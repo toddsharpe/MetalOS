@@ -15,21 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Print.c">
+    <ClCompile Include="Main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EfiMain.c">
+    <ClCompile Include="..\MetalOS.Boot\EfiMain.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MetalOS.Boot\Print.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Print.h">
+    <ClInclude Include="..\MetalOS.Boot\EfiMain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Common.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EfiMain.h">
+    <ClInclude Include="..\MetalOS.Boot\Print.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

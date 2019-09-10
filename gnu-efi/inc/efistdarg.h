@@ -18,7 +18,7 @@ Abstract:
 Revision History
 
 --*/
-
+#define GNU_EFI_USE_EXTERNAL_STDARG
 #ifndef GNU_EFI_USE_EXTERNAL_STDARG
 typedef __builtin_va_list va_list;
 

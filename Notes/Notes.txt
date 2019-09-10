@@ -1,0 +1,11 @@
+Bootloader using C#:
+https://github.com/MichalStrehovsky/zerosharp/blob/master/efi-no-runtime/zerosharp.cs
+
+Alternate Headers:
+https://github.com/c-util/c-efi/tree/master/src
+
+https://github.com/boazsegev/BoOS/tree/v.0.0.0
+
+UEFI:
+https://kazlauskas.me/entries/x64-uefi-os-1.html
+

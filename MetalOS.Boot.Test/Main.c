@@ -4,6 +4,8 @@
 #include <efi.h>
 #include <efilib.h>
 
+#define EFI_DEBUG 1
+
 EFI_STATUS
 (EFIAPI StdOutPrint) (
 	IN struct _SIMPLE_TEXT_OUTPUT_INTERFACE* This,

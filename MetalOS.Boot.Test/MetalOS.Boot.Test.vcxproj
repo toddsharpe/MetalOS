@@ -126,12 +126,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\MetalOS.Boot\EfiMain.c" />
+    <ClCompile Include="..\MetalOS.Boot\Memory.c" />
     <ClCompile Include="..\MetalOS.Boot\Print.c" />
+    <ClCompile Include="..\MetalOS.Boot\String.c" />
     <ClCompile Include="Main.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\MetalOS.Boot\EfiMain.h" />
+    <ClInclude Include="..\MetalOS.Boot\Memory.h" />
     <ClInclude Include="..\MetalOS.Boot\Print.h" />
+    <ClInclude Include="..\MetalOS.Boot\String.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

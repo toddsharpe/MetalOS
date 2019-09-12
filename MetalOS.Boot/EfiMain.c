@@ -1,13 +1,39 @@
 #include "EfiMain.h"
 #include "Common.h"
+#include "Print.h"
+#include "String.h"
+
+#define EFI_DEBUG 1
 
 EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 {
 	EFI_STATUS status;
 	EFI_INPUT_KEY Key;
 
+	/*
+	UINT32 len = stringlen(L"12345");
+
+	CHAR16 string[] = L"ABC,DEF,GHI";
+	
+	CHAR16 *ptr = stringtok(string, L',');
+	while (ptr != NULL)
+	{
+		ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, ptr));
+		ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, L"\n\r"));
+		ptr = stringtok(NULL, L',');
+	}*/
+
+	Print(SystemTable->ConOut, L"Number: %b\n", 5);
+	/*
+	CHAR16 buffer[14];
+	ByteToString(0x12, buffer);
+	WordToString(0x1234, buffer + 2);
+	DWordToString(0xDEADBEEF, buffer + 6);
+	*/
 	ReturnIfNotSuccess(PrintSystemTable(SystemTable));
 	ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, L"MetalOS.BootLoader\n\r"));
+
+	CHAR16 buffer[3];
 
 	/* Now wait for a keystroke before continuing, otherwise your
 	   message will flash off the screen before you see it.

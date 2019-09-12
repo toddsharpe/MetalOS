@@ -24,12 +24,24 @@
     <ClCompile Include="..\MetalOS.Boot\Print.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\MetalOS.Boot\String.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MetalOS.Boot\Memory.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\MetalOS.Boot\EfiMain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\MetalOS.Boot\Print.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MetalOS.Boot\String.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MetalOS.Boot\Memory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

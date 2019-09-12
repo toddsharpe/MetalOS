@@ -162,12 +162,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EfiMain.c" />
+    <ClCompile Include="Memory.c" />
     <ClCompile Include="Print.c" />
+    <ClCompile Include="String.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
     <ClInclude Include="EfiMain.h" />
+    <ClInclude Include="Memory.h" />
     <ClInclude Include="Print.h" />
+    <ClInclude Include="String.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

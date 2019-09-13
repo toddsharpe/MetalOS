@@ -49,7 +49,8 @@ int main(int argc, char** argv)
 	stdIn.ReadKeyStroke = StdInReadKeyStroke;
 	
 	EFI_SYSTEM_TABLE table = { 0 };
-	table.FirmwareVendor = L"Test";
+	table.FirmwareVendor = L"SharpeCoding";
+	table.FirmwareRevision = 0x01020304;
 	table.ConOut = &stdOut;
 	table.ConIn = &stdIn;
 

@@ -23,7 +23,6 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 		ptr = stringtok(NULL, L',');
 	}*/
 
-	Print(SystemTable->ConOut, L"Number: %b\n", 5);
 	/*
 	CHAR16 buffer[14];
 	ByteToString(0x12, buffer);
@@ -58,6 +57,7 @@ EFI_STATUS PrintSystemTable(EFI_SYSTEM_TABLE* SystemTable)
 	
 	ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, L"PrintSystemTable\n\r"))
 	ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, SystemTable->FirmwareVendor));
+	ReturnIfNotSuccess(Print(SystemTable->ConOut, L"FirmwareRevision: %u\n", SystemTable->FirmwareRevision));
 	ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, L"\n\r"));
 
 

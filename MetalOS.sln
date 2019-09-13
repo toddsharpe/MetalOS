@@ -12,6 +12,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Notes", "Notes", "{0FD0A580
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Boot.Test", "MetalOS.Boot.Test\MetalOS.Boot.Test.vcxproj", "{99FB6E14-76C6-4189-9D4C-4D170525C2F7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gnu-efi.x86_64", "gnu-efi.x86_64\gnu-efi.x86_64.vcxproj", "{C2BA850E-D2BF-4B96-9964-D3133D705208}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -36,6 +38,14 @@ Global
 		{99FB6E14-76C6-4189-9D4C-4D170525C2F7}.Release|x64.Build.0 = Release|x64
 		{99FB6E14-76C6-4189-9D4C-4D170525C2F7}.Release|x86.ActiveCfg = Release|Win32
 		{99FB6E14-76C6-4189-9D4C-4D170525C2F7}.Release|x86.Build.0 = Release|Win32
+		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Debug|x64.ActiveCfg = Debug|x64
+		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Debug|x64.Build.0 = Debug|x64
+		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Debug|x86.ActiveCfg = Debug|Win32
+		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Debug|x86.Build.0 = Debug|Win32
+		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Release|x64.ActiveCfg = Release|x64
+		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Release|x64.Build.0 = Release|x64
+		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Release|x86.ActiveCfg = Release|Win32
+		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -37,6 +37,31 @@ EFI_STATUS
 	return EFI_SUCCESS;
 }
 
+EFI_STATUS
+(EFIAPI RuntimeGetTime) (
+	OUT EFI_TIME* Time,
+	OUT EFI_TIME_CAPABILITIES* Capabilities OPTIONAL
+	)
+{
+	/*
+	SYSTEMTIME time;
+	GetSystemTime(&time);
+
+	Time->Year = time.wYear;
+	Time->Month = time.wMonth;
+	Time->Day = time.wDay;
+	Time->Hour = time.wHour;
+	Time->Minute = time.wMinute;
+	Time->Second = time.wSecond;
+	*/
+	Time->Year = 2019;
+	Time->Month = 9;
+	Time->Day = 13;
+	Time->Hour = 14;
+	Time->Minute = 11;
+	Time->Second = 59;
+}
+
 extern EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable);
 
 int main(int argc, char** argv)
@@ -53,6 +78,10 @@ int main(int argc, char** argv)
 	table.FirmwareRevision = 0x01020304;
 	table.ConOut = &stdOut;
 	table.ConIn = &stdIn;
+
+	EFI_RUNTIME_SERVICES runtimeServices = { 0 };
+	table.RuntimeServices = &runtimeServices;
+	runtimeServices.GetTime = RuntimeGetTime;
 
 	EfiMain(0, &table);
 }

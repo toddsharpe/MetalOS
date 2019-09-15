@@ -14,6 +14,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Boot.Test", "MetalO
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gnu-efi.x86_64", "gnu-efi.x86_64\gnu-efi.x86_64.vcxproj", "{C2BA850E-D2BF-4B96-9964-D3133D705208}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Kernel", "MetalOS.Kernel\MetalOS.Kernel.vcxproj", "{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{4F1726A7-E0E8-4D73-AE43-AC42D140886F}"
+	ProjectSection(SolutionItems) = preProject
+		inc\LoaderParams.h = inc\LoaderParams.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -46,6 +53,14 @@ Global
 		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Release|x64.Build.0 = Release|x64
 		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Release|x86.ActiveCfg = Release|Win32
 		{C2BA850E-D2BF-4B96-9964-D3133D705208}.Release|x86.Build.0 = Release|Win32
+		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Debug|x64.ActiveCfg = Debug|x64
+		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Debug|x64.Build.0 = Debug|x64
+		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Debug|x86.ActiveCfg = Debug|Win32
+		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Debug|x86.Build.0 = Debug|Win32
+		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x64.ActiveCfg = Release|x64
+		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x64.Build.0 = Release|x64
+		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x86.ActiveCfg = Release|Win32
+		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

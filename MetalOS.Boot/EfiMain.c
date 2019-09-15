@@ -2,63 +2,53 @@
 #include "Common.h"
 #include "Print.h"
 #include "String.h"
+#include "Device.h"
 
 #define EFI_DEBUG 1
+
+EFI_SYSTEM_TABLE *ST;
+EFI_RUNTIME_SERVICES* RT;
+EFI_BOOT_SERVICES* BS;
 
 EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 {
 	EFI_STATUS status;
-	EFI_INPUT_KEY Key;
 
-	/*
-	UINT32 len = stringlen(L"12345");
+	ST = SystemTable;
+	BS = SystemTable->BootServices;
+	RT = SystemTable->RuntimeServices;
 
-	CHAR16 string[] = L"ABC,DEF,GHI";
-	
-	CHAR16 *ptr = stringtok(string, L',');
-	while (ptr != NULL)
-	{
-		ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, ptr));
-		ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, L"\n\r"));
-		ptr = stringtok(NULL, L',');
-	}*/
+	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\n\r"));
+	ReturnIfNotSuccess(Print(L"Firmware Vendor: %S, Revision: %d\n\r", ST->FirmwareVendor, ST->FirmwareRevision));
 
-	/*
-	CHAR16 buffer[14];
-	ByteToString(0x12, buffer);
-	WordToString(0x1234, buffer + 2);
-	DWordToString(0xDEADBEEF, buffer + 6);
-	*/
-	ReturnIfNotSuccess(PrintSystemTable(SystemTable));
-	ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, L"MetalOS.BootLoader\n\r"));
+	EFI_TIME time;
+	ReturnIfNotSuccess(RT->GetTime(&time, NULL));
+	Print(L"Date: %d-%d-%d %d:%d:%d\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
-	CHAR16 buffer[3];
+	LOADER_PARAMS params = { 0 };
 
-	/* Now wait for a keystroke before continuing, otherwise your
-	   message will flash off the screen before you see it.
+	ReturnIfNotSuccess(DiscoverGraphics(&params));
 
-	   First, we need to empty the console input buffer to flush
-	   out any keystrokes entered before this point */
-	status = SystemTable->ConIn->Reset(SystemTable->ConIn, FALSE);
-	if (EFI_ERROR(status))
-		return status;
-
-	/* Now wait until a key becomes available.  This is a simple
-	   polling implementation.  You could try and use the WaitForKey
-	   event instead if you like */
-	while ((status = SystemTable->ConIn->ReadKeyStroke(SystemTable->ConIn, &Key)) == EFI_NOT_READY);
+	Keywait("Waiting...\n");
 
 	return status;
 }
 
-EFI_STATUS PrintSystemTable(EFI_SYSTEM_TABLE* SystemTable)
+EFI_STATUS Keywait(CHAR16* String)
 {
 	EFI_STATUS status;
-	
-	ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, L"PrintSystemTable\n\r"))
-	ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, SystemTable->FirmwareVendor));
-	ReturnIfNotSuccess(Print(SystemTable->ConOut, L"FirmwareRevision: %u\n", SystemTable->FirmwareRevision));
-	ReturnIfNotSuccess(SystemTable->ConOut->OutputString(SystemTable->ConOut, L"\n\r"));
+	EFI_INPUT_KEY Key;
 
+	Print(String);
+	ReturnIfNotSuccess(Print(L"Press any key to continue..."));
+	ReturnIfNotSuccess(ST->ConIn->Reset(ST->ConIn, FALSE));
 
+	// Poll for key
+	while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &Key)) == EFI_NOT_READY);
+
+	// Clear keystroke buffer (this is just a pause)
+	ReturnIfNotSuccess(ST->ConIn->Reset(ST->ConIn, FALSE));
+
+	Print(L"\r\n");
+	return status;
 }

@@ -1,4 +1,5 @@
 #include "String.h"
+#include "Memory.h"
 
 UINT32 efi_strlen(CHAR16* str)
 {
@@ -14,7 +15,7 @@ UINT32 efi_strlen(CHAR16* str)
 	return length;
 }
 
-void efi_revstr(CHAR16* str)
+void efi_strrev(CHAR16* str)
 {
 	UINT32 length = efi_strlen(str);
 
@@ -24,4 +25,11 @@ void efi_revstr(CHAR16* str)
 		str[i] = str[length - i - 1];
 		str[length - i - 1] = temp;
 	}
+}
+
+UINT32 efi_strcpy(CHAR16* source, CHAR16* dest)
+{
+	UINT32 length = efi_strlen(source);
+	efi_memcpy(source, dest, efi_strlen(source) * sizeof(CHAR16));
+	return length;
 }

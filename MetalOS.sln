@@ -21,6 +21,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{4F1726A7-E0E
 		inc\LoaderParams.h = inc\LoaderParams.h
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{35DFADE8-8138-4EAD-8722-B29DE8093465}"
+	ProjectSection(SolutionItems) = preProject
+		build_vhd.cmd = build_vhd.cmd
+		mount_vhd.cmd = mount_vhd.cmd
+		unmount_vhd.cmd = unmount_vhd.cmd
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

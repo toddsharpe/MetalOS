@@ -23,14 +23,29 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 
 	EFI_TIME time;
 	ReturnIfNotSuccess(RT->GetTime(&time, NULL));
-	Print(L"Date: %d-%d-%d %d:%d:%d\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+	Print(L"Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
 	LOADER_PARAMS params = { 0 };
+	params.BaseAddress = ImageHandle;
+	params.ConOut = ST->ConOut;
 
-	ReturnIfNotSuccess(DiscoverGraphics(&params));
+	ReturnIfNotSuccess(InitializeGraphics(&params.Graphics));
+	ReturnIfNotSuccess(DisplayLoaderParams(&params));
 
-	Keywait("Waiting...\n");
 
+
+	Keywait(L"Waiting...\n");
+
+	return status;
+}
+
+EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
+{
+	EFI_STATUS status;
+	
+	ReturnIfNotSuccess(Print(L"DisplayLoaderParams:\r\n"));
+	ReturnIfNotSuccess(Print(L"\tBaseAddress: %u\r\n", params->BaseAddress));
+	PrintGOP(&params->Graphics);
 	return status;
 }
 

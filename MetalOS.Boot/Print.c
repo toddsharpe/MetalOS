@@ -42,6 +42,20 @@ EFI_STATUS _print(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, CHAR16* format, va_list 
 		//Advance past %
 		format++;
 
+		BOOL zeroes = FALSE;
+		if (*format == L'0')
+		{
+			zeroes = TRUE;
+			format++;
+		}
+
+		UINT8 size = 0;
+		if ((*format >= L'1') && (*format <= L'9'))
+		{
+			size = *format - Char16_Zero;
+			format++;
+		}
+
 		//Process
 		switch (*format)
 		{
@@ -60,6 +74,30 @@ EFI_STATUS _print(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, CHAR16* format, va_list 
 				buffer_ptr += 8;
 				break;
 
+			case L'x':
+			{
+				if (size == 2)
+				{
+					ByteToHex(va_arg(args, UINT8), buffer_ptr);
+					buffer_ptr += 2;
+				}
+				else if (size == 4)
+				{
+					WordToHex(va_arg(args, UINT16), buffer_ptr);
+					buffer_ptr += 4;
+				}
+				else if (size == 8)
+				{
+					DWordToHex(va_arg(args, UINT32), buffer_ptr);
+					buffer_ptr += 8;
+				}
+				else
+				{
+					Print(L"Error!\n");
+				}
+				break;
+			}
+
 			case L'd':
 			{
 				UINT32 length = IntToString(va_arg(args, int), buffer_ptr);
@@ -72,6 +110,11 @@ EFI_STATUS _print(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, CHAR16* format, va_list 
 				buffer_ptr += efi_strcpy(va_arg(args, CHAR16*), buffer_ptr);
 				break;
 			}
+
+			case L'c':
+				*buffer_ptr = va_arg(args, CHAR16);
+				buffer_ptr++;
+				break;
 		}
 
 		//Advance past type - assume 1 char types

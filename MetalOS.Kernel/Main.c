@@ -3,5 +3,6 @@
 
 void main(LOADER_PARAMS* loader)
 {
-	//loader->Runtime.
+	loader->ConOut->OutputString(loader->ConOut, L"Kernel!\r\n");
+	return;
 }

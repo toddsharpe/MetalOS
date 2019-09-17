@@ -1,5 +1,6 @@
-@set VHD=%CD%\zerosharp.vhdx
-@set VHD_SCRIPT=%CD%\diskpart.txt
+@set VHD=%CD%\out\MetalOS.vhdx
+@set VHD_SCRIPT=%CD%\out\diskpart.txt
+@set BUILD_OUT=%CD%\x64\Debug
 @del %VHD% >nul 2>&1
 @del %VHD_SCRIPT% >nul 2>&1
 
@@ -18,7 +19,9 @@ echo exit
 
 diskpart /s %VHD_SCRIPT%
 
-xcopy BOOTX64.EFI X:\EFI\BOOT\
+@rem Copy files to VHD
+xcopy %BUILD_OUT%\BOOTX64.EFI X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS.Kernel.exe X:\EFI\BOOT\
 
 @(
 echo select vdisk file=%VHD%
@@ -29,3 +32,8 @@ echo exit
 )>%VHD_SCRIPT%
 
 diskpart /s %VHD_SCRIPT%
+@del %VHD_SCRIPT% >nul 2>&1
+
+@rem Fix Perms
+@rem Get-VM 'MetalOS' | Select-Object VMID
+icacls %VHD% /grant 4ba14b7b-99cb-4179-bf86-b8c05f09091e:F

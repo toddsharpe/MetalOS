@@ -163,6 +163,7 @@
   <ItemGroup>
     <ClCompile Include="Device.c" />
     <ClCompile Include="EfiMain.c" />
+    <ClCompile Include="Loader.c" />
     <ClCompile Include="Memory.c" />
     <ClCompile Include="Print.c" />
     <ClCompile Include="String.c" />
@@ -171,6 +172,7 @@
     <ClInclude Include="Common.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="EfiMain.h" />
+    <ClInclude Include="Loader.h" />
     <ClInclude Include="Memory.h" />
     <ClInclude Include="Print.h" />
     <ClInclude Include="String.h" />

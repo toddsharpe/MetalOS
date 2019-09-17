@@ -3,6 +3,7 @@
 #include "Print.h"
 #include "String.h"
 #include "Device.h"
+#include "Loader.h"
 
 #define EFI_DEBUG 1
 
@@ -32,7 +33,7 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	ReturnIfNotSuccess(InitializeGraphics(&params.Graphics));
 	ReturnIfNotSuccess(DisplayLoaderParams(&params));
 
-
+	ReturnIfNotSuccess(LoadKernel(ImageHandle));
 
 	Keywait(L"Waiting...\n");
 

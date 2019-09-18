@@ -33,6 +33,15 @@
     <ClCompile Include="..\MetalOS.Boot\Device.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\MetalOS.Boot\Error.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MetalOS.Boot\Loader.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MetalOS.Boot\Path.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\MetalOS.Boot\EfiMain.h">
@@ -48,6 +57,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\MetalOS.Boot\Device.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MetalOS.Boot\Error.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MetalOS.Boot\Loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MetalOS.Boot\Path.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

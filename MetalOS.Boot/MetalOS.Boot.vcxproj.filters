@@ -33,6 +33,12 @@
     <ClCompile Include="Loader.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Error.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Path.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Print.h">
@@ -54,6 +60,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Error.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Path.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

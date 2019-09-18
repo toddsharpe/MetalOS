@@ -27,9 +27,18 @@ void efi_strrev(CHAR16* str)
 	}
 }
 
+//This should be dest, source
+//TODO: Everyusage of strcpy in public code cant just be renamed, args have to be switched
+//GDI
 UINT32 efi_strcpy(CHAR16* source, CHAR16* dest)
 {
 	UINT32 length = efi_strlen(source);
 	efi_memcpy(source, dest, efi_strlen(source) * sizeof(CHAR16));
 	return length;
+}
+
+UINT32 efi_strcpy_n(CHAR16* source, CHAR16* dest, UINT32 count)
+{
+	efi_memcpy(source, dest, count * sizeof(CHAR16));
+	return count;
 }

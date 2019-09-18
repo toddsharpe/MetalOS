@@ -181,3 +181,79 @@ PrintGOPFull(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
 
 	return EFI_SUCCESS;
 }
+
+//==================================================================================================================================
+//  print_memmap: The Ultimate Debugging Tool
+//==================================================================================================================================
+//
+// Get the system memory map, parse it, and print it. Print the whole thing.
+//
+
+// This array is a global variable so that it can be made static, which helps prevent a stack overflow if it ever needs to lengthen.
+STATIC CONST CHAR16 mem_types[16][27] = {
+	  L"EfiReservedMemoryType     ",
+	  L"EfiLoaderCode             ",
+	  L"EfiLoaderData             ",
+	  L"EfiBootServicesCode       ",
+	  L"EfiBootServicesData       ",
+	  L"EfiRuntimeServicesCode    ",
+	  L"EfiRuntimeServicesData    ",
+	  L"EfiConventionalMemory     ",
+	  L"EfiUnusableMemory         ",
+	  L"EfiACPIReclaimMemory      ",
+	  L"EfiACPIMemoryNVS          ",
+	  L"EfiMemoryMappedIO         ",
+	  L"EfiMemoryMappedIOPortSpace",
+	  L"EfiPalCode                ",
+	  L"EfiPersistentMemory       ",
+	  L"EfiMaxMemoryType          "
+};
+
+VOID print_memmap()
+{
+	EFI_STATUS memmap_status;
+	UINTN MemMapSize = 0, MemMapKey, MemMapDescriptorSize;
+	UINT32 MemMapDescriptorVersion;
+	EFI_MEMORY_DESCRIPTOR* MemMap = NULL;
+	EFI_MEMORY_DESCRIPTOR* Piece;
+	UINT16 line = 0;
+
+	memmap_status = BS->GetMemoryMap(&MemMapSize, MemMap, &MemMapKey, &MemMapDescriptorSize, &MemMapDescriptorVersion);
+	if (memmap_status == EFI_BUFFER_TOO_SMALL)
+	{
+		memmap_status = BS->AllocatePool(EfiBootServicesData, MemMapSize, (void**)& MemMap); // Allocate pool for MemMap
+		if (EFI_ERROR(memmap_status)) // Error! Wouldn't be safe to continue.
+		{
+			Print(L"MemMap AllocatePool error. 0x%q\r\n", memmap_status);
+			return;
+		}
+		memmap_status = BS->GetMemoryMap(&MemMapSize, MemMap, &MemMapKey, &MemMapDescriptorSize, &MemMapDescriptorVersion);
+	}
+	if (EFI_ERROR(memmap_status))
+	{
+		Print(L"Error getting memory map for printing. 0x%q\r\n", memmap_status);
+	}
+
+	Print(L"MemMapSize: %q, MemMapDescriptorSize: %q, MemMapDescriptorVersion: 0x%q\r\n", MemMapSize, MemMapDescriptorSize, MemMapDescriptorVersion);
+	Print(L"MemMap: %q\r\n", MemMap);
+
+	// There's no virtual addressing yet, so there's no need to see Piece->VirtualStart
+	// Multiply NumOfPages by EFI_PAGE_SIZE or do (NumOfPages << EFI_PAGE_SHIFT) to get the end address... which should just be the start of the next section.
+	for (Piece = MemMap; Piece < (EFI_MEMORY_DESCRIPTOR*)((UINT8*)MemMap + MemMapSize); Piece = (EFI_MEMORY_DESCRIPTOR*)((UINT8*)Piece + MemMapDescriptorSize))
+	{
+		if (line % 20 == 0)
+		{
+			Keywait(L"\0");
+			Print(L"#   Memory Type                Phys Addr Start   Num Of Pages\r\n");
+		}
+
+		Print(L"%w: %S 0x%q 0x%q\r\n", line, mem_types[Piece->Type], Piece->PhysicalStart, Piece->NumberOfPages);
+		line++;
+	}
+
+	memmap_status = BS->FreePool(MemMap);
+	if (EFI_ERROR(memmap_status))
+	{
+		Print(L"Error freeing print_memmap pool. 0x%d\n", memmap_status);
+	}
+}

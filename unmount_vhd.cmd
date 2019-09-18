@@ -5,7 +5,7 @@
 @(
 echo select vdisk file=%VHD%
 echo select partition 2
-remove letter="X"
+remove letter=X
 echo detach vdisk
 echo exit
 )>%VHD_SCRIPT%

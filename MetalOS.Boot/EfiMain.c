@@ -19,6 +19,9 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	BS = SystemTable->BootServices;
 	RT = SystemTable->RuntimeServices;
 
+	char buffer[] = { "hello" };
+	Print(L"Test: %s - %d\r\n", buffer, 5);
+
 	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\n\r"));
 	ReturnIfNotSuccess(Print(L"Firmware Vendor: %S, Revision: %d\n\r", ST->FirmwareVendor, ST->FirmwareRevision));
 
@@ -31,9 +34,18 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	params.ConOut = ST->ConOut;
 
 	ReturnIfNotSuccess(InitializeGraphics(&params.Graphics));
-	ReturnIfNotSuccess(DisplayLoaderParams(&params));
+	//ReturnIfNotSuccess(DisplayLoaderParams(&params));
 
-	ReturnIfNotSuccess(LoadKernel(ImageHandle));
+	//ReturnIfNotSuccess(LoadKernel(ImageHandle));
+	status = LoadKernel(ImageHandle);
+	if (EFI_ERROR(status))
+	{
+		CHAR16 buffer[64];
+		StatusToString(buffer, status);
+		Print(L"LoadKernel - %d - %S\r\n", status, buffer);
+	}
+
+	print_memmap();
 
 	Keywait(L"Waiting...\n");
 

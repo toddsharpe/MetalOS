@@ -11,6 +11,9 @@
 #define DWordHighWord(x) (((UINT32)x) >> 16)
 #define DWordLowWord(x) (((UINT32)x) & 0xFFFF)
 
+#define QWordHighDWord(x) (((UINT64)x) >> 32)
+#define QWordLowDWord(x) (((UINT64)x) & 0xFFFFFFFF)
+
 #define LibraryFunction(x) lib_ ## x
 
 #define BOOL UINT8

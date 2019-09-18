@@ -73,18 +73,24 @@ EFI_STATUS MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS* imageBaseOut, EFI_PHYSI
 
 	//Read headers into memory
 	size = peHeader.OptionalHeader.SizeOfHeaders;
+	ReturnIfNotSuccess(file->SetPosition(file, 0));
 	ReturnIfNotSuccess(file->Read(file, &size, (void*)imageBase));
 
+	//Hack? - determine if loading headers on stack is right, versus just loading them from disk to physical memory
+	//Problem is knowing the destination address
+	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(imageBase + dosHeader.e_lfanew);
+	Print(L"SUbsystem: %u\r\n", pNtHeader->OptionalHeader.Subsystem);
+	
 	if (imageBaseOut != NULL)
 		*imageBaseOut = imageBase;
 
 	//Write sections
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(&peHeader);
-	Print(L"%q - %q - %w\r\n", &peHeader, section, peHeader.FileHeader.NumberOfSections);
-	for (WORD i = 0; i < peHeader.FileHeader.NumberOfSections; i++)
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	Print(L"%q - %q - %w\r\n", pNtHeader, section, pNtHeader->FileHeader.NumberOfSections);
+	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		EFI_PHYSICAL_ADDRESS destination = imageBase + section[i].VirtualAddress;
-		Print(L"T: %u\r\n", section[i].VirtualAddress);
+		Print(L"T: %s - %u\r\n", section[i].Name, section[i].VirtualAddress);
 		EFI_PHYSICAL_ADDRESS source = section[i].PointerToRawData;
 		DWORD size = section[i].SizeOfRawData;
 		//ReturnIfNotSuccess(BS->AllocatePages(AllocateAddress, EfiLoaderData, EFI_SIZE_TO_PAGES(size), &destination));

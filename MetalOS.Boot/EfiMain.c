@@ -29,15 +29,19 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	ReturnIfNotSuccess(RT->GetTime(&time, NULL));
 	Print(L"Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
-	LOADER_PARAMS params = { 0 };
-	params.BaseAddress = ImageHandle;
-	params.ConOut = ST->ConOut;
+	//Reserve space for loader block
+	LOADER_PARAMS* params;
+	ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, sizeof(LOADER_PARAMS), &params));
+	params->BaseAddress = ImageHandle;
 
-	ReturnIfNotSuccess(InitializeGraphics(&params.Graphics));
-	//ReturnIfNotSuccess(DisplayLoaderParams(&params));
+	//Technically everything after allocationg the loader block needs to free that memory before dying
 
+	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
+	//ReturnIfNotSuccess(DisplayLoaderParams(params));
+	//Keywait(L"wait\r\n");
 	//ReturnIfNotSuccess(LoadKernel(ImageHandle));
-	status = LoadKernel(ImageHandle);
+	EFI_PHYSICAL_ADDRESS entryPoint = 0;
+	status = LoadKernel(ImageHandle, &params->BaseAddress, &entryPoint);
 	if (EFI_ERROR(status))
 	{
 		CHAR16 buffer[64];
@@ -45,11 +49,18 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 		Print(L"LoadKernel - %d - %S\r\n", status, buffer);
 	}
 
-	print_memmap();
+	Keywait(L"wait\r\n");
 
-	Keywait(L"Waiting...\n");
+	//Get latest memory map, exit boot services
+	ReturnIfNotSuccess(GetMemoryMap(&params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
+	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
 
-	return status;
+	//Call into kernel
+	KernelMain kernelMain = (KernelMain)(entryPoint);
+	kernelMain(params);
+
+	//Should never get here
+	return EFI_ABORTED;
 }
 
 EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
@@ -58,7 +69,7 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
 	
 	ReturnIfNotSuccess(Print(L"DisplayLoaderParams:\r\n"));
 	ReturnIfNotSuccess(Print(L"\tBaseAddress: %u\r\n", params->BaseAddress));
-	PrintGOP(&params->Graphics);
+	PrintGopMode(&params->Display);
 	return status;
 }
 

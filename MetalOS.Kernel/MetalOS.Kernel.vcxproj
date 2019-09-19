@@ -83,6 +83,7 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -90,6 +91,9 @@
       <FixedBaseAddress>false</FixedBaseAddress>
       <BaseAddress>0x10000</BaseAddress>
       <EntryPointSymbol>main</EntryPointSymbol>
+      <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
+      <EnableUAC>false</EnableUAC>
+      <DataExecutionPrevention>false</DataExecutionPrevention>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

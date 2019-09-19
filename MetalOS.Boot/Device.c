@@ -12,24 +12,54 @@ EFI_GUID gEfiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
 
 //Originally this method was DiscoverGraphics and returned an array, but lets not overcomplicate things.
 //Initialize - pick a mode and return the info we need to operate in it
-EFI_STATUS InitializeGraphics(EFI_GRAPHICS_OUTPUT_PROTOCOL* graphics)
+EFI_STATUS InitializeGraphics(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)
 {
 	EFI_STATUS status;
 
 	EFI_GRAPHICS_OUTPUT_PROTOCOL* gop;
 	ReturnIfNotSuccess(BS->HandleProtocol(ST->ConsoleOutHandle, &GraphicsOutputProtocol, (void**)&gop));
 
-	//Copy to loader params
-	efi_memcpy(gop, graphics, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL));
-
 	//Allocate space for full graphics info
-	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* info;
-	UINTN sizeOfInfo;
-	ReturnIfNotSuccess(gop->QueryMode(gop, 0, &sizeOfInfo, &info));
-	ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, sizeOfInfo, &graphics->Mode->Info));
-	efi_memcpy(info, graphics->Mode->Info, sizeOfInfo);
+	//EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* info;
+	//UINTN sizeOfInfo;
+	//ReturnIfNotSuccess(gop->QueryMode(gop, 0, &sizeOfInfo, &info));
+	//ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, sizeOfInfo, &gop->Mode->Info));
+	//efi_memcpy(info, graphics->Mode->Info, sizeOfInfo);
+	efi_memcpy(gop->Mode, display, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
 
 	return EFI_SUCCESS;
+}
+
+EFI_STATUS PrintGopMode(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* mode)
+{
+	Print(L"SizeOfInfo %u\r\n", mode->SizeOfInfo);
+	Print(L"FrameBufferSize %u\r\n", mode->FrameBufferSize);
+	Print(L"FrameBufferBase %u\r\n", mode->FrameBufferBase);
+	Print(L"&Res %dx%d - ", mode->Info->HorizontalResolution, mode->Info->VerticalResolution);
+
+	switch (mode->Info->PixelFormat)
+	{
+	case PixelRedGreenBlueReserved8BitPerColor:
+		Print(L"RGBRerserved");
+		break;
+	case PixelBlueGreenRedReserved8BitPerColor:
+		Print(L"BGRReserved");
+		break;
+	case PixelBitMask:
+		Print(L"Red:%08x Green:%08x Blue:%08x Reserved:%08x",
+			mode->Info->PixelInformation.RedMask,
+			mode->Info->PixelInformation.GreenMask,
+			mode->Info->PixelInformation.BlueMask,
+			mode->Info->PixelInformation.ReservedMask);
+		break;
+	case PixelBltOnly:
+		Print(L"(blt only)");
+		break;
+	default:
+		Print(L"(Invalid pixel format)");
+		break;
+	}
+	Print(L" Pixels %d\n\r", mode->Info->PixelsPerScanLine);
 }
 
 EFI_STATUS PrintGOP(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
@@ -62,6 +92,33 @@ EFI_STATUS PrintGOP(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
 			break;
 	}
 	Print(L" Pixels %d\n\r", gop->Mode->Info->PixelsPerScanLine);
+}
+
+EFI_STATUS GetMemoryMap(EFI_MEMORY_DESCRIPTOR** ppMap, UINTN* pMapKey, UINTN* pDescriptorSize, UINT32* pVersion)
+{
+	UINTN mapSize;
+	UINTN mapKey;
+	UINTN descriptorSize;
+	UINT32 version;
+	EFI_MEMORY_DESCRIPTOR* map = NULL;
+	
+	if (ppMap == NULL || pMapKey == NULL || pDescriptorSize == NULL || pVersion == NULL)
+		return EFI_UNSUPPORTED;//TODO: better error code?
+
+	//Exit boot services
+	EFI_STATUS status = BS->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &version);
+	if (status != EFI_BUFFER_TOO_SMALL)
+		return status;
+	
+	ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, mapSize, &map));
+
+	//TODO: Free memory allocated above if this second call fails
+	ReturnIfNotSuccess(BS->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &version));
+
+	*ppMap = map;
+	*pMapKey = mapKey;
+	*pDescriptorSize = descriptorSize;
+	*pVersion = version;
 }
 
 EFI_STATUS

@@ -19,21 +19,20 @@ EFI_STATUS LoadKernel(EFI_HANDLE ImageHandle, EFI_PHYSICAL_ADDRESS* imageBase, E
 	Print(L"BootFilePath: %S\r\n", BootFilePath);
 
 	CHAR16 KernelPath[64];
-	PathCombine(BootFilePath, KernelPath, Kernel);
-	Print(L"Loading: %S\r\n", KernelPath);
+	PathCombine(BootFilePath, KernelPath, Kernel); // THis function needs to be renamed/split
 
 	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem;
 	ReturnIfNotSuccess(ST->BootServices->OpenProtocol(LoadedImage->DeviceHandle, &FileSystemProtocol, (void**)&fileSystem, ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
 
 	EFI_FILE* CurrentDriveRoot;
 	ReturnIfNotSuccess(fileSystem->OpenVolume(fileSystem, &CurrentDriveRoot));
-	Print(L"check\r\n");
 
-	Print(L"Loading: %S\r\n", KernelPath);
 	EFI_FILE* KernelFile;
+	Print(L"Loading: %S\r\n", KernelPath);
 	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelFile, KernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
-	Print(L"Premap\r\n");
+	
 	//Map file, get base and entry point
+	Print(L"Premap\r\n");
 	ReturnIfNotSuccess(MapFile(KernelFile, imageBase, entryPoint));
 
 	return status;

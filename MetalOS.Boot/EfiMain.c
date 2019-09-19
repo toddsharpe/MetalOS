@@ -30,13 +30,14 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	Print(L"Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
 	//Reserve space for loader block
-	LOADER_PARAMS* params;
-	ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, sizeof(LOADER_PARAMS), &params));
+	LOADER_PARAMS pSrtruct = { 0 };
+	LOADER_PARAMS* params = &pSrtruct;
+	//ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, sizeof(LOADER_PARAMS), &params));
 	params->BaseAddress = ImageHandle;
 
 	//Technically everything after allocationg the loader block needs to free that memory before dying
 
-	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
+	//ReturnIfNotSuccess(InitializeGraphics(&params->Display));
 	//ReturnIfNotSuccess(DisplayLoaderParams(params));
 	//Keywait(L"wait\r\n");
 	//ReturnIfNotSuccess(LoadKernel(ImageHandle));

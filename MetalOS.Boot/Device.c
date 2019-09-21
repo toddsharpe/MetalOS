@@ -2,6 +2,7 @@
 #include "Common.h"
 #include "Print.h"
 #include "Memory.h"
+#include "Error.h"
 
 //TODO: move to file?
 EFI_GUID gEfiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
@@ -18,16 +19,14 @@ EFI_STATUS InitializeGraphics(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)
 
 	EFI_GRAPHICS_OUTPUT_PROTOCOL* gop;
 	ReturnIfNotSuccess(BS->HandleProtocol(ST->ConsoleOutHandle, &GraphicsOutputProtocol, (void**)&gop));
+	efi_memcpy(gop->Mode, display, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
 
 	//Allocate space for full graphics info
-	//EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* info;
-	//UINTN sizeOfInfo;
-	//ReturnIfNotSuccess(gop->QueryMode(gop, 0, &sizeOfInfo, &info));
-	//ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, sizeOfInfo, &gop->Mode->Info));
-	//efi_memcpy(info, graphics->Mode->Info, sizeOfInfo);
-
-	Print(L"Mode %q\r\n", gop->Mode);
-	efi_memcpy(gop->Mode, display, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
+	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* info;
+	UINTN sizeOfInfo;
+	ReturnIfNotSuccess(gop->QueryMode(gop, 0, &sizeOfInfo, &info));
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeOfInfo, &display->Info));
+	efi_memcpy(info, display->Info, sizeOfInfo);
 
 	return EFI_SUCCESS;
 }
@@ -94,21 +93,6 @@ EFI_STATUS PrintGOP(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
 			break;
 	}
 	Print(L" Pixels %d\n\r", gop->Mode->Info->PixelsPerScanLine);
-}
-
-EFI_STATUS GetMemoryMap(EFI_MEMORY_DESCRIPTOR* pMap, UINTN* mapKey, UINTN* pDescriptorSize, UINT32* version)
-{
-	UINTN mapSize;
-	
-	//Determine size of map
-	EFI_STATUS status = BS->GetMemoryMap(&mapSize, pMap, mapKey, pDescriptorSize, version);
-	if (status != EFI_BUFFER_TOO_SMALL)
-		return status;
-	
-	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, mapSize, pMap));
-
-	//TODO: Free memory allocated above if this second call fails
-	ReturnIfNotSuccess(BS->GetMemoryMap(&mapSize, pMap, mapKey, pDescriptorSize, version));
 }
 
 EFI_STATUS

@@ -6,6 +6,7 @@
 #include "Loader.h"
 #include "Path.h"
 #include "Error.h"
+#include "Memory.h"
 
 #define EFI_DEBUG 1
 #define Kernel L"moskrnl.exe"
@@ -40,6 +41,7 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	//Build path to kernel
 	CHAR16* KernelPath;
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, MaxKernelPath * sizeof(CHAR16), &KernelPath));
+	efi_memset((void*)KernelPath, 0, MaxKernelPath * sizeof(CHAR16));
 	PathCombine(BootFilePath, KernelPath, Kernel); // THis function needs to be renamed/split
 
 	//Load kernel
@@ -56,6 +58,7 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	//Reserve space for loader block
 	LOADER_PARAMS* params = NULL;
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeof(LOADER_PARAMS), &params));
+	efi_memset(params, 0, sizeof(LOADER_PARAMS));
 
 	//Map file, get base and entry point
 	EFI_PHYSICAL_ADDRESS entry;
@@ -66,9 +69,20 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
 	ReturnIfNotSuccess(DisplayLoaderParams(params));
 
+	//Determine size of map
+	UINTN mapSize = 0;
+	status = BS->GetMemoryMap(&mapSize, params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion);
+	if (status != EFI_BUFFER_TOO_SMALL)
+	{
+		ReturnIfNotSuccess(status);
+	}
+
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, mapSize, &params->MemoryMap));
+	//TODO: Free memory allocated above if this second call fails
+	ReturnIfNotSuccess(BS->GetMemoryMap(&mapSize, params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
+
 	//Get latest memory map, exit boot services
-	//ReturnIfNotSuccess(GetMemoryMap(&params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
-	//ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
+	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
 
 	//Call into kernel
 	//This call or doing getmemory map and exitbootservices is enough to break us

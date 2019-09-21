@@ -17,8 +17,6 @@
 #define LibraryFunction(x) lib_ ## x
 
 #define BOOL UINT8
-#define TRUE 1
-#define FALSE 0
 
 extern EFI_SYSTEM_TABLE* ST;
 extern EFI_RUNTIME_SERVICES* RT;

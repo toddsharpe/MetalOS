@@ -1,10 +1,11 @@
 #include "Error.h"
 #include "String.h"
 #include "Print.h"
+#include "EfiMain.h"
 
 struct {
 	EFI_STATUS      Code;
-	WCHAR* Desc;
+	CHAR16* Desc;
 } ErrorCodeTable[] = {
 	{  EFI_SUCCESS,                L"Success"},
 	{  EFI_LOAD_ERROR,             L"Load Error"},

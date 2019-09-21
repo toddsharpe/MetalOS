@@ -3,6 +3,7 @@
 #include "Path.h"
 #include "WindowsPE.h"
 #include "Memory.h"
+#include "Error.h"
 
 EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
 EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
@@ -38,7 +39,7 @@ EFI_STATUS MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS* imageBaseOut, EFI_PHYSI
 	Print(L"  ImageBase: %q\r\n", imageBase);
 
 	//Verification is complete
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAddress, EfiLoaderData, EFI_SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfHeaders), &imageBase));
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAddress, EfiLoaderData, EFI_SIZE_TO_PAGES((UINTN)peHeader.OptionalHeader.SizeOfHeaders), &imageBase));
 
 	//Read headers into memory
 	size = peHeader.OptionalHeader.SizeOfHeaders;
@@ -67,13 +68,14 @@ EFI_STATUS MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS* imageBaseOut, EFI_PHYSI
 			section[i].VirtualAddress, section[i].Misc.VirtualSize);
 
 		//Allocate space according to virtual size
-		ReturnIfNotSuccess(BS->AllocatePages(AllocateAddress, EfiLoaderData, EFI_SIZE_TO_PAGES(section[i].Misc.VirtualSize), &destination));
+		ReturnIfNotSuccess(BS->AllocatePages(AllocateAddress, EfiLoaderData, EFI_SIZE_TO_PAGES((UINTN)section[i].Misc.VirtualSize), &destination));
 
 		//If physical size is non-zero, read data to allocated address
-		if (section[i].SizeOfRawData != 0)
+		UINTN rawSize = section[i].SizeOfRawData;
+		if (rawSize != 0)
 		{
 			ReturnIfNotSuccess(file->SetPosition(file, section[i].PointerToRawData));
-			ReturnIfNotSuccess(file->Read(file, section[i].SizeOfRawData, (void*)destination));
+			ReturnIfNotSuccess(file->Read(file, &rawSize, (void*)destination));
 		}
 	}
 

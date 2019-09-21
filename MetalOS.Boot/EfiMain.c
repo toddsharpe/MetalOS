@@ -4,12 +4,17 @@
 #include "String.h"
 #include "Device.h"
 #include "Loader.h"
+#include "Path.h"
+#include "Error.h"
 
 #define EFI_DEBUG 1
+#define Kernel L"moskrnl.exe"
+#define MaxKernelPath 64
 
 EFI_SYSTEM_TABLE *ST;
 EFI_RUNTIME_SERVICES* RT;
 EFI_BOOT_SERVICES* BS;
+EFI_MEMORY_TYPE AllocationType;
 
 EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 {
@@ -19,46 +24,59 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	BS = SystemTable->BootServices;
 	RT = SystemTable->RuntimeServices;
 
-	char buffer[] = { "hello" };
-	Print(L"Test: %s - %d\r\n", buffer, 5);
+	EFI_LOADED_IMAGE* LoadedImage;
+	ReturnIfNotSuccess(BS->OpenProtocol(ImageHandle, &LoadedImageProtocol, &LoadedImage, NULL, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
+	AllocationType = LoadedImage->ImageDataType;
+	CHAR16* BootFilePath = ((FILEPATH_DEVICE_PATH*)LoadedImage->FilePath)->PathName;
 
 	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\n\r"));
-	ReturnIfNotSuccess(Print(L"Firmware Vendor: %S, Revision: %d\n\r", ST->FirmwareVendor, ST->FirmwareRevision));
+	ReturnIfNotSuccess(Print(L"  Firmware Vendor: %S, Revision: %d\n\r", ST->FirmwareVendor, ST->FirmwareRevision));
+	ReturnIfNotSuccess(Print(L"  Bootloader: %S\r\n", BootFilePath));
 
 	EFI_TIME time;
 	ReturnIfNotSuccess(RT->GetTime(&time, NULL));
-	Print(L"Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+	Print(L"  Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+
+	//Build path to kernel
+	CHAR16* KernelPath;
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, MaxKernelPath * sizeof(CHAR16), &KernelPath));
+	PathCombine(BootFilePath, KernelPath, Kernel); // THis function needs to be renamed/split
+
+	//Load kernel
+	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem;
+	ReturnIfNotSuccess(ST->BootServices->OpenProtocol(LoadedImage->DeviceHandle, &FileSystemProtocol, &fileSystem, ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
+
+	EFI_FILE* CurrentDriveRoot;
+	ReturnIfNotSuccess(fileSystem->OpenVolume(fileSystem, &CurrentDriveRoot));
+
+	EFI_FILE* KernelFile = NULL;
+	Print(L"Loading: %S\r\n", KernelPath);
+	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelFile, KernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
 
 	//Reserve space for loader block
-	LOADER_PARAMS pSrtruct = { 0 };
-	LOADER_PARAMS* params = &pSrtruct;
-	//ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, sizeof(LOADER_PARAMS), &params));
-	params->BaseAddress = ImageHandle;
+	LOADER_PARAMS* params = NULL;
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeof(LOADER_PARAMS), &params));
+
+	//Map file, get base and entry point
+	EFI_PHYSICAL_ADDRESS entry;
+	ReturnIfNotSuccess(MapFile(KernelFile, &params->BaseAddress, &entry));
 
 	//Technically everything after allocationg the loader block needs to free that memory before dying
 
-	//ReturnIfNotSuccess(InitializeGraphics(&params->Display));
-	//ReturnIfNotSuccess(DisplayLoaderParams(params));
-	//Keywait(L"wait\r\n");
-	//ReturnIfNotSuccess(LoadKernel(ImageHandle));
-	EFI_PHYSICAL_ADDRESS entryPoint = 0;
-	status = LoadKernel(ImageHandle, &params->BaseAddress, &entryPoint);
-	if (EFI_ERROR(status))
-	{
-		CHAR16 buffer[64];
-		StatusToString(buffer, status);
-		Print(L"LoadKernel - %d - %S\r\n", status, buffer);
-	}
-
-	Keywait(L"wait\r\n");
+	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
+	ReturnIfNotSuccess(DisplayLoaderParams(params));
 
 	//Get latest memory map, exit boot services
-	ReturnIfNotSuccess(GetMemoryMap(&params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
-	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
+	//ReturnIfNotSuccess(GetMemoryMap(&params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
+	//ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
 
 	//Call into kernel
-	KernelMain kernelMain = (KernelMain)(entryPoint);
+	//This call or doing getmemory map and exitbootservices is enough to break us
+	//Has to be some sort of stack bullshit
+	KernelMain kernelMain = (KernelMain)(entry);
 	kernelMain(params);
+
+	Keywait(L"asd\r\n");
 
 	//Should never get here
 	return EFI_ABORTED;

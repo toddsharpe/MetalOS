@@ -47,6 +47,17 @@ struct {
 	{  0, NULL}
 };
 
+EFI_STATUS DisplayError(CHAR16* function, EFI_STATUS status)
+{
+	CHAR16 statusString[64];
+	Print(L"Error:\r\n");
+	Print(L"  %S\r\n", function);
+	StatusToString(statusString, status);
+	Print(L"  Status: %d ( %S )\r\n", status, statusString);
+	Keywait(L"Exiting...\r\n");
+
+	return EFI_SUCCESS;
+}
 
 VOID
 StatusToString(

@@ -25,6 +25,8 @@ EFI_STATUS InitializeGraphics(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)
 	//ReturnIfNotSuccess(gop->QueryMode(gop, 0, &sizeOfInfo, &info));
 	//ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, sizeOfInfo, &gop->Mode->Info));
 	//efi_memcpy(info, graphics->Mode->Info, sizeOfInfo);
+
+	Print(L"Mode %q\r\n", gop->Mode);
 	efi_memcpy(gop->Mode, display, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
 
 	return EFI_SUCCESS;
@@ -94,31 +96,19 @@ EFI_STATUS PrintGOP(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
 	Print(L" Pixels %d\n\r", gop->Mode->Info->PixelsPerScanLine);
 }
 
-EFI_STATUS GetMemoryMap(EFI_MEMORY_DESCRIPTOR** ppMap, UINTN* pMapKey, UINTN* pDescriptorSize, UINT32* pVersion)
+EFI_STATUS GetMemoryMap(EFI_MEMORY_DESCRIPTOR* pMap, UINTN* mapKey, UINTN* pDescriptorSize, UINT32* version)
 {
 	UINTN mapSize;
-	UINTN mapKey;
-	UINTN descriptorSize;
-	UINT32 version;
-	EFI_MEMORY_DESCRIPTOR* map = NULL;
 	
-	if (ppMap == NULL || pMapKey == NULL || pDescriptorSize == NULL || pVersion == NULL)
-		return EFI_UNSUPPORTED;//TODO: better error code?
-
-	//Exit boot services
-	EFI_STATUS status = BS->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &version);
+	//Determine size of map
+	EFI_STATUS status = BS->GetMemoryMap(&mapSize, pMap, mapKey, pDescriptorSize, version);
 	if (status != EFI_BUFFER_TOO_SMALL)
 		return status;
 	
-	ReturnIfNotSuccess(BS->AllocatePool(EfiLoaderData, mapSize, &map));
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, mapSize, pMap));
 
 	//TODO: Free memory allocated above if this second call fails
-	ReturnIfNotSuccess(BS->GetMemoryMap(&mapSize, map, &mapKey, &descriptorSize, &version));
-
-	*ppMap = map;
-	*pMapKey = mapKey;
-	*pDescriptorSize = descriptorSize;
-	*pVersion = version;
+	ReturnIfNotSuccess(BS->GetMemoryMap(&mapSize, pMap, mapKey, pDescriptorSize, version));
 }
 
 EFI_STATUS
@@ -129,9 +119,8 @@ CheckGOP(BOOLEAN Verbose)
 	EFI_STATUS Status = EFI_SUCCESS;
 	EFI_GRAPHICS_OUTPUT_PROTOCOL* Gop;
 
-
 	// get from ConsoleOutHandle?
-	Status = gBS->HandleProtocol(gST->ConsoleOutHandle,
+	Status = BS->HandleProtocol(ST->ConsoleOutHandle,
 		&gEfiGraphicsOutputProtocolGuid,
 		(VOID * *)& Gop);
 	if (EFI_ERROR(Status)) {

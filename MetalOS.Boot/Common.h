@@ -1,6 +1,6 @@
 #pragma once
 
-#define ReturnIfNotSuccess(x) { if (EFI_ERROR(status = x)) return status; }
+#define ReturnIfNotSuccess(x) status = x; if (EFI_ERROR(status)) { DisplayError(L#x, status); return status; }
 
 #define ByteHighNibble(x) (((UINT8)x) >> 4)
 #define ByteLowNibble(x) (((UINT8)x) & 0x0F)
@@ -23,3 +23,4 @@
 extern EFI_SYSTEM_TABLE* ST;
 extern EFI_RUNTIME_SERVICES* RT;
 extern EFI_BOOT_SERVICES* BS;
+extern EFI_MEMORY_TYPE AllocationType;

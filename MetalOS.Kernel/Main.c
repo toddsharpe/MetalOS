@@ -25,14 +25,14 @@ void main(LOADER_PARAMS* loader)
 
 void color_screen(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display, UINT32 color)
 {
-	UINT64* start = (UINT64*)display->FrameBufferBase;
+	UINT32* start = (UINT64*)display->FrameBufferBase;
 	
 	//y * width + x
-	for (int x = 0; x < 100; x++)
+	for (int x = 0; x < 200; x++)
 	{
 		for (int y = 0; y < 100; y++)
 		{
-			UINT64* cell = start + (y * display->Info->PixelsPerScanLine) + x;
+			UINT32* cell = start + (y * display->Info->PixelsPerScanLine) + x;
 			*cell = color;
 		}
 	}

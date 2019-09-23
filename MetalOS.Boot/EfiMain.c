@@ -59,6 +59,8 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	LOADER_PARAMS* params = NULL;
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeof(LOADER_PARAMS), &params));
 	efi_memset(params, 0, sizeof(LOADER_PARAMS));
+	params->ConfigTables = ST->ConfigurationTable;
+	params->ConfigTableSizes = ST->NumberOfTableEntries;
 
 	//Map file, get base and entry point
 	EFI_PHYSICAL_ADDRESS entry;
@@ -111,7 +113,7 @@ EFI_STATUS Keywait(CHAR16* String)
 	EFI_STATUS status;
 	EFI_INPUT_KEY Key;
 
-	Print(String);
+	ReturnIfNotSuccess(Print(String));
 	ReturnIfNotSuccess(Print(L"Press any key to continue..."));
 	ReturnIfNotSuccess(ST->ConIn->Reset(ST->ConIn, FALSE));
 

@@ -1,4 +1,4 @@
-Bootloader using C#:
+﻿Bootloader using C#:
 https://github.com/MichalStrehovsky/zerosharp/blob/master/efi-no-runtime/zerosharp.cs
 
 Alternate Headers:
@@ -9,3 +9,31 @@ https://github.com/boazsegev/BoOS/tree/v.0.0.0
 UEFI:
 https://kazlauskas.me/entries/x64-uefi-os-1.html
 
+
+
+Ntdll showing off systemcall:
+.text:000000018009C578 algn_18009C578:                         ; DATA XREF: .pdata:00000001801712B8↓o
+.text:000000018009C578                 align 20h
+.text:000000018009C580 ; Exported entry 431. NtOpenProcess
+.text:000000018009C580 ; Exported entry 1969. ZwOpenProcess
+.text:000000018009C580
+.text:000000018009C580 ; =============== S U B R O U T I N E =======================================
+.text:000000018009C580
+.text:000000018009C580
+.text:000000018009C580                 public ZwOpenProcess
+.text:000000018009C580 ZwOpenProcess   proc near               ; CODE XREF: RtlQueryProcessDebugInformation+122↑p
+.text:000000018009C580                                         ; sub_1800751E8+17C↑p ...
+.text:000000018009C580                 mov     r10, rcx        ; NtOpenProcess
+.text:000000018009C583                 mov     eax, 26h
+.text:000000018009C588                 test    byte ptr ds:7FFE0308h, 1
+.text:000000018009C590                 jnz     short loc_18009C595
+.text:000000018009C592                 syscall                 ; Low latency system call
+.text:000000018009C594                 retn
+.text:000000018009C595 ; ---------------------------------------------------------------------------
+.text:000000018009C595
+.text:000000018009C595 loc_18009C595:                          ; CODE XREF: ZwOpenProcess+10↑j
+.text:000000018009C595                 int     2Eh             ; DOS 2+ internal - EXECUTE COMMAND
+.text:000000018009C595                                         ; DS:SI -> counted CR-terminated command string
+.text:000000018009C597                 retn
+.text:000000018009C597 ZwOpenProcess   endp
+.text:000000018009C597

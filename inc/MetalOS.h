@@ -1,0 +1,48 @@
+#pragma once
+
+//TODO: clean
+typedef unsigned __int64    uint64_t;
+typedef __int64             int64_t;
+typedef unsigned __int32    uint32_t;
+typedef __int32             int32_t;
+typedef unsigned short      uint16_t;
+typedef short               int16_t;
+typedef unsigned char       uint8_t;
+typedef char                int8_t;
+
+//Types
+typedef uint32_t UINT32;
+
+//PixelBlueGreenRedReserved8BitPerColor
+struct BGRRPixel
+{
+	UINT32 Blue : 8;
+	UINT32 Green : 8;
+	UINT32 Red : 8;
+	UINT32 Reserved : 8;
+};
+
+struct ProcessInfo
+{
+	UINT32 Id;
+};
+
+enum SystemCallResult : UINT32
+{
+	Success = 0,
+	Failed
+};
+
+enum SystemCall : UINT32
+{
+	GetProcessInformation = 1,
+};
+
+#if !defined(EXPORT)
+#define SYSTEMCALL __declspec(dllimport) SystemCallResult
+#else
+#define SYSTEMCALL __declspec(dllexport) SystemCallResult
+#endif
+
+//Prototypes
+SYSTEMCALL GetProcessInfo(ProcessInfo* info);

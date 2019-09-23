@@ -13,6 +13,10 @@ typedef struct
 
 	//No point in using the array its always being used in a VM
 	EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE Display;
+
+	//Config tables
+	EFI_CONFIGURATION_TABLE* ConfigTables;
+	UINTN ConfigTableSizes;
 } LOADER_PARAMS;
 
 //KernelMain

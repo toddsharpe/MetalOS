@@ -19,6 +19,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{4F1726A7-E0E8-4D73-AE43-AC42D140886F}"
 	ProjectSection(SolutionItems) = preProject
 		inc\LoaderParams.h = inc\LoaderParams.h
+		inc\MetalOS.h = inc\MetalOS.h
 		inc\WindowsPE.h = inc\WindowsPE.h
 	EndProjectSection
 EndProject
@@ -28,6 +29,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{35DF
 		mount_vhd.cmd = mount_vhd.cmd
 		unmount_vhd.cmd = unmount_vhd.cmd
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.OS.Init", "MetalOS.OS.Init\MetalOS.OS.Init.vcxproj", "{AADAF690-9C54-4A28-8B2E-20FEF1374610}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.OS.KernalApi", "MetalOS.OS.KernalApi\MetalOS.OS.KernalApi.vcxproj", "{7B9B9C34-9380-45F3-8402-3A71FE29F897}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +74,22 @@ Global
 		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x64.Build.0 = Release|x64
 		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x86.ActiveCfg = Release|Win32
 		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x86.Build.0 = Release|Win32
+		{AADAF690-9C54-4A28-8B2E-20FEF1374610}.Debug|x64.ActiveCfg = Debug|x64
+		{AADAF690-9C54-4A28-8B2E-20FEF1374610}.Debug|x64.Build.0 = Debug|x64
+		{AADAF690-9C54-4A28-8B2E-20FEF1374610}.Debug|x86.ActiveCfg = Debug|Win32
+		{AADAF690-9C54-4A28-8B2E-20FEF1374610}.Debug|x86.Build.0 = Debug|Win32
+		{AADAF690-9C54-4A28-8B2E-20FEF1374610}.Release|x64.ActiveCfg = Release|x64
+		{AADAF690-9C54-4A28-8B2E-20FEF1374610}.Release|x64.Build.0 = Release|x64
+		{AADAF690-9C54-4A28-8B2E-20FEF1374610}.Release|x86.ActiveCfg = Release|Win32
+		{AADAF690-9C54-4A28-8B2E-20FEF1374610}.Release|x86.Build.0 = Release|Win32
+		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Debug|x64.ActiveCfg = Debug|x64
+		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Debug|x64.Build.0 = Debug|x64
+		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Debug|x86.ActiveCfg = Debug|Win32
+		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Debug|x86.Build.0 = Debug|Win32
+		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Release|x64.ActiveCfg = Release|x64
+		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Release|x64.Build.0 = Release|x64
+		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Release|x86.ActiveCfg = Release|Win32
+		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,5 +1,6 @@
 #include <efi.h>
 #include "LoaderParams.h"
+#include "Display.h"
 
 void memset(void* dest, UINT8 value, UINT32 count);
 
@@ -10,11 +11,13 @@ void color_screen(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display, UINT32 color);
 void main(LOADER_PARAMS* loader)
 {
 	//Color screen
-	EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE GPU = loader->Display;
-	UINT32 color = 0x00FF0000;
+	//EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE GPU = loader->Display;
+	//UINT32 color = 0x00FF0000;
 	//memset((EFI_PHYSICAL_ADDRESS*)GPU.FrameBufferBase, color, GPU.Info->VerticalResolution * GPU.Info->PixelsPerScanLine);
 
-	color_screen(&loader->Display, color);
+	//color_screen(&loader->Display, color);
+
+	Display display(loader->Display);
 
 	int i = 0;
 	while (TRUE)
@@ -25,7 +28,7 @@ void main(LOADER_PARAMS* loader)
 
 void color_screen(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display, UINT32 color)
 {
-	UINT32* start = (UINT64*)display->FrameBufferBase;
+	UINT32* start = (UINT32*)display->FrameBufferBase;
 	
 	//y * width + x
 	for (int x = 0; x < 200; x++)

@@ -20,8 +20,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}</ProjectGuid>
-    <RootNamespace>MetalOSKernel</RootNamespace>
+    <ProjectGuid>{AADAF690-9C54-4A28-8B2E-20FEF1374610}</ProjectGuid>
+    <RootNamespace>MetalOSOSInit</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -69,31 +69,24 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>moskrnl</TargetName>
-  </PropertyGroup>
+  <PropertyGroup />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\gnu-efi\inc\x86_64;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <ExceptionHandling>false</ExceptionHandling>
-      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\inc</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <FixedBaseAddress>false</FixedBaseAddress>
-      <BaseAddress>0x10000</BaseAddress>
-      <EntryPointSymbol>main</EntryPointSymbol>
-      <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
       <EnableUAC>false</EnableUAC>
+      <EntryPointSymbol>main</EntryPointSymbol>
       <DataExecutionPrevention>false</DataExecutionPrevention>
+      <AdditionalDependencies />
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -138,12 +131,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Display.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Common.h" />
-    <ClInclude Include="Display.h" />
+    <ProjectReference Include="..\MetalOS.OS.KernalApi\MetalOS.OS.KernalApi.vcxproj">
+      <Project>{7b9b9c34-9380-45f3-8402-3a71fe29f897}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

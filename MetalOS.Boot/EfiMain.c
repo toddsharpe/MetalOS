@@ -82,9 +82,8 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, mapSize, &params->MemoryMap));
 	//TODO: Free memory allocated above if this second call fails
 	ReturnIfNotSuccess(BS->GetMemoryMap(&mapSize, params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
-
 	//Get latest memory map, exit boot services
-	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
+	//ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
 
 	//Call into kernel
 	//This call or doing getmemory map and exitbootservices is enough to break us
@@ -104,6 +103,10 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
 	
 	ReturnIfNotSuccess(Print(L"DisplayLoaderParams:\r\n"));
 	ReturnIfNotSuccess(Print(L"\tBaseAddress: %u\r\n", params->BaseAddress));
+	ReturnIfNotSuccess(Print(L"\tMemoryMapKey: %q\r\n", params->MemoryMapKey));
+	ReturnIfNotSuccess(Print(L"\tConfigTables: %q\r\n", params->ConfigTables));
+	ReturnIfNotSuccess(Print(L"\tConfigTableSizes: %d\r\n", params->ConfigTableSizes));
+
 	PrintGopMode(&params->Display);
 	return status;
 }

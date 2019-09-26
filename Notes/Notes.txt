@@ -37,3 +37,11 @@ Ntdll showing off systemcall:
 .text:000000018009C597                 retn
 .text:000000018009C597 ZwOpenProcess   endp
 .text:000000018009C597
+
+
+Font Parsing:
+http://stevehanov.ca/blog/?id=143
+https://github.com/kv01/ttf-parser
+https://github.com/microsoft/cascadia-code
+https://www.freetype.org/freetype2/docs/ft2faq.html
+

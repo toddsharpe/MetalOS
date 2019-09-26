@@ -15,11 +15,27 @@ typedef uint32_t UINT32;
 
 //PixelBlueGreenRedReserved8BitPerColor
 struct BGRRPixel
-{
+{	
 	UINT32 Blue : 8;
 	UINT32 Green : 8;
 	UINT32 Red : 8;
 	UINT32 Reserved : 8;
+};
+static_assert(sizeof(BGRRPixel) == sizeof(UINT32), "Pixel greater than UINT32 in size");
+typedef struct BGRRPixel Color;
+
+
+
+struct Point2D
+{
+	UINT32 X;
+	UINT32 Y;
+};
+
+struct Rectangle
+{
+	Point2D P1;
+	Point2D P2;
 };
 
 struct ProcessInfo

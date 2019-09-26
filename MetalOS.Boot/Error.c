@@ -52,10 +52,13 @@ EFI_STATUS DisplayError(CHAR16* function, EFI_STATUS status)
 {
 	CHAR16 statusString[64];
 	Print(L"Error:\r\n");
+	BS->Stall(1000 * 1000 * 60);
 	Print(L"  %S\r\n", function);
+	BS->Stall(1000 * 1000 * 60);
 	StatusToString(statusString, status);
+	BS->Stall(1000 * 1000 * 60);
 	Print(L"  Status: %d ( %S )\r\n", status, statusString);
-	Keywait(L"Exiting...\r\n");
+	BS->Stall(1000 * 1000 * 60 * 60);
 
 	return EFI_SUCCESS;
 }

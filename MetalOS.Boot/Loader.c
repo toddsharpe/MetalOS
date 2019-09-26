@@ -13,7 +13,7 @@ EFI_STATUS MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS* imageBaseOut, EFI_PHYSI
 {
 	EFI_STATUS status;
 
-	Print(L"MapFile\r\n");
+	//Print(L"MapFile\r\n");
 
 	UINTN size = sizeof(IMAGE_DOS_HEADER);
 	IMAGE_DOS_HEADER dosHeader;
@@ -49,7 +49,7 @@ EFI_STATUS MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS* imageBaseOut, EFI_PHYSI
 	//Hack? - determine if loading headers on stack is right, versus just loading them from disk to physical memory
 	//Problem is knowing the destination address
 	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(imageBase + dosHeader.e_lfanew);
-	Print(L"  Subsystem: %u\r\n", pNtHeader->OptionalHeader.Subsystem);
+	//Print(L"  Subsystem: %u\r\n", pNtHeader->OptionalHeader.Subsystem);
 	
 	if (imageBaseOut != NULL)
 		*imageBaseOut = imageBase;
@@ -59,13 +59,13 @@ EFI_STATUS MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS* imageBaseOut, EFI_PHYSI
 
 	//Write sections
 	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
-	Print(L"  %q - %q - %w\r\n", pNtHeader, section, pNtHeader->FileHeader.NumberOfSections);
+	//Print(L"  %q - %q - %w\r\n", pNtHeader, section, pNtHeader->FileHeader.NumberOfSections);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		EFI_PHYSICAL_ADDRESS destination = imageBase + section[i].VirtualAddress;
-		Print(L"  T: %s - %u\r\n", section[i].Name, section[i].VirtualAddress);
-		Print(L"    %u (%u) -> %u (%u)\r\n", section[i].PointerToRawData, section[i].SizeOfRawData,
-			section[i].VirtualAddress, section[i].Misc.VirtualSize);
+		//Print(L"  T: %s - %u\r\n", section[i].Name, section[i].VirtualAddress);
+		//Print(L"    %u (%u) -> %u (%u)\r\n", section[i].PointerToRawData, section[i].SizeOfRawData,
+		//	section[i].VirtualAddress, section[i].Misc.VirtualSize);
 
 		//Allocate space according to virtual size
 		ReturnIfNotSuccess(BS->AllocatePages(AllocateAddress, EfiLoaderData, EFI_SIZE_TO_PAGES((UINTN)section[i].Misc.VirtualSize), &destination));
@@ -81,13 +81,13 @@ EFI_STATUS MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS* imageBaseOut, EFI_PHYSI
 
 	//Someday we could do imports but not now
 	IMAGE_DATA_DIRECTORY importDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-	Print(L"  Imports: %u\r\n", importDirectory.Size);
+	//Print(L"  Imports: %u\r\n", importDirectory.Size);
 
 	//TODO: relocations
 	IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-	Print(L"  Relocations: %u\r\n", relocationDirectory.Size);
+	//Print(L"  Relocations: %u\r\n", relocationDirectory.Size);
 
-	Print(L"  Base: %q Entry: %q\r\n", imageBase, (imageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint));
+	//Print(L"  Base: %q Entry: %q\r\n", imageBase, (imageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint));
 
 	return EFI_SUCCESS;
 }

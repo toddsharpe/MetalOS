@@ -83,7 +83,7 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	//TODO: Free memory allocated above if this second call fails
 	ReturnIfNotSuccess(BS->GetMemoryMap(&mapSize, params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
 	//Get latest memory map, exit boot services
-	//ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
+	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
 
 	//Call into kernel
 	//This call or doing getmemory map and exitbootservices is enough to break us

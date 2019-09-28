@@ -82,7 +82,7 @@
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
-      <SubSystem>Native</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableUAC>false</EnableUAC>
       <EntryPointSymbol>main</EntryPointSymbol>
       <DataExecutionPrevention>false</DataExecutionPrevention>

@@ -8,6 +8,8 @@ class LoadingScreen
 public:
 	LoadingScreen(Display& display);
 
+	void WriteLineFormat(const char* format, ...);
+	void WriteLine(const char* s);
 	void WriteText(const char* text);
 	void WriteCharacter(char c);
 

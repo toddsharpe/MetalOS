@@ -1,13 +1,35 @@
 #include "LoadingScreen.h"
 #include "Main.h"
+#include "String.h"
 
 #define PositionToPixelScale 10
 
 const Color LoadingScreen::m_white = { 0xFF, 0xFF, 0xFF, 0x00 };
 
-LoadingScreen::LoadingScreen(Display& display) : m_display(display), m_fontScale(3)
+LoadingScreen::LoadingScreen(Display& display) : m_display(display), m_fontScale(2)
 {
 	m_position = { 0 };
+}
+
+void LoadingScreen::WriteLineFormat(const char* format, ...)
+{
+	char buffer[80];
+
+	va_list ap;
+
+	va_start(ap, format);
+	int retval = String::vsprintf(buffer, format, ap);
+	buffer[retval] = '\0';
+	va_end(ap);
+
+	WriteLine(buffer);
+}
+
+void LoadingScreen::WriteLine(const char* s)
+{
+	LoadingScreen::WriteText(s);
+	AdvanceY();
+	ResetX();
 }
 
 void LoadingScreen::WriteText(const char* text)

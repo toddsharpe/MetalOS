@@ -2,9 +2,9 @@
 #include "Common.h"
 #include "Main.h"
 
-char* Font::GetCharacterMap(char c)
+const char* Font::GetCharacterMap(char c)
 {
-	ASSERT(c > 0x7F);
+	Assert(c <= 0x7F);
 	
-	return nullptr;
+	return (*this->FontMap)[c];
 }

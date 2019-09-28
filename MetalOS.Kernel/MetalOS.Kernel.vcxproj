@@ -140,12 +140,14 @@
   <ItemGroup>
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Font.cpp" />
+    <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
+    <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Main.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

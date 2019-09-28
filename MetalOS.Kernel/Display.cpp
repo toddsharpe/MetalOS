@@ -1,5 +1,6 @@
 #include "Display.h"
 #include "MetalOS.h"
+#include "Main.h"
 
 //Hyper-V
 //PixelBlueGreenRedReserved8BitPerColor
@@ -20,8 +21,7 @@ void Display::ColorScreen(Color color)
 void Display::ColorRectangle(Color color, Rectangle* region)
 {
 	UINT32* start = (UINT32*)_display->FrameBufferBase;
-	Color use = { 0 };
-	use.Red = 0xFF;
+
 	//y * width + x
 	//This can definitely be done faster with memory ops
 	for (UINT32 x = region->P1.X; x < region->P2.X; x++)
@@ -32,5 +32,15 @@ void Display::ColorRectangle(Color color, Rectangle* region)
 			*(Color*)cell = color;//We can do this because of the static assert in metalos.h
 		}
 	}
+}
+
+void Display::ColorPixel(Color color, Point2D position)
+{
+	Assert(position.X < _display->Info->HorizontalResolution);
+	Assert(position.Y < _display->Info->VerticalResolution);
+
+	UINT32* start = (UINT32*)_display->FrameBufferBase;
+	UINT32* cell = start + (position.Y * _display->Info->PixelsPerScanLine) + position.X;
+	*(Color*)cell = color;
 }
 

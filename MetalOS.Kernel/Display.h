@@ -16,6 +16,7 @@ public:
 
 	void ColorScreen(Color color);
 	void ColorRectangle(Color color, Rectangle* region);
+	void ColorPixel(Color color, Point2D position);
 
 	//THis method needs to go, find a better way to do this in kernel main
 	void SetDisplay(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)

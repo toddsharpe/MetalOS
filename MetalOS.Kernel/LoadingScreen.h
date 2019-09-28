@@ -11,7 +11,10 @@ public:
 	void WriteText(const char* text);
 	void WriteCharacter(char c);
 
-	void AdvancePositionX();
+	void AdvanceX();
+	void ResetX();
+	void AdvanceY();
+	void ResetY();
 
 private:
 	const UINT32 m_fontScale;

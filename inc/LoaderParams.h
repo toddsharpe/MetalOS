@@ -6,10 +6,10 @@ typedef struct
 	EFI_RUNTIME_SERVICES Runtime;
 
 	//Memory
-	UINTN MemoryMapKey;
+	EFI_MEMORY_DESCRIPTOR* MemoryMap;
+	UINTN MemoryMapSize;
 	UINTN MemoryMapDescriptorSize;
 	UINT32 MemoryMapVersion;
-	EFI_MEMORY_DESCRIPTOR* MemoryMap;
 
 	//No point in using the array its always being used in a VM
 	EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE Display;

@@ -4,4 +4,4 @@
 #include "LoaderParams.h"
 
 extern "C" void main(LOADER_PARAMS* loader);
-void KernelBugcheck(const char* assert);
+_declspec(noreturn) void KernelBugcheck(const char* assert);

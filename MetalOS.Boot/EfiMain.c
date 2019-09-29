@@ -7,6 +7,8 @@
 #include "Path.h"
 #include "Error.h"
 #include "Memory.h"
+//#define _JMP_BUF_DEFINED
+#include <intrin.h>
 
 #define EFI_DEBUG 1
 #define Kernel L"moskrnl.exe"
@@ -33,6 +35,23 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\n\r"));
 	ReturnIfNotSuccess(Print(L"  Firmware Vendor: %S, Revision: %d\n\r", ST->FirmwareVendor, ST->FirmwareRevision));
 	ReturnIfNotSuccess(Print(L"  Bootloader: %S\r\n", BootFilePath));
+
+	//Detect CPU vendor and features
+	int registers[4] = { -1 };
+	char vendor[13] = { 0 };
+
+	__cpuid(&registers, 0);
+	*((UINT32*)vendor) = (UINT32)registers[1];
+	*((UINT32*)(vendor + 4)) = (UINT32)registers[3];
+	*((UINT32*)(vendor + 8)) = (UINT32)registers[2];
+
+	ReturnIfNotSuccess(Print(L"  CPU vendor: %s\r\n", vendor));
+
+	//Detect CPU
+	__cpuid(&registers, 0x80000001);
+
+	int x64 = (registers[3] & (1 << 29)) != 0;
+	ReturnIfNotSuccess(Print(L"  CPU x64 Mode: %d\r\n", x64));
 
 	EFI_TIME time;
 	ReturnIfNotSuccess(RT->GetTime(&time, NULL));
@@ -71,19 +90,22 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
 	ReturnIfNotSuccess(DisplayLoaderParams(params));
 
+	//Brief pause before launching kernel (for any output to be read)
+	Keywait(L"Continue to boot kernel\r\n");
+
 	//Determine size of map
-	UINTN mapSize = 0;
-	status = BS->GetMemoryMap(&mapSize, params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion);
+	UINTN memoryMapKey = 0;
+	status = BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion);
 	if (status != EFI_BUFFER_TOO_SMALL)
 	{
 		ReturnIfNotSuccess(status);
 	}
 
-	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, mapSize, &params->MemoryMap));
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, params->MemoryMapSize, &params->MemoryMap));
 	//TODO: Free memory allocated above if this second call fails
-	ReturnIfNotSuccess(BS->GetMemoryMap(&mapSize, params->MemoryMap, &params->MemoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
+	ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
 	//Get latest memory map, exit boot services
-	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, params->MemoryMapKey));
+	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
 
 	//Call into kernel
 	//This call or doing getmemory map and exitbootservices is enough to break us
@@ -103,7 +125,6 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
 	
 	ReturnIfNotSuccess(Print(L"DisplayLoaderParams:\r\n"));
 	ReturnIfNotSuccess(Print(L"\tBaseAddress: %u\r\n", params->BaseAddress));
-	ReturnIfNotSuccess(Print(L"\tMemoryMapKey: %q\r\n", params->MemoryMapKey));
 	ReturnIfNotSuccess(Print(L"\tConfigTables: %q\r\n", params->ConfigTables));
 	ReturnIfNotSuccess(Print(L"\tConfigTableSizes: %d\r\n", params->ConfigTableSizes));
 

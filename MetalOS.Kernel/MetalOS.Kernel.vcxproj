@@ -141,8 +141,10 @@
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="KernelBugcheck.cpp" />
+    <ClCompile Include="Loader.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Memory.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="System.cpp" />
   </ItemGroup>
@@ -151,8 +153,10 @@
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="KernelBugcheck.h" />
+    <ClInclude Include="Loader.h" />
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Main.h" />
+    <ClInclude Include="Memory.h" />
     <ClInclude Include="String.h" />
     <ClInclude Include="System.h" />
   </ItemGroup>

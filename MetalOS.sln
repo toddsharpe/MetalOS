@@ -34,6 +34,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.OS.Init", "MetalOS.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.OS.KernalApi", "MetalOS.OS.KernalApi\MetalOS.OS.KernalApi.vcxproj", "{7B9B9C34-9380-45F3-8402-3A71FE29F897}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Screenshots", "Screenshots", "{946995FC-A745-4A79-8C0E-DF7AD027EB94}"
+	ProjectSection(SolutionItems) = preProject
+		Screenshots\Kernel_MemoryMap.PNG = Screenshots\Kernel_MemoryMap.PNG
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

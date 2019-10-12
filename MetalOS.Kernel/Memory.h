@@ -1,5 +1,6 @@
 #pragma once
 
+#define GNU_EFI_SETJMP_H
 #include <efi.h>
 
 const char mem_types[16][27] = {
@@ -26,13 +27,14 @@ class Memory
 {
 public:
 	static void memcpy(void* dest, void* source, UINT32 size);
+	static int memcmp(const void* ptr1, const void* ptr2, UINT32 num);
 
 	Memory(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap,
 		EFI_PHYSICAL_ADDRESS kernelBaseAddress, UINTN kernelPageCount);
 
-	void ReclaimBootServicesPages();
+	void ReclaimBootPages();
 	void MergeConventionalPages();
-	EFI_PHYSICAL_ADDRESS AllocatePhysical();
+	EFI_PHYSICAL_ADDRESS AllocatePhysicalPages(UINT32 count);
 	void DumpMemoryMap();
 
 private:

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Common.h"
+#include "Kernel.h"
 #include "MetalOS.h"
 
+#define GNU_EFI_SETJMP_H
 #include <efi.h>
 #include <efilib.h>
 
@@ -12,7 +13,7 @@ class Display
 public:
 	Display() { _display = nullptr;  }
 	Display(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display);
-	NO_COPY_OR_ASSIGN(Display);
+	::NO_COPY_OR_ASSIGN(Display);
 
 	void ColorScreen(Color color);
 	void ColorRectangle(Color color, Rectangle* region);

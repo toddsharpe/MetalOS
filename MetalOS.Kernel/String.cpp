@@ -1,7 +1,8 @@
 #include "String.h"
 #include "Main.h"
-#include "Common.h"
+#include "Kernel.h"
 
+//TODO: convert/rewrite these routines, or at lease source them
 
 #define NULL 0
 #define NBBY    8               /* number of bits in a byte */

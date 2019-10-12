@@ -1,5 +1,5 @@
 #include "Font.h"
-#include "Common.h"
+#include "Kernel.h"
 #include "Main.h"
 
 const char* Font::GetCharacterMap(char c)

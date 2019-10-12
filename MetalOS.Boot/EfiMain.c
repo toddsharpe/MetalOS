@@ -50,8 +50,41 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	//Detect CPU
 	__cpuid(&registers, 0x80000001);
 
+	//This means its supported, may not be active
 	int x64 = (registers[3] & (1 << 29)) != 0;
 	ReturnIfNotSuccess(Print(L"  CPU x64 Mode: %d\r\n", x64));
+
+	UINT64 efer = __readmsr(0xC0000080);
+	int lme = (efer & (1 << 8)) != 0;
+	int lma = (efer & (1 << 10)) != 0;
+	ReturnIfNotSuccess(Print(L"  LME: %b LMA: %b\r\n", lme, lma));
+
+	UINT64 cr0 = __readcr0();
+	ReturnIfNotSuccess(Print(L"CR0 - %u\r\n", (UINT32)cr0));
+	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
+	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
+
+	UINT64 cr3 = __readcr3();
+	ReturnIfNotSuccess(Print(L"CR3 - %q\r\n", (UINT64)cr3));
+
+	UINT64 cr4 = __readcr4();
+	ReturnIfNotSuccess(Print(L"CR4 - %q\r\n", (UINT64)cr4));
+	int pse = (cr4 & (1 << 4)) != 0;
+	int pae = (cr4 & (1 << 5)) != 0;
+	int pcide = (cr4 & (1 << 17)) != 0;
+	ReturnIfNotSuccess(Print(L"  PSE: %b PAE: %b PCIDE: %b\r\n", pse, pae, pcide));
+
+	//Detect CPU topology - might not be working?
+	/*
+	int numProcessors;
+	__cpuidex(&registers, 0xB, 0);
+	numProcessors = registers[1];//EBX
+
+	int numCoresPer;
+	__cpuidex(&registers, 0xB, 1);
+	numCoresPer = registers[1];//EBX
+	ReturnIfNotSuccess(Print(L"  CPU Cores: %d, Logical Processors: %d\r\n", numProcessors, numProcessors * numCoresPer));
+	*/
 
 	EFI_TIME time;
 	ReturnIfNotSuccess(RT->GetTime(&time, NULL));

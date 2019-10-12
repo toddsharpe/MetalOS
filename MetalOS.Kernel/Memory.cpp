@@ -7,30 +7,67 @@ extern LOADER_PARAMS* pParams;
 //extern Display display;
 extern LoadingScreen* loading;
 
+//TODO: pull out of this class, rename to memorymap
 void Memory::memcpy(void* dest, void* source, UINT32 size)
 {
 	UINT64* dest_64 = (UINT64*)dest;
 	UINT64* source_64 = (UINT64*)source;
 	UINT32 chunkSize = 64;
 	
-	int i = 0;
-	while (i < size / chunkSize)
+	for (int i = 0; i < size / chunkSize; i++)
 	{
 		*dest_64 = *source_64;
 
 		dest_64++;
 		source_64++;
-		i++;
 	}
 
 	UINT8* dest_8 = (UINT8*)dest;
 	UINT8* source_8 = (UINT8*)source;
-	for (i = 0; i < size % chunkSize; i++)
+	for (int i = 0; i < size % chunkSize; i++)
 	{
 		*dest_8 = *source_8;
 		dest_8++;
 		source_8++;
 	}
+}
+
+int Memory::memcmp(const void* ptr1, const void* ptr2, UINT32 num)
+{
+	UINT64* ptr1_64 = (UINT64*)ptr1;
+	UINT64* ptr2_64 = (UINT64*)ptr2;
+	UINT32 chunkSize = 64;
+
+	int i = 0;
+	while (i < num / chunkSize)
+	{
+		if (*ptr1_64 < *ptr2_64)
+			return -1;
+		else if (*ptr1_64 > * ptr2_64)
+			return 1;
+
+		i++;
+		ptr1_64++;
+		ptr2_64++;
+	}
+	
+	UINT8* ptr1_8 = (UINT8*)ptr1;
+	UINT8* ptr2_8 = (UINT8*)ptr2;
+
+	i = 0;
+	while (i <  num % chunkSize)
+	{
+		if (*ptr1_8 < *ptr2_8)
+			return -1;
+		else if (*ptr1_8 > * ptr2_8)
+			return 1;
+
+		i++;
+		ptr1_8++;
+		ptr2_8++;
+	}
+
+	return 0;
 }
 
 Memory::Memory(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap,
@@ -41,14 +78,14 @@ Memory::Memory(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 Memory
 
 }
 
-void Memory::ReclaimBootServicesPages()
+void Memory::ReclaimBootPages()
 {
 	EFI_MEMORY_DESCRIPTOR* current;
 	for (current = m_memoryMap;
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
-		if ((current->Type == EfiBootServicesCode) || (current->Type == EfiBootServicesData))
+		if ((current->Type == EfiBootServicesCode) || (current->Type == EfiBootServicesData) || (current->Type == EfiLoaderCode))
 			current->Type = EfiConventionalMemory;
 	}
 }
@@ -124,7 +161,7 @@ void Memory::DumpMemoryMap()
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
-		loading->WriteLineFormat("S:0x%08x T:%s N:0x%x", current->PhysicalStart, (*MemTypes)[current->Type], current->NumberOfPages);
+		loading->WriteLineFormat("S:%08x T:%s V:%x N:%x", current->PhysicalStart, (*MemTypes)[current->Type], current->VirtualStart, current->NumberOfPages);
 	}
 }
 

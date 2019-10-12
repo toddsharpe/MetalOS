@@ -1,5 +1,5 @@
 #include "Loader.h"
-#include "Common.h"
+#include "Kernel.h"
 #include "Main.h"
 #include "WindowsPE.h"
 

@@ -33,18 +33,20 @@ extern "C" void main(LOADER_PARAMS* loader)
 
 	Memory memory(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, loader->MemoryMap,
 		loader->BaseAddress, kernelPages);
-	memory.ReclaimBootServicesPages();
-	memory.MergeConventionalPages();
-	memory.DumpMemoryMap();
+	//memory.ReclaimBootPages();
+	//memory.MergeConventionalPages();
+	//memory.DumpMemoryMap();
 
 
 	System system(loader->ConfigTables, loader->ConfigTableSizes);
+	//system.GetInstalledSystemRam();
+	bool b = system.IsPagingEnabled();
+	loading->WriteLineFormat("IsPagingEnabled: %d", b);
+	//UINT64 phys = system.ResolveAddress(loader->BaseAddress);
+	UINT64 phys = system.ResolveAddress((UINT64)loader->Display.Info);
+	loading->WriteLineFormat("Resolved: 0x%16x", phys);
 
-	int i = 0;
-	while (TRUE)
-	{
-		i++;
-	}
+	__halt();
 }
 
 //TODO: fix when merging loading screen and display

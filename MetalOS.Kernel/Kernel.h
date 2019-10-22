@@ -1,8 +1,12 @@
 #pragma once
 
+#include "MetalOS.h"
+
 #define NO_COPY_OR_ASSIGN(X) X(const X&) = delete; X& operator = (const X&) = delete;
 #define Assert(x) if (!(x)) { KernelBugcheck(#x); }
 #define Fatal(x) KernelBugcheck(x);
+
+#define MakePtr( cast, ptr, addValue ) (cast)( (UINT64)(ptr) + (UINT64)(addValue))
 
 //Paging Structures - https://gist.github.com/mvankuipers/
 //https://queazan.wordpress.com/2013/12/21/paging-under-amd64/
@@ -110,3 +114,29 @@ typedef struct _PTE
 	};
 } PTE, * PPTE;
 static_assert(sizeof(PTE) == sizeof(PVOID), "Size mismatch, only 64-bit supported.");
+
+#define UINT64_MAX 0xFFFFFFFFFFFFFFFF
+
+//4mb reserved space
+#define ReservedPageTablePages 512
+#define ReservedPageTableSpace (ReservedPageTablePages * EFI_PAGE_SIZE)
+#define ReservedPageTableSpaceMask (ReservedPageTableSpace - 1)
+
+//User space starts at   0x00000000 00000000
+//User space stops at    0x00007FFF FFFFFFFF
+//Kernel space starts at 0xFFFF8000 00000000
+//Kernel space stops at  0xFFFFFFFF FFFFFFFF
+
+#define UserStop    0x00007FFFFFFFFFFF
+#define KernelStart 0xFFFF800000000000
+#define KernelStop UINT64_MAX
+
+#define PAGE_SIZE (1 << 12)
+
+#define PAGE_SIZE   4096
+#define PAGE_MASK   0xFFF
+#define PAGE_SHIFT  12
+
+#define SIZE_TO_PAGES(a)  \
+    ( ((a) >> PAGE_SHIFT) + ((a) & PAGE_MASK ? 1 : 0) )
+

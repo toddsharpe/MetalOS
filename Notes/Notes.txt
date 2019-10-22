@@ -10,6 +10,28 @@ UEFI:
 https://kazlauskas.me/entries/x64-uefi-os-1.html
 
 
+CPUID:
+https://docs.microsoft.com/en-us/cpp/intrinsics/cpuid-cpuidex?view=vs-2019
+https://gist.github.com/CoolerVoid/0e2b5791963dd6aa714e
+
+https://www.pagetable.com/?p=298
+
+SetVirtualAddressMap
+https://mjg59.dreamwidth.org/3244.html
+
+SMBios lookups:
+https://github.com/biosbits/bits/blob/master/python/efi.py
+
+simple firmware interface
+
+Paging:
+https://wiki.osdev.org/Paging
+https://wiki.osdev.org/CPU_Registers_x86-64#CR0
+https://wiki.osdev.org/Page_Tables
+https://os.phil-opp.com/paging-implementation/#accessing-page-tables
+
+Address space:
+https://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details
 
 Ntdll showing off systemcall:
 .text:000000018009C578 algn_18009C578:                         ; DATA XREF: .pdata:00000001801712B8↓o

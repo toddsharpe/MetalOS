@@ -23,13 +23,10 @@ const char mem_types[16][27] = {
 };
 
 //#define NextMemoryDescriptor(Ptr,Size)  ((EFI_MEMORY_DESCRIPTOR *) (((UINT8 *) Ptr) + Size))
-class Memory
+class MemoryMap
 {
 public:
-	static void memcpy(void* dest, void* source, UINT32 size);
-	static int memcmp(const void* ptr1, const void* ptr2, UINT32 num);
-
-	Memory(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap,
+	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap,
 		EFI_PHYSICAL_ADDRESS kernelBaseAddress, UINTN kernelPageCount);
 
 	void ReclaimBootPages();

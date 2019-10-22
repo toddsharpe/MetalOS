@@ -123,6 +123,14 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
 	ReturnIfNotSuccess(DisplayLoaderParams(params));
 
+	//Allocate a page for the memory map
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, 1, &(params->MemoryMap)));
+	Print(L"MemoryMap: %q\r\n", params->MemoryMap);
+
+	//Allocate pages for our PageTablesPool
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, ReservedPageTablePages, &(params->PageTablesPoolAddress)));
+	Print(L"PageTablesPoolAddress: %q\r\n", params->PageTablesPoolAddress);
+
 	//Brief pause before launching kernel (for any output to be read)
 	Keywait(L"Continue to boot kernel\r\n");
 
@@ -133,22 +141,24 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	{
 		ReturnIfNotSuccess(status);
 	}
+	else if (params->MemoryMapSize > EFI_PAGE_SIZE)
+	{
+		//We cant allocate a page after getting the memory map size (since that allocates a page) so instead we predict a page and make sure it isnt too small
+		//We could do fancy math to know this ahead of time (if its within MemoryMapDescriptorSize or being over a page, etc)
+		ReturnIfNotSuccess(EFI_BUFFER_TOO_SMALL);
+	}
 
-	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, params->MemoryMapSize, &params->MemoryMap));
 	//TODO: Free memory allocated above if this second call fails
 	ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
 	//Get latest memory map, exit boot services
 	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
 
 	//Call into kernel
-	//This call or doing getmemory map and exitbootservices is enough to break us
-	//Has to be some sort of stack bullshit
 	KernelMain kernelMain = (KernelMain)(entry);
 	kernelMain(params);
 
-	Keywait(L"asd\r\n");
-
 	//Should never get here
+	Keywait(L"Kernel returned?\r\n");
 	return EFI_ABORTED;
 }
 

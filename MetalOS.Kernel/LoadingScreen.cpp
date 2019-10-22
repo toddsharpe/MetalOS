@@ -6,7 +6,7 @@
 
 const Color LoadingScreen::m_white = { 0xFF, 0xFF, 0xFF, 0x00 };
 
-LoadingScreen::LoadingScreen(Display& display) : m_display(display), m_fontScale(2)
+LoadingScreen::LoadingScreen(Display& display) : m_display(display), m_fontScale(1)
 {
 	m_position = { 0 };
 }

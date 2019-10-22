@@ -145,11 +145,14 @@
     <ClCompile Include="Loader.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Memory.cpp" />
+    <ClCompile Include="MemoryMap.cpp" />
+    <ClCompile Include="PageTables.cpp" />
+    <ClCompile Include="PageTablesPool.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="System.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CRT.h" />
     <ClInclude Include="Kernel.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
@@ -157,7 +160,9 @@
     <ClInclude Include="Loader.h" />
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Main.h" />
-    <ClInclude Include="Memory.h" />
+    <ClInclude Include="MemoryMap.h" />
+    <ClInclude Include="PageTables.h" />
+    <ClInclude Include="PageTablesPool.h" />
     <ClInclude Include="String.h" />
     <ClInclude Include="System.h" />
   </ItemGroup>

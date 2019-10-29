@@ -1,5 +1,7 @@
 #pragma once
 
+//Public facing header
+
 //TODO: clean
 typedef unsigned __int64    uint64_t;
 typedef __int64             int64_t;
@@ -17,6 +19,8 @@ typedef uint8_t UINT8;
 typedef uint16_t UINT16;
 typedef uint32_t UINT32;
 typedef uint64_t UINT64;
+
+typedef UINT16          CHAR16;
 
 //PixelBlueGreenRedReserved8BitPerColor
 struct BGRRPixel

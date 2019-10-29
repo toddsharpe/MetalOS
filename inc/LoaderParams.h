@@ -1,8 +1,11 @@
 #pragma once
 
+//Shared header between loader and kernel
+
 typedef struct
 {
-	EFI_PHYSICAL_ADDRESS BaseAddress;
+	UINT64 BaseAddress;
+	UINT64 ImageSize;
 	EFI_RUNTIME_SERVICES* Runtime;
 
 	//MemoryMap - allocated on its own page
@@ -50,3 +53,4 @@ typedef void (*KernelMain)(LOADER_PARAMS* params);
 #define PAGE_SHIFT  12
 
 #define SIZE_TO_PAGES(a) (((a) >> PAGE_SHIFT) + ((a) & PAGE_MASK ? 1 : 0))
+

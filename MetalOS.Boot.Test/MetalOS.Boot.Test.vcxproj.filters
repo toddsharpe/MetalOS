@@ -18,54 +18,39 @@
     <ClCompile Include="Main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MetalOS.Boot\EfiMain.c">
+    <ClCompile Include="..\MetalOS.Boot\Device.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MetalOS.Boot\Print.c">
+    <ClCompile Include="..\MetalOS.Boot\EfiMain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MetalOS.Boot\String.c">
+    <ClCompile Include="..\MetalOS.Boot\EfiPrint.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MetalOS.Boot\Memory.c">
+    <ClCompile Include="..\MetalOS.Boot\Error.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MetalOS.Boot\Device.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\MetalOS.Boot\Error.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\MetalOS.Boot\Loader.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\MetalOS.Boot\Path.c">
+    <ClCompile Include="..\MetalOS.Boot\Loader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\MetalOS.Boot\EfiMain.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MetalOS.Boot\Print.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MetalOS.Boot\String.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MetalOS.Boot\Memory.h">
+    <ClInclude Include="..\MetalOS.Boot\BootLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\MetalOS.Boot\Device.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\MetalOS.Boot\EfiMain.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\MetalOS.Boot\EfiPrint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\MetalOS.Boot\Error.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\MetalOS.Boot\Loader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\MetalOS.Boot\Path.h">
+    <ClInclude Include="..\MetalOS.Boot\EfiLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

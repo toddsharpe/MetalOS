@@ -48,17 +48,17 @@ extern "C" void main(LOADER_PARAMS* loader)
 
 	//Construct pool and map in page tables
 	PageTablesPool pool(pageTables, ReservedPageTablePages);//This needs to be in persistent memory
-	UINT64 root = pool.AllocatePage();
+	//UINT64 root = pool.AllocatePage();
 
-	PageTables newTables(root);
-	newTables.SetPool(&pool);
-	newTables.MapKernelPages((UINT64)(KernelStart + pageTables), pageTables, ReservedPageTablePages); //// WTFFFFFFFFFFF
+	//PageTables newTables(root);
+	//newTables.SetPool(&pool);
+	//newTables.MapKernelPages((UINT64)(KernelStart + pageTables), pageTables, ReservedPageTablePages); //// WTFFFFFFFFFFF
 
 	//UINT64 virtualAddress = newTables.ResolveAddress(pageTables);
 	//loading->WriteLineFormat("virtualAddress: 0x%16x", virtualAddress);
 
 
-	//memoryMap.DumpMemoryMap();
+	memoryMap.DumpMemoryMap();
 
 	//Reconstruct our map there
 	//memoryMap = MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, (EFI_MEMORY_DESCRIPTOR*)address, pages * EFI_PAGE_SIZE);

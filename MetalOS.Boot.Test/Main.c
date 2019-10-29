@@ -62,6 +62,30 @@ EFI_STATUS
 	Time->Second = 59;
 }
 
+EFI_STATUS
+(EFIAPI EfiAllocatePool) (
+	IN EFI_MEMORY_TYPE              PoolType,
+	IN UINTN                        Size,
+	OUT VOID** Buffer
+	)
+{
+	*Buffer = malloc(Size);
+	return EFI_SUCCESS;
+}
+
+EFI_STATUS
+(EFIAPI EfiAllocatePages) (
+	IN EFI_ALLOCATE_TYPE            Type,
+	IN EFI_MEMORY_TYPE              MemoryType,
+	IN UINTN                        NoPages,
+	OUT EFI_PHYSICAL_ADDRESS* Memory
+	)
+{
+	//Just grab the memory off the heap
+	*Memory = malloc(NoPages << EFI_PAGE_SIZE);
+	return EFI_SUCCESS;
+}
+
 extern EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable);
 
 int main(int argc, char** argv)
@@ -82,6 +106,11 @@ int main(int argc, char** argv)
 	EFI_RUNTIME_SERVICES runtimeServices = { 0 };
 	table.RuntimeServices = &runtimeServices;
 	runtimeServices.GetTime = RuntimeGetTime;
+
+	EFI_BOOT_SERVICES bootServices = { 0 };
+	table.BootServices = &bootServices;
+	bootServices.AllocatePool = &EfiAllocatePool;
+	bootServices.AllocatePages = &EfiAllocatePages;
 
 	EfiMain(0, &table);
 }

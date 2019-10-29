@@ -1,7 +1,6 @@
-#include "Print.h"
-#include "Common.h"
-#include "String.h"
-#include "Memory.h"
+#include "EfiPrint.h"
+#include "CRT.h"
+#include "Error.h"
 
 CHAR16 Char16_Zero = L'0';
 CHAR16 Char16_CapA = L'A';
@@ -9,24 +8,40 @@ CHAR16 Char16_CapA = L'A';
 #define GetHexChar(x) ((x) < 10 ? (Char16_Zero + (x)) : (Char16_CapA + ((x) - 10)))
 #define MAXBUFFER 255
 
-EFI_STATUS Print(CHAR16* format, ...)
+#define ByteHighNibble(x) (((UINT8)x) >> 4)
+#define ByteLowNibble(x) (((UINT8)x) & 0x0F)
+
+#define WordHighByte(x) (((UINT16)x) >> 8)
+#define WordLowByte(x) (((UINT16)x) & 0xFF)
+
+#define DWordHighWord(x) (((UINT32)x) >> 16)
+#define DWordLowWord(x) (((UINT32)x) & 0xFFFF)
+
+#define QWordHighDWord(x) (((UINT64)x) >> 32)
+#define QWordLowDWord(x) (((UINT64)x) & 0xFFFFFFFF)
+
+EFI_STATUS Print(const CHAR16* format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	EFI_STATUS status =  _print(ST->ConOut, format, args);
+	EFI_STATUS status = EfiPrint::_print(ST->ConOut, format, args);
 	va_end(args);
+
+	return EFI_SUCCESS;
 }
 
 UINTN SPrint(OUT CHAR16* Str, IN UINTN StrSize, IN CONST CHAR16* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	EFI_STATUS status = _sprint(Str, StrSize, fmt, args);
+	EFI_STATUS status = EfiPrint::_sprint(Str, StrSize, fmt, args);
 	va_end(args);
+
+	return EFI_SUCCESS;
 }
 
 //TODO: Calculate string length?
-EFI_STATUS _print(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, CHAR16* format, va_list args)
+EFI_STATUS EfiPrint::_print(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, const CHAR16* format, va_list args)
 {
 	EFI_STATUS status;
 
@@ -34,18 +49,19 @@ EFI_STATUS _print(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, CHAR16* format, va_list 
 	_sprint(buffer, MAXBUFFER, format, args);
 
 	//Write
-	ReturnIfNotSuccess(conOut->OutputString(conOut, buffer));
+	if (EFI_ERROR((status = conOut->OutputString(conOut, buffer))))
+		return status;
 
 	return EFI_SUCCESS;
 }
 
 //TODO: we never check strsize
-UINTN _sprint(OUT CHAR16* Str, IN UINTN StrSize, IN CONST CHAR16* format, va_list args)
+UINTN EfiPrint::_sprint(OUT CHAR16* Str, IN UINTN StrSize, IN CONST CHAR16* format, va_list args)
 {
 	CHAR16* buffer_ptr = Str;
 
-	void* arg = NULL;
-	CHAR16* start = format;
+	void* arg = nullptr;
+	const CHAR16* start = format;
 	while (*format != L'\0')
 	{
 		if (*format != L'%')
@@ -55,16 +71,16 @@ UINTN _sprint(OUT CHAR16* Str, IN UINTN StrSize, IN CONST CHAR16* format, va_lis
 		}
 
 		//Copy contents to this point
-		efi_memcpy(start, buffer_ptr, (format - start) * sizeof(CHAR16));
+		CRT::strncpy(buffer_ptr, start, (format - start));
 		buffer_ptr += (format - start);
 
 		//Advance past %
 		format++;
 
-		BOOL zeroes = FALSE;
+		bool zeroes = false;
 		if (*format == L'0')
 		{
-			zeroes = TRUE;
+			zeroes = true;
 			format++;
 		}
 
@@ -136,7 +152,7 @@ UINTN _sprint(OUT CHAR16* Str, IN UINTN StrSize, IN CONST CHAR16* format, va_lis
 
 		case L'S':
 		{
-			buffer_ptr += efi_strcpy(va_arg(args, CHAR16*), buffer_ptr);
+			buffer_ptr += CRT::strcpy(buffer_ptr, va_arg(args, CHAR16*));
 			break;
 		}
 
@@ -167,55 +183,13 @@ UINTN _sprint(OUT CHAR16* Str, IN UINTN StrSize, IN CONST CHAR16* format, va_lis
 	}
 
 	//Copy end of string
-	efi_memcpy(start, buffer_ptr, (format - start) * sizeof(CHAR16));
-}
+	CRT::strncpy(buffer_ptr, start, (format - start));
 
-EFI_STATUS PrintUint64Hex(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, UINT64 data)
-{
-	EFI_STATUS status;
-
-	CHAR16 buffer[16];
-	QWordToHex(data, buffer);
-
-	ReturnIfNotSuccess(conOut->OutputString(conOut, buffer));
-	return EFI_SUCCESS;
-}
-
-EFI_STATUS PrintUint32Hex(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, UINT32 data)
-{
-	EFI_STATUS status;
-
-	CHAR16 buffer[8];
-	DWordToHex(data, buffer);
-
-	ReturnIfNotSuccess(conOut->OutputString(conOut, buffer));
-	return EFI_SUCCESS;
-}
-
-EFI_STATUS PrintUint16Hex(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, UINT16 data)
-{
-	EFI_STATUS status;
-
-	CHAR16 buffer[4];
-	WordToHex(data, buffer);
-
-	ReturnIfNotSuccess(conOut->OutputString(conOut, buffer));
-	return EFI_SUCCESS;
-}
-
-EFI_STATUS PrintUint8Hex(SIMPLE_TEXT_OUTPUT_INTERFACE* conOut, UINT8 data)
-{
-	EFI_STATUS status;
-
-	CHAR16 buffer[2];
-	ByteToHex(data, buffer);
-	
-	ReturnIfNotSuccess(conOut->OutputString(conOut, buffer));
-	return EFI_SUCCESS;
+	return 0;
 }
 
 //TODO: rewrite without using length (subtract pointers)
-UINT32 IntToString(int data, CHAR16* str)
+UINT32 EfiPrint::IntToString(int data, CHAR16* str)
 {
 	UINT32 length = 0;
 	if (data < 0)
@@ -236,38 +210,30 @@ UINT32 IntToString(int data, CHAR16* str)
 		length++;
 	}
 
-	efi_strrev(start);
+	CRT::strrev(start);
 	return length;
 }
 
-void QWordToHex(UINT64 data, CHAR16* string)
+void EfiPrint::QWordToHex(UINT64 data, CHAR16* string)
 {
-	ASSERT(string != NULL);
-
 	DWordToHex(QWordHighDWord(data), string);
 	DWordToHex(QWordLowDWord(data), string + 8);
 }
 
-void DWordToHex(UINT32 data, CHAR16* string)
+void EfiPrint::DWordToHex(UINT32 data, CHAR16* string)
 {
-	ASSERT(string != NULL);
-
 	WordToHex(DWordHighWord(data), string);
 	WordToHex(DWordLowWord(data), string + 4);
 }
 
-void WordToHex(UINT16 data, CHAR16* string)
+void EfiPrint::WordToHex(UINT16 data, CHAR16* string)
 {
-	ASSERT(string != NULL);
-
 	ByteToHex(WordHighByte(data), string);
 	ByteToHex(WordLowByte(data), string + 2);
 }
 
-void ByteToHex(UINT8 data, CHAR16* string)
+void EfiPrint::ByteToHex(UINT8 data, CHAR16* string)
 {
-	ASSERT(string != NULL);
-
 	string[0] = GetHexChar(ByteHighNibble(data));
 	string[1] = GetHexChar(ByteLowNibble(data));
 }

@@ -491,3 +491,25 @@ typedef struct _IMAGE_SECTION_HEADER {
 // TLS Characteristic Flags
 //
 #define IMAGE_SCN_SCALE_INDEX                0x00000001  // Tls index is scaled
+
+typedef struct _IMAGE_BASE_RELOCATION {
+	DWORD   VirtualAddress;
+	DWORD   SizeOfBlock;
+} IMAGE_BASE_RELOCATION;
+typedef IMAGE_BASE_RELOCATION* PIMAGE_BASE_RELOCATION;
+
+//
+// Based relocation types.
+//
+
+#define IMAGE_REL_BASED_ABSOLUTE              0
+#define IMAGE_REL_BASED_HIGH                  1
+#define IMAGE_REL_BASED_LOW                   2
+#define IMAGE_REL_BASED_HIGHLOW               3
+#define IMAGE_REL_BASED_HIGHADJ               4
+#define IMAGE_REL_BASED_MACHINE_SPECIFIC_5    5
+#define IMAGE_REL_BASED_RESERVED              6
+#define IMAGE_REL_BASED_MACHINE_SPECIFIC_7    7
+#define IMAGE_REL_BASED_MACHINE_SPECIFIC_8    8
+#define IMAGE_REL_BASED_MACHINE_SPECIFIC_9    9
+#define IMAGE_REL_BASED_DIR64                 10

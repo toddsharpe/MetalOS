@@ -16,11 +16,11 @@ public:
 
 	void Activate(PageTables& tables);
 
-	UINT64 AllocatePage();
-	void DeallocatePage(UINT64 address);
+	bool AllocatePage(UINT64 *addressOut);
+	bool DeallocatePage(UINT64 address);
 
 private:
-	bool m_index[PAGE_SIZE];
+	bool m_index[ReservedPageTablePages];//PAGE_SIZE
 	UINT64 m_physicalAddress;
 	UINT64 m_pageCount;
 };

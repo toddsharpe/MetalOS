@@ -76,7 +76,8 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\inc;..\gnu-efi\inc\x86_64;..\gnu-efi\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\inc;..\gnu-efi\inc\x86_64;..\gnu-efi\inc;%(AdditionalIncludeDirectories);..\MetalOS.lib</AdditionalIncludeDirectories>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -116,7 +117,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;%(AdditionalIncludeDirectories);..\MetalOS.lib</AdditionalIncludeDirectories>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -125,25 +127,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\MetalOS.Boot\Device.c" />
-    <ClCompile Include="..\MetalOS.Boot\EfiMain.c" />
-    <ClCompile Include="..\MetalOS.Boot\Error.c" />
-    <ClCompile Include="..\MetalOS.Boot\Loader.c" />
-    <ClCompile Include="..\MetalOS.Boot\Memory.c" />
-    <ClCompile Include="..\MetalOS.Boot\Path.c" />
-    <ClCompile Include="..\MetalOS.Boot\Print.c" />
-    <ClCompile Include="..\MetalOS.Boot\String.c" />
+    <ClCompile Include="..\MetalOS.Boot\Device.cpp" />
+    <ClCompile Include="..\MetalOS.Boot\EfiMain.cpp" />
+    <ClCompile Include="..\MetalOS.Boot\EfiPrint.cpp" />
+    <ClCompile Include="..\MetalOS.Boot\Error.cpp" />
+    <ClCompile Include="..\MetalOS.Boot\Loader.cpp" />
     <ClCompile Include="Main.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\MetalOS.Boot\BootLoader.h" />
     <ClInclude Include="..\MetalOS.Boot\Device.h" />
     <ClInclude Include="..\MetalOS.Boot\EfiMain.h" />
+    <ClInclude Include="..\MetalOS.Boot\EfiPrint.h" />
     <ClInclude Include="..\MetalOS.Boot\Error.h" />
-    <ClInclude Include="..\MetalOS.Boot\Loader.h" />
-    <ClInclude Include="..\MetalOS.Boot\Memory.h" />
-    <ClInclude Include="..\MetalOS.Boot\Path.h" />
-    <ClInclude Include="..\MetalOS.Boot\Print.h" />
-    <ClInclude Include="..\MetalOS.Boot\String.h" />
+    <ClInclude Include="..\MetalOS.Boot\EfiLoader.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">
+      <Project>{53afb5f2-11ec-448c-bfb6-2d4d9f5eabad}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

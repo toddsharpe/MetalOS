@@ -21,6 +21,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Kernel", "MetalOS.K
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{4F1726A7-E0E8-4D73-AE43-AC42D140886F}"
 	ProjectSection(SolutionItems) = preProject
+		inc\Kernel.h = inc\Kernel.h
 		inc\LoaderParams.h = inc\LoaderParams.h
 		inc\MetalOS.h = inc\MetalOS.h
 		inc\WindowsPE.h = inc\WindowsPE.h
@@ -41,6 +42,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Screenshots", "Screenshots"
 	ProjectSection(SolutionItems) = preProject
 		Screenshots\Kernel_MemoryMap.PNG = Screenshots\Kernel_MemoryMap.PNG
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.lib", "MetalOS.lib\MetalOS.lib.vcxproj", "{53AFB5F2-11EC-448C-BFB6-2D4D9F5EABAD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.lib.Test", "MetalOS.lib.Test\MetalOS.lib.Test.vcxproj", "{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -98,6 +103,22 @@ Global
 		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Release|x64.Build.0 = Release|x64
 		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Release|x86.ActiveCfg = Release|Win32
 		{7B9B9C34-9380-45F3-8402-3A71FE29F897}.Release|x86.Build.0 = Release|Win32
+		{53AFB5F2-11EC-448C-BFB6-2D4D9F5EABAD}.Debug|x64.ActiveCfg = Debug|x64
+		{53AFB5F2-11EC-448C-BFB6-2D4D9F5EABAD}.Debug|x64.Build.0 = Debug|x64
+		{53AFB5F2-11EC-448C-BFB6-2D4D9F5EABAD}.Debug|x86.ActiveCfg = Debug|Win32
+		{53AFB5F2-11EC-448C-BFB6-2D4D9F5EABAD}.Debug|x86.Build.0 = Debug|Win32
+		{53AFB5F2-11EC-448C-BFB6-2D4D9F5EABAD}.Release|x64.ActiveCfg = Release|x64
+		{53AFB5F2-11EC-448C-BFB6-2D4D9F5EABAD}.Release|x64.Build.0 = Release|x64
+		{53AFB5F2-11EC-448C-BFB6-2D4D9F5EABAD}.Release|x86.ActiveCfg = Release|Win32
+		{53AFB5F2-11EC-448C-BFB6-2D4D9F5EABAD}.Release|x86.Build.0 = Release|Win32
+		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Debug|x64.ActiveCfg = Debug|x64
+		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Debug|x64.Build.0 = Debug|x64
+		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Debug|x86.ActiveCfg = Debug|Win32
+		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Debug|x86.Build.0 = Debug|Win32
+		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Release|x64.ActiveCfg = Release|x64
+		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Release|x64.Build.0 = Release|x64
+		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Release|x86.ActiveCfg = Release|Win32
+		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

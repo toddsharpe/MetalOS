@@ -42,14 +42,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -103,7 +103,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;..\gnu-efi\inc\protocol;..\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;..\gnu-efi\inc\protocol;..\inc;%(AdditionalIncludeDirectories);..\MetalOS.lib</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -115,6 +115,7 @@
       <StringPooling>false</StringPooling>
       <ErrorReporting>None</ErrorReporting>
       <DisableSpecificWarnings>5045</DisableSpecificWarnings>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
     </ClCompile>
     <Link>
       <SubSystem>EFI Application</SubSystem>
@@ -125,6 +126,7 @@
       <EntryPointSymbol>EfiMain</EntryPointSymbol>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -153,8 +155,9 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;..\gnu-efi\inc\protocol;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;..\gnu-efi\inc\protocol;%(AdditionalIncludeDirectories);..\MetalOS.lib</AdditionalIncludeDirectories>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
     </ClCompile>
     <Link>
       <SubSystem>EFI Application</SubSystem>
@@ -167,28 +170,28 @@
       <EntryPointSymbol>EfiMain</EntryPointSymbol>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Device.c" />
-    <ClCompile Include="EfiMain.c" />
-    <ClCompile Include="Error.c" />
-    <ClCompile Include="Loader.c" />
-    <ClCompile Include="Memory.c" />
-    <ClCompile Include="Path.c" />
-    <ClCompile Include="Print.c" />
-    <ClCompile Include="String.c" />
+    <ClCompile Include="Device.cpp" />
+    <ClCompile Include="EfiLoader.cpp" />
+    <ClCompile Include="EfiMain.cpp" />
+    <ClCompile Include="EfiPrint.cpp" />
+    <ClCompile Include="Error.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Common.h" />
+    <ClInclude Include="BootLoader.h" />
     <ClInclude Include="Device.h" />
+    <ClInclude Include="EfiLoader.h" />
     <ClInclude Include="EfiMain.h" />
+    <ClInclude Include="EfiPrint.h" />
     <ClInclude Include="Error.h" />
-    <ClInclude Include="Loader.h" />
-    <ClInclude Include="Memory.h" />
-    <ClInclude Include="Path.h" />
-    <ClInclude Include="Print.h" />
-    <ClInclude Include="String.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">
+      <Project>{53afb5f2-11ec-448c-bfb6-2d4d9f5eabad}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

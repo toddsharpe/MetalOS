@@ -115,11 +115,42 @@ typedef struct _PTE
 } PTE, * PPTE;
 static_assert(sizeof(PTE) == sizeof(PVOID), "Size mismatch, only 64-bit supported.");
 
+typedef struct _SegmentDescriptor
+{
+	struct
+	{
+		UINT64 SegmentLimit1 : 16;
+		UINT64 BaseAddress1 : 16;
+		UINT64 BaseAddress2 : 8;
+		UINT64 Type : 4;
+		UINT64 S : 1; // 1 if code/data, 0 if system segment
+		UINT64 DPL : 2; //Descriptor Privilege Level
+		UINT64 Present : 1;
+		UINT64 SegmentLimit2 : 4;
+		UINT64 Available : 1; // Used for OS
+		UINT64 L : 1; //1 for 64bit code (d must be cleared)
+		UINT64 DB : 1;
+		UINT64 Granulatiry : 1; // 0=1b-1mb, 1=4kb-4gb
+		UINT64 BaseAddress3 : 8;
+	};
+} SegmentDescriptor, *PSegmentDescriptor;
+static_assert(sizeof(SegmentDescriptor) == sizeof(PVOID), "Size mismatch, only 64-bit supported.");
+
 #define UINT64_MAX 0xFFFFFFFFFFFFFFFF
+
+#define PAGE_SIZE (1 << 12)
+
+#define PAGE_SIZE   4096
+#define PAGE_MASK   0xFFF
+#define PAGE_SHIFT  12
+
+#define SIZE_TO_PAGES(a)  \
+    ( ((a) >> PAGE_SHIFT) + ((a) & PAGE_MASK ? 1 : 0) )
+
 
 //4mb reserved space
 #define ReservedPageTablePages 512
-#define ReservedPageTableSpace (ReservedPageTablePages * EFI_PAGE_SIZE)
+#define ReservedPageTableSpace (ReservedPageTablePages * PAGE_SIZE)
 #define ReservedPageTableSpaceMask (ReservedPageTableSpace - 1)
 
 //User space starts at   0x00000000 00000000
@@ -131,12 +162,9 @@ static_assert(sizeof(PTE) == sizeof(PVOID), "Size mismatch, only 64-bit supporte
 #define KernelStart 0xFFFF800000000000
 #define KernelStop UINT64_MAX
 
-#define PAGE_SIZE (1 << 12)
+//We should just change the base address of the kernel image
+//#define KernelBaseAddress 0x100000
 
-#define PAGE_SIZE   4096
-#define PAGE_MASK   0xFFF
-#define PAGE_SHIFT  12
 
-#define SIZE_TO_PAGES(a)  \
-    ( ((a) >> PAGE_SHIFT) + ((a) & PAGE_MASK ? 1 : 0) )
+
 

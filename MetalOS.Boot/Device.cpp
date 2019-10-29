@@ -1,8 +1,9 @@
 #include "Device.h"
-#include "Common.h"
-#include "Print.h"
+#include "BootLoader.h"
+#include "EfiPrint.h"
 #include "Memory.h"
 #include "Error.h"
+#include "CRT.h"
 
 //TODO: move to file?
 EFI_GUID gEfiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
@@ -17,16 +18,16 @@ EFI_STATUS InitializeGraphics(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)
 {
 	EFI_STATUS status;
 
-	EFI_GRAPHICS_OUTPUT_PROTOCOL* gop;
+	EFI_GRAPHICS_OUTPUT_PROTOCOL* gop = nullptr;
 	ReturnIfNotSuccess(BS->HandleProtocol(ST->ConsoleOutHandle, &GraphicsOutputProtocol, (void**)&gop));
-	efi_memcpy(gop->Mode, display, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
+	CRT::memcpy(display, gop->Mode, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
 
 	//Allocate space for full graphics info
-	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* info;
-	UINTN sizeOfInfo;
+	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* info = nullptr;
+	UINTN sizeOfInfo = 0;
 	ReturnIfNotSuccess(gop->QueryMode(gop, 0, &sizeOfInfo, &info));
-	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeOfInfo, &display->Info));
-	efi_memcpy(info, display->Info, sizeOfInfo);
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeOfInfo, (void**)&display->Info));
+	CRT::memcpy(display->Info, info, sizeOfInfo);
 
 	return EFI_SUCCESS;
 }
@@ -61,6 +62,8 @@ EFI_STATUS PrintGopMode(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* mode)
 		break;
 	}
 	Print(L" Pixels %d\n\r", mode->Info->PixelsPerScanLine);
+
+	return EFI_SUCCESS;
 }
 
 EFI_STATUS PrintGOP(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
@@ -93,12 +96,14 @@ EFI_STATUS PrintGOP(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
 			break;
 	}
 	Print(L" Pixels %d\n\r", gop->Mode->Info->PixelsPerScanLine);
+
+	return EFI_SUCCESS;
 }
 
 EFI_STATUS
 CheckGOP(BOOLEAN Verbose)
 {
-	EFI_HANDLE* HandleBuffer = NULL;
+	EFI_HANDLE* HandleBuffer = nullptr;
 	UINTN HandleCount = 0;
 	EFI_STATUS Status = EFI_SUCCESS;
 	EFI_GRAPHICS_OUTPUT_PROTOCOL* Gop;
@@ -143,7 +148,7 @@ CheckGOP(BOOLEAN Verbose)
 		for (int i = 0; i < HandleCount; i++) {
 			Status = gBS->HandleProtocol(HandleBuffer[i],
 				&gEfiGraphicsOutputProtocolGuid,
-				(VOID*)& Gop);
+				(VOID**)& Gop);
 			if (!EFI_ERROR(Status)) {
 				if (Verbose)
 					PrintGOPFull(Gop);
@@ -181,7 +186,7 @@ PrintGOPFull(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
 			Print(L"ERROR: Bad response from QueryMode: %d\r\n", Status);
 			continue;
 		}
-		Print(L"%c%d: %dx%d ", efi_memcmp(Info, gop->Mode->Info, sizeof(*Info)) == 0 ? '*' : ' ', i,
+		Print(L"%c%d: %dx%d ", CRT::memcmp(Info, gop->Mode->Info, sizeof(*Info)) == 0 ? '*' : ' ', i,
 			Info->HorizontalResolution,
 			Info->VerticalResolution);
 		switch (Info->PixelFormat) {
@@ -210,80 +215,4 @@ PrintGOPFull(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
 	Print(L"\r\n");
 
 	return EFI_SUCCESS;
-}
-
-//==================================================================================================================================
-//  print_memmap: The Ultimate Debugging Tool
-//==================================================================================================================================
-//
-// Get the system memory map, parse it, and print it. Print the whole thing.
-//
-
-// This array is a global variable so that it can be made static, which helps prevent a stack overflow if it ever needs to lengthen.
-STATIC CONST CHAR16 mem_types[16][27] = {
-	  L"EfiReservedMemoryType     ",
-	  L"EfiLoaderCode             ",
-	  L"EfiLoaderData             ",
-	  L"EfiBootServicesCode       ",
-	  L"EfiBootServicesData       ",
-	  L"EfiRuntimeServicesCode    ",
-	  L"EfiRuntimeServicesData    ",
-	  L"EfiConventionalMemory     ",
-	  L"EfiUnusableMemory         ",
-	  L"EfiACPIReclaimMemory      ",
-	  L"EfiACPIMemoryNVS          ",
-	  L"EfiMemoryMappedIO         ",
-	  L"EfiMemoryMappedIOPortSpace",
-	  L"EfiPalCode                ",
-	  L"EfiPersistentMemory       ",
-	  L"EfiMaxMemoryType          "
-};
-
-VOID print_memmap()
-{
-	EFI_STATUS memmap_status;
-	UINTN MemMapSize = 0, MemMapKey, MemMapDescriptorSize;
-	UINT32 MemMapDescriptorVersion;
-	EFI_MEMORY_DESCRIPTOR* MemMap = NULL;
-	EFI_MEMORY_DESCRIPTOR* Piece;
-	UINT16 line = 0;
-
-	memmap_status = BS->GetMemoryMap(&MemMapSize, MemMap, &MemMapKey, &MemMapDescriptorSize, &MemMapDescriptorVersion);
-	if (memmap_status == EFI_BUFFER_TOO_SMALL)
-	{
-		memmap_status = BS->AllocatePool(EfiBootServicesData, MemMapSize, (void**)& MemMap); // Allocate pool for MemMap
-		if (EFI_ERROR(memmap_status)) // Error! Wouldn't be safe to continue.
-		{
-			Print(L"MemMap AllocatePool error. 0x%q\r\n", memmap_status);
-			return;
-		}
-		memmap_status = BS->GetMemoryMap(&MemMapSize, MemMap, &MemMapKey, &MemMapDescriptorSize, &MemMapDescriptorVersion);
-	}
-	if (EFI_ERROR(memmap_status))
-	{
-		Print(L"Error getting memory map for printing. 0x%q\r\n", memmap_status);
-	}
-
-	Print(L"MemMapSize: %q, MemMapDescriptorSize: %q, MemMapDescriptorVersion: 0x%q\r\n", MemMapSize, MemMapDescriptorSize, MemMapDescriptorVersion);
-	Print(L"MemMap: %q\r\n", MemMap);
-
-	// There's no virtual addressing yet, so there's no need to see Piece->VirtualStart
-	// Multiply NumOfPages by EFI_PAGE_SIZE or do (NumOfPages << EFI_PAGE_SHIFT) to get the end address... which should just be the start of the next section.
-	for (Piece = MemMap; Piece < (EFI_MEMORY_DESCRIPTOR*)((UINT8*)MemMap + MemMapSize); Piece = (EFI_MEMORY_DESCRIPTOR*)((UINT8*)Piece + MemMapDescriptorSize))
-	{
-		if (line % 20 == 0)
-		{
-			Keywait(L"\0");
-			Print(L"#   Memory Type                Phys Addr Start   Num Of Pages\r\n");
-		}
-
-		Print(L"%w: %S 0x%q 0x%q\r\n", line, mem_types[Piece->Type], Piece->PhysicalStart, Piece->NumberOfPages);
-		line++;
-	}
-
-	memmap_status = BS->FreePool(MemMap);
-	if (EFI_ERROR(memmap_status))
-	{
-		Print(L"Error freeing print_memmap pool. 0x%d\n", memmap_status);
-	}
 }

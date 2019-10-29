@@ -1,15 +1,16 @@
 #include "PageTablesPool.h"
-#include "Main.h"
 #include "Kernel.h"
 
 PageTablesPool::PageTablesPool(UINT64 physicalAddress, UINT32 pageCount) : m_physicalAddress(physicalAddress), m_pageCount(pageCount), m_index()
 {
-	Assert(pageCount < PageTablesPoolMax);
+	//TODO
+	//Assert(pageCount < PageTablesPoolMax);
+
 
 
 }
 
-UINT64 PageTablesPool::AllocatePage()
+bool PageTablesPool::AllocatePage(UINT64* addressOut)
 {
 	//First page is index
 	//Simple scheme - a page of booleans
@@ -22,18 +23,24 @@ UINT64 PageTablesPool::AllocatePage()
 			continue;
 
 		m_index[i] = true;
-		return m_physicalAddress + i << PAGE_SHIFT;
+		*addressOut = m_physicalAddress + (i << PAGE_SHIFT);
+		return true;
 	}
+
+	return false;
 }
 
-void PageTablesPool::DeallocatePage(UINT64 address)
+bool PageTablesPool::DeallocatePage(UINT64 address)
 {
 	UINT32 relative = (address - m_physicalAddress);
-	Assert(relative % PAGE_SIZE == 0);
+	if (relative % PAGE_SIZE == 0)
+		return false;
 	
 	UINT32 index = relative >> PAGE_SHIFT;
-	Assert(index < (m_pageCount - 1));
-	Assert(m_index[index]);
+	if (index < (m_pageCount - 1))
+		return false;
+	if (m_index[index])
+		return false;
 
 	m_index[index] = false;
 }

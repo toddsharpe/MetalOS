@@ -1,25 +1,28 @@
 #include "EfiMain.h"
-#include "Common.h"
-#include "Print.h"
+#include "BootLoader.h"
+#include "EfiPrint.h"
 #include "String.h"
 #include "Device.h"
-#include "Loader.h"
-#include "Path.h"
+#include "EfiLoader.h"
 #include "Error.h"
 #include "Memory.h"
 //#define _JMP_BUF_DEFINED
 #include <intrin.h>
+#include "CRT.h"
+
+#include <PageTables.h>
+#include <PageTablesPool.h>
 
 #define EFI_DEBUG 1
 #define Kernel L"moskrnl.exe"
 #define MaxKernelPath 64
 
-EFI_SYSTEM_TABLE *ST;
+EFI_SYSTEM_TABLE* ST;
 EFI_RUNTIME_SERVICES* RT;
 EFI_BOOT_SERVICES* BS;
 EFI_MEMORY_TYPE AllocationType;
 
-EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
+extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 {
 	EFI_STATUS status;
 
@@ -27,10 +30,13 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	BS = SystemTable->BootServices;
 	RT = SystemTable->RuntimeServices;
 
+	//Disable the stupid watchdog
+	ReturnIfNotSuccess(BS->SetWatchdogTimer(0, 0, 0, nullptr));
+
 	EFI_LOADED_IMAGE* LoadedImage;
-	ReturnIfNotSuccess(BS->OpenProtocol(ImageHandle, &LoadedImageProtocol, &LoadedImage, NULL, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
+	ReturnIfNotSuccess(BS->OpenProtocol(ImageHandle, &LoadedImageProtocol, (void**)&LoadedImage, NULL, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
 	AllocationType = LoadedImage->ImageDataType;
-	CHAR16* BootFilePath = ((FILEPATH_DEVICE_PATH*)LoadedImage->FilePath)->PathName;
+	const CHAR16* BootFilePath = ((FILEPATH_DEVICE_PATH*)LoadedImage->FilePath)->PathName;
 
 	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\n\r"));
 	ReturnIfNotSuccess(Print(L"  Firmware Vendor: %S, Revision: %d\n\r", ST->FirmwareVendor, ST->FirmwareRevision));
@@ -40,7 +46,7 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	int registers[4] = { -1 };
 	char vendor[13] = { 0 };
 
-	__cpuid(&registers, 0);
+	__cpuid(registers, 0);
 	*((UINT32*)vendor) = (UINT32)registers[1];
 	*((UINT32*)(vendor + 4)) = (UINT32)registers[3];
 	*((UINT32*)(vendor + 8)) = (UINT32)registers[2];
@@ -48,7 +54,7 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	ReturnIfNotSuccess(Print(L"  CPU vendor: %s\r\n", vendor));
 
 	//Detect CPU
-	__cpuid(&registers, 0x80000001);
+	__cpuid(registers, 0x80000001);
 
 	//This means its supported, may not be active
 	int x64 = (registers[3] & (1 << 29)) != 0;
@@ -86,50 +92,69 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	ReturnIfNotSuccess(Print(L"  CPU Cores: %d, Logical Processors: %d\r\n", numProcessors, numProcessors * numCoresPer));
 	*/
 
+	//Display time
 	EFI_TIME time;
-	ReturnIfNotSuccess(RT->GetTime(&time, NULL));
+	ReturnIfNotSuccess(RT->GetTime(&time, nullptr));
 	Print(L"  Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
-	//Build path to kernel
-	CHAR16* KernelPath;
-	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, MaxKernelPath * sizeof(CHAR16), &KernelPath));
-	efi_memset((void*)KernelPath, 0, MaxKernelPath * sizeof(CHAR16));
-	PathCombine(BootFilePath, KernelPath, Kernel); // THis function needs to be renamed/split
-
-	//Load kernel
-	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem;
-	ReturnIfNotSuccess(ST->BootServices->OpenProtocol(LoadedImage->DeviceHandle, &FileSystemProtocol, &fileSystem, ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
-
-	EFI_FILE* CurrentDriveRoot;
-	ReturnIfNotSuccess(fileSystem->OpenVolume(fileSystem, &CurrentDriveRoot));
-
-	EFI_FILE* KernelFile = NULL;
-	Print(L"Loading: %S\r\n", KernelPath);
-	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelFile, KernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
-
 	//Reserve space for loader block
-	LOADER_PARAMS* params = NULL;
-	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeof(LOADER_PARAMS), &params));
-	efi_memset(params, 0, sizeof(LOADER_PARAMS));
+	LOADER_PARAMS* params = nullptr;
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeof(LOADER_PARAMS), (void**)&params));
+	CRT::memset(params, 0, sizeof(LOADER_PARAMS));
 	params->ConfigTables = ST->ConfigurationTable;
 	params->ConfigTableSizes = ST->NumberOfTableEntries;
 
-	//Map file, get base and entry point
-	EFI_PHYSICAL_ADDRESS entry;
-	ReturnIfNotSuccess(MapFile(KernelFile, &params->BaseAddress, &entry));
-
-	//Technically everything after allocationg the loader block needs to free that memory before dying
-
-	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
-	ReturnIfNotSuccess(DisplayLoaderParams(params));
-
 	//Allocate a page for the memory map
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, 1, &(params->MemoryMap)));
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, 1, (EFI_PHYSICAL_ADDRESS*)&(params->MemoryMap)));
 	Print(L"MemoryMap: %q\r\n", params->MemoryMap);
 
 	//Allocate pages for our PageTablesPool
 	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, ReservedPageTablePages, &(params->PageTablesPoolAddress)));
 	Print(L"PageTablesPoolAddress: %q\r\n", params->PageTablesPoolAddress);
+	params->PageTablesPoolPageCount = ReservedPageTablePages;
+
+	PageTablesPool pageTablesPool(params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+
+	//Access current page tables
+	PageTables currentPT(params->PageTablesPoolAddress);
+	currentPT.SetPool(&pageTablesPool);
+
+	//Build path to kernel
+	CHAR16* KernelPath;
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, MaxKernelPath * sizeof(CHAR16), (void**)&KernelPath));
+	CRT::memset((void*)KernelPath, 0, MaxKernelPath * sizeof(CHAR16));
+	CRT::GetDirectoryName(BootFilePath, KernelPath);
+	CRT::strcpy(KernelPath + CRT::strlen(KernelPath), Kernel);
+	Print(L"KernelPath: %S\r\n", KernelPath);
+
+	//Load kernel path
+	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem = nullptr;
+	ReturnIfNotSuccess(ST->BootServices->OpenProtocol(LoadedImage->DeviceHandle, &FileSystemProtocol, (void**)&fileSystem, ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
+	EFI_FILE* CurrentDriveRoot = nullptr;
+	ReturnIfNotSuccess(fileSystem->OpenVolume(fileSystem, &CurrentDriveRoot));
+	EFI_FILE* KernelFile = nullptr;
+	Print(L"Loading: %S\r\n", KernelPath);
+	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelFile, KernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
+
+	//Map kernel into memory
+	UINT64 entryPoint;
+	EFI_PHYSICAL_ADDRESS physicalImageBase;
+	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &params->BaseAddress, &params->ImageSize, &entryPoint, &physicalImageBase));
+
+	//Map kernel into address space
+	currentPT.MapKernelPages(params->BaseAddress, physicalImageBase, EFI_SIZE_TO_PAGES(params->ImageSize));
+
+	//Verify
+	UINT64 physical = currentPT.ResolveAddress(params->BaseAddress);
+	Print(L"Physical: %q\r\n", physical);
+
+	//Try to dereference code from kernel
+	UINT64* t = (UINT64*)entryPoint;
+	Print(L"E: %q T: %q\r\n", physical, *t);
+
+	//Technically everything after allocationg the loader block needs to free that memory before dying
+	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
+	ReturnIfNotSuccess(DisplayLoaderParams(params));
 
 	//Brief pause before launching kernel (for any output to be read)
 	Keywait(L"Continue to boot kernel\r\n");
@@ -149,12 +174,12 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 	}
 
 	//TODO: Free memory allocated above if this second call fails
-	ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
+	ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
 	//Get latest memory map, exit boot services
 	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
 
 	//Call into kernel
-	KernelMain kernelMain = (KernelMain)(entry);
+	KernelMain kernelMain = (KernelMain)(entryPoint);
 	kernelMain(params);
 
 	//Should never get here
@@ -175,7 +200,7 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
 	return status;
 }
 
-EFI_STATUS Keywait(CHAR16* String)
+EFI_STATUS Keywait(const CHAR16* String)
 {
 	EFI_STATUS status;
 	EFI_INPUT_KEY Key;

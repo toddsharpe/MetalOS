@@ -19,7 +19,7 @@ const Color Black = { 0x00, 0x00, 0x00, 0x00 };
 
 Display display;
 LoadingScreen* loading;
-LOADER_PARAMS* pParams;
+LOADER_PARAMS* pParams;//TODO: make this extern and have loader get address and fill out struct directly?
 
 extern "C" void main(LOADER_PARAMS* loader)
 {

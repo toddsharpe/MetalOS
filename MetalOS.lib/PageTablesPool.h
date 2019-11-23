@@ -20,7 +20,7 @@ public:
 	bool DeallocatePage(UINT64 address);
 
 private:
-	bool m_index[ReservedPageTablePages];//PAGE_SIZE
+	bool *m_index;
 	UINT64 m_physicalAddress;
 	UINT64 m_pageCount;
 };

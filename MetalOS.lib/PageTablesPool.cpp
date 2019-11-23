@@ -1,7 +1,7 @@
 #include "PageTablesPool.h"
 #include "Kernel.h"
 
-PageTablesPool::PageTablesPool(UINT64 physicalAddress, UINT32 pageCount) : m_physicalAddress(physicalAddress), m_pageCount(pageCount), m_index()
+PageTablesPool::PageTablesPool(UINT64 physicalAddress, UINT32 pageCount) : m_physicalAddress(physicalAddress), m_pageCount(pageCount), m_index((bool*)physicalAddress)
 {
 	//TODO
 	//Assert(pageCount < PageTablesPoolMax);

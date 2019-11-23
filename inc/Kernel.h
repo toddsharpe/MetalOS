@@ -13,6 +13,8 @@
 //https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf
 typedef unsigned __int64 ULONG64;
 typedef void* PVOID;
+
+#pragma pack(push, 1)
 typedef struct _PML4E
 {
 	union
@@ -115,26 +117,121 @@ typedef struct _PTE
 } PTE, * PPTE;
 static_assert(sizeof(PTE) == sizeof(PVOID), "Size mismatch, only 64-bit supported.");
 
-typedef struct _SegmentDescriptor
+
+// Intel SDM Vol 3A Figure 3-8
+typedef struct _SEGMENT_DESCRIPTOR
 {
-	struct
+	union
 	{
-		UINT64 SegmentLimit1 : 16;
-		UINT64 BaseAddress1 : 16;
-		UINT64 BaseAddress2 : 8;
-		UINT64 Type : 4;
-		UINT64 S : 1; // 1 if code/data, 0 if system segment
-		UINT64 DPL : 2; //Descriptor Privilege Level
-		UINT64 Present : 1;
-		UINT64 SegmentLimit2 : 4;
-		UINT64 Available : 1; // Used for OS
-		UINT64 L : 1; //1 for 64bit code (d must be cleared)
-		UINT64 DB : 1;
-		UINT64 Granulatiry : 1; // 0=1b-1mb, 1=4kb-4gb
-		UINT64 BaseAddress3 : 8;
+		struct
+		{
+			UINT64 SegmentLimit1 : 16;
+			UINT64 BaseAddress1 : 16;
+			UINT64 BaseAddress2 : 8;
+			UINT64 Type : 4;
+			UINT64 S : 1; // 1 if code/data, 0 if system segment
+			UINT64 DPL : 2; //Descriptor Privilege Level
+			UINT64 Present : 1;
+			UINT64 SegmentLimit2 : 4;
+			UINT64 Available : 1; // Used for OS
+			UINT64 L : 1; //1 for 64bit code (d must be cleared)
+			UINT64 DB : 1;
+			UINT64 Granulatiry : 1; // 0=1b-1mb, 1=4kb-4gb
+			UINT64 BaseAddress3 : 8;
+		};
+		UINT64 Value;
 	};
-} SegmentDescriptor, *PSegmentDescriptor;
-static_assert(sizeof(SegmentDescriptor) == sizeof(PVOID), "Size mismatch, only 64-bit supported.");
+} SEGMENT_DESCRIPTOR, *PSEGMENT_DESCRIPTOR;
+static_assert(sizeof(SEGMENT_DESCRIPTOR) == sizeof(PVOID), "Size mismatch, only 64-bit supported.");
+
+// Intel SDM Vol 3A Figure 7-11
+typedef struct _TASK_STATE_SEGMENT_64
+{
+	UINT32 Reserved_0;
+	//RSP for privilege levels 0-2
+	UINT32 RSP_0_low;
+	UINT32 RSP_0_high;
+	UINT32 RSP_1_low;
+	UINT32 RSP_1_high;
+	UINT32 RSP_2_low;
+	UINT32 RSP_2_high;
+	UINT32 Reserved_1;
+	UINT32 Reserved_2;
+	//ISTs
+	UINT32 IST_1_low;
+	UINT32 IST_1_high;
+	UINT32 IST_2_low;
+	UINT32 IST_2_high;
+	UINT32 IST_3_low;
+	UINT32 IST_3_high;
+	UINT32 IST_4_low;
+	UINT32 IST_4_high;
+	UINT32 IST_5_low;
+	UINT32 IST_5_high;
+	UINT32 IST_6_low;
+	UINT32 IST_6_high;
+	UINT32 IST_7_low;
+	UINT32 IST_7_high;
+	UINT32 Reserved_3;
+	UINT32 Reserved_4;
+	UINT16 Reserved_5;
+	UINT16 IO_Map_Base;
+} TASK_STATE_SEGMENT_64, *PTASK_STATE_SEGMENT_64;
+static_assert(sizeof(TASK_STATE_SEGMENT_64) == 104, "Size mismatch, only 64-bit supported.");
+
+// Intel SDM Vol 3A Figure 6-7
+typedef struct _IDT_GATE
+{
+	UINT16 Offset1;
+	UINT16 SegmentSelector;
+	UINT16 InterruptStackTable : 3;
+	UINT16 Zeros : 5;
+	UINT16 Type : 4;
+	UINT16 Zero : 1;
+	UINT16 PrivilegeLevel : 2; // DPL
+	UINT16 Present : 1;
+	UINT16 Offset2;
+	UINT32 Offset3;
+	UINT32 Reserved;
+} IDT_GATE, *PIDT_GATE;
+static_assert(sizeof(IDT_GATE) == 16, "Size mismatch, only 64-bit supported.");
+
+// Intel SDM Vol 3A Figure 7-4
+typedef struct _TSS_LDT_ENTRY
+{
+	UINT16 SegmentLimit1;
+	UINT16 BaseAddress1;
+
+	UINT16 BaseAddress2 : 8;
+	UINT16 Type : 4;
+	UINT16 Zero1 : 1;
+	UINT16 PrivilegeLevel : 2; // DPL
+	UINT16 Present : 1;
+
+	UINT16 Limit : 4;
+	UINT16 Available : 1;
+	UINT16 Zero2 : 1;
+	UINT16 Zero3 : 1;
+	UINT16 Granularity : 1;
+	UINT16 BaseAddress3 : 8;
+
+	UINT32 BaseAddress4;
+
+	UINT32 Reserved1 : 8;
+	UINT32 Zeros : 4;
+	UINT32 Reserved2 : 20;
+} TSS_LDT_ENTRY, *PTSS_LDT_ENTRY;
+static_assert(sizeof(TSS_LDT_ENTRY) == 16, "Size mismatch, only 64-bit supported.");
+
+// Intel SDM Vol 3A Figure 3-11
+typedef struct _DESCRIPTOR_TABLE
+{
+	UINT16 Limit;
+	UINT64 BaseAddress;
+} DESCRIPTOR_TABLE, *PDESCRIPTOR_TABLE;
+static_assert(sizeof(DESCRIPTOR_TABLE) == 10, "Size mismatch, only 64-bit supported.");
+
+#pragma pack(pop)
 
 #define UINT64_MAX 0xFFFFFFFFFFFFFFFF
 

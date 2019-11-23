@@ -19,7 +19,7 @@ public:
 
 	//Is there a use for this besides testing?
 	UINT64 ResolveAddress(UINT64 virtualAddress);
-
+	 
 private:
 	bool MapPage(UINT64 virtualAddress, UINT64 physicalAddress, UINT32 count, bool global);
 	bool MapPage(UINT64 virtualAddress, UINT64 physicalAddress, bool global);

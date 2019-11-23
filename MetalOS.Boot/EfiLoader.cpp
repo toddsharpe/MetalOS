@@ -66,7 +66,6 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageBaseOut, UINT64* p
 	}
 
 	//Update NTHeader to point to desired location
-	//TODO: fix with kernelstart
 	pNtHeader->OptionalHeader.ImageBase = KernelStart + pNtHeader->OptionalHeader.ImageBase;
 
 	//Relocate image to KernelSpace. It gets allocated at KernelStart + ImageBase
@@ -113,7 +112,7 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageBaseOut, UINT64* p
 	*pImageSizeOut = pNtHeader->OptionalHeader.SizeOfImage;
 	*pEntryPointOut = pNtHeader->OptionalHeader.ImageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint;
 
-	Print(L"  ImageBase: %q IamgeSize: %q\r\n Entry: %q Physical: %q\r\n", *pImageBaseOut, *pImageSizeOut, *pEntryPointOut, *pPhysicalImageBase);
+	Print(L"  ImageBase: %q ImageSize: %q\r\n  Entry: %q Physical: %q\r\n", *pImageBaseOut, EFI_SIZE_TO_PAGES(*pImageSizeOut), *pEntryPointOut, *pPhysicalImageBase);
 
 	return EFI_SUCCESS;
 }

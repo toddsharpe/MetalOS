@@ -12,6 +12,7 @@
 
 #include <PageTables.h>
 #include <PageTablesPool.h>
+#include <DescriptorTable.h>
 
 #define EFI_DEBUG 1
 #define Kernel L"moskrnl.exe"
@@ -38,64 +39,17 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	AllocationType = LoadedImage->ImageDataType;
 	const CHAR16* BootFilePath = ((FILEPATH_DEVICE_PATH*)LoadedImage->FilePath)->PathName;
 
+	//Display some splash info
 	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\n\r"));
 	ReturnIfNotSuccess(Print(L"  Firmware Vendor: %S, Revision: %d\n\r", ST->FirmwareVendor, ST->FirmwareRevision));
 	ReturnIfNotSuccess(Print(L"  Bootloader: %S\r\n", BootFilePath));
-
-	//Detect CPU vendor and features
-	int registers[4] = { -1 };
-	char vendor[13] = { 0 };
-
-	__cpuid(registers, 0);
-	*((UINT32*)vendor) = (UINT32)registers[1];
-	*((UINT32*)(vendor + 4)) = (UINT32)registers[3];
-	*((UINT32*)(vendor + 8)) = (UINT32)registers[2];
-
-	ReturnIfNotSuccess(Print(L"  CPU vendor: %s\r\n", vendor));
-
-	//Detect CPU
-	__cpuid(registers, 0x80000001);
-
-	//This means its supported, may not be active
-	int x64 = (registers[3] & (1 << 29)) != 0;
-	ReturnIfNotSuccess(Print(L"  CPU x64 Mode: %d\r\n", x64));
-
-	UINT64 efer = __readmsr(0xC0000080);
-	int lme = (efer & (1 << 8)) != 0;
-	int lma = (efer & (1 << 10)) != 0;
-	ReturnIfNotSuccess(Print(L"  LME: %b LMA: %b\r\n", lme, lma));
-
-	UINT64 cr0 = __readcr0();
-	ReturnIfNotSuccess(Print(L"CR0 - %u\r\n", (UINT32)cr0));
-	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
-	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
-
-	UINT64 cr3 = __readcr3();
-	ReturnIfNotSuccess(Print(L"CR3 - %q\r\n", (UINT64)cr3));
-
-	UINT64 cr4 = __readcr4();
-	ReturnIfNotSuccess(Print(L"CR4 - %q\r\n", (UINT64)cr4));
-	int pse = (cr4 & (1 << 4)) != 0;
-	int pae = (cr4 & (1 << 5)) != 0;
-	int pcide = (cr4 & (1 << 17)) != 0;
-	ReturnIfNotSuccess(Print(L"  PSE: %b PAE: %b PCIDE: %b\r\n", pse, pae, pcide));
-
-	//Detect CPU topology - might not be working?
-	/*
-	int numProcessors;
-	__cpuidex(&registers, 0xB, 0);
-	numProcessors = registers[1];//EBX
-
-	int numCoresPer;
-	__cpuidex(&registers, 0xB, 1);
-	numCoresPer = registers[1];//EBX
-	ReturnIfNotSuccess(Print(L"  CPU Cores: %d, Logical Processors: %d\r\n", numProcessors, numProcessors * numCoresPer));
-	*/
+	ReturnIfNotSuccess(Print(L"  ImageHandle: %q\r\n", ImageHandle));
+	ReturnIfNotSuccess(PrintCpuDetails());
 
 	//Display time
 	EFI_TIME time;
 	ReturnIfNotSuccess(RT->GetTime(&time, nullptr));
-	Print(L"  Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+	Print(L"Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
 	//Reserve space for loader block
 	LOADER_PARAMS* params = nullptr;
@@ -113,11 +67,22 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	Print(L"PageTablesPoolAddress: %q\r\n", params->PageTablesPoolAddress);
 	params->PageTablesPoolPageCount = ReservedPageTablePages;
 
+	//Initialize the page tables pool and allocate a root page
 	PageTablesPool pageTablesPool(params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	EFI_PHYSICAL_ADDRESS ptsRoot;
+	if (!pageTablesPool.AllocatePage(&ptsRoot))
+	{
+		ReturnIfNotSuccess(EFI_LOAD_ERROR);
+	}
 
-	//Access current page tables
-	PageTables currentPT(params->PageTablesPoolAddress);
-	currentPT.SetPool(&pageTablesPool);
+	//Copy current PT root to our new root
+	CRT::memcpy((void*)ptsRoot, (void*)__readcr3(), EFI_PAGE_SIZE);
+
+	//Make a new PT from this root and activate it. We do this because original PT is read-only to us.
+	//We only need to map the kernel, then the kernel can arrange things in a clean PT.
+	PageTables newPts(ptsRoot);
+	newPts.SetPool(&pageTablesPool);
+	__writecr3(ptsRoot);
 
 	//Build path to kernel
 	CHAR16* KernelPath;
@@ -125,7 +90,6 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	CRT::memset((void*)KernelPath, 0, MaxKernelPath * sizeof(CHAR16));
 	CRT::GetDirectoryName(BootFilePath, KernelPath);
 	CRT::strcpy(KernelPath + CRT::strlen(KernelPath), Kernel);
-	Print(L"KernelPath: %S\r\n", KernelPath);
 
 	//Load kernel path
 	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem = nullptr;
@@ -142,22 +106,12 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &params->BaseAddress, &params->ImageSize, &entryPoint, &physicalImageBase));
 
 	//Map kernel into address space
-	currentPT.MapKernelPages(params->BaseAddress, physicalImageBase, EFI_SIZE_TO_PAGES(params->ImageSize));
+	newPts.MapKernelPages(params->BaseAddress, physicalImageBase, EFI_SIZE_TO_PAGES(params->ImageSize));
 
-	//Verify
-	UINT64 physical = currentPT.ResolveAddress(params->BaseAddress);
-	Print(L"Physical: %q\r\n", physical);
-
-	//Try to dereference code from kernel
-	UINT64* t = (UINT64*)entryPoint;
-	Print(L"E: %q T: %q\r\n", physical, *t);
-
-	//Technically everything after allocationg the loader block needs to free that memory before dying
+	//Technically everything after allocating the loader block needs to free that memory before dying
 	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
 	ReturnIfNotSuccess(DisplayLoaderParams(params));
-
-	//Brief pause before launching kernel (for any output to be read)
-	Keywait(L"Continue to boot kernel\r\n");
+	Keywait(L"Boot kernel?\r\n");
 
 	//Determine size of map
 	UINTN memoryMapKey = 0;
@@ -183,7 +137,6 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	kernelMain(params);
 
 	//Should never get here
-	Keywait(L"Kernel returned?\r\n");
 	return EFI_ABORTED;
 }
 
@@ -192,7 +145,7 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
 	EFI_STATUS status;
 	
 	ReturnIfNotSuccess(Print(L"DisplayLoaderParams:\r\n"));
-	ReturnIfNotSuccess(Print(L"\tBaseAddress: %u\r\n", params->BaseAddress));
+	ReturnIfNotSuccess(Print(L"\tBaseAddress: %q\r\n", params->BaseAddress));
 	ReturnIfNotSuccess(Print(L"\tConfigTables: %q\r\n", params->ConfigTables));
 	ReturnIfNotSuccess(Print(L"\tConfigTableSizes: %d\r\n", params->ConfigTableSizes));
 
@@ -216,5 +169,51 @@ EFI_STATUS Keywait(const CHAR16* String)
 	ReturnIfNotSuccess(ST->ConIn->Reset(ST->ConIn, FALSE));
 
 	Print(L"\r\n");
+	return status;
+}
+
+EFI_STATUS DumpGDT()
+{
+	EFI_STATUS status;
+	
+	DESCRIPTOR_TABLE gdt = { 0 };
+	_sgdt(&gdt);
+
+	ReturnIfNotSuccess(Print(L"GDT-Limit: %w\r\n", gdt.Limit));
+	ReturnIfNotSuccess(Print(L"GDT-Address: %q\r\n", gdt.BaseAddress));
+
+	PSEGMENT_DESCRIPTOR pSegDesc = (PSEGMENT_DESCRIPTOR)gdt.BaseAddress;
+	while ((UINT64)pSegDesc < gdt.BaseAddress + gdt.Limit)
+	{
+		ReturnIfNotSuccess(Print(L"  SegDesc: %q\r\n", pSegDesc->Value));
+		pSegDesc++;
+	}
+
+	return status;
+}
+
+EFI_STATUS PrintCpuDetails()
+{
+	EFI_STATUS status;
+	
+	int registers[4] = { -1 };
+	char vendor[13] = { 0 };
+
+	__cpuid(registers, 0);
+	*((UINT32*)vendor) = (UINT32)registers[1];
+	*((UINT32*)(vendor + 4)) = (UINT32)registers[3];
+	*((UINT32*)(vendor + 8)) = (UINT32)registers[2];
+
+	ReturnIfNotSuccess(Print(L"CPU vendor: %s\r\n", vendor));
+
+	__cpuid(registers, 0x80000001);
+	//This means its supported, may not be active
+	int x64 = (registers[3] & (1 << 29)) != 0;
+	ReturnIfNotSuccess(Print(L"  CPU x64 Mode: %d\r\n", x64));
+
+	UINT64 cr0 = __readcr0();
+	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
+	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
+
 	return status;
 }

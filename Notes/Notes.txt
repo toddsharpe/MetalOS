@@ -67,3 +67,31 @@ https://github.com/kv01/ttf-parser
 https://github.com/microsoft/cascadia-code
 https://www.freetype.org/freetype2/docs/ft2faq.html
 
+
+UEFI GDT
+address: 3FFEEF18
+limit: 3f
+
+
+0
+00 CF 93 00 0000 FFFF - 
+00 CF 9A 00 0000 FFFF
+00 CF 92 00 0000 FFFF
+00 CF 9A 00 0000 FFFF
+00 AF 9B 00 0000 FFFF
+0
+0
+
+      9 - present, S = 1
+	   3 - RW, accessed
+	   2 - RW
+	   A - execute/read
+
+
+    F - seglimit 2
+   C - G (4gb), DB (data) (32 bit and 64 bit)
+   A - G (4gb), L (code)
+
+All 20 bits of segment descriptors are on - ignored in 64 bit anyways
+
+

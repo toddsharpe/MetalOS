@@ -32,7 +32,7 @@ extern "C" void main(LOADER_PARAMS* loader)
 
 	LoadingScreen localLoading(display);
 	loading = &localLoading;
-	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%08x Size: 0x%x", loader->BaseAddress, kernelPages);
+	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%16x Size: 0x%x", loader->BaseAddress, kernelPages);
 	loading->WriteLineFormat("LOADER_PARAMS: 0x%08x", loader);
 	loading->WriteLineFormat("ConfigTableSizes: %d", loader->ConfigTableSizes);
 	loading->WriteLineFormat("MemoryMap: 0x%08x", loader->MemoryMap);

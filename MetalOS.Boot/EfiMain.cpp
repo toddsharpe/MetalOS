@@ -12,7 +12,6 @@
 
 #include <PageTables.h>
 #include <PageTablesPool.h>
-#include <DescriptorTable.h>
 
 #define EFI_DEBUG 1
 #define Kernel L"moskrnl.exe"

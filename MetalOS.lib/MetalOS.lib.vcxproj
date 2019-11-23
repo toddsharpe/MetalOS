@@ -142,14 +142,12 @@
   <ItemGroup>
     <ClCompile Include="Cpu.cpp" />
     <ClCompile Include="CRT.cpp" />
-    <ClCompile Include="DescriptorTable.cpp" />
     <ClCompile Include="PageTables.cpp" />
     <ClCompile Include="PageTablesPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cpu.h" />
     <ClInclude Include="CRT.h" />
-    <ClInclude Include="DescriptorTable.h" />
     <ClInclude Include="PageTables.h" />
     <ClInclude Include="PageTablesPool.h" />
   </ItemGroup>

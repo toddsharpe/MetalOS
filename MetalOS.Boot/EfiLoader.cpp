@@ -12,7 +12,7 @@ EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
 EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
 
 //This method should check the memory map file and ensure nobody else has this reservation
-EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageBaseOut, UINT64* pImageSizeOut, UINT64* pEntryPointOut, EFI_PHYSICAL_ADDRESS* pPhysicalImageBase)
+EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageSizeOut, UINT64* pEntryPointOut, EFI_PHYSICAL_ADDRESS* pPhysicalImageBase)
 {
 	EFI_STATUS status;
 
@@ -65,8 +65,8 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageBaseOut, UINT64* p
 		}
 	}
 
-	//Update NTHeader to point to desired location
-	pNtHeader->OptionalHeader.ImageBase = KernelStart + pNtHeader->OptionalHeader.ImageBase;
+	//Update NTHeader to point to new virtual address
+	pNtHeader->OptionalHeader.ImageBase = KernelBaseAddress;
 
 	//Relocate image to KernelSpace. It gets allocated at KernelStart + ImageBase
 	IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
@@ -108,11 +108,10 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageBaseOut, UINT64* p
 	}
 
 	//Populate return variables
-	*pImageBaseOut = pNtHeader->OptionalHeader.ImageBase;
 	*pImageSizeOut = pNtHeader->OptionalHeader.SizeOfImage;
 	*pEntryPointOut = pNtHeader->OptionalHeader.ImageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint;
 
-	Print(L"  ImageBase: %q ImageSize: %q\r\n  Entry: %q Physical: %q\r\n", *pImageBaseOut, EFI_SIZE_TO_PAGES(*pImageSizeOut), *pEntryPointOut, *pPhysicalImageBase);
+	Print(L"  ImageBase: %q ImageSize: %q\r\n  Entry: %q Physical: %q\r\n", KernelBaseAddress, EFI_SIZE_TO_PAGES(*pImageSizeOut), *pEntryPointOut, *pPhysicalImageBase);
 
 	return EFI_SUCCESS;
 }

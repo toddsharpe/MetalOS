@@ -134,8 +134,11 @@ UINT64 PageTables::ResolveAddress(UINT64 virtualAddress)
 	UINT32 l4Index = (virtualAddress >> 39) & 0x1FF;
 
 	PPML4E l4 = (PPML4E)PhysicalToVirtual(m_physicalAddress);
+	Print(L"L4: 0x%q, P: %d, RW: %d S: %d -\r\n", l4[l4Index].Value, l4[l4Index].Present, l4[l4Index].ReadWrite, l4[l4Index].UserSupervisor);
 	PPDPTE l3 = (PPDPTE)PhysicalToVirtual(l4[l4Index].Value & ~0xFFF);
+	Print(L"L3: 0x%q, P: %d, RW: %d S: %d -\r\n", l3[l3Index].Value, l3[l3Index].Present, l3[l3Index].ReadWrite, l3[l3Index].UserSupervisor);
 	PPDE l2 = (PPDE)PhysicalToVirtual(l3[l3Index].Value & ~0xFFF);
+	Print(L"L2: 0x%q, P: %d, RW: %d S: %d -\r\n", l2[l2Index].Value, l2[l2Index].Present, l2[l2Index].ReadWrite, l2[l2Index].UserSupervisor);
 
 	if (l2[l2Index].PageSize == 1)
 	{
@@ -146,5 +149,31 @@ UINT64 PageTables::ResolveAddress(UINT64 virtualAddress)
 	//L2 maps a 4k page
 
 	PPTE l1 = (PPTE)PhysicalToVirtual(l2[l2Index].Value & ~0xFFF);
+	Print(L"L1: 0x%q, P: %d, RW: %d S: %d -\r\n", l1[l1Index].Value, l1[l1Index].Present, l1[l1Index].ReadWrite, l1[l1Index].UserSupervisor);
 	return (l1[l1Index].Value & ~0xFFF) + offset;
+}
+
+bool PageTables::EnableWrite(UINT64 virtualAddress)
+{
+	UINT32 offset = virtualAddress & 0xFFF;
+	UINT32 l1Index = (virtualAddress >> 12) & 0x1FF;
+	UINT32 l2Index = (virtualAddress >> 21) & 0x1FF;
+	UINT32 l3Index = (virtualAddress >> 30) & 0x1FF;
+	UINT32 l4Index = (virtualAddress >> 39) & 0x1FF;
+
+	PPML4E l4 = (PPML4E)PhysicalToVirtual(m_physicalAddress);
+	PPDPTE l3 = (PPDPTE)PhysicalToVirtual(l4[l4Index].Value & ~0xFFF);
+	PPDE l2 = (PPDE)PhysicalToVirtual(l3[l3Index].Value & ~0xFFF);
+
+	if (l2[l2Index].PageSize == 1)
+	{
+		l2[l2Index].ReadWrite = true;
+	}
+	else
+	{
+		PPTE l1 = (PPTE)PhysicalToVirtual(l2[l2Index].Value & ~0xFFF);
+		l1[l1Index].ReadWrite = true;
+	}
+
+	return true;
 }

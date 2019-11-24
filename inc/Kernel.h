@@ -257,6 +257,7 @@ static_assert(sizeof(DESCRIPTOR_TABLE) == 10, "Size mismatch, only 64-bit suppor
 
 #define UserStop    0x00007FFFFFFFFFFF
 #define KernelStart 0xFFFF800000000000
+#define KernelBaseAddress (KernelStart + 0x100000)
 #define KernelStop UINT64_MAX
 
 //We should just change the base address of the kernel image

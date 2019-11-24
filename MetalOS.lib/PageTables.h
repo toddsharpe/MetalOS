@@ -17,6 +17,8 @@ public:
 
 	void SetVirtualOffset(UINT64 virtualOffset);
 
+	bool EnableWrite(UINT64 virtualAddress);
+
 	//Is there a use for this besides testing?
 	UINT64 ResolveAddress(UINT64 virtualAddress);
 	 

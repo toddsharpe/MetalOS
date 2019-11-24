@@ -19,20 +19,27 @@ const Color Black = { 0x00, 0x00, 0x00, 0x00 };
 
 Display display;
 LoadingScreen* loading;
-LOADER_PARAMS* pParams;//TODO: make this extern and have loader get address and fill out struct directly?
+//LOADER_PARAMS* pParams;//TODO: make this extern and have loader get address and fill out struct directly?
+
+//Copy loader params into our own params (possible improvement, is to make this local params a PE/COFF export and have the loader fill that in directly)
+//Copy memory map - update efi bootloader to not put it on its own page then?
+//Copy configuration?
+
+//Map in kernel
+//Map in graphics buffer
+//map in page tables pool
+
+//figure out how to get dynamic memory
 
 extern "C" void main(LOADER_PARAMS* loader)
 {
-	pParams = loader;
-
+	//Immediately set up
 	display.SetDisplay(&loader->Display);
 	display.ColorScreen(Black);
 
-	UINT32 kernelPages = Loader::GetImageSize((void*)loader->BaseAddress) >> EFI_PAGE_SHIFT;
-
 	LoadingScreen localLoading(display);
 	loading = &localLoading;
-	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%16x Size: 0x%x", loader->BaseAddress, kernelPages);
+	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%16x Size: 0x%x S2: 0x%x", loader->KernelAddress, loader->KernelImageSize);
 	loading->WriteLineFormat("LOADER_PARAMS: 0x%08x", loader);
 	loading->WriteLineFormat("ConfigTableSizes: %d", loader->ConfigTableSizes);
 	loading->WriteLineFormat("MemoryMap: 0x%08x", loader->MemoryMap);
@@ -47,7 +54,7 @@ extern "C" void main(LOADER_PARAMS* loader)
 	CRT::memset((void*)pageTables, 0, ReservedPageTableSpace);
 
 	//Construct pool and map in page tables
-	PageTablesPool pool(pageTables, ReservedPageTablePages);//This needs to be in persistent memory
+	//PageTablesPool pool(pageTables, ReservedPageTablePages);//This needs to be in persistent memory
 	//UINT64 root = pool.AllocatePage();
 
 	//PageTables newTables(root);

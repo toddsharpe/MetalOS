@@ -26,11 +26,12 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 {
 	EFI_STATUS status;
 
+	//Save UEFI environment
 	ST = SystemTable;
 	BS = SystemTable->BootServices;
 	RT = SystemTable->RuntimeServices;
 
-	//Disable the stupid watchdog
+	//Disable the stupid watchdog - TODO: why doesnt it go away on its own?
 	ReturnIfNotSuccess(BS->SetWatchdogTimer(0, 0, 0, nullptr));
 
 	EFI_LOADED_IMAGE* LoadedImage;
@@ -57,31 +58,10 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	params->ConfigTables = ST->ConfigurationTable;
 	params->ConfigTableSizes = ST->NumberOfTableEntries;
 
-	//Allocate a page for the memory map
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, 1, (EFI_PHYSICAL_ADDRESS*)&(params->MemoryMap)));
-	Print(L"MemoryMap: %q\r\n", params->MemoryMap);
-
 	//Allocate pages for our PageTablesPool
 	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, ReservedPageTablePages, &(params->PageTablesPoolAddress)));
 	Print(L"PageTablesPoolAddress: %q\r\n", params->PageTablesPoolAddress);
 	params->PageTablesPoolPageCount = ReservedPageTablePages;
-
-	//Initialize the page tables pool and allocate a root page
-	PageTablesPool pageTablesPool(params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
-	EFI_PHYSICAL_ADDRESS ptsRoot;
-	if (!pageTablesPool.AllocatePage(&ptsRoot))
-	{
-		ReturnIfNotSuccess(EFI_LOAD_ERROR);
-	}
-
-	//Copy current PT root to our new root
-	CRT::memcpy((void*)ptsRoot, (void*)__readcr3(), EFI_PAGE_SIZE);
-
-	//Make a new PT from this root and activate it. We do this because original PT is read-only to us.
-	//We only need to map the kernel, then the kernel can arrange things in a clean PT.
-	PageTables newPts(ptsRoot);
-	newPts.SetPool(&pageTablesPool);
-	__writecr3(ptsRoot);
 
 	//Build path to kernel
 	CHAR16* KernelPath;
@@ -99,37 +79,44 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	Print(L"Loading: %S\r\n", KernelPath);
 	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelFile, KernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
 
-	//Map kernel into memory
+	//Map kernel into memory. It will be relocated at KernelBaseAddress
 	UINT64 entryPoint;
-	EFI_PHYSICAL_ADDRESS physicalImageBase;
-	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &params->BaseAddress, &params->ImageSize, &entryPoint, &physicalImageBase));
-
-	//Map kernel into address space
-	newPts.MapKernelPages(params->BaseAddress, physicalImageBase, EFI_SIZE_TO_PAGES(params->ImageSize));
+	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &params->KernelImageSize, &entryPoint, &params->KernelAddress));
 
 	//Technically everything after allocating the loader block needs to free that memory before dying
 	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
 	ReturnIfNotSuccess(DisplayLoaderParams(params));
+
 	Keywait(L"Boot kernel?\r\n");
 
-	//Determine size of map
+	//Determine size of map and retrieve it from UEFI
 	UINTN memoryMapKey = 0;
 	status = BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion);
-	if (status != EFI_BUFFER_TOO_SMALL)
+	if (status == EFI_BUFFER_TOO_SMALL)
 	{
-		ReturnIfNotSuccess(status);
+		ReturnIfNotSuccess(BS->AllocatePool(AllocationType, params->MemoryMapSize, (void**)&params->MemoryMap));
+		ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
 	}
-	else if (params->MemoryMapSize > EFI_PAGE_SIZE)
-	{
-		//We cant allocate a page after getting the memory map size (since that allocates a page) so instead we predict a page and make sure it isnt too small
-		//We could do fancy math to know this ahead of time (if its within MemoryMapDescriptorSize or being over a page, etc)
-		ReturnIfNotSuccess(EFI_BUFFER_TOO_SMALL);
-	}
-
-	//TODO: Free memory allocated above if this second call fails
-	ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
-	//Get latest memory map, exit boot services
+	
+	//After ExitBootServices we can no longer use the BS handle (no print, memory, etc)
 	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
+
+	//Kernel has been mapped to deep address space. The current pagetable k-tree is Read Only and attempts to make it writable aren't working (probably because its recursive)
+	//Instead, copy the root page and add our kernel entry. This works because the current identity mapping and our new kernel mapping don't share a L4 entry
+	//if they did, the l3 entry would have to be duplicated.
+	PageTablesPool pageTablesPool(params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	EFI_PHYSICAL_ADDRESS ptsRoot;
+	if (!pageTablesPool.AllocatePage(&ptsRoot))
+	{
+		ReturnIfNotSuccess(EFI_LOAD_ERROR);
+	}
+	CRT::memcpy((void*)ptsRoot, (void*)__readcr3(), EFI_PAGE_SIZE);
+
+	//Create new PT using the copied root page, and map in the kernel
+	PageTables newPts(ptsRoot);
+	newPts.SetPool(&pageTablesPool);
+	newPts.MapKernelPages(KernelBaseAddress, params->KernelAddress, EFI_SIZE_TO_PAGES(params->KernelImageSize));
+	__writecr3(ptsRoot);
 
 	//Call into kernel
 	KernelMain kernelMain = (KernelMain)(entryPoint);
@@ -144,9 +131,10 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
 	EFI_STATUS status;
 	
 	ReturnIfNotSuccess(Print(L"DisplayLoaderParams:\r\n"));
-	ReturnIfNotSuccess(Print(L"\tBaseAddress: %q\r\n", params->BaseAddress));
-	ReturnIfNotSuccess(Print(L"\tConfigTables: %q\r\n", params->ConfigTables));
-	ReturnIfNotSuccess(Print(L"\tConfigTableSizes: %d\r\n", params->ConfigTableSizes));
+	ReturnIfNotSuccess(Print(L"  KernelAddress: %q\r\n", params->KernelAddress));
+	ReturnIfNotSuccess(Print(L"  KernelImageSize: %q\r\n", params->KernelImageSize));
+	ReturnIfNotSuccess(Print(L"  ConfigTables: %q\r\n", params->ConfigTables));
+	ReturnIfNotSuccess(Print(L"  ConfigTableSizes: %d\r\n", params->ConfigTableSizes));
 
 	PrintGopMode(&params->Display);
 	return status;
@@ -213,6 +201,8 @@ EFI_STATUS PrintCpuDetails()
 	UINT64 cr0 = __readcr0();
 	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
 	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
+
+	ReturnIfNotSuccess(Print(L"  CR3: %q\r\n", __readcr3()))
 
 	return status;
 }

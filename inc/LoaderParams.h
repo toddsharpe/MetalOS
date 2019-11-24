@@ -4,8 +4,11 @@
 
 typedef struct
 {
-	UINT64 BaseAddress;
-	UINT64 ImageSize;
+	//Kernel details
+	EFI_PHYSICAL_ADDRESS KernelAddress;
+	UINT64 KernelImageSize;
+
+	//UEFI runtime services
 	EFI_RUNTIME_SERVICES* Runtime;
 
 	//MemoryMap - allocated on its own page
@@ -18,7 +21,7 @@ typedef struct
 	EFI_PHYSICAL_ADDRESS PageTablesPoolAddress;
 	UINT32 PageTablesPoolPageCount;
 
-	//No point in using the array its always being used in a VM
+	//No point in supporting multiple monitors since this is build for hyper-v
 	EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE Display;
 
 	//Config tables

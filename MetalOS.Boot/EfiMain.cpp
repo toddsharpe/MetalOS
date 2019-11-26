@@ -1,4 +1,5 @@
 #include "EfiMain.h"
+#include "Kernel.h"
 #include "BootLoader.h"
 #include "EfiPrint.h"
 #include "String.h"
@@ -87,7 +88,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
 	ReturnIfNotSuccess(DisplayLoaderParams(params));
 
-	Keywait(L"Boot kernel?\r\n");
+	Keywait();
 
 	//Determine size of map and retrieve it from UEFI
 	UINTN memoryMapKey = 0;
@@ -104,6 +105,10 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	//Kernel has been mapped to deep address space. The current pagetable k-tree is Read Only and attempts to make it writable aren't working (probably because its recursive)
 	//Instead, copy the root page and add our kernel entry. This works because the current identity mapping and our new kernel mapping don't share a L4 entry
 	//if they did, the l3 entry would have to be duplicated.
+
+	//I honestly wonder how this is supposed to be done. Because the current page tables cant easily be modified (all the leaves are R/O) but I cant jump to kernel
+	//entry without adding the new address. But this yields me a sort of combined address space, and the first thing the kernel has to do is remap/unmap physical
+
 	PageTablesPool pageTablesPool(params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 	EFI_PHYSICAL_ADDRESS ptsRoot;
 	if (!pageTablesPool.AllocatePage(&ptsRoot))
@@ -136,16 +141,17 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
 	ReturnIfNotSuccess(Print(L"  ConfigTables: %q\r\n", params->ConfigTables));
 	ReturnIfNotSuccess(Print(L"  ConfigTableSizes: %d\r\n", params->ConfigTableSizes));
 
-	PrintGopMode(&params->Display);
+	PrintGraphicsDevice(&params->Display);
 	return status;
 }
 
 EFI_STATUS Keywait(const CHAR16* String)
 {
-	EFI_STATUS status;
+	EFI_STATUS status = EFI_SUCCESS;
 	EFI_INPUT_KEY Key;
 
-	ReturnIfNotSuccess(Print(String));
+	if (String != nullptr)
+		ReturnIfNotSuccess(Print(String));
 	ReturnIfNotSuccess(Print(L"Press any key to continue..."));
 	ReturnIfNotSuccess(ST->ConIn->Reset(ST->ConIn, FALSE));
 
@@ -202,7 +208,7 @@ EFI_STATUS PrintCpuDetails()
 	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
 	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
 
-	ReturnIfNotSuccess(Print(L"  CR3: %q\r\n", __readcr3()))
+	//ReturnIfNotSuccess(Print(L"  CR3: %q\r\n", __readcr3()))
 
 	return status;
 }

@@ -1,13 +1,19 @@
 #include "PageTablesPool.h"
 #include "Kernel.h"
 
-PageTablesPool::PageTablesPool(UINT64 physicalAddress, UINT32 pageCount) : m_physicalAddress(physicalAddress), m_pageCount(pageCount), m_index((bool*)physicalAddress)
+PageTablesPool::PageTablesPool(UINT64 physicalAddress, UINT32 pageCount) :
+	m_virtualAddress(0), m_physicalAddress(physicalAddress), m_pageCount(pageCount), m_index((bool*)m_virtualAddress)
 {
 	//TODO
 	//Assert(pageCount < PageTablesPoolMax);
 
 
+}
 
+void PageTablesPool::SetVirtualAddress(UINT64 virtualAddress)
+{
+	m_virtualAddress = virtualAddress;
+	m_index = ((bool*)virtualAddress);
 }
 
 bool PageTablesPool::AllocatePage(UINT64* addressOut)
@@ -33,15 +39,16 @@ bool PageTablesPool::AllocatePage(UINT64* addressOut)
 bool PageTablesPool::DeallocatePage(UINT64 address)
 {
 	UINT32 relative = (address - m_physicalAddress);
-	if (relative % PAGE_SIZE == 0)
+	if (relative % PAGE_SIZE != 0)
 		return false;
 	
 	UINT32 index = relative >> PAGE_SHIFT;
-	if (index < (m_pageCount - 1))
+	if (index > (m_pageCount - 1))
 		return false;
-	if (m_index[index])
+	if (!m_index[index])
 		return false;
 
 	m_index[index] = false;
+	return true;
 }
 

@@ -29,7 +29,45 @@ EFI_STATUS InitializeGraphics(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeOfInfo, (void**)&display->Info));
 	CRT::memcpy(display->Info, info, sizeOfInfo);
 
+	//Kernel will only support one pixel format. If we wait until the kernel is loaded then we cant print to give the error message.
+	//We might be able to with different pixels, but lets just catch it here for now
+
+	if (display->Info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor)
+		return EFI_UNSUPPORTED;
+
 	return EFI_SUCCESS;
+}
+
+EFI_STATUS InitializeGraphics(PGRAPHICS_DEVICE pDevice)
+{
+	EFI_STATUS status;
+	EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE mode;
+
+	//Get mode from UEFI
+	ReturnIfNotSuccess(InitializeGraphics(&mode));
+
+	//Populate kernel structure
+	pDevice->FrameBufferBase = mode.FrameBufferBase;
+	pDevice->FrameBufferSize = mode.FrameBufferSize;
+	pDevice->HorizontalResolution = mode.Info->HorizontalResolution;
+	pDevice->VerticalResolution = mode.Info->VerticalResolution;
+	pDevice->PixelsPerScanLine = mode.Info->PixelsPerScanLine;
+
+	return status;
+}
+
+EFI_STATUS PrintGraphicsDevice(PGRAPHICS_DEVICE pDevice)
+{
+	EFI_STATUS status;
+	
+	ReturnIfNotSuccess(Print(L"Graphics:\r\n"));
+	ReturnIfNotSuccess(Print(L"  FrameBufferBase %q:\r\n", pDevice->FrameBufferBase));
+	ReturnIfNotSuccess(Print(L"  FrameBufferSize %q:\r\n", pDevice->FrameBufferSize));
+	ReturnIfNotSuccess(Print(L"  HorizontalResolution %q:\r\n", pDevice->HorizontalResolution));
+	ReturnIfNotSuccess(Print(L"  VerticalResolution %q:\r\n", pDevice->VerticalResolution));
+	ReturnIfNotSuccess(Print(L"  PixelsPerScanLine %q:\r\n", pDevice->PixelsPerScanLine));
+
+	return status;
 }
 
 EFI_STATUS PrintGopMode(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* mode)

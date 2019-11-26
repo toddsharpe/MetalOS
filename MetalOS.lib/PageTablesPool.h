@@ -12,7 +12,8 @@ class PageTables;
 class PageTablesPool
 {
 public:
-	PageTablesPool(UINT64 physicalAddress, UINT32 pageCount);
+	PageTablesPool(EFI_PHYSICAL_ADDRESS physicalAddress, UINT32 pageCount);
+	void SetVirtualAddress(UINT64 virtualAddress);
 
 	void Activate(PageTables& tables);
 
@@ -20,8 +21,9 @@ public:
 	bool DeallocatePage(UINT64 address);
 
 private:
-	bool *m_index;
-	UINT64 m_physicalAddress;
+	UINT64 m_virtualAddress;
+	EFI_PHYSICAL_ADDRESS m_physicalAddress;
 	UINT64 m_pageCount;
+	bool* m_index;
 };
 

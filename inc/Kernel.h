@@ -257,12 +257,41 @@ static_assert(sizeof(DESCRIPTOR_TABLE) == 10, "Size mismatch, only 64-bit suppor
 
 #define UserStop    0x00007FFFFFFFFFFF
 #define KernelStart 0xFFFF800000000000
-#define KernelBaseAddress (KernelStart + 0x100000)
+
+#define KernelBaseAddress (KernelStart + 0x1000000)//16 MB kernel
+#define KernelPageTablesPoolAddress (KernelStart + 0x2000000)//16MB page pool (currently only 2mb is used - 512 * 4096)
+#define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
 #define KernelStop UINT64_MAX
 
 //We should just change the base address of the kernel image
 //#define KernelBaseAddress 0x100000
 
+typedef unsigned __int64    uint64_t;
+typedef __int64             int64_t;
+typedef unsigned __int32    uint32_t;
+typedef __int32             int32_t;
+typedef unsigned short      uint16_t;
+typedef short               int16_t;
+typedef unsigned char       uint8_t;
+typedef char                int8_t;
+typedef long long          intmax_t;
+typedef unsigned long long uintmax_t;
 
+//Types
+typedef uint8_t UINT8;
+typedef uint16_t UINT16;
+typedef uint32_t UINT32;
+typedef uint64_t UINT64;
 
+typedef UINT16          CHAR16;
+typedef UINT64          EFI_PHYSICAL_ADDRESS;
+
+typedef struct
+{
+	EFI_PHYSICAL_ADDRESS FrameBufferBase;
+	UINT32 FrameBufferSize;
+	UINT32 HorizontalResolution;
+	UINT32 VerticalResolution;
+	UINT32 PixelsPerScanLine;
+} GRAPHICS_DEVICE, * PGRAPHICS_DEVICE;
 

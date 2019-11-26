@@ -11,7 +11,7 @@ int main(int argc, char** argv)
 	printf("Virtual Address: 0x%016x Size:0x%08x\n", baseAddr, ReservedPageTableSpace * 2);
 	printf("Physical Address: 0 -> 0x%016x -> 0x%016x\n", ReservedPageTableSpace, ReservedPageTableSpace * 2);
 
-	PageTablesPool pool(ReservedPageTableSpace, ReservedPageTablePages);
+	PageTablesPool pool((UINT64)baseAddr + ReservedPageTableSpace, ReservedPageTableSpace, ReservedPageTablePages);
 	
 	//Get our main page
 	UINT64 address = 0;
@@ -28,6 +28,8 @@ int main(int argc, char** argv)
 
 	//Map 1mb at the 1mb offset
 	tables.MapKernelPages(KernelStart + 0x100000, 0x100000, 10);
+
+	pool.DeallocatePage(address);
 
 	UINT64 resolved = tables.ResolveAddress(KernelStart + 0x100000);
 	printf("Resolved: 0x%016x\n", resolved);

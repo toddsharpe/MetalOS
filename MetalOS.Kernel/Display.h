@@ -11,8 +11,8 @@
 class Display
 {
 public:
-	Display() { _display = nullptr;  }
-	Display(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display);
+	Display() { m_pDevice = nullptr;  }
+	Display(PGRAPHICS_DEVICE pDevice);
 	::NO_COPY_OR_ASSIGN(Display);
 
 	void ColorScreen(Color color);
@@ -20,12 +20,12 @@ public:
 	void ColorPixel(Color color, Point2D position);
 
 	//THis method needs to go, find a better way to do this in kernel main
-	void SetDisplay(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)
+	void SetDisplay(PGRAPHICS_DEVICE pDevice)
 	{
-		_display = display;
+		m_pDevice = pDevice;
 	}
 
 private:
-	EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* _display;
+	PGRAPHICS_DEVICE m_pDevice;
 };
 

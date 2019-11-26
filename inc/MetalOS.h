@@ -21,6 +21,7 @@ typedef uint32_t UINT32;
 typedef uint64_t UINT64;
 
 typedef UINT16          CHAR16;
+typedef UINT64          EFI_PHYSICAL_ADDRESS;
 
 //PixelBlueGreenRedReserved8BitPerColor
 struct BGRRPixel

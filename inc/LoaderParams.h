@@ -1,7 +1,12 @@
 #pragma once
 
+#include "Kernel.h"
 //Shared header between loader and kernel
 
+//PixelsPerScanLine could be larger than HorizonalResolution if theres padding
+
+
+//No point in supporting multiple monitors since this is build for hyper-v
 typedef struct
 {
 	//Kernel details
@@ -21,8 +26,7 @@ typedef struct
 	EFI_PHYSICAL_ADDRESS PageTablesPoolAddress;
 	UINT32 PageTablesPoolPageCount;
 
-	//No point in supporting multiple monitors since this is build for hyper-v
-	EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE Display;
+	GRAPHICS_DEVICE Display;
 
 	//Config tables
 	EFI_CONFIGURATION_TABLE* ConfigTables;

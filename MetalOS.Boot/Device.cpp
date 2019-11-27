@@ -61,11 +61,8 @@ EFI_STATUS PrintGraphicsDevice(PGRAPHICS_DEVICE pDevice)
 	EFI_STATUS status;
 	
 	ReturnIfNotSuccess(Print(L"Graphics:\r\n"));
-	ReturnIfNotSuccess(Print(L"  FrameBufferBase %q:\r\n", pDevice->FrameBufferBase));
-	ReturnIfNotSuccess(Print(L"  FrameBufferSize %q:\r\n", pDevice->FrameBufferSize));
-	ReturnIfNotSuccess(Print(L"  HorizontalResolution %q:\r\n", pDevice->HorizontalResolution));
-	ReturnIfNotSuccess(Print(L"  VerticalResolution %q:\r\n", pDevice->VerticalResolution));
-	ReturnIfNotSuccess(Print(L"  PixelsPerScanLine %q:\r\n", pDevice->PixelsPerScanLine));
+	ReturnIfNotSuccess(Print(L"  FrameBuffer-Base %q, Size: %u\r\n", pDevice->FrameBufferBase, pDevice->FrameBufferSize));
+	ReturnIfNotSuccess(Print(L"  Resulution 0x%4x (0x%4x) x 0x%4x\r\n", pDevice->HorizontalResolution, pDevice->PixelsPerScanLine, pDevice->VerticalResolution));
 
 	return status;
 }

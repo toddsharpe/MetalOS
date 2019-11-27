@@ -52,16 +52,33 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	ReturnIfNotSuccess(RT->GetTime(&time, nullptr));
 	Print(L"Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
-	//Reserve space for loader block
-	LOADER_PARAMS* params = nullptr;
-	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeof(LOADER_PARAMS), (void**)&params));
+	//Reserve space for loader block, it will be on its own page
+	PLOADER_PARAMS params = nullptr;
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS)), (EFI_PHYSICAL_ADDRESS*)&params));
 	CRT::memset(params, 0, sizeof(LOADER_PARAMS));
 	params->ConfigTables = ST->ConfigurationTable;
 	params->ConfigTableSizes = ST->NumberOfTableEntries;
 
-	//Allocate pages for our PageTablesPool
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, ReservedPageTablePages, &(params->PageTablesPoolAddress)));
-	Print(L"PageTablesPoolAddress: %q\r\n", params->PageTablesPoolAddress);
+	//Determine size of memory map, allocate it on its own page
+	UINTN memoryMapKey = 0;
+	status = BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion);
+	if (status == EFI_BUFFER_TOO_SMALL)
+	{
+		ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, EFI_SIZE_TO_PAGES(params->MemoryMapSize), (EFI_PHYSICAL_ADDRESS*)&params->MemoryMap));
+	}
+	else
+	{
+		ReturnIfNotSuccess(status);
+	}
+
+	//Allocate pages for Bootloader PageTablesPool
+	//Pages from this pool will be used to bootstrap the kernel
+	EFI_PHYSICAL_ADDRESS bootloaderPagePoolAddress;
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiBootServicesData, BootloaderPagePoolCount, &bootloaderPagePoolAddress));
+
+	//Allocate pages for our Kernel's page pools
+	//This pool will be kept for the kernel to use during runtime
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, ReservedPageTablePages, &(params->PageTablesPoolAddress)));
 	params->PageTablesPoolPageCount = ReservedPageTablePages;
 
 	//Build path to kernel
@@ -88,16 +105,12 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
 	ReturnIfNotSuccess(DisplayLoaderParams(params));
 
+	//Pause here before booting kernel. This is the furthest chance there is to pause before noreturn
 	Keywait();
 
-	//Determine size of map and retrieve it from UEFI
-	UINTN memoryMapKey = 0;
-	status = BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion);
-	if (status == EFI_BUFFER_TOO_SMALL)
-	{
-		ReturnIfNotSuccess(BS->AllocatePool(AllocationType, params->MemoryMapSize, (void**)&params->MemoryMap));
-		ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
-	}
+	//Retrieve map from UEFI
+	//This could fail on EFI_BUFFER_TOO_SMALL
+	ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
 	
 	//After ExitBootServices we can no longer use the BS handle (no print, memory, etc)
 	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
@@ -105,15 +118,13 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	//Kernel has been mapped to deep address space. The current pagetable k-tree is Read Only and attempts to make it writable aren't working (probably because its recursive)
 	//Instead, copy the root page and add our kernel entry. This works because the current identity mapping and our new kernel mapping don't share a L4 entry
 	//if they did, the l3 entry would have to be duplicated.
-
 	//I honestly wonder how this is supposed to be done. Because the current page tables cant easily be modified (all the leaves are R/O) but I cant jump to kernel
 	//entry without adding the new address. But this yields me a sort of combined address space, and the first thing the kernel has to do is remap/unmap physical
-
-	PageTablesPool pageTablesPool(params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	PageTablesPool pageTablesPool(bootloaderPagePoolAddress, BootloaderPagePoolCount);
 	EFI_PHYSICAL_ADDRESS ptsRoot;
 	if (!pageTablesPool.AllocatePage(&ptsRoot))
 	{
-		ReturnIfNotSuccess(EFI_LOAD_ERROR);
+		return EFI_LOAD_ERROR;
 	}
 	CRT::memcpy((void*)ptsRoot, (void*)__readcr3(), EFI_PAGE_SIZE);
 
@@ -131,17 +142,17 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	return EFI_ABORTED;
 }
 
-EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* params)
+EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* pParams)
 {
 	EFI_STATUS status;
 	
-	ReturnIfNotSuccess(Print(L"DisplayLoaderParams:\r\n"));
-	ReturnIfNotSuccess(Print(L"  KernelAddress: %q\r\n", params->KernelAddress));
-	ReturnIfNotSuccess(Print(L"  KernelImageSize: %q\r\n", params->KernelImageSize));
-	ReturnIfNotSuccess(Print(L"  ConfigTables: %q\r\n", params->ConfigTables));
-	ReturnIfNotSuccess(Print(L"  ConfigTableSizes: %d\r\n", params->ConfigTableSizes));
+	ReturnIfNotSuccess(Print(L"LoaderParams: %q, Pages: 0x%2x\r\n", pParams, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS))));
+	ReturnIfNotSuccess(Print(L"  Kernel-Address: %q, Pages: 0x%2x\r\n", pParams->KernelAddress, EFI_SIZE_TO_PAGES(pParams->KernelImageSize)));
+	ReturnIfNotSuccess(Print(L"  MemoryMap-Address: %q, Pages: 0x%2x\r\n", pParams->MemoryMap, EFI_SIZE_TO_PAGES(pParams->MemoryMapSize)));
+	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: %q, Pages: 0x%4x\r\n", pParams->PageTablesPoolAddress, pParams->PageTablesPoolPageCount));
+	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: %q, Count: 0x%2x\r\n", pParams->ConfigTables, pParams->ConfigTableSizes));
 
-	PrintGraphicsDevice(&params->Display);
+	PrintGraphicsDevice(&pParams->Display);
 	return status;
 }
 

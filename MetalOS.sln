@@ -40,6 +40,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.OS.KernalApi", "Met
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Screenshots", "Screenshots", "{946995FC-A745-4A79-8C0E-DF7AD027EB94}"
 	ProjectSection(SolutionItems) = preProject
+		Screenshots\GDT_Dump.PNG = Screenshots\GDT_Dump.PNG
 		Screenshots\Kernel_MemoryMap.PNG = Screenshots\Kernel_MemoryMap.PNG
 	EndProjectSection
 EndProject

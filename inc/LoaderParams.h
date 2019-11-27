@@ -31,7 +31,7 @@ typedef struct
 	//Config tables
 	EFI_CONFIGURATION_TABLE* ConfigTables;
 	UINTN ConfigTableSizes;
-} LOADER_PARAMS;
+} LOADER_PARAMS, *PLOADER_PARAMS;
 
 //KernelMain
 typedef void (*KernelMain)(LOADER_PARAMS* params);
@@ -40,6 +40,7 @@ typedef void (*KernelMain)(LOADER_PARAMS* params);
 #define UINT64_MAX 0xFFFFFFFFFFFFFFFF
 
 //4mb reserved space
+#define BootloaderPagePoolCount 32
 #define ReservedPageTablePages 512
 #define ReservedPageTableSpace (ReservedPageTablePages * EFI_PAGE_SIZE)
 #define ReservedPageTableSpaceMask (ReservedPageTableSpace - 1)

@@ -133,8 +133,8 @@ typedef struct _SEGMENT_DESCRIPTOR
 			UINT64 DPL : 2; //Descriptor Privilege Level
 			UINT64 Present : 1;
 			UINT64 SegmentLimit2 : 4;
-			UINT64 Available : 1; // Used for OS
-			UINT64 L : 1; //1 for 64bit code (d must be cleared)
+			UINT64 Available : 1; // For use by OS
+			UINT64 L : 1; //Should always be 0
 			UINT64 DB : 1;
 			UINT64 Granulatiry : 1; // 0=1b-1mb, 1=4kb-4gb
 			UINT64 BaseAddress3 : 8;
@@ -143,6 +143,33 @@ typedef struct _SEGMENT_DESCRIPTOR
 	};
 } SEGMENT_DESCRIPTOR, *PSEGMENT_DESCRIPTOR;
 static_assert(sizeof(SEGMENT_DESCRIPTOR) == sizeof(PVOID), "Size mismatch, only 64-bit supported.");
+
+// Intel SDM Vol 3A Figure 7-4
+typedef struct _TSS_LDT_ENTRY
+{
+	UINT16 SegmentLimit1;
+	UINT16 BaseAddress1;
+
+	UINT16 BaseAddress2 : 8;
+	UINT16 Type : 4;
+	UINT16 Zero1 : 1;
+	UINT16 PrivilegeLevel : 2; // DPL
+	UINT16 Present : 1;
+
+	UINT16 Limit : 4;
+	UINT16 Available : 1;
+	UINT16 Zero2 : 1;
+	UINT16 Zero3 : 1;
+	UINT16 Granularity : 1;
+	UINT16 BaseAddress3 : 8;
+
+	UINT32 BaseAddress4;
+
+	UINT32 Reserved1 : 8;
+	UINT32 Zeros : 4;
+	UINT32 Reserved2 : 20;
+} TSS_LDT_ENTRY, * PTSS_LDT_ENTRY;
+static_assert(sizeof(TSS_LDT_ENTRY) == 16, "Size mismatch, only 64-bit supported.");
 
 // Intel SDM Vol 3A Figure 7-11
 typedef struct _TASK_STATE_SEGMENT_64
@@ -196,33 +223,6 @@ typedef struct _IDT_GATE
 } IDT_GATE, *PIDT_GATE;
 static_assert(sizeof(IDT_GATE) == 16, "Size mismatch, only 64-bit supported.");
 
-// Intel SDM Vol 3A Figure 7-4
-typedef struct _TSS_LDT_ENTRY
-{
-	UINT16 SegmentLimit1;
-	UINT16 BaseAddress1;
-
-	UINT16 BaseAddress2 : 8;
-	UINT16 Type : 4;
-	UINT16 Zero1 : 1;
-	UINT16 PrivilegeLevel : 2; // DPL
-	UINT16 Present : 1;
-
-	UINT16 Limit : 4;
-	UINT16 Available : 1;
-	UINT16 Zero2 : 1;
-	UINT16 Zero3 : 1;
-	UINT16 Granularity : 1;
-	UINT16 BaseAddress3 : 8;
-
-	UINT32 BaseAddress4;
-
-	UINT32 Reserved1 : 8;
-	UINT32 Zeros : 4;
-	UINT32 Reserved2 : 20;
-} TSS_LDT_ENTRY, *PTSS_LDT_ENTRY;
-static_assert(sizeof(TSS_LDT_ENTRY) == 16, "Size mismatch, only 64-bit supported.");
-
 // Intel SDM Vol 3A Figure 3-11
 typedef struct _DESCRIPTOR_TABLE
 {
@@ -230,6 +230,13 @@ typedef struct _DESCRIPTOR_TABLE
 	UINT64 BaseAddress;
 } DESCRIPTOR_TABLE, *PDESCRIPTOR_TABLE;
 static_assert(sizeof(DESCRIPTOR_TABLE) == 10, "Size mismatch, only 64-bit supported.");
+
+//Modern kernel has 5 GDTs (first has to be empty, plus 2x user and 2x kernel), plus the last entry is actually a TSS entry, mandatory.
+typedef struct _KERNEL_GDTS
+{
+	SEGMENT_DESCRIPTOR GDT[5];
+	TSS_LDT_ENTRY TssEntry;
+} KERNEL_GDTS, *PKERNEL_GDTS;
 
 #pragma pack(pop)
 
@@ -262,6 +269,21 @@ static_assert(sizeof(DESCRIPTOR_TABLE) == 10, "Size mismatch, only 64-bit suppor
 #define KernelPageTablesPoolAddress (KernelStart + 0x2000000)//16MB page pool (currently only 2mb is used - 512 * 4096)
 #define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
 #define KernelStop UINT64_MAX
+
+#define UserDPL 3
+#define KernelDPL 0
+
+#define IDT_COUNT 256
+#define IST_STACK_SIZE (1 << 12)
+#define IST_DOUBLEFAULT_IDX 1
+#define IST_NMI_IDX 2
+#define IST_DEBUG_IDX 3
+#define IST_MCE_IDX 4
+
+
+#define PLACEHOLDER 0
+
+#define KERNEL_GLOBAL_ALIGN __declspec(align(64))
 
 //We should just change the base address of the kernel image
 //#define KernelBaseAddress 0x100000

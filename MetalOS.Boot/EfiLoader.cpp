@@ -5,11 +5,14 @@
 #include "Error.h"
 #include <LoaderParams.h>
 #include <Kernel.h>
+#include "CRT.h"
 
 //#include <Windows.h>
 
 EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
 EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
+
+typedef void (*CrtInitializer)();
 
 //This method should check the memory map file and ensure nobody else has this reservation
 EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageSizeOut, UINT64* pEntryPointOut, EFI_PHYSICAL_ADDRESS* pPhysicalImageBase)
@@ -103,7 +106,7 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageSizeOut, UINT64* p
 				}
 			}
 
-			pBaseRelocation = (PIMAGE_BASE_RELOCATION)(pBaseRelocation + pBaseRelocation->SizeOfBlock);
+			pBaseRelocation = (PIMAGE_BASE_RELOCATION)((UINT64)pBaseRelocation + pBaseRelocation->SizeOfBlock);
 		}
 	}
 
@@ -112,6 +115,40 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageSizeOut, UINT64* p
 	*pEntryPointOut = pNtHeader->OptionalHeader.ImageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint;
 
 	Print(L"  ImageBase: %q ImageSize: %q\r\n  Entry: %q Physical: %q\r\n", KernelBaseAddress, EFI_SIZE_TO_PAGES(*pImageSizeOut), *pEntryPointOut, *pPhysicalImageBase);
+
+	return EFI_SUCCESS;
+}
+
+//This function doesn't do any error checking, should it?
+EFI_STATUS EfiLoader::CrtInitialization(UINT64 imageBase)
+{
+	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)imageBase;
+	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(imageBase + dosHeader->e_lfanew);
+
+	//Write sections into memory
+	PIMAGE_SECTION_HEADER crtSection = nullptr;
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
+	{
+		if (CRT::strcmp((char*)& section[i].Name, ".CRT") == 0)
+		{
+			crtSection = &section[i];
+			break;
+		}
+	}
+	if (crtSection == nullptr)
+		return EFI_NOT_FOUND;
+	
+	//https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-initialization?view=vs-2019
+	//https://docs.microsoft.com/en-us/cpp/error-messages/tool-errors/linker-tools-warning-lnk4210?view=vs-2019
+	//.CRT seems to be a list of function pointers (see asm). Loop through each one and invoke them
+	UINT64* initializer = (UINT64*)(imageBase + crtSection->VirtualAddress);
+	while (*initializer)
+	{
+		CrtInitializer initFunction = (CrtInitializer)*initializer;
+		initFunction();
+		initializer++;
+	}
 
 	return EFI_SUCCESS;
 }

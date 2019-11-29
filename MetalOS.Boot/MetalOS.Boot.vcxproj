@@ -116,6 +116,7 @@
       <ErrorReporting>None</ErrorReporting>
       <DisableSpecificWarnings>5045</DisableSpecificWarnings>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>EFI Application</SubSystem>

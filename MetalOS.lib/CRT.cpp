@@ -105,6 +105,11 @@ UINT32 CRT::strncpy(CHAR16* dest, const CHAR16* source, UINT32 num)
 	return num;
 }
 
+UINT32 CRT::strcmp(const CHAR16* str1, const CHAR16* str2)
+{
+	return CRT::memcmp(str1, str2, CRT::strlen(str1));
+}
+
 void CRT::strrev(CHAR16* str)
 {
 	UINT32 length = CRT::strlen(str);
@@ -115,6 +120,23 @@ void CRT::strrev(CHAR16* str)
 		str[i] = str[length - i - 1];
 		str[length - i - 1] = temp;
 	}
+}
+
+UINT32 CRT::strlen(const char* str)
+{
+	UINT32 length = 0;
+	while (*str != '\0')
+	{
+		length++;
+		str++;
+	}
+
+	return length;
+}
+
+UINT32 CRT::strcmp(const char* str1, const char* str2)
+{
+	return CRT::memcmp(str1, str2, CRT::strlen(str1));
 }
 
 void CRT::GetDirectoryName(const CHAR16* source, CHAR16* destination)

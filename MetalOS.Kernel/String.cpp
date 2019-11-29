@@ -315,7 +315,7 @@ int String::kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int r
 		sign = 0;
 		if (jflag)
 			num = va_arg(ap, uintmax_t);
-		else if (qflag)
+		else if (qflag || (width == 16)) //HACK? Apparently "qx" is the old way to do 64bit? this lets us not use the q if we have %16x
 			num = va_arg(ap, unsigned long long);
 		else if (tflag)
 			num = va_arg(ap, ptrdiff_t);

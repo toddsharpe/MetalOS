@@ -19,6 +19,9 @@ https://www.pagetable.com/?p=298
 SetVirtualAddressMap
 https://mjg59.dreamwidth.org/3244.html
 
+Exit Boot Services and memory:
+http://hypervsir.blogspot.com/2014/09/approach-to-retrieving-bios-memory-map.html
+
 SMBios lookups:
 https://github.com/biosbits/bits/blob/master/python/efi.py
 
@@ -32,6 +35,23 @@ https://os.phil-opp.com/paging-implementation/#accessing-page-tables
 
 Address space:
 https://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details
+
+Loader:
+https://www.joachim-bauch.de/tutorials/loading-a-dll-from-memory/
+https://github.com/fancycode/MemoryModule/blob/master/MemoryModule.c#L419
+
+GDT:
+http://www.jamesmolloy.co.uk/tutorial_html/4.-The%20GDT%20and%20IDT.html
+https://wiki.osdev.org/GDT_Tutorial
+
+TSS:
+
+
+IST stacks:
+https://www.kernel.org/doc/Documentation/x86/kernel-stacks
+
+x64 functions that should be intrinsics:
+https://github.com/tandasat/HyperPlatform/blob/master/HyperPlatform/Arch/x64/x64.asm
 
 Ntdll showing off systemcall:
 .text:000000018009C578 algn_18009C578:                         ; DATA XREF: .pdata:00000001801712B8↓o
@@ -82,15 +102,17 @@ limit: 3f
 0
 0
 
-      9 - present, S = 1
+      9 - present, S = 1 - user
+	  F - P, DBL=3, S=1 - kernel
 	   3 - RW, accessed
-	   2 - RW
-	   A - execute/read
+	   2 - RW (data)
+	   A - execute/read (code)
+	   9 - TSS type
+	  8 - Present only
 
 
     F - seglimit 2
-   C - G (4gb), DB (data) (32 bit and 64 bit)
-   A - G (4gb), L (code)
+   C - G (4gb), DB (data)
 
 All 20 bits of segment descriptors are on - ignored in 64 bit anyways
 

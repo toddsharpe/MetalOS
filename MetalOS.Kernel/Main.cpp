@@ -13,6 +13,7 @@
 #include "PageTables.h"
 #include "PageTablesPool.h"
 #include <intrin.h>
+#include "x64_support.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -31,25 +32,109 @@ LoadingScreen* loading;
 
 //figure out how to get dynamic memory
 
+//Kernel stacks
+KERNEL_GLOBAL_ALIGN static volatile UINT8 DOUBLEFAULT_STACK[IST_STACK_SIZE] = { 0 };
+KERNEL_GLOBAL_ALIGN static volatile UINT8 NMI_Stack[IST_STACK_SIZE] = { 0 };
+KERNEL_GLOBAL_ALIGN static volatile UINT8 DEBUG_STACK[IST_STACK_SIZE] = { 0 };
+KERNEL_GLOBAL_ALIGN static volatile UINT8 MCE_STACK[IST_STACK_SIZE] = { 0 };
+
+
+//Kernel Structures
+KERNEL_GLOBAL_ALIGN static TASK_STATE_SEGMENT_64 TSS64 =
+{
+
+};
+
+//1 empty, 4 GDTs, and 1 TSS
+KERNEL_GLOBAL_ALIGN static KERNEL_GDTS KernelGDT =
+{
+	{
+		{ 0 }, //First entry has to be empty
+		// Seg1   Base  type  S   DPL		   P   Seg2   OS      L     DB    4GB   Base
+		{ 0xFFFF, 0, 0, 0xA, true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit code Kernel
+		{ 0xFFFF, 0, 0, 0x2, true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit data Kernel
+		{ 0xFFFF, 0, 0, 0xA, true, UserDPL,	  true, 0xF, false, false, true, true, 0x00 }, //64-bit code User
+		{ 0xFFFF, 0, 0, 0x2, true, UserDPL,	  true, 0xF, false, false, true, true, 0x00 }, //64-bit data User
+	},
+	{
+		// Seg1				Base1			Base2							type  S  DPL  P   Seg2	OS      L   DB     4GB   Base3
+		sizeof(TSS64) - 1, (UINT16)& TSS64, (UINT8)((UINT64)& TSS64 >> 16), 0x9, false, 0, true, 0, false, false, false, true, (UINT8)((UINT64)& TSS64 >> 24),
+		// Base4						Zeroes
+		(UINT32)((UINT64)& TSS64 >> 32), 0, 0, 0
+	}
+};
+
+KERNEL_GLOBAL_ALIGN static IDT_GATE IDT[IDT_COUNT] = { 0 };
+
+//Aligned on word boundary so address load is on correct boundary
+__declspec(align(2)) static DESCRIPTOR_TABLE GDTR =
+{
+	sizeof(KernelGDT) - 1,
+	(UINT64)& KernelGDT
+};
+__declspec(align(2)) static DESCRIPTOR_TABLE IDTR =
+{
+	sizeof(IDT) - 1,
+	(UINT64)IDT
+};
+
+
+//Further initialize structures
+void InitializeGlobals()
+{
+	//Populate TSS structure
+	//These assignments need to be consistent with IST_ defines
+	//TODO: maybe make an array of addresses to enforce consistency?
+	TSS64.IST_1_low = (UINT32)((UINT64)DOUBLEFAULT_STACK);
+	TSS64.IST_1_high = (UINT32)(((UINT64)DOUBLEFAULT_STACK) >> 32);
+	TSS64.IST_2_low = (UINT32)((UINT64)NMI_Stack);
+	TSS64.IST_2_high = (UINT32)(((UINT64)NMI_Stack) >> 32);
+	TSS64.IST_3_low = (UINT32)((UINT64)DEBUG_STACK);
+	TSS64.IST_3_high = (UINT32)(((UINT64)DEBUG_STACK) >> 32);
+	TSS64.IST_4_low = (UINT32)((UINT64)MCE_STACK);
+	TSS64.IST_4_high = (UINT32)(((UINT64)MCE_STACK) >> 32);
+
+}
+
 extern "C" void main(LOADER_PARAMS* loader)
 {
+	//Finish global initialization
+	InitializeGlobals();
+	
 	//Immediately set up graphics device so we can bugcheck gracefully
 	display.SetDisplay(&loader->Display);
 	display.ColorScreen(Black);
 
-	//Set up the page tables
-	PageTablesPool pool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
-	
-	//Map in kernel, page table pool
-	PageTables kernelPT(__readcr3());
-	kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
-	kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
-	pool.SetVirtualAddress(KernelPageTablesPoolAddress);
-	kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
-	loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
-
 	LoadingScreen localLoading(display);
 	loading = &localLoading;
+
+	loading->WriteLineFormat("KernelBase:0x%16x", KernelBaseAddress);
+	loading->WriteLineFormat("TSS64- Limit:0x%16x", &TSS64);
+	loading->WriteLineFormat("KernelGDT- Limit:0x%08x Base1: 0x%08x", KernelGDT.TssEntry.SegmentLimit1, KernelGDT.TssEntry.BaseAddress1);
+	loading->WriteLineFormat("GDTR- Limit:0x%08x Address: 0x%16x", GDTR.Limit, GDTR.BaseAddress);
+
+	//Setup GDT/TSR
+	_lgdt(&GDTR);
+	x64_ltr((UINT64)&KernelGDT.TssEntry - (UINT64)&KernelGDT.GDT);
+
+	//Set up the page tables
+	//PageTablesPool pool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
+	//UINT64 ptRoot;
+	//Assert(pool.AllocatePage(&ptRoot));
+	//loading->WriteLineFormat("PT - Current: 0x%16x Base: 0x%16x", __readcr3(), ptRoot);
+
+	//Map in kernel, page table pool
+	//PageTables kernelPT(__readcr3());
+	//PageTables kernelPT(ptRoot);
+	//kernelPT.SetPool(&pool);
+	//kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
+	//kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
+	//pool.SetVirtualAddress(KernelPageTablesPoolAddress);
+	//kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
+	//loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
+	//__writecr3(ptRoot);
+
+
 	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%16x Size: 0x%x", loader->KernelAddress, loader->KernelImageSize);
 	loading->WriteLineFormat("LOADER_PARAMS: 0x%16x", loader);
 	loading->WriteLineFormat("ConfigTableSizes: %d", loader->ConfigTableSizes);

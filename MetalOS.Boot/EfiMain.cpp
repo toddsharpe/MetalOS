@@ -101,20 +101,6 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	UINT64 entryPoint;
 	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &params->KernelImageSize, &entryPoint, &params->KernelAddress));
 
-	//Technically everything after allocating the loader block needs to free that memory before dying
-	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
-	ReturnIfNotSuccess(DisplayLoaderParams(params));
-
-	//Pause here before booting kernel. This is the furthest chance there is to pause before noreturn
-	Keywait();
-
-	//Retrieve map from UEFI
-	//This could fail on EFI_BUFFER_TOO_SMALL
-	ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
-	
-	//After ExitBootServices we can no longer use the BS handle (no print, memory, etc)
-	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
-
 	//Kernel has been mapped to deep address space. The current pagetable k-tree is Read Only and attempts to make it writable aren't working (probably because its recursive)
 	//Instead, copy the root page and add our kernel entry. This works because the current identity mapping and our new kernel mapping don't share a L4 entry
 	//if they did, the l3 entry would have to be duplicated.
@@ -132,7 +118,25 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	PageTables newPts(ptsRoot);
 	newPts.SetPool(&pageTablesPool);
 	newPts.MapKernelPages(KernelBaseAddress, params->KernelAddress, EFI_SIZE_TO_PAGES(params->KernelImageSize));
+	//newPts.MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 	__writecr3(ptsRoot);
+
+	//Call post-page table kernel initialization
+	ReturnIfNotSuccess(EfiLoader::CrtInitialization(KernelBaseAddress));
+
+	//Technically everything after allocating the loader block needs to free that memory before dying
+	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
+	ReturnIfNotSuccess(DisplayLoaderParams(params));
+
+	//Pause here before booting kernel. This is the furthest chance there is to pause before noreturn
+	Keywait();
+
+	//Retrieve map from UEFI
+	//This could fail on EFI_BUFFER_TOO_SMALL
+	ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
+	
+	//After ExitBootServices we can no longer use the BS handle (no print, memory, etc)
+	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
 
 	//Call into kernel
 	KernelMain kernelMain = (KernelMain)(entryPoint);

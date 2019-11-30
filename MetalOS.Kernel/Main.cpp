@@ -33,6 +33,13 @@ LoadingScreen* loading;
 //figure out how to get dynamic memory
 
 //Kernel stacks
+extern "C"
+{
+	KERNEL_GLOBAL_ALIGN volatile UINT8 KERNEL_STACK[KERNEL_STACK_SIZE] = { 0 };
+	UINT64 KERNEL_STACK_START = (UINT64)&KERNEL_STACK[0];
+	UINT64 KERNEL_STACK_STOP = (UINT64)& KERNEL_STACK[KERNEL_STACK_SIZE];
+}
+
 KERNEL_GLOBAL_ALIGN static volatile UINT8 DOUBLEFAULT_STACK[IST_STACK_SIZE] = { 0 };
 KERNEL_GLOBAL_ALIGN static volatile UINT8 NMI_Stack[IST_STACK_SIZE] = { 0 };
 KERNEL_GLOBAL_ALIGN static volatile UINT8 DEBUG_STACK[IST_STACK_SIZE] = { 0 };
@@ -48,14 +55,12 @@ KERNEL_GLOBAL_ALIGN static TASK_STATE_SEGMENT_64 TSS64 =
 //1 empty, 4 GDTs, and 1 TSS
 KERNEL_GLOBAL_ALIGN static KERNEL_GDTS KernelGDT =
 {
-	{
-		{ 0 }, //First entry has to be empty
-		// Seg1   Base  type  S   DPL		   P   Seg2   OS      L     DB    4GB   Base
-		{ 0xFFFF, 0, 0, 0xA, true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit code Kernel
-		{ 0xFFFF, 0, 0, 0x2, true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit data Kernel
-		{ 0xFFFF, 0, 0, 0xA, true, UserDPL,	  true, 0xF, false, false, true, true, 0x00 }, //64-bit code User
-		{ 0xFFFF, 0, 0, 0x2, true, UserDPL,	  true, 0xF, false, false, true, true, 0x00 }, //64-bit data User
-	},
+	{ 0 }, //First entry has to be empty
+	// Seg1   Base  type  S   DPL		   P   Seg2   OS      L     DB    4GB   Base
+	{ 0xFFFF, 0, 0, 0xA, true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit code Kernel
+	{ 0xFFFF, 0, 0, 0x2, true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit data Kernel
+	{ 0xFFFF, 0, 0, 0xA, true, UserDPL,	  true, 0xF, false, false, true, true, 0x00 }, //64-bit code User
+	{ 0xFFFF, 0, 0, 0x2, true, UserDPL,	  true, 0xF, false, false, true, true, 0x00 }, //64-bit data User
 	{
 		// Seg1				Base1			Base2							type  S  DPL  P   Seg2	OS      L   DB     4GB   Base3
 		sizeof(TSS64) - 1, (UINT16)& TSS64, (UINT8)((UINT64)& TSS64 >> 16), 0x9, false, 0, true, 0, false, false, false, true, (UINT8)((UINT64)& TSS64 >> 24),
@@ -100,7 +105,7 @@ extern "C" void main(LOADER_PARAMS* loader)
 {
 	//Finish global initialization
 	InitializeGlobals();
-	
+
 	//Immediately set up graphics device so we can bugcheck gracefully
 	display.SetDisplay(&loader->Display);
 	display.ColorScreen(Black);
@@ -112,10 +117,22 @@ extern "C" void main(LOADER_PARAMS* loader)
 	loading->WriteLineFormat("TSS64- Limit:0x%16x", &TSS64);
 	loading->WriteLineFormat("KernelGDT- Limit:0x%08x Base1: 0x%08x", KernelGDT.TssEntry.SegmentLimit1, KernelGDT.TssEntry.BaseAddress1);
 	loading->WriteLineFormat("GDTR- Limit:0x%08x Address: 0x%16x", GDTR.Limit, GDTR.BaseAddress);
+	loading->WriteLineFormat("RSP - 0x%16x, KERNEL_STACK_START: 0x%16x, KERNEL_STACK_END: 0x%16x", x64_ReadSP(), KERNEL_STACK_START, KERNEL_STACK_STOP);
+
+	SEGMENT_SELECTOR csSelector;
+	csSelector.Value = x64_ReadCS();
+	loading->WriteLineFormat("CS RPL %d Value:0x%16x", csSelector.PrivilegeLevel, csSelector.Value);
 
 	//Setup GDT/TSR
-	_lgdt(&GDTR);
-	x64_ltr((UINT64)&KernelGDT.TssEntry - (UINT64)&KernelGDT.GDT);
+	//_lgdt(&GDTR);
+	//SEGMENT_SELECTOR tssSelector;
+	//tssSelector.Index = GDT_TSS_ENTRY;
+	//x64_ltr(tssSelector.Value);
+
+	//SEGMENT_SELECTOR dataSelector;
+	//dataSelector.Index = GDT_KERNEL_DATA;
+
+	//load segment registers?
 
 	//Set up the page tables
 	//PageTablesPool pool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);

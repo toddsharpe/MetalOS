@@ -91,7 +91,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
       <BaseAddress>0x100000</BaseAddress>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <EntryPointSymbol>x64_main</EntryPointSymbol>
       <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
       <EnableUAC>false</EnableUAC>
       <DataExecutionPrevention>false</DataExecutionPrevention>
@@ -140,6 +140,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <BaseAddress>0x100000</BaseAddress>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <EntryPointSymbol>x64_main</EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -164,6 +165,7 @@
     <ClInclude Include="MemoryMap.h" />
     <ClInclude Include="String.h" />
     <ClInclude Include="System.h" />
+    <ClInclude Include="x64_support.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">
@@ -171,6 +173,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <MASM Include="x64_main.asm" />
     <MASM Include="x64_support.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

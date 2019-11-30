@@ -117,6 +117,20 @@ typedef struct _PTE
 } PTE, * PPTE;
 static_assert(sizeof(PTE) == sizeof(PVOID), "Size mismatch, only 64-bit supported.");
 
+// Intel SDM Vol 3A Figure 3-6
+typedef struct _SEGMENT_SELECTOR
+{
+	union
+	{
+		struct
+		{
+			UINT16 PrivilegeLevel : 2;
+			UINT16 TableIndicator : 1; // 0 is GDT, 1 is LDT
+			UINT16 Index : 13;
+		};
+		UINT16 Value;
+	};
+} SEGMENT_SELECTOR, *PSEGME;
 
 // Intel SDM Vol 3A Figure 3-8
 typedef struct _SEGMENT_DESCRIPTOR
@@ -210,7 +224,7 @@ static_assert(sizeof(TASK_STATE_SEGMENT_64) == 104, "Size mismatch, only 64-bit 
 typedef struct _IDT_GATE
 {
 	UINT16 Offset1;
-	UINT16 SegmentSelector;
+	SEGMENT_SELECTOR SegmentSelector;
 	UINT16 InterruptStackTable : 3;
 	UINT16 Zeros : 5;
 	UINT16 Type : 4;
@@ -234,9 +248,20 @@ static_assert(sizeof(DESCRIPTOR_TABLE) == 10, "Size mismatch, only 64-bit suppor
 //Modern kernel has 5 GDTs (first has to be empty, plus 2x user and 2x kernel), plus the last entry is actually a TSS entry, mandatory.
 typedef struct _KERNEL_GDTS
 {
-	SEGMENT_DESCRIPTOR GDT[5];
+	SEGMENT_DESCRIPTOR Empty;
+	SEGMENT_DESCRIPTOR KernelCode;
+	SEGMENT_DESCRIPTOR KernelData;
+	SEGMENT_DESCRIPTOR UserCode;
+	SEGMENT_DESCRIPTOR UserData;
 	TSS_LDT_ENTRY TssEntry;
 } KERNEL_GDTS, *PKERNEL_GDTS;
+
+#define GDT_EMPTY 0
+#define GDT_KERNEL_CODE 1
+#define GDT_KERNEL_DATA 2
+#define GDT_USER_CODE 3
+#define GDT_USER_DATA 4
+#define GDT_TSS_ENTRY 5
 
 #pragma pack(pop)
 
@@ -272,6 +297,8 @@ typedef struct _KERNEL_GDTS
 
 #define UserDPL 3
 #define KernelDPL 0
+
+#define KERNEL_STACK_SIZE (1 << 20)
 
 #define IDT_COUNT 256
 #define IST_STACK_SIZE (1 << 12)

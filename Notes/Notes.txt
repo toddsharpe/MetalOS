@@ -53,6 +53,48 @@ https://www.kernel.org/doc/Documentation/x86/kernel-stacks
 x64 functions that should be intrinsics:
 https://github.com/tandasat/HyperPlatform/blob/master/HyperPlatform/Arch/x64/x64.asm
 
+http://os-adventure.blogspot.com/?view=classic
+
+x64 Stacks:
+https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64
+
+Calling conventions:
+https://www.exploit-db.com/papers/13177
+   +-------------------------+
+   | Parameter 6             |
+   +-------------------------+
+   | Parameter 5             |
+   +-------------------------+
+   | Parameter 4 (R9 Home)   |
+   +-------------------------+
+   | Parameter 3 (R8 Home)   |
+   +-------------------------+
+   | Parameter 2 (RDX Home)  |
+   +-------------------------+
+   | Parameter 1 (RCX Home)  |
+   +-------------------------+
+   | Return address          | <- RSP
+   +-------------------------+
+
+Push: dec, then write
+Pop: read, then inc
+
+MASM:
+http://www.phatcode.net/res/223/files/html/Chapter_8/CH08-7.html
+
+OS:
+https://github.com/redox-os/redox
+
+Loading Segment Register:
+https://stackoverflow.com/questions/34264752/change-gdt-and-update-cs-while-in-long-mode
+http://os-adventure.blogspot.com/2014/12/local-gdt-and-idt.html?view=classic
+https://forum.osdev.org/viewtopic.php?f=1&t=29883&sid=b954100cc5c685faa4a7f958bad5291a&start=15
+
+x64 Calling Convention:
+https://docs.microsoft.com/en-us/cpp/build/x64-calling-convention?view=vs-2019
+https://stackoverflow.com/questions/20637569/assembly-registers-in-64-bit-architecture
+https://stackoverflow.com/questions/11177137/why-do-x86-64-instructions-on-32-bit-registers-zero-the-upper-part-of-the-full-6
+
 Ntdll showing off systemcall:
 .text:000000018009C578 algn_18009C578:                         ; DATA XREF: .pdata:00000001801712B8↓o
 .text:000000018009C578                 align 20h
@@ -98,7 +140,7 @@ limit: 3f
 00 CF 9A 00 0000 FFFF
 00 CF 92 00 0000 FFFF
 00 CF 9A 00 0000 FFFF
-00 AF 9B 00 0000 FFFF
+00 AF 9B 00 0000 FFFF - code
 0
 0
 

@@ -7,3 +7,4 @@
 extern "C" void main(LOADER_PARAMS* loader);
 void InitializeGlobals();
 _declspec(noreturn) void KernelBugcheck(const char* assert);
+

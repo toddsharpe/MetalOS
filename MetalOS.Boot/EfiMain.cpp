@@ -32,7 +32,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	BS = SystemTable->BootServices;
 	RT = SystemTable->RuntimeServices;
 
-	//Disable the stupid watchdog - TODO: why doesnt it go away on its own?
+	//Disable the stupid watchdog - TODO: why doesnt it go away on its own? Maybe because i didnt call SetVirtualAddressMap?
 	ReturnIfNotSuccess(BS->SetWatchdogTimer(0, 0, 0, nullptr));
 
 	EFI_LOADED_IMAGE* LoadedImage;

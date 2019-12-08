@@ -37,14 +37,14 @@ extern "C"
 {
 	KERNEL_GLOBAL_ALIGN volatile UINT8 KERNEL_STACK[KERNEL_STACK_SIZE] = { 0 };
 	UINT64 KERNEL_STACK_START = (UINT64)&KERNEL_STACK[0];
-	UINT64 KERNEL_STACK_STOP = (UINT64)& KERNEL_STACK[KERNEL_STACK_SIZE];
+	UINT64 KERNEL_STACK_STOP = (UINT64)& KERNEL_STACK[KERNEL_STACK_SIZE - 0x10];//This creates a register parameter area in main, test
 }
 
+// "Known good stacks" Intel SDM Vol 3A 6.14.5
 KERNEL_GLOBAL_ALIGN static volatile UINT8 DOUBLEFAULT_STACK[IST_STACK_SIZE] = { 0 };
 KERNEL_GLOBAL_ALIGN static volatile UINT8 NMI_Stack[IST_STACK_SIZE] = { 0 };
 KERNEL_GLOBAL_ALIGN static volatile UINT8 DEBUG_STACK[IST_STACK_SIZE] = { 0 };
 KERNEL_GLOBAL_ALIGN static volatile UINT8 MCE_STACK[IST_STACK_SIZE] = { 0 };
-
 
 //Kernel Structures
 KERNEL_GLOBAL_ALIGN static TASK_STATE_SEGMENT_64 TSS64 =
@@ -57,9 +57,9 @@ KERNEL_GLOBAL_ALIGN static KERNEL_GDTS KernelGDT =
 {
 	{ 0 }, //First entry has to be empty
 	// Seg1   Base  type  S   DPL		   P   Seg2   OS      L     DB    4GB   Base
-	{ 0xFFFF, 0, 0, 0xA, true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit code Kernel
+	{ 0xFFFF, 0, 0, 0xA, true, KernelDPL, true, 0xF, false, true, false, true, 0x00 }, //64-bit code Kernel
 	{ 0xFFFF, 0, 0, 0x2, true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit data Kernel
-	{ 0xFFFF, 0, 0, 0xA, true, UserDPL,	  true, 0xF, false, false, true, true, 0x00 }, //64-bit code User
+	{ 0xFFFF, 0, 0, 0xA, true, UserDPL,	  true, 0xF, false, true, false, true, 0x00 }, //64-bit code User
 	{ 0xFFFF, 0, 0, 0x2, true, UserDPL,	  true, 0xF, false, false, true, true, 0x00 }, //64-bit data User
 	{
 		// Seg1				Base1			Base2							type  S  DPL  P   Seg2	OS      L   DB     4GB   Base3
@@ -69,7 +69,55 @@ KERNEL_GLOBAL_ALIGN static KERNEL_GDTS KernelGDT =
 	}
 };
 
-KERNEL_GLOBAL_ALIGN static IDT_GATE IDT[IDT_COUNT] = { 0 };
+extern "C"
+{
+	DEF_ISR_HANDLER(DE);
+	DEF_ISR_HANDLER(DB);
+	DEF_ISR_HANDLER(NMI);
+	DEF_ISR_HANDLER(BP);
+	DEF_ISR_HANDLER(OF);
+	DEF_ISR_HANDLER(BR);
+	DEF_ISR_HANDLER(UD);
+	DEF_ISR_HANDLER(NM);
+	DEF_EXC_HANDLER(DF);
+	DEF_ISR_HANDLER(CSO);
+	DEF_EXC_HANDLER(TS);
+	DEF_EXC_HANDLER(NP);
+	DEF_EXC_HANDLER(SS);
+	DEF_EXC_HANDLER(GP);
+	DEF_EXC_HANDLER(PF);
+	DEF_ISR_HANDLER(MF);
+	DEF_EXC_HANDLER(AC);
+	DEF_ISR_HANDLER(MC);
+	DEF_ISR_HANDLER(XM);
+	DEF_ISR_HANDLER(VE);
+	DEF_EXC_HANDLER(SX);
+}
+
+KERNEL_GLOBAL_ALIGN static IDT_GATE IDT[IDT_COUNT] =
+{
+	IDT_GATE((UINT64)&ISR_HANDLER(DE), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(DB), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(NMI), IST_NMI_IDX, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(DB), IST_DEBUG_IDX, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(OF), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(BR), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(UD), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(NM), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&EXC_HANDLER(DF), IST_DOUBLEFAULT_IDX, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(CSO), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&EXC_HANDLER(TS), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&EXC_HANDLER(NP), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&EXC_HANDLER(SS), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&EXC_HANDLER(GP), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&EXC_HANDLER(PF), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(MF), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&EXC_HANDLER(AC), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(MC), IST_MCE_IDX, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(XM), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&ISR_HANDLER(VE), 0, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((UINT64)&EXC_HANDLER(SX), 0, IDT_GATE_TYPE::InterruptGate32),
+};
 
 //Aligned on word boundary so address load is on correct boundary
 __declspec(align(2)) static DESCRIPTOR_TABLE GDTR =
@@ -83,6 +131,17 @@ __declspec(align(2)) static DESCRIPTOR_TABLE IDTR =
 	(UINT64)IDT
 };
 
+extern "C" void INTERRUPT_HANDLER(PINTERRUPT_FRAME pFrame)
+{
+	loading->WriteLineFormat("ISR: RIP 0x%16x", pFrame->RIP);
+	__halt();
+}
+
+extern "C" void EXCEPTION_HANDLER(PEXCEPTION_FRAME pFrame)
+{
+	loading->WriteLineFormat("EXC: RIP 0x%16x", pFrame->RIP);
+	__halt();
+}
 
 //Further initialize structures
 void InitializeGlobals()
@@ -90,6 +149,7 @@ void InitializeGlobals()
 	//Populate TSS structure
 	//These assignments need to be consistent with IST_ defines
 	//TODO: maybe make an array of addresses to enforce consistency?
+	//TODO: this is top of stack, is that ok?
 	TSS64.IST_1_low = (UINT32)((UINT64)DOUBLEFAULT_STACK);
 	TSS64.IST_1_high = (UINT32)(((UINT64)DOUBLEFAULT_STACK) >> 32);
 	TSS64.IST_2_low = (UINT32)((UINT64)NMI_Stack);
@@ -99,6 +159,12 @@ void InitializeGlobals()
 	TSS64.IST_4_low = (UINT32)((UINT64)MCE_STACK);
 	TSS64.IST_4_high = (UINT32)(((UINT64)MCE_STACK) >> 32);
 
+}
+
+void test()
+{
+	//LOADER_PARAMS p;
+	main(nullptr);
 }
 
 extern "C" void main(LOADER_PARAMS* loader)
@@ -113,24 +179,54 @@ extern "C" void main(LOADER_PARAMS* loader)
 	LoadingScreen localLoading(display);
 	loading = &localLoading;
 
-	loading->WriteLineFormat("KernelBase:0x%16x", KernelBaseAddress);
-	loading->WriteLineFormat("TSS64- Limit:0x%16x", &TSS64);
-	loading->WriteLineFormat("KernelGDT- Limit:0x%08x Base1: 0x%08x", KernelGDT.TssEntry.SegmentLimit1, KernelGDT.TssEntry.BaseAddress1);
-	loading->WriteLineFormat("GDTR- Limit:0x%08x Address: 0x%16x", GDTR.Limit, GDTR.BaseAddress);
-	loading->WriteLineFormat("RSP - 0x%16x, KERNEL_STACK_START: 0x%16x, KERNEL_STACK_END: 0x%16x", x64_ReadSP(), KERNEL_STACK_START, KERNEL_STACK_STOP);
+	for (int i = 0; i < (GDTR.Limit + 1) / 8; i++)
+	{
+		UINT64* a = (UINT64*)(GDTR.BaseAddress + i * 8);
+		loading->WriteLineFormat("0x%16x: 0x%16x", (UINT64)a, *a);
+	}
+
+	//loading->WriteLineFormat("KernelBase:0x%16x", KernelBaseAddress);
+	//loading->WriteLineFormat("TSS64- Limit:0x%16x", &TSS64);
+	loading->WriteLineFormat("KernelGDT - 0x%16x, Size: 0x%x", &KernelGDT, sizeof(KernelGDT));
+	//loading->WriteLineFormat("RSP - 0x%16x, Start: 0x%16x, End: 0x%16x", x64_ReadSP(), KERNEL_STACK_START, KERNEL_STACK_STOP);
+	loading->WriteLineFormat("GDTR &:0x%16x, Limit:0x%08x, Address: 0x%16x", &GDTR, GDTR.Limit, GDTR.BaseAddress);
+	
+	//loading->WriteLineFormat("RSP - 0x%16x, KERNEL_STACK_START: 0x%16x, KERNEL_STACK_END: 0x%16x", x64_ReadSP(), KERNEL_STACK_START, KERNEL_STACK_STOP);
 
 	SEGMENT_SELECTOR csSelector;
 	csSelector.Value = x64_ReadCS();
 	loading->WriteLineFormat("CS RPL %d Value:0x%16x", csSelector.PrivilegeLevel, csSelector.Value);
+	loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
 
+	x64_sti();
+	loading->WriteLineFormat("RFLAGS: 0x%16x", x64_rflags());
 	//Setup GDT/TSR
-	//_lgdt(&GDTR);
-	//SEGMENT_SELECTOR tssSelector;
-	//tssSelector.Index = GDT_TSS_ENTRY;
-	//x64_ltr(tssSelector.Value);
+	_lgdt(&GDTR);
 
-	//SEGMENT_SELECTOR dataSelector;
-	//dataSelector.Index = GDT_KERNEL_DATA;
+	SEGMENT_SELECTOR dataSelector = { 0 };
+	dataSelector.Index = GDT_KERNEL_DATA;
+	SEGMENT_SELECTOR codeSelector = { 0 };
+	codeSelector.Index = GDT_KERNEL_CODE;
+	SEGMENT_SELECTOR tssSelector = { 0 };
+	tssSelector.Index = GDT_TSS_ENTRY;
+	loading->WriteLineFormat("Code: 0x%4x, Data: 0x%4x, TSS: 0x%4x", codeSelector.Value, dataSelector.Value, tssSelector.Value);
+	//__halt();
+	x64_update_segments(dataSelector.Value, codeSelector.Value);
+	loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
+	__halt();
+
+
+
+	x64_ltr(tssSelector.Value);
+	__lidt(&IDTR);
+	__halt();
+
+	__debugbreak();
+	
+	//x64_update_segments(dataSelector.Value, codeSelector.Value);
+	
+	loading->WriteLineFormat("RDX: 0x%16x, RCX: 0x%16x", x64_ReadRDX(), x64_ReadRCX());
+	//loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
 
 	//load segment registers?
 

@@ -14,6 +14,25 @@
 typedef unsigned __int64 ULONG64;
 typedef void* PVOID;
 
+#define GDT_EMPTY 0
+#define GDT_KERNEL_CODE 1
+#define GDT_KERNEL_DATA 2
+#define GDT_USER_CODE 3
+#define GDT_USER_DATA 4
+#define GDT_TSS_ENTRY 5
+
+#define UserDPL 3
+#define KernelDPL 0
+
+enum IDT_GATE_TYPE
+{
+	TaskGate32 = 0x5,
+	InterruptGate16 = 0x6,
+	TrapGate16 = 0x7,
+	InterruptGate32 = 0xE,
+	TrapGate32 = 0xF
+};
+
 #pragma pack(push, 1)
 typedef struct _PML4E
 {
@@ -131,6 +150,7 @@ typedef struct _SEGMENT_SELECTOR
 		UINT16 Value;
 	};
 } SEGMENT_SELECTOR, *PSEGME;
+static_assert(sizeof(SEGMENT_SELECTOR) == sizeof(UINT16), "Size mismatch, only 64-bit supported.");
 
 // Intel SDM Vol 3A Figure 3-8
 typedef struct _SEGMENT_DESCRIPTOR
@@ -148,7 +168,7 @@ typedef struct _SEGMENT_DESCRIPTOR
 			UINT64 Present : 1;
 			UINT64 SegmentLimit2 : 4;
 			UINT64 Available : 1; // For use by OS
-			UINT64 L : 1; //Should always be 0
+			UINT64 L : 1; //Should always be 0 for data
 			UINT64 DB : 1;
 			UINT64 Granulatiry : 1; // 0=1b-1mb, 1=4kb-4gb
 			UINT64 BaseAddress3 : 8;
@@ -234,6 +254,23 @@ typedef struct _IDT_GATE
 	UINT16 Offset2;
 	UINT32 Offset3;
 	UINT32 Reserved;
+
+	_IDT_GATE() {}
+
+	_IDT_GATE(UINT64 isrAddress, UINT16 stack, IDT_GATE_TYPE type)
+	{
+		Offset1 = (UINT16)isrAddress;
+		SegmentSelector.Value = 0;
+		SegmentSelector.PrivilegeLevel = GDT_KERNEL_CODE;
+		InterruptStackTable = stack;
+		Zeros = 0;
+		Type = type;
+		Zero = 0;
+		PrivilegeLevel = KernelDPL;
+		Present = true;
+		Offset2 = (UINT16)(isrAddress >> 16);
+		Offset3 = (UINT32)(isrAddress >> 32);
+	}
 } IDT_GATE, *PIDT_GATE;
 static_assert(sizeof(IDT_GATE) == 16, "Size mismatch, only 64-bit supported.");
 
@@ -256,12 +293,62 @@ typedef struct _KERNEL_GDTS
 	TSS_LDT_ENTRY TssEntry;
 } KERNEL_GDTS, *PKERNEL_GDTS;
 
-#define GDT_EMPTY 0
-#define GDT_KERNEL_CODE 1
-#define GDT_KERNEL_DATA 2
-#define GDT_USER_CODE 3
-#define GDT_USER_DATA 4
-#define GDT_TSS_ENTRY 5
+typedef struct
+{
+	UINT64 ISR_NUM;
+	
+	UINT64 RAX;
+	UINT64 RBX;
+	UINT64 RCX;
+	UINT64 RDX;
+	UINT64 RSI;
+	UINT64 RDI;
+	UINT64 R8;
+	UINT64 R9;
+	UINT64 R10;
+	UINT64 R11;
+	UINT64 R12;
+	UINT64 R13;
+	UINT64 R14;
+	UINT64 R15;
+	UINT64 RBP;
+
+	//Intel SDM Vol3A Figure 6-4
+	UINT64 RIP;
+	UINT64 CS;
+	UINT64 RFlags;
+	UINT64 RSP;
+	UINT64 SS;
+} INTERRUPT_FRAME, *PINTERRUPT_FRAME;
+
+typedef struct
+{
+	UINT64 ISR_NUM;
+	
+	UINT64 RAX;
+	UINT64 RBX;
+	UINT64 RCX;
+	UINT64 RDX;
+	UINT64 RSI;
+	UINT64 RDI;
+	UINT64 R8;
+	UINT64 R9;
+	UINT64 R10;
+	UINT64 R11;
+	UINT64 R12;
+	UINT64 R13;
+	UINT64 R14;
+	UINT64 R15;
+	UINT64 RBP;
+
+	//Intel SDM Vol3A Figure 6-4
+	UINT64 ErrorCode;
+	UINT64 RIP;
+	UINT64 CS;
+	UINT64 RFlags;
+	UINT64 RSP;
+	UINT64 SS;
+} EXCEPTION_FRAME, * PEXCEPTION_FRAME;
 
 #pragma pack(pop)
 
@@ -295,8 +382,10 @@ typedef struct _KERNEL_GDTS
 #define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
 #define KernelStop UINT64_MAX
 
-#define UserDPL 3
-#define KernelDPL 0
+#define ISR_HANDLER(x) x ## _ISR_HANDLER
+#define DEF_ISR_HANDLER(x) void ISR_HANDLER(x) ## ()
+#define EXC_HANDLER(x) x ## _EXC_HANDLER
+#define DEF_EXC_HANDLER(x) void EXC_HANDLER(x) ## ()
 
 #define KERNEL_STACK_SIZE (1 << 20)
 

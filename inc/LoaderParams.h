@@ -6,7 +6,7 @@
 //PixelsPerScanLine could be larger than HorizonalResolution if theres padding
 
 
-//No point in supporting multiple monitors since this is build for hyper-v
+//No point in supporting multiple monitors since this is built for hyper-v
 typedef struct
 {
 	//Kernel details

@@ -91,11 +91,12 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
       <BaseAddress>0x100000</BaseAddress>
-      <EntryPointSymbol>x64_main</EntryPointSymbol>
+      <EntryPointSymbol>main</EntryPointSymbol>
       <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
       <EnableUAC>false</EnableUAC>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <GenerateMapFile>true</GenerateMapFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -140,7 +141,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <BaseAddress>0x100000</BaseAddress>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <EntryPointSymbol>x64_main</EntryPointSymbol>
+      <EntryPointSymbol>main</EntryPointSymbol>
+      <GenerateMapFile>true</GenerateMapFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -173,6 +175,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <MASM Include="x64_isr.asm" />
     <MASM Include="x64_main.asm" />
     <MASM Include="x64_support.asm" />
   </ItemGroup>

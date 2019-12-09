@@ -198,7 +198,7 @@ extern "C" void main(LOADER_PARAMS* loader)
 	loading->WriteLineFormat("CS RPL %d Value:0x%16x", csSelector.PrivilegeLevel, csSelector.Value);
 	loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
 
-	x64_sti();
+	//x64_sti();
 	loading->WriteLineFormat("RFLAGS: 0x%16x", x64_rflags());
 	//Setup GDT/TSR
 	_lgdt(&GDTR);
@@ -210,7 +210,6 @@ extern "C" void main(LOADER_PARAMS* loader)
 	SEGMENT_SELECTOR tssSelector = { 0 };
 	tssSelector.Index = GDT_TSS_ENTRY;
 	loading->WriteLineFormat("Code: 0x%4x, Data: 0x%4x, TSS: 0x%4x", codeSelector.Value, dataSelector.Value, tssSelector.Value);
-	//__halt();
 	x64_update_segments(dataSelector.Value, codeSelector.Value);
 	loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
 	__halt();

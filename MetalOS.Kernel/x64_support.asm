@@ -39,15 +39,8 @@ x64_update_segments PROC
 	lea rcx, exit
 	push rdx
 	push rcx
-
-	; Allocate stack space
-	;sub rsp, 16
-	;mov [rsp + 8], rcx
-	;mov [rsp], rdx
-	retf
+	retfq
 exit:
-	;pop rcx
-	;pop rdx
 	ret
 x64_update_segments ENDP
 

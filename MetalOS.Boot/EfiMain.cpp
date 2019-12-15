@@ -73,6 +73,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Allocate pages for Bootloader PageTablesPool
 	//Pages from this pool will be used to bootstrap the kernel
+	//This is because original PT was read-only. TODO: use CR0 bit 16 to fix this?
 	EFI_PHYSICAL_ADDRESS bootloaderPagePoolAddress;
 	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiBootServicesData, BootloaderPagePoolCount, &bootloaderPagePoolAddress));
 

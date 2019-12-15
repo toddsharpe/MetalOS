@@ -257,11 +257,29 @@ typedef struct _IDT_GATE
 
 	_IDT_GATE() {}
 
+	_IDT_GATE(UINT64 isrAddress)
+	{
+		Offset1 = (UINT16)isrAddress;
+		SegmentSelector.Value = 0;
+		SegmentSelector.PrivilegeLevel = KernelDPL;
+		SegmentSelector.Index = GDT_KERNEL_CODE;
+		InterruptStackTable = 0;
+		Zeros = 0;
+		Type = IDT_GATE_TYPE::InterruptGate32;
+		Zero = 0;
+		PrivilegeLevel = KernelDPL;
+		Present = true;
+		Offset2 = (UINT16)(isrAddress >> 16);
+		Offset3 = (UINT32)(isrAddress >> 32);
+		Reserved = 0;
+	}
+
 	_IDT_GATE(UINT64 isrAddress, UINT16 stack, IDT_GATE_TYPE type)
 	{
 		Offset1 = (UINT16)isrAddress;
 		SegmentSelector.Value = 0;
-		SegmentSelector.PrivilegeLevel = GDT_KERNEL_CODE;
+		SegmentSelector.PrivilegeLevel = KernelDPL;
+		SegmentSelector.Index = GDT_KERNEL_CODE;
 		InterruptStackTable = stack;
 		Zeros = 0;
 		Type = type;
@@ -270,6 +288,7 @@ typedef struct _IDT_GATE
 		Present = true;
 		Offset2 = (UINT16)(isrAddress >> 16);
 		Offset3 = (UINT32)(isrAddress >> 32);
+		Reserved = 0;
 	}
 } IDT_GATE, *PIDT_GATE;
 static_assert(sizeof(IDT_GATE) == 16, "Size mismatch, only 64-bit supported.");
@@ -295,12 +314,13 @@ typedef struct _KERNEL_GDTS
 
 typedef struct
 {
-	UINT64 ISR_NUM;
-	
+	//Pushed by PUSH_INTERRUPT_FRAME
+	//Order: http://www.c-jump.com/CIS77/CPU/x86/X77_0060_mod_reg_r_m_byte.htm
 	UINT64 RAX;
-	UINT64 RBX;
 	UINT64 RCX;
 	UINT64 RDX;
+	UINT64 RBX;
+	UINT64 RBP;
 	UINT64 RSI;
 	UINT64 RDI;
 	UINT64 R8;
@@ -311,44 +331,18 @@ typedef struct
 	UINT64 R13;
 	UINT64 R14;
 	UINT64 R15;
-	UINT64 RBP;
 
 	//Intel SDM Vol3A Figure 6-4
-	UINT64 RIP;
-	UINT64 CS;
-	UINT64 RFlags;
-	UINT64 RSP;
-	UINT64 SS;
-} INTERRUPT_FRAME, *PINTERRUPT_FRAME;
-
-typedef struct
-{
-	UINT64 ISR_NUM;
-	
-	UINT64 RAX;
-	UINT64 RBX;
-	UINT64 RCX;
-	UINT64 RDX;
-	UINT64 RSI;
-	UINT64 RDI;
-	UINT64 R8;
-	UINT64 R9;
-	UINT64 R10;
-	UINT64 R11;
-	UINT64 R12;
-	UINT64 R13;
-	UINT64 R14;
-	UINT64 R15;
-	UINT64 RBP;
-
-	//Intel SDM Vol3A Figure 6-4
+	//Pushed conditionally by CPU, ensured to exist by x64_INTERRUPT_HANDLER, 0 by default
 	UINT64 ErrorCode;
+
+	//Pushed automatically
 	UINT64 RIP;
 	UINT64 CS;
 	UINT64 RFlags;
 	UINT64 RSP;
 	UINT64 SS;
-} EXCEPTION_FRAME, * PEXCEPTION_FRAME;
+} INTERRUPT_FRAME, * PINTERRUPT_FRAME;
 
 #pragma pack(pop)
 
@@ -382,10 +376,8 @@ typedef struct
 #define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
 #define KernelStop UINT64_MAX
 
-#define ISR_HANDLER(x) x ## _ISR_HANDLER
+#define ISR_HANDLER(x) x64_interrupt_handler_ ## x
 #define DEF_ISR_HANDLER(x) void ISR_HANDLER(x) ## ()
-#define EXC_HANDLER(x) x ## _EXC_HANDLER
-#define DEF_EXC_HANDLER(x) void EXC_HANDLER(x) ## ()
 
 #define KERNEL_STACK_SIZE (1 << 20)
 
@@ -396,10 +388,13 @@ typedef struct
 #define IST_DEBUG_IDX 3
 #define IST_MCE_IDX 4
 
+#define QWordHigh(x) (((UINT64)x) >> 32)
+#define QWordLow(x) ((UINT32)((UINT64)x))
 
 #define PLACEHOLDER 0
 
 #define KERNEL_GLOBAL_ALIGN __declspec(align(64))
+#define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
 
 //We should just change the base address of the kernel image
 //#define KernelBaseAddress 0x100000

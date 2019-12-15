@@ -43,6 +43,7 @@ https://github.com/fancycode/MemoryModule/blob/master/MemoryModule.c#L419
 GDT:
 http://www.jamesmolloy.co.uk/tutorial_html/4.-The%20GDT%20and%20IDT.html
 https://wiki.osdev.org/GDT_Tutorial
+https://wiki.osdev.org/Global_Descriptor_Table
 
 TSS:
 
@@ -57,6 +58,7 @@ http://os-adventure.blogspot.com/?view=classic
 
 x64 Stacks:
 https://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64
+https://docs.microsoft.com/en-us/cpp/build/stack-usage?view=vs-2019
 
 Calling conventions:
 https://www.exploit-db.com/papers/13177
@@ -81,6 +83,7 @@ Pop: read, then inc
 
 MASM:
 http://www.phatcode.net/res/223/files/html/Chapter_8/CH08-7.html
+https://www.csie.ntu.edu.tw/~acpang/course/asm_2004/slides/chapt_10_PartIIbw.pdf
 
 OS:
 https://github.com/redox-os/redox

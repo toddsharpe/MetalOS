@@ -77,6 +77,9 @@
     <ClInclude Include="x64_support.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="x64_interrupts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="x64_support.asm">
@@ -85,7 +88,7 @@
     <MASM Include="x64_main.asm">
       <Filter>Source Files</Filter>
     </MASM>
-    <MASM Include="x64_isr.asm">
+    <MASM Include="x64_interrupts.asm">
       <Filter>Source Files</Filter>
     </MASM>
   </ItemGroup>

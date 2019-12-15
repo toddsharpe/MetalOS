@@ -21,10 +21,24 @@ extern "C"
 	UINT16 __stdcall x64_ReadSS();
 	void __stdcall x64_WriteSS(UINT16 segment_selector);
 
-	//Register RW
-	UINT64 __stdcall x64_ReadSP();
-	UINT64 __stdcall x64_ReadRCX();
-	UINT64 __stdcall x64_ReadRDX();
+	//Register Reading
+	UINT64 __stdcall x64_ReadRax();
+	UINT64 __stdcall x64_ReadRcx();
+	UINT64 __stdcall x64_ReadRdx();
+	UINT64 __stdcall x64_ReadRbx();
+	UINT64 __stdcall x64_ReadRsp();
+	UINT64 __stdcall x64_ReadRbp();
+	UINT64 __stdcall x64_ReadRsi();
+	UINT64 __stdcall x64_ReadRdi();
+
+	UINT64 __stdcall x64_ReadR8();
+	UINT64 __stdcall x64_ReadR9();
+	UINT64 __stdcall x64_ReadR10();
+	UINT64 __stdcall x64_Read11();
+	UINT64 __stdcall x64_ReadR12();
+	UINT64 __stdcall x64_ReadR13();
+	UINT64 __stdcall x64_ReadR14();
+	UINT64 __stdcall x64_ReadR15();
 
 	//Helpers
 	void __stdcall x64_update_segments(UINT16 data_selector, UINT16 code_selector);

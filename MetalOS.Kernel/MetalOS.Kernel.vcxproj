@@ -90,8 +90,8 @@
       <SubSystem>Native</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
-      <BaseAddress>0x100000</BaseAddress>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <BaseAddress>0x1000000</BaseAddress>
+      <EntryPointSymbol>x64_main</EntryPointSymbol>
       <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
       <EnableUAC>false</EnableUAC>
       <DataExecutionPrevention>false</DataExecutionPrevention>
@@ -139,9 +139,9 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <BaseAddress>0x100000</BaseAddress>
+      <BaseAddress>0x1000000</BaseAddress>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <EntryPointSymbol>main</EntryPointSymbol>
+      <EntryPointSymbol>x64_main</EntryPointSymbol>
       <GenerateMapFile>true</GenerateMapFile>
     </Link>
   </ItemDefinitionGroup>
@@ -167,6 +167,7 @@
     <ClInclude Include="MemoryMap.h" />
     <ClInclude Include="String.h" />
     <ClInclude Include="System.h" />
+    <ClInclude Include="x64_interrupts.h" />
     <ClInclude Include="x64_support.h" />
   </ItemGroup>
   <ItemGroup>
@@ -175,7 +176,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="x64_isr.asm" />
+    <MASM Include="x64_interrupts.asm" />
     <MASM Include="x64_main.asm" />
     <MASM Include="x64_support.asm" />
   </ItemGroup>

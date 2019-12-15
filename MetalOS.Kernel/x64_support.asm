@@ -105,22 +105,28 @@ x64_WriteSS PROC
 	ret
 x64_WriteSS ENDP
 
-; RSP RW
-x64_ReadSP PROC
-	mov rax, rsp
+x64_READ_GPR MACRO name
+x64_Read&name& PROC
+	mov rax, name
 	ret
-x64_ReadSP ENDP
+x64_Read&name& ENDP
+ENDM
 
-; RCX R
-x64_ReadRCX PROC
-	mov rax, rcx
-	ret
-x64_ReadRCX ENDP
-
-; RDX R
-x64_ReadRDX PROC
-	mov rax, rdx
-	ret
-x64_ReadRDX ENDP
+x64_READ_GPR <Rax>
+x64_READ_GPR <Rcx>
+x64_READ_GPR <Rdx>
+x64_READ_GPR <Rbx>
+x64_READ_GPR <Rsp>
+x64_READ_GPR <Rbp>
+x64_READ_GPR <Rsi>
+x64_READ_GPR <Rdi>
+x64_READ_GPR <R8>
+x64_READ_GPR <R9>
+x64_READ_GPR <R10>
+x64_READ_GPR <R11>
+x64_READ_GPR <R12>
+x64_READ_GPR <R13>
+x64_READ_GPR <R14>
+x64_READ_GPR <R15>
 
 end

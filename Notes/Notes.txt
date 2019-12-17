@@ -9,6 +9,9 @@ https://github.com/boazsegev/BoOS/tree/v.0.0.0
 UEFI:
 https://kazlauskas.me/entries/x64-uefi-os-1.html
 
+OS:
+http://pages.cs.wisc.edu/~remzi/OSTEP/
+https://wiki.osdev.org/Getting_to_Ring_3
 
 CPUID:
 https://docs.microsoft.com/en-us/cpp/intrinsics/cpuid-cpuidex?view=vs-2019
@@ -97,6 +100,10 @@ x64 Calling Convention:
 https://docs.microsoft.com/en-us/cpp/build/x64-calling-convention?view=vs-2019
 https://stackoverflow.com/questions/20637569/assembly-registers-in-64-bit-architecture
 https://stackoverflow.com/questions/11177137/why-do-x86-64-instructions-on-32-bit-registers-zero-the-upper-part-of-the-full-6
+https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/x64-architecture
+
+Exceptions:
+https://wiki.osdev.org/Exceptions#Selector_Error_Code
 
 Ntdll showing off systemcall:
 .text:000000018009C578 algn_18009C578:                         ; DATA XREF: .pdata:00000001801712B8↓o

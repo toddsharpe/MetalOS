@@ -149,6 +149,15 @@ typedef struct _SEGMENT_SELECTOR
 		};
 		UINT16 Value;
 	};
+
+	_SEGMENT_SELECTOR() { };
+
+	_SEGMENT_SELECTOR(UINT16 index)
+	{
+		PrivilegeLevel = KernelDPL;
+		TableIndicator = 0;
+		Index = index;
+	}
 } SEGMENT_SELECTOR, *PSEGME;
 static_assert(sizeof(SEGMENT_SELECTOR) == sizeof(UINT16), "Size mismatch, only 64-bit supported.");
 

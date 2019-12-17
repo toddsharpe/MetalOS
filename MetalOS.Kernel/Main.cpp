@@ -357,16 +357,7 @@ extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
 {
 	loading->WriteLineFormat("ISR: %d", vector);
 	loading->WriteLineFormat("RSP: 0x%16x", x64_ReadRsp());
-	loading->WriteLineFormat("DEBUG_STACK-Start: 0x%16x End: 0x%16x", (UINT64*)DEBUG_STACK, (UINT64*)(DEBUG_STACK + IST_STACK_SIZE));
 	loading->WriteLineFormat("RIP: 0x%16x", pFrame->RIP);
-
-	__halt();
-}
-
-void test()
-{
-	//LOADER_PARAMS p;
-	main(nullptr);
 }
 
 extern "C" void main(LOADER_PARAMS* loader)
@@ -383,7 +374,6 @@ extern "C" void main(LOADER_PARAMS* loader)
 	loading->WriteLineFormat("IDT[1] 0x%16x 0x%16x", *(UINT64*)& IDT[1], *(((UINT64*)& IDT[1]) + 1));
 	loading->WriteLineFormat("IDT[2] 0x%16x 0x%16x", *(UINT64*)& IDT[2], *(((UINT64*)& IDT[2]) + 1));
 	loading->WriteLineFormat("IDT[3] 0x%16x 0x%16x", *(UINT64*)& IDT[3], *(((UINT64*)& IDT[3]) + 1));
-	//__halt();
 	loading->WriteLineFormat("KernelBase:0x%16x", KernelBaseAddress);
 	loading->WriteLineFormat("TSS64- Limit:0x%16x", &TSS64);
 	loading->WriteLineFormat("KernelGDT - 0x%16x, Size: 0x%x", &KernelGDT, sizeof(KernelGDT));
@@ -391,7 +381,7 @@ extern "C" void main(LOADER_PARAMS* loader)
 	loading->WriteLineFormat("RBP - 0x%16x", x64_ReadRbp());
 	loading->WriteLineFormat("GDTR &:0x%16x, Limit:0x%08x, Address: 0x%16x", &GDTR, GDTR.Limit, GDTR.BaseAddress);
 	
-	SEGMENT_SELECTOR csSelector;
+	SEGMENT_SELECTOR csSelector = { 0 };
 	csSelector.Value = x64_ReadCS();
 	loading->WriteLineFormat("CS RPL %d Value:0x%16x", csSelector.PrivilegeLevel, csSelector.Value);
 	loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
@@ -401,16 +391,12 @@ extern "C" void main(LOADER_PARAMS* loader)
 	//Setup GDT/TSR
 	_lgdt(&GDTR);
 
-	SEGMENT_SELECTOR dataSelector = { 0 };
-	dataSelector.Index = GDT_KERNEL_DATA;
-	SEGMENT_SELECTOR codeSelector = { 0 };
-	codeSelector.Index = GDT_KERNEL_CODE;
+	SEGMENT_SELECTOR dataSelector(GDT_KERNEL_DATA);
+	SEGMENT_SELECTOR codeSelector(GDT_KERNEL_CODE);
 	loading->WriteLineFormat("Code: 0x%4x, Data: 0x%4x", codeSelector.Value, dataSelector.Value);
 	x64_update_segments(dataSelector.Value, codeSelector.Value);
 	loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
-
-	SEGMENT_SELECTOR tssSelector = { 0 };
-	tssSelector.Index = GDT_TSS_ENTRY;
+	SEGMENT_SELECTOR tssSelector(GDT_TSS_ENTRY);
 	loading->WriteLineFormat("TSS: 0x%4x", tssSelector.Value);
 	x64_ltr(tssSelector.Value);
 
@@ -419,6 +405,7 @@ extern "C" void main(LOADER_PARAMS* loader)
 
 
 	x64_sti();
+	__debugbreak();
 	__debugbreak();
 	__halt();
 

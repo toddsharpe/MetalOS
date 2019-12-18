@@ -355,9 +355,7 @@ __declspec(align(2)) static DESCRIPTOR_TABLE IDTR =
 
 extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
 {
-	loading->WriteLineFormat("ISR: %d", vector);
-	loading->WriteLineFormat("RSP: 0x%16x", x64_ReadRsp());
-	loading->WriteLineFormat("RIP: 0x%16x", pFrame->RIP);
+	loading->WriteLineFormat("ISR: %d, Code: %d, RSP: 0x%16x, RIP: 0x%16x", vector, pFrame->ErrorCode, x64_ReadRsp(), pFrame->RIP);
 }
 
 extern "C" void main(LOADER_PARAMS* loader)
@@ -407,13 +405,11 @@ extern "C" void main(LOADER_PARAMS* loader)
 	x64_sti();
 	__debugbreak();
 	__debugbreak();
-	__halt();
 
 	//__debugbreak();
 	
 	//x64_update_segments(dataSelector.Value, codeSelector.Value);
 	
-	__halt();
 	//loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
 
 	//load segment registers?

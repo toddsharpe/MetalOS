@@ -58,9 +58,8 @@ x64_interrupt_handler_&number& PROC
 	ENDIF
 
 	; Push Complete frame
-	PUSH_INTERRUPT_FRAME
-
 	ISR_PROLOG
+	PUSH_INTERRUPT_FRAME
 
 	; INTERRUPT_HANDLER arguments
 	mov rcx, number
@@ -70,10 +69,11 @@ x64_interrupt_handler_&number& PROC
 	call INTERRUPT_HANDLER; Call OS handler
 	add rsp, 20h; Reclaim register parameter area
 
-	ISR_EPILOG
-	add rsp, 8
-
+	; Restore previous frame
 	POP_INTERRUPT_FRAME
+	ISR_EPILOG
+	add rsp, 8 ; Remove error code
+
 	iretq
 x64_interrupt_handler_&number& ENDP
 ENDM

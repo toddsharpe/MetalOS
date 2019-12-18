@@ -1,5 +1,9 @@
 #pragma once
 
+#define def_x64_GPR_RW(name) \
+	UINT64 __stdcall x64_Read ## name ## (); \
+	void __stdcall x64_Write ## name ## (UINT64 value);
+
 extern "C"
 {
 	//Omitted from intrinsics
@@ -21,24 +25,23 @@ extern "C"
 	UINT16 __stdcall x64_ReadSS();
 	void __stdcall x64_WriteSS(UINT16 segment_selector);
 
-	//Register Reading
-	UINT64 __stdcall x64_ReadRax();
-	UINT64 __stdcall x64_ReadRcx();
-	UINT64 __stdcall x64_ReadRdx();
-	UINT64 __stdcall x64_ReadRbx();
-	UINT64 __stdcall x64_ReadRsp();
-	UINT64 __stdcall x64_ReadRbp();
-	UINT64 __stdcall x64_ReadRsi();
-	UINT64 __stdcall x64_ReadRdi();
-
-	UINT64 __stdcall x64_ReadR8();
-	UINT64 __stdcall x64_ReadR9();
-	UINT64 __stdcall x64_ReadR10();
-	UINT64 __stdcall x64_Read11();
-	UINT64 __stdcall x64_ReadR12();
-	UINT64 __stdcall x64_ReadR13();
-	UINT64 __stdcall x64_ReadR14();
-	UINT64 __stdcall x64_ReadR15();
+	//General Purpose Register (RW)
+	def_x64_GPR_RW(Rax);
+	def_x64_GPR_RW(Rcx);
+	def_x64_GPR_RW(Rdx);
+	def_x64_GPR_RW(Rbx);
+	def_x64_GPR_RW(Rsi);
+	def_x64_GPR_RW(Rdi);
+	def_x64_GPR_RW(Rsp);
+	def_x64_GPR_RW(Rbp);
+	def_x64_GPR_RW(R8);
+	def_x64_GPR_RW(R9);
+	def_x64_GPR_RW(R10);
+	def_x64_GPR_RW(R11);
+	def_x64_GPR_RW(R12);
+	def_x64_GPR_RW(R13);
+	def_x64_GPR_RW(R14);
+	def_x64_GPR_RW(R15);
 
 	//Helpers
 	void __stdcall x64_update_segments(UINT16 data_selector, UINT16 code_selector);

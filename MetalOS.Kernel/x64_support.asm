@@ -105,28 +105,33 @@ x64_WriteSS PROC
 	ret
 x64_WriteSS ENDP
 
-x64_READ_GPR MACRO name
+x64_GPR_RW MACRO name
 x64_Read&name& PROC
 	mov rax, name
 	ret
 x64_Read&name& ENDP
+
+x64_Write&name& PROC
+	mov name, rcx
+	ret
+x64_Write&name& ENDP
 ENDM
 
-x64_READ_GPR <Rax>
-x64_READ_GPR <Rcx>
-x64_READ_GPR <Rdx>
-x64_READ_GPR <Rbx>
-x64_READ_GPR <Rsp>
-x64_READ_GPR <Rbp>
-x64_READ_GPR <Rsi>
-x64_READ_GPR <Rdi>
-x64_READ_GPR <R8>
-x64_READ_GPR <R9>
-x64_READ_GPR <R10>
-x64_READ_GPR <R11>
-x64_READ_GPR <R12>
-x64_READ_GPR <R13>
-x64_READ_GPR <R14>
-x64_READ_GPR <R15>
+x64_GPR_RW <Rax>
+x64_GPR_RW <Rcx>
+x64_GPR_RW <Rdx>
+x64_GPR_RW <Rbx>
+x64_GPR_RW <Rsi>
+x64_GPR_RW <Rdi>
+x64_GPR_RW <Rsp>
+x64_GPR_RW <Rbp>
+x64_GPR_RW <R8>
+x64_GPR_RW <R9>
+x64_GPR_RW <R10>
+x64_GPR_RW <R11>
+x64_GPR_RW <R12>
+x64_GPR_RW <R13>
+x64_GPR_RW <R14>
+x64_GPR_RW <R15>
 
 end

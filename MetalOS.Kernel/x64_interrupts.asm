@@ -23,7 +23,6 @@ PUSH_INTERRUPT_FRAME MACRO
 	push r8
 	push rdi
 	push rsi
-	push rbp
 	push rbx
 	push rdx
 	push rcx
@@ -36,7 +35,6 @@ POP_INTERRUPT_FRAME MACRO
 	pop rcx
 	pop rdx
 	pop rbx
-	pop rbp
 	pop rsi
 	pop rdi
 	pop r8
@@ -63,7 +61,7 @@ x64_interrupt_handler_&number& PROC
 
 	; INTERRUPT_HANDLER arguments
 	mov rcx, number
-	lea rdx, [rbp + 8]
+	mov rdx, rsp
 
 	sub rsp, 20h; Reserve 32bytes for register parameter area
 	call INTERRUPT_HANDLER; Call OS handler
@@ -72,7 +70,7 @@ x64_interrupt_handler_&number& PROC
 	; Restore previous frame
 	POP_INTERRUPT_FRAME
 	ISR_EPILOG
-	add rsp, 8 ; Remove error code
+	add rsp, 8 ; Remove error code (Intel SDM, Vol 3A Section 6.13)
 
 	iretq
 x64_interrupt_handler_&number& ENDP

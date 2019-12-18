@@ -355,7 +355,7 @@ __declspec(align(2)) static DESCRIPTOR_TABLE IDTR =
 
 extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
 {
-	loading->WriteLineFormat("ISR: %d, Code: %d, RSP: 0x%16x, RIP: 0x%16x", vector, pFrame->ErrorCode, x64_ReadRsp(), pFrame->RIP);
+	loading->WriteLineFormat("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP);
 }
 
 extern "C" void main(LOADER_PARAMS* loader)
@@ -400,9 +400,8 @@ extern "C" void main(LOADER_PARAMS* loader)
 
 	__lidt(&IDTR);
 	loading->WriteLineFormat("IDTR: 0x%4x, Address: 0x%16x", IDTR.Limit, IDTR.BaseAddress);
-
-
 	x64_sti();
+
 	__debugbreak();
 	__debugbreak();
 

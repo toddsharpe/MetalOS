@@ -329,7 +329,6 @@ typedef struct
 	UINT64 RCX;
 	UINT64 RDX;
 	UINT64 RBX;
-	UINT64 RBP;
 	UINT64 RSI;
 	UINT64 RDI;
 	UINT64 R8;
@@ -340,6 +339,7 @@ typedef struct
 	UINT64 R13;
 	UINT64 R14;
 	UINT64 R15;
+	UINT64 RBP; //Position between automatically pushed context and additional context
 
 	//Intel SDM Vol3A Figure 6-4
 	//Pushed conditionally by CPU, ensured to exist by x64_INTERRUPT_HANDLER, 0 by default

@@ -155,6 +155,7 @@
     <ClCompile Include="MemoryMap.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="System.cpp" />
+    <ClCompile Include="x64.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CRT.h" />
@@ -167,6 +168,7 @@
     <ClInclude Include="MemoryMap.h" />
     <ClInclude Include="String.h" />
     <ClInclude Include="System.h" />
+    <ClInclude Include="x64.h" />
     <ClInclude Include="x64_interrupts.h" />
     <ClInclude Include="x64_support.h" />
   </ItemGroup>

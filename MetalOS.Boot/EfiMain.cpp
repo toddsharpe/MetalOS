@@ -52,9 +52,10 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	ReturnIfNotSuccess(RT->GetTime(&time, nullptr));
 	Print(L"Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
-	//Reserve space for loader block, it will be on its own page
+	//Reserve space for loader block, it will be on its own page.
+	//It's labelled BootServicesData because kernel will copy into its own address space early in boot.
 	PLOADER_PARAMS params = nullptr;
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS)), (EFI_PHYSICAL_ADDRESS*)&params));
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiBootServicesData, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS)), (EFI_PHYSICAL_ADDRESS*)&params));
 	CRT::memset(params, 0, sizeof(LOADER_PARAMS));
 	params->ConfigTables = ST->ConfigurationTable;
 	params->ConfigTableSizes = ST->NumberOfTableEntries;
@@ -74,6 +75,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	//Allocate pages for Bootloader PageTablesPool
 	//Pages from this pool will be used to bootstrap the kernel
 	//This is because original PT was read-only. TODO: use CR0 bit 16 to fix this?
+	//Boot PT is allocated in boot services data so kernel knows it can be cleared
 	EFI_PHYSICAL_ADDRESS bootloaderPagePoolAddress;
 	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiBootServicesData, BootloaderPagePoolCount, &bootloaderPagePoolAddress));
 
@@ -115,11 +117,11 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	}
 	CRT::memcpy((void*)ptsRoot, (void*)__readcr3(), EFI_PAGE_SIZE);
 
-	//Create new PT using the copied root page, and map in the kernel
+	//Create new PT using the copied root page, and map in the kernel and page tables pool
 	PageTables newPts(ptsRoot);
 	newPts.SetPool(&pageTablesPool);
 	newPts.MapKernelPages(KernelBaseAddress, params->KernelAddress, EFI_SIZE_TO_PAGES(params->KernelImageSize));
-	//newPts.MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	newPts.MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 	__writecr3(ptsRoot);
 
 	//Call post-page table kernel initialization

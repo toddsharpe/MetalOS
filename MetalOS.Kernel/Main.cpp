@@ -10,6 +10,7 @@
 #include "Loader.h"
 #include <intrin.h>
 #include "CRT.h"
+#include "String.h"
 #include "PageTables.h"
 #include "PageTablesPool.h"
 #include <intrin.h>
@@ -353,13 +354,41 @@ __declspec(align(2)) static DESCRIPTOR_TABLE IDTR =
 	(UINT64)IDT
 };
 
+KERNEL_GLOBAL_ALIGN static LOADER_PARAMS LoaderParams = { 0 };
+
+KERNEL_GLOBAL_ALIGN static UINT8 EFI_MEMORY_MAP[MemoryMapReservedSize] = { 0 };
+
 extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
 {
 	loading->WriteLineFormat("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP);
+	switch (vector)
+	{
+	case 14:
+		loading->WriteLineFormat("CR2: 0x%16x", __readcr2());
+		break;
+	}
+}
+
+extern "C" void Print(const char* format, ...)
+{
+	char buffer[80];
+
+	va_list ap;
+
+	va_start(ap, format);
+	int retval = String::vsprintf(buffer, format, ap);
+	buffer[retval] = '\0';
+	va_end(ap);
+
+	loading->WriteLine(buffer);
 }
 
 extern "C" void main(LOADER_PARAMS* loader)
 {
+	//Copy Loader Params into kernel data, update pointer
+	CRT::memcpy(&LoaderParams, loader, sizeof(LOADER_PARAMS));
+	loader = &LoaderParams;
+	
 	//Immediately set up graphics device so we can bugcheck gracefully
 	display.SetDisplay(&loader->Display);
 	display.ColorScreen(Black);
@@ -367,71 +396,43 @@ extern "C" void main(LOADER_PARAMS* loader)
 	LoadingScreen localLoading(display);
 	loading = &localLoading;
 
-	loading->WriteLineFormat("TSS 0x%16x 0x%16x", *(UINT64*)& KernelGDT.TssEntry , *(((UINT64*)&KernelGDT.TssEntry) + 1));
-	loading->WriteLineFormat("IDT[0] 0x%16x 0x%16x", *(UINT64*)&IDT[0], *(((UINT64*)& IDT[0]) + 1));
-	loading->WriteLineFormat("IDT[1] 0x%16x 0x%16x", *(UINT64*)& IDT[1], *(((UINT64*)& IDT[1]) + 1));
-	loading->WriteLineFormat("IDT[2] 0x%16x 0x%16x", *(UINT64*)& IDT[2], *(((UINT64*)& IDT[2]) + 1));
-	loading->WriteLineFormat("IDT[3] 0x%16x 0x%16x", *(UINT64*)& IDT[3], *(((UINT64*)& IDT[3]) + 1));
-	loading->WriteLineFormat("KernelBase:0x%16x", KernelBaseAddress);
-	loading->WriteLineFormat("TSS64- Limit:0x%16x", &TSS64);
-	loading->WriteLineFormat("KernelGDT - 0x%16x, Size: 0x%x", &KernelGDT, sizeof(KernelGDT));
-	loading->WriteLineFormat("RSP - 0x%16x, Start: 0x%16x, End: 0x%16x", x64_ReadRsp(), &KERNEL_STACK, KERNEL_STACK_STOP);
-	loading->WriteLineFormat("RBP - 0x%16x", x64_ReadRbp());
-	loading->WriteLineFormat("GDTR &:0x%16x, Limit:0x%08x, Address: 0x%16x", &GDTR, GDTR.Limit, GDTR.BaseAddress);
-	
-	SEGMENT_SELECTOR csSelector = { 0 };
-	csSelector.Value = x64_ReadCS();
-	loading->WriteLineFormat("CS RPL %d Value:0x%16x", csSelector.PrivilegeLevel, csSelector.Value);
-	loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
+	//Copy Memory Map
+	Assert(loader->MemoryMapSize < MemoryMapReservedSize);
+	CRT::memcpy(EFI_MEMORY_MAP, loader->MemoryMap, loader->MemoryMapSize);
+	loader->MemoryMap = (EFI_MEMORY_DESCRIPTOR*)EFI_MEMORY_MAP;
 
-	//x64_sti();
-	loading->WriteLineFormat("RFLAGS: 0x%16x", x64_rflags());
-	//Setup GDT/TSR
+	//Setup GDT/Segments/TSR
 	_lgdt(&GDTR);
-
 	SEGMENT_SELECTOR dataSelector(GDT_KERNEL_DATA);
 	SEGMENT_SELECTOR codeSelector(GDT_KERNEL_CODE);
-	loading->WriteLineFormat("Code: 0x%4x, Data: 0x%4x", codeSelector.Value, dataSelector.Value);
 	x64_update_segments(dataSelector.Value, codeSelector.Value);
-	loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
 	SEGMENT_SELECTOR tssSelector(GDT_TSS_ENTRY);
-	loading->WriteLineFormat("TSS: 0x%4x", tssSelector.Value);
 	x64_ltr(tssSelector.Value);
-
 	__lidt(&IDTR);
-	loading->WriteLineFormat("IDTR: 0x%4x, Address: 0x%16x", IDTR.Limit, IDTR.BaseAddress);
 	x64_sti();
 
+	//Test interrupts
 	__debugbreak();
-	__debugbreak();
-
-	//__debugbreak();
-	
-	//x64_update_segments(dataSelector.Value, codeSelector.Value);
-	
-	//loading->WriteLineFormat("CS: 0x%16x, DS: 0x%16x", x64_ReadCS(), x64_ReadDS());
-
-	//load segment registers?
 
 	//Set up the page tables
-	//PageTablesPool pool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
-	//UINT64 ptRoot;
-	//Assert(pool.AllocatePage(&ptRoot));
-	//loading->WriteLineFormat("PT - Current: 0x%16x Base: 0x%16x", __readcr3(), ptRoot);
+	PageTablesPool pool(LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
+	pool.SetVirtualAddress(KernelPageTablesPoolAddress);
+	UINT64 ptRoot;
+	Assert(pool.AllocatePage(&ptRoot));
+	loading->WriteLineFormat("PT - Current: 0x%16x Base: 0x%16x", __readcr3(), ptRoot);
 
-	//Map in kernel, page table pool
-	//PageTables kernelPT(__readcr3());
-	//PageTables kernelPT(ptRoot);
-	//kernelPT.SetPool(&pool);
-	//kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
-	//kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
-	//pool.SetVirtualAddress(KernelPageTablesPoolAddress);
-	//kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
-	//loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
-	//__writecr3(ptRoot);
+	//Map in kernel to new PT. PageTablesPool has been mapped in by bootloader
+	PageTables kernelPT(ptRoot);
+	kernelPT.SetPool(&pool);
+	kernelPT.SetVirtualOffset(KernelPageTablesPoolAddress - LoaderParams.PageTablesPoolAddress);
+	kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
+	kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
+	kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
+	loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
+	__writecr3(ptRoot);
+	
 
-
-	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%16x Size: 0x%x", loader->KernelAddress, loader->KernelImageSize);
+	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%16x Size: 0x%x", LoaderParams.KernelAddress, LoaderParams.KernelImageSize);
 	loading->WriteLineFormat("LOADER_PARAMS: 0x%16x", loader);
 	loading->WriteLineFormat("ConfigTableSizes: %d", loader->ConfigTableSizes);
 	loading->WriteLineFormat("MemoryMap: 0x%16x", loader->MemoryMap);
@@ -440,61 +441,7 @@ extern "C" void main(LOADER_PARAMS* loader)
 	//Access current EFI memory map
 	//Its on its own page so we are fine with resizing
 	MemoryMap memoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, loader->MemoryMap, PAGE_SIZE);
-	//memoryMap.ReclaimBootPages();
-	//memoryMap.MergeConventionalPages();
-
-	//Allocate pages for PageTablesPool
-	//EFI_PHYSICAL_ADDRESS pageTables = memoryMap.AllocatePages(ReservedPageTablePages);
-	//CRT::memset((void*)pageTables, 0, ReservedPageTableSpace);
-
-	//Construct pool and map in page tables
-	//PageTablesPool pool(pageTables, ReservedPageTablePages);//This needs to be in persistent memory
-	//UINT64 root = pool.AllocatePage();
-
-	//PageTables newTables(root);
-	//newTables.SetPool(&pool);
-	//newTables.MapKernelPages((UINT64)(KernelStart + pageTables), pageTables, ReservedPageTablePages); //// WTFFFFFFFFFFF
-
-	//UINT64 virtualAddress = newTables.ResolveAddress(pageTables);
-	//loading->WriteLineFormat("virtualAddress: 0x%16x", virtualAddress);
-
-
 	memoryMap.DumpMemoryMap();
-
-	//Reconstruct our map there
-	//memoryMap = MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, (EFI_MEMORY_DESCRIPTOR*)address, pages * EFI_PAGE_SIZE);
-	
-	//memoryMap.AllocatePages(pages);//not using return value?
-
-	//memoryMap.ReclaimBootPages();
-
-	//memoryMap.MergeConventionalPages();
-
-	//Carve out area of memory map for page table region
-
-	//Make new page table in pool
-	//map memory map, map pool, map kernel
-
-	//
-
-	//memoryMap.DumpMemoryMap();
-
-
-	//Map in page table pool
-
-
-	//Map a region of physical pages to the highest possible address to use for page tables
-	//PageTables current(__readcr3() & ~0xFFF);
-	//current.SetPool(&pool);
-
-	//System system(loader->ConfigTables, loader->ConfigTableSizes);
-
-	//system.GetInstalledSystemRam();
-	//bool b = system.IsPagingEnabled();
-	//loading->WriteLineFormat("IsPagingEnabled: %d", b);
-	//UINT64 phys = system.ResolveAddress(loader->BaseAddress);
-	//UINT64 phys = system.ResolveAddress((UINT64)loader->Display.Info);
-	//loading->WriteLineFormat("Resolved: 0x%16x", phys);
 
 	__halt();
 }

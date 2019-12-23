@@ -136,6 +136,7 @@ typedef struct _PTE
 } PTE, * PPTE;
 static_assert(sizeof(PTE) == sizeof(PVOID), "Size mismatch, only 64-bit supported.");
 
+#define MakeSegmentSelector(x) (x << 3) //TODO: replace with constructor and cast maybe?
 // Intel SDM Vol 3A Figure 3-6
 typedef struct _SEGMENT_SELECTOR
 {
@@ -380,9 +381,16 @@ typedef struct
 #define UserStop    0x00007FFFFFFFFFFF
 #define KernelStart 0xFFFF800000000000
 
+//16MB region unused
 #define KernelBaseAddress (KernelStart + 0x1000000)//16 MB kernel
 #define KernelPageTablesPoolAddress (KernelStart + 0x2000000)//16MB page pool (currently only 2mb is used - 512 * 4096)
 #define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
+#define KernelHeapAddress (KernelStart + 0x4000000)//16MB for kernel heap!
+
+#define KernelHeapSize 0x1000000
+
+#define MemoryMapReservedSize PAGE_SIZE
+
 #define KernelStop UINT64_MAX
 
 #define ISR_HANDLER(x) x64_interrupt_handler_ ## x

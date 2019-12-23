@@ -125,7 +125,7 @@ EFI_STATUS EfiLoader::CrtInitialization(UINT64 imageBase)
 	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)imageBase;
 	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(imageBase + dosHeader->e_lfanew);
 
-	//Write sections into memory
+	//Find CRT section
 	PIMAGE_SECTION_HEADER crtSection = nullptr;
 	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)

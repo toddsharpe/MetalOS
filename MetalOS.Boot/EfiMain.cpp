@@ -7,7 +7,6 @@
 #include "EfiLoader.h"
 #include "Error.h"
 #include "Memory.h"
-//#define _JMP_BUF_DEFINED
 #include <intrin.h>
 #include "CRT.h"
 
@@ -23,6 +22,9 @@ EFI_RUNTIME_SERVICES* RT;
 EFI_BOOT_SERVICES* BS;
 EFI_MEMORY_TYPE AllocationType;
 
+LOADER_PARAMS LoaderParams = { 0 };
+UINT8 EfiMemoryMap[MemoryMapReservedSize] = { 0 };
+
 extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 {
 	EFI_STATUS status;
@@ -31,6 +33,10 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	ST = SystemTable;
 	BS = SystemTable->BootServices;
 	RT = SystemTable->RuntimeServices;
+
+	//Populate params
+	LoaderParams.ConfigTables = ST->ConfigurationTable;
+	LoaderParams.ConfigTableSizes = ST->NumberOfTableEntries;
 
 	//Disable the stupid watchdog - TODO: why doesnt it go away on its own? Maybe because i didnt call SetVirtualAddressMap?
 	ReturnIfNotSuccess(BS->SetWatchdogTimer(0, 0, 0, nullptr));
@@ -52,37 +58,33 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	ReturnIfNotSuccess(RT->GetTime(&time, nullptr));
 	Print(L"Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
-	//Reserve space for loader block, it will be on its own page.
-	//It's labelled BootServicesData because kernel will copy into its own address space early in boot.
-	PLOADER_PARAMS params = nullptr;
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiBootServicesData, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS)), (EFI_PHYSICAL_ADDRESS*)&params));
-	CRT::memset(params, 0, sizeof(LOADER_PARAMS));
-	params->ConfigTables = ST->ConfigurationTable;
-	params->ConfigTableSizes = ST->NumberOfTableEntries;
-
-	//Determine size of memory map, allocate it on its own page
+	//Determine size of memory map, allocate it in Boot Services Data so Kernel cleans it up
 	UINTN memoryMapKey = 0;
-	status = BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion);
+	status = BS->GetMemoryMap(&LoaderParams.MemoryMapSize, LoaderParams.MemoryMap, &memoryMapKey, &LoaderParams.MemoryMapDescriptorSize, &LoaderParams.MemoryMapVersion);
 	if (status == EFI_BUFFER_TOO_SMALL)
 	{
-		ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, EFI_SIZE_TO_PAGES(params->MemoryMapSize), (EFI_PHYSICAL_ADDRESS*)&params->MemoryMap));
+		ReturnIfNotSuccess(BS->AllocatePool(EfiBootServicesData, LoaderParams.MemoryMapSize, (void**)&LoaderParams.MemoryMap));
 	}
 	else
 	{
 		ReturnIfNotSuccess(status);
 	}
 
-	//Allocate pages for Bootloader PageTablesPool
+	if (LoaderParams.MemoryMapSize > MemoryMapReservedSize)
+	{
+		ReturnIfNotSuccess(EFI_BUFFER_TOO_SMALL);
+	}
+
+	//Allocate pages for Bootloader PageTablesPool in BootServicesData
 	//Pages from this pool will be used to bootstrap the kernel
-	//This is because original PT was read-only. TODO: use CR0 bit 16 to fix this?
 	//Boot PT is allocated in boot services data so kernel knows it can be cleared
 	EFI_PHYSICAL_ADDRESS bootloaderPagePoolAddress;
 	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiBootServicesData, BootloaderPagePoolCount, &bootloaderPagePoolAddress));
 
 	//Allocate pages for our Kernel's page pools
 	//This pool will be kept for the kernel to use during runtime
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, ReservedPageTablePages, &(params->PageTablesPoolAddress)));
-	params->PageTablesPoolPageCount = ReservedPageTablePages;
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, ReservedPageTablePages, &(LoaderParams.PageTablesPoolAddress)));
+	LoaderParams.PageTablesPoolPageCount = ReservedPageTablePages;
 
 	//Build path to kernel
 	CHAR16* KernelPath;
@@ -102,48 +104,41 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Map kernel into memory. It will be relocated at KernelBaseAddress
 	UINT64 entryPoint;
-	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &params->KernelImageSize, &entryPoint, &params->KernelAddress));
+	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &LoaderParams.KernelImageSize, &entryPoint, &LoaderParams.KernelAddress));
 
-	//Kernel has been mapped to deep address space. The current pagetable k-tree is Read Only and attempts to make it writable aren't working (probably because its recursive)
-	//Instead, copy the root page and add our kernel entry. This works because the current identity mapping and our new kernel mapping don't share a L4 entry
-	//if they did, the l3 entry would have to be duplicated.
-	//I honestly wonder how this is supposed to be done. Because the current page tables cant easily be modified (all the leaves are R/O) but I cant jump to kernel
-	//entry without adding the new address. But this yields me a sort of combined address space, and the first thing the kernel has to do is remap/unmap physical
+	//Disable write protection, allowing current page tables to be modified
+	__writecr0(__readcr0() & ~(1 << 16));
+
+	//Expand current page tables to include Kernel address space and pagetables
 	PageTablesPool pageTablesPool(bootloaderPagePoolAddress, BootloaderPagePoolCount);
-	EFI_PHYSICAL_ADDRESS ptsRoot;
-	if (!pageTablesPool.AllocatePage(&ptsRoot))
-	{
-		return EFI_LOAD_ERROR;
-	}
-	CRT::memcpy((void*)ptsRoot, (void*)__readcr3(), EFI_PAGE_SIZE);
+	PageTables currentPT(__readcr3());
+	currentPT.SetPool(&pageTablesPool);
+	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, EFI_SIZE_TO_PAGES(LoaderParams.KernelImageSize));
+	currentPT.MapKernelPages(KernelPageTablesPoolAddress, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
 
-	//Create new PT using the copied root page, and map in the kernel and page tables pool
-	PageTables newPts(ptsRoot);
-	newPts.SetPool(&pageTablesPool);
-	newPts.MapKernelPages(KernelBaseAddress, params->KernelAddress, EFI_SIZE_TO_PAGES(params->KernelImageSize));
-	newPts.MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
-	__writecr3(ptsRoot);
+	//Re-enable write protection
+	__writecr0(__readcr0() | (1 << 16));
 
-	//Call post-page table kernel initialization
+	//Finish kernel image initialization now that address space is constructed
 	ReturnIfNotSuccess(EfiLoader::CrtInitialization(KernelBaseAddress));
 
 	//Technically everything after allocating the loader block needs to free that memory before dying
-	ReturnIfNotSuccess(InitializeGraphics(&params->Display));
-	ReturnIfNotSuccess(DisplayLoaderParams(params));
+	ReturnIfNotSuccess(InitializeGraphics(&LoaderParams.Display));
+	ReturnIfNotSuccess(DisplayLoaderParams(&LoaderParams));
 
-	//Pause here before booting kernel. This is the furthest chance there is to pause before noreturn
+	//Pause here before booting kernel to inspect bootloader outputs
 	Keywait();
 
 	//Retrieve map from UEFI
 	//This could fail on EFI_BUFFER_TOO_SMALL
-	ReturnIfNotSuccess(BS->GetMemoryMap(&params->MemoryMapSize, params->MemoryMap, &memoryMapKey, &params->MemoryMapDescriptorSize, &params->MemoryMapVersion));
+	ReturnIfNotSuccess(BS->GetMemoryMap(&LoaderParams.MemoryMapSize, LoaderParams.MemoryMap, &memoryMapKey, &LoaderParams.MemoryMapDescriptorSize, &LoaderParams.MemoryMapVersion));
 	
 	//After ExitBootServices we can no longer use the BS handle (no print, memory, etc)
 	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
 
 	//Call into kernel
 	KernelMain kernelMain = (KernelMain)(entryPoint);
-	kernelMain(params);
+	kernelMain(&LoaderParams);
 
 	//Should never get here
 	return EFI_ABORTED;
@@ -225,8 +220,6 @@ EFI_STATUS PrintCpuDetails()
 	UINT64 cr0 = __readcr0();
 	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
 	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
-
-	//ReturnIfNotSuccess(Print(L"  CR3: %q\r\n", __readcr3()))
 
 	return status;
 }

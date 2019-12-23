@@ -70,23 +70,24 @@ extern "C" void Print(const char* format, ...)
 	loading->WriteLine(buffer);
 }
 
-extern "C" void main(LOADER_PARAMS* loader)
+//Copy loader params and all recursive structures to kernel memory
+extern "C" void main_thunk(LOADER_PARAMS* loader)
 {
-	//Copy Loader Params into kernel data, update pointer
 	CRT::memcpy(&LoaderParams, loader, sizeof(LOADER_PARAMS));
-	loader = &LoaderParams;
-	
+	LoaderParams.MemoryMap = (EFI_MEMORY_DESCRIPTOR*)EFI_MEMORY_MAP;
+	CRT::memcpy(EFI_MEMORY_MAP, loader->MemoryMap, loader->MemoryMapSize);
+
+	main(&LoaderParams);
+}
+
+void main(LOADER_PARAMS* loader)
+{
 	//Immediately set up graphics device so we can bugcheck gracefully
 	display.SetDisplay(&loader->Display);
 	display.ColorScreen(Black);
 
 	LoadingScreen localLoading(display);
 	loading = &localLoading;
-
-	//Copy Memory Map
-	Assert(loader->MemoryMapSize < MemoryMapReservedSize);
-	CRT::memcpy(EFI_MEMORY_MAP, loader->MemoryMap, loader->MemoryMapSize);
-	loader->MemoryMap = (EFI_MEMORY_DESCRIPTOR*)EFI_MEMORY_MAP;
 
 	//x64 Initialization
 	x64::Initialize();

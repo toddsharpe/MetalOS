@@ -20,26 +20,18 @@ const Color Black = { 0x00, 0x00, 0x00, 0x00 };
 
 Display display;
 LoadingScreen* loading;
-//LOADER_PARAMS* pParams;//TODO: make this extern and have loader get address and fill out struct directly?
 
 //Copy loader params into our own params (possible improvement, is to make this local params a PE/COFF export and have the loader fill that in directly)
 //Copy memory map - update efi bootloader to not put it on its own page then?
 //Copy configuration?
 
-//Map in kernel
-//Map in graphics buffer
-//map in page tables pool
-
-//figure out how to get dynamic memory
 
 //Kernel stack
 KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[KERNEL_STACK_SIZE] = { 0 };
-extern "C"
-{
-	//Define etern for x64_main
-	UINT64 KERNEL_STACK_STOP = (UINT64)& KERNEL_STACK[KERNEL_STACK_SIZE];
-}
+extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[KERNEL_STACK_SIZE];
 
+//Kernel Heap
+KERNEL_PAGE_ALIGN static volatile UINT8 KERNEL_HEAP[KERNEL_HEAP_SIZE] = { 0 };
 
 KERNEL_GLOBAL_ALIGN static LOADER_PARAMS LoaderParams = { 0 };
 
@@ -111,7 +103,6 @@ void main(LOADER_PARAMS* loader)
 	kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
 	loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
 	__writecr3(ptRoot);
-	
 
 	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%16x Size: 0x%x", LoaderParams.KernelAddress, LoaderParams.KernelImageSize);
 	loading->WriteLineFormat("LOADER_PARAMS: 0x%16x", loader);
@@ -122,19 +113,24 @@ void main(LOADER_PARAMS* loader)
 	//Access current EFI memory map
 	//Its on its own page so we are fine with resizing
 	MemoryMap memoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, loader->MemoryMap, PAGE_SIZE);
+	memoryMap.ReclaimBootPages();
+	memoryMap.DumpMemoryMap();
+	memoryMap.MergeConventionalPages();
 	memoryMap.DumpMemoryMap();
 
 	__halt();
 }
 
 //TODO: fix when merging loading screen and display
-void KernelBugcheck(const char* assert)
+void KernelBugcheck(const char* file, const char* line, const char* assert)
 {
-	display.ColorScreen(Red);
+	//display.ColorScreen(Red);
 	
-	loading->ResetX();
-	loading->ResetY();
-	loading->WriteText(assert);
+	//loading->ResetX();
+	//loading->ResetY();
+	loading->WriteLine(file);
+	loading->WriteLine(line);
+	loading->WriteLine(assert);
 
 	//halt
 	__halt();

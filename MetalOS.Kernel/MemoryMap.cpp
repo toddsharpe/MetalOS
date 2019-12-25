@@ -26,82 +26,39 @@ void MemoryMap::ReclaimBootPages()
 	}
 }
 
-//memoryMapDescriptorSize isn't the same size of the structure, so always use the firmware one
+//Note: m_memoryMapDescriptorSize (0x30) is not the same size as EFI_MEMORY_DESCRIPTOR (0x28)
 void MemoryMap::MergeConventionalPages()
 {
-	UINTN descriptorsMerged = 0;
-	const UINT32 sentinel = EfiMaxMemoryType + 1;
-	UINT32 descriptorCount = (m_memoryMapSize / m_memoryMapDescriptorSize);
-	
+	EFI_MEMORY_DESCRIPTOR* destination;;
 	EFI_MEMORY_DESCRIPTOR* current;
-	EFI_MEMORY_DESCRIPTOR* next;
-	for (current = m_memoryMap;
-		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize - m_memoryMapDescriptorSize);
-		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
-	{
-		next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
-		
-		if ((current->Type == EfiConventionalMemory) && (next->Type == EfiConventionalMemory))
-			descriptorsMerged++;
-	}
-
-	UINT32 newMapSize = m_memoryMapSize - descriptorsMerged * m_memoryMapDescriptorSize;
-	loading->WriteLineFormat("m: %d", descriptorsMerged);
-	loading->WriteLineFormat("B: %x A: %x", m_memoryMapSize, newMapSize);
-
-	//Seems we don't need to worry about resizing the allocation for the memory map, so just assert its fine
-	Assert((m_memoryMapSize >> EFI_PAGE_SIZE) != (newMapSize >> EFI_PAGE_SHIFT));
-	//On second thought, we do, maybe?
-
-	EFI_MEMORY_DESCRIPTOR* memoryMapPage = ResolveAddress((EFI_PHYSICAL_ADDRESS)m_memoryMap);
-	loading->WriteLineFormat("F: %x A: %x", memoryMapPage->PhysicalStart, memoryMapPage->NumberOfPages);
-	return;
-	
-	//Indexes wont work!
-	//Scan over memory map, combining adjacent EfiConventionalMemory blocks
-	for (UINT32 i = 0; i < descriptorCount - 1; i++)
-	{
-		if (m_memoryMap[i].Type != EfiConventionalMemory)
-			continue;
-		
-		UINT32 j = i + 1;
-		while ((j < descriptorCount) && (m_memoryMap[j].Type == EfiConventionalMemory))
-		{
-			m_memoryMap[i].NumberOfPages += m_memoryMap[j].NumberOfPages;
-			m_memoryMap[j].Type = sentinel;
-			descriptorsMerged++;
-
-			j++;
-		}
-
-		//memoryMap[j] points to next real record
-
-		//Copy remaining records back
-		CRT::memcpy(&m_memoryMap[i + 1], &m_memoryMap[j], m_memoryMapDescriptorSize * (descriptorCount - j));
-		descriptorCount -= (j - i);
-	}
-
-
-	//Find entry that contains memory map, calculate reduction in pages and decrement
-	
-
-	//Find entry just after this one. If its free (conventional) decrement the starting address
-	//If its not, then insert a new one
-}
-
-//Returns the lowest address that is free with at least this many pages
-EFI_PHYSICAL_ADDRESS MemoryMap::GetLowestFree(UINT32 count)
-{
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap;
+	for (current = this->m_memoryMap,
+			destination = this->m_memoryMap;
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
-		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize),
+			destination = NextMemoryDescriptor(destination, m_memoryMapDescriptorSize))
 	{
-		if (current->NumberOfPages >= count)
-			return current->PhysicalStart;
+		//Copy over entry
+		CRT::memcpy(destination, current, this->m_memoryMapDescriptorSize);
+
+		if (current->Type == EfiConventionalMemory)
+		{
+			//Look ahead for Conventional memory and condense entry
+			EFI_MEMORY_DESCRIPTOR* next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
+			while (next->Type == EfiConventionalMemory)
+			{
+				destination->NumberOfPages += next->NumberOfPages;
+				current = next;
+				next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
+			}
+		}
 	}
 
-	Assert(false);
+	//Zero out remaining entries
+	UINT32 newSize = (UINT64)destination - (UINT64)this->m_memoryMap;
+	CRT::memset(destination, this->m_memoryMapSize - newSize, 0);
+
+	//Update size
+	this->m_memoryMapSize = newSize;
 }
 
 //Maybe return bool?

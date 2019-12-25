@@ -33,7 +33,6 @@ public:
 
 	void ReclaimBootPages();
 	void MergeConventionalPages();
-	EFI_PHYSICAL_ADDRESS GetLowestFree(UINT32 count);
 	EFI_PHYSICAL_ADDRESS AllocatePages(UINT32 count);
 
 	bool AddressFree(EFI_PHYSICAL_ADDRESS address);

@@ -2,9 +2,11 @@
 
 #include "MetalOS.h"
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
 #define NO_COPY_OR_ASSIGN(X) X(const X&) = delete; X& operator = (const X&) = delete;
-#define Assert(x) if (!(x)) { KernelBugcheck(#x); }
-#define Fatal(x) KernelBugcheck(x);
+#define Assert(x) if (!(x)) { KernelBugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
+#define Fatal(x) KernelBugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); 
 
 #define MakePtr( cast, ptr, addValue ) (cast)( (UINT64)(ptr) + (UINT64)(addValue))
 
@@ -397,6 +399,7 @@ typedef struct
 #define DEF_ISR_HANDLER(x) void ISR_HANDLER(x) ## ()
 
 #define KERNEL_STACK_SIZE (1 << 20)
+#define KERNEL_HEAP_SIZE (1 << 20)
 
 #define IDT_COUNT 256
 #define IST_STACK_SIZE (1 << 12)

@@ -23,7 +23,6 @@ EFI_BOOT_SERVICES* BS;
 EFI_MEMORY_TYPE AllocationType;
 
 LOADER_PARAMS LoaderParams = { 0 };
-UINT8 EfiMemoryMap[MemoryMapReservedSize] = { 0 };
 
 extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 {

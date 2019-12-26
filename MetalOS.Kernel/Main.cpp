@@ -14,6 +14,7 @@
 #include "PageTables.h"
 #include "PageTablesPool.h"
 #include "x64.h"
+#include "KernelHeap.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -36,6 +37,8 @@ KERNEL_PAGE_ALIGN static volatile UINT8 KERNEL_HEAP[KERNEL_HEAP_SIZE] = { 0 };
 KERNEL_GLOBAL_ALIGN static LOADER_PARAMS LoaderParams = { 0 };
 
 KERNEL_GLOBAL_ALIGN static UINT8 EFI_MEMORY_MAP[MemoryMapReservedSize] = { 0 };
+
+KernelHeap heap;
 
 extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
 {
@@ -62,6 +65,18 @@ extern "C" void Print(const char* format, ...)
 	loading->WriteLine(buffer);
 }
 
+void* operator new(size_t n)
+{
+	void* p = (void*)heap.Allocate(n);
+
+	return p;
+}
+
+void operator delete(void* p)
+{
+	heap.Deallocate((UINT64)p);
+}
+
 //Copy loader params and all recursive structures to kernel memory
 extern "C" void main_thunk(LOADER_PARAMS* loader)
 {
@@ -86,6 +101,14 @@ void main(LOADER_PARAMS* loader)
 
 	//Test interrupts
 	__debugbreak();
+
+	//Initialize heap
+	KernelHeap::Initialize((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
+	heap.OpenHeap((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
+
+	//Attempt to allocate
+	PageTables* pt = new PageTables(0);
+	loading->WriteLineFormat("PT: 0x%16x", pt);
 
 	//Set up the page tables
 	PageTablesPool pool(LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
@@ -114,7 +137,6 @@ void main(LOADER_PARAMS* loader)
 	//Its on its own page so we are fine with resizing
 	MemoryMap memoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, loader->MemoryMap, PAGE_SIZE);
 	memoryMap.ReclaimBootPages();
-	memoryMap.DumpMemoryMap();
 	memoryMap.MergeConventionalPages();
 	memoryMap.DumpMemoryMap();
 

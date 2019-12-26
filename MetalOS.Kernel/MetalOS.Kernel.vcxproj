@@ -149,6 +149,7 @@
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="KernelBugcheck.cpp" />
+    <ClCompile Include="KernelHeap.cpp" />
     <ClCompile Include="Loader.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="KernelBugcheck.h" />
+    <ClInclude Include="KernelHeap.h" />
     <ClInclude Include="Loader.h" />
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Main.h" />

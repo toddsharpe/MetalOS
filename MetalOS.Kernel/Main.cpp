@@ -19,15 +19,12 @@
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
 
-Display display;
+//Kernel members
+Display* display;
 LoadingScreen* loading;
+PageTablesPool* pagePool;
 
-//Copy loader params into our own params (possible improvement, is to make this local params a PE/COFF export and have the loader fill that in directly)
-//Copy memory map - update efi bootloader to not put it on its own page then?
-//Copy configuration?
-
-
-//Kernel stack
+//Kernel Stack
 KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[KERNEL_STACK_SIZE] = { 0 };
 extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[KERNEL_STACK_SIZE];
 
@@ -65,15 +62,11 @@ extern "C" void Print(const char* format, ...)
 
 void* operator new(size_t n)
 {
-	void* p = (void*)heap.Allocate(n);
-	loading->WriteLineFormat("New: 0x%16x (0x%x)", p, n);
-
-	return p;
+	return (void*)heap.Allocate(n);
 }
 
 void operator delete(void* p)
 {
-	loading->WriteLineFormat("delete: 0x%16x", (UINT64)p);
 	heap.Deallocate((UINT64)p);
 }
 
@@ -90,11 +83,13 @@ extern "C" void main_thunk(LOADER_PARAMS* loader)
 void main(LOADER_PARAMS* loader)
 {
 	//Immediately set up graphics device so we can bugcheck gracefully
-	display.SetDisplay(&loader->Display);
-	display.ColorScreen(Black);
+	display = new Display(&loader->Display);
+	display->ColorScreen(Black);
+	loading = new LoadingScreen(*display);
 
-	LoadingScreen localLoading(display);
-	loading = &localLoading;
+	//Initialize page tables
+	pagePool = new PageTablesPool(LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
+	pagePool->SetVirtualAddress(KernelPageTablesPoolAddress);
 
 	//x64 Initialization
 	x64::Initialize();
@@ -102,16 +97,11 @@ void main(LOADER_PARAMS* loader)
 	//Test interrupts
 	__debugbreak();
 
-	//Set up the page tables
-	PageTablesPool pool(LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
-	pool.SetVirtualAddress(KernelPageTablesPoolAddress);
-	UINT64 ptRoot;
-	Assert(pool.AllocatePage(&ptRoot));
-	loading->WriteLineFormat("PT - Current: 0x%16x Base: 0x%16x", __readcr3(), ptRoot);
-
 	//Map in kernel to new PT. PageTablesPool has been mapped in by bootloader
+	UINT64 ptRoot;
+	Assert(pagePool->AllocatePage(&ptRoot));
 	PageTables kernelPT(ptRoot);
-	kernelPT.SetPool(&pool);
+	kernelPT.SetPool(pagePool);
 	kernelPT.SetVirtualOffset(KernelPageTablesPoolAddress - LoaderParams.PageTablesPoolAddress);
 	kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
 	kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);

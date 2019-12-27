@@ -43,4 +43,3 @@ void Display::ColorPixel(Color color, Point2D position)
 	UINT32* cell = start + (position.Y * m_pDevice->PixelsPerScanLine) + position.X;
 	*(Color*)cell = color;
 }
-

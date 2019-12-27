@@ -13,7 +13,7 @@ LoadingScreen::LoadingScreen(Display& display) : m_display(display), m_fontScale
 
 void LoadingScreen::WriteLineFormat(const char* format, ...)
 {
-	char buffer[80];
+	char buffer[255];
 
 	va_list ap;
 

@@ -116,7 +116,7 @@ void MemoryMap::DumpMemoryMap()
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
-		loading->WriteLineFormat("A:%08x S:%08x T:%s V: %d N: 0x%x", (UINT32)current, current->PhysicalStart, (*MemTypes)[current->Type], current->VirtualStart, current->NumberOfPages);
+		loading->WriteLineFormat("Physical: %16x Virtual: %16x T:%s NumPages: 0x%x", current->PhysicalStart, current->VirtualStart, (*MemTypes)[current->Type], current->NumberOfPages);
 	}
 }
 

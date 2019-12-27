@@ -48,8 +48,6 @@ UINT64 KernelHeap::Allocate(UINT32 size)
 	pBlock->Size = size;
 	pBlock->Next = newBlock;
 
-	PrintHeap();
-
 	return address;
 }
 
@@ -71,7 +69,6 @@ void KernelHeap::Deallocate(UINT64 address)
 		pBlock->Size += pBlock->Next->Size + sizeof(HEAP_BLOCK);
 		pBlock->Next = pBlock->Next->Next;
 	}
-	PrintHeap();
 }
 
 void KernelHeap::PrintHeap()

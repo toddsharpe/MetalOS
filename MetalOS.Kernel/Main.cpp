@@ -33,12 +33,11 @@ extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[KERNEL_STACK_SIZE];
 
 //Kernel Heap
 KERNEL_PAGE_ALIGN static volatile UINT8 KERNEL_HEAP[KERNEL_HEAP_SIZE] = { 0 };
+KERNEL_GLOBAL_ALIGN static KernelHeap heap((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
 
 KERNEL_GLOBAL_ALIGN static LOADER_PARAMS LoaderParams = { 0 };
 
 KERNEL_GLOBAL_ALIGN static UINT8 EFI_MEMORY_MAP[MemoryMapReservedSize] = { 0 };
-
-KernelHeap heap;
 
 extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
 {
@@ -68,12 +67,14 @@ extern "C" void Print(const char* format, ...)
 void* operator new(size_t n)
 {
 	void* p = (void*)heap.Allocate(n);
+	loading->WriteLineFormat("New: 0x%16x (0x%x)", p, n);
 
 	return p;
 }
 
 void operator delete(void* p)
 {
+	loading->WriteLineFormat("delete: 0x%16x", (UINT64)p);
 	heap.Deallocate((UINT64)p);
 }
 
@@ -101,14 +102,6 @@ void main(LOADER_PARAMS* loader)
 
 	//Test interrupts
 	__debugbreak();
-
-	//Initialize heap
-	KernelHeap::Initialize((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
-	heap.OpenHeap((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
-
-	//Attempt to allocate
-	PageTables* pt = new PageTables(0);
-	loading->WriteLineFormat("PT: 0x%16x", pt);
 
 	//Set up the page tables
 	PageTablesPool pool(LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);

@@ -63,7 +63,15 @@ void KernelHeap::Deallocate(UINT64 address)
 	
 	pBlock->Free = true;
 
-	//TODO: defrag
+	//TODO: check flags?
+	//TODO: condense with block before? change to double pointer blocks?
+	if (pBlock->Next->Free)
+	{
+		//Combine this and next blocks
+		pBlock->Size += pBlock->Next->Size + sizeof(HEAP_BLOCK);
+		pBlock->Next = pBlock->Next->Next;
+	}
+	PrintHeap();
 }
 
 void KernelHeap::PrintHeap()

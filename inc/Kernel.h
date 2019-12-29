@@ -360,17 +360,16 @@ typedef struct
 
 #define UINT64_MAX 0xFFFFFFFFFFFFFFFF
 
-#define PAGE_SIZE (1 << 12)
-
-#define PAGE_SIZE   4096
-#define PAGE_MASK   0xFFF
 #define PAGE_SHIFT  12
+#define PAGE_SIZE (1 << PAGE_SHIFT)
+#define PAGE_MASK   0xFFF
 
 #define SIZE_TO_PAGES(a)  \
     ( ((a) >> PAGE_SHIFT) + ((a) & PAGE_MASK ? 1 : 0) )
 
 
 //4mb reserved space
+#define BootloaderPagePoolCount 32
 #define ReservedPageTablePages 512
 #define ReservedPageTableSpace (ReservedPageTablePages * PAGE_SIZE)
 #define ReservedPageTableSpaceMask (ReservedPageTableSpace - 1)
@@ -425,7 +424,7 @@ typedef __int32             int32_t;
 typedef unsigned short      uint16_t;
 typedef short               int16_t;
 typedef unsigned char       uint8_t;
-typedef char                int8_t;
+typedef signed char          int8_t;
 typedef long long          intmax_t;
 typedef unsigned long long uintmax_t;
 

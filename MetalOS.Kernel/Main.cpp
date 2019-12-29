@@ -1,3 +1,4 @@
+#include "msvc.h"
 #define GNU_EFI_SETJMP_H
 #include <efi.h>
 #include "LoaderParams.h"
@@ -15,6 +16,10 @@
 #include "PageTablesPool.h"
 #include "x64.h"
 #include "KernelHeap.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <vector>
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -62,11 +67,19 @@ extern "C" void Print(const char* format, ...)
 
 void* operator new(size_t n)
 {
+	//loading->WriteLineFormat("Allocation size 0x%x", n);
 	return (void*)heap.Allocate(n);
 }
 
 void operator delete(void* p)
 {
+	//loading->WriteLineFormat("Delete at 0x%16x", p);
+	heap.Deallocate((UINT64)p);
+}
+
+void operator delete(void* p, size_t n)
+{
+	//loading->WriteLineFormat("Delete at 0x%16x 0x%x", p, n);
 	heap.Deallocate((UINT64)p);
 }
 

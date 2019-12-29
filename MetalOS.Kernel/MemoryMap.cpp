@@ -5,6 +5,8 @@
 #include "CRT.h"
 #include "Kernel.h"
 
+#include <string.h>
+
 extern LOADER_PARAMS* pParams;
 //extern Display display;
 extern LoadingScreen* loading;
@@ -38,7 +40,7 @@ void MemoryMap::MergeConventionalPages()
 			destination = NextMemoryDescriptor(destination, m_memoryMapDescriptorSize))
 	{
 		//Copy over entry
-		CRT::memcpy(destination, current, this->m_memoryMapDescriptorSize);
+		memcpy(destination, current, this->m_memoryMapDescriptorSize);
 
 		if (current->Type == EfiConventionalMemory)
 		{
@@ -55,7 +57,7 @@ void MemoryMap::MergeConventionalPages()
 
 	//Zero out remaining entries
 	UINT32 newSize = (UINT64)destination - (UINT64)this->m_memoryMap;
-	CRT::memset(destination, this->m_memoryMapSize - newSize, 0);
+	memset(destination, this->m_memoryMapSize - newSize, 0);
 
 	//Update size
 	this->m_memoryMapSize = newSize;
@@ -78,19 +80,19 @@ EFI_PHYSICAL_ADDRESS MemoryMap::AllocatePages(UINT32 count)
 	{
 		Assert(m_memoryMapSize + m_memoryMapDescriptorSize <= m_maxSize);
 
-		int index = (UINTN)(m_memoryMap - current) / m_memoryMapDescriptorSize;
-		int length = m_memoryMapSize / m_memoryMapDescriptorSize;
+		UINT32 index = (UINTN)(m_memoryMap - current) / m_memoryMapDescriptorSize;
+		UINT32 length = m_memoryMapSize / m_memoryMapDescriptorSize;
 
 		//Copy all subsequent records down one
-		for (int i = length - 1; i >= index; i--)
+		for (UINT32 i = length - 1; i >= index; i--)
 		{
-			CRT::memcpy(MakePtr(void*, m_memoryMap, m_memoryMapDescriptorSize * (i + 1)), MakePtr(void*, m_memoryMap, m_memoryMapDescriptorSize * i), m_memoryMapDescriptorSize);
+			memcpy(MakePtr(void*, m_memoryMap, m_memoryMapDescriptorSize * (i + 1)), MakePtr(void*, m_memoryMap, m_memoryMapDescriptorSize * i), m_memoryMapDescriptorSize);
 		}
 		m_memoryMapSize += m_memoryMapDescriptorSize;
 		
 		//Fix up next record
 		EFI_MEMORY_DESCRIPTOR* next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
-		next->PhysicalStart = current->PhysicalStart + (count * EFI_PAGE_SIZE);
+		next->PhysicalStart = current->PhysicalStart + ((UINT64)count * EFI_PAGE_SIZE);
 		next->NumberOfPages = current->NumberOfPages - count;
 
 		//Set size of current

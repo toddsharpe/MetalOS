@@ -92,7 +92,7 @@ UINT64 System::ResolveAddress(UINT64 virtualAddress)
 	PPML4E l4 = (PPML4E)cr3;
 	loading->WriteLineFormat("L4: 0x%16x", l4);
 	
-	for (int i = l4Index; i < l4Index + 5; i++)
+	for (UINT32 i = l4Index; i < l4Index + 5; i++)
 	{
 		const PPML4E& current = &l4[i];
 		loading->WriteLineFormat("  L4: 0x%16x - %d", current->Value, i);
@@ -103,7 +103,7 @@ UINT64 System::ResolveAddress(UINT64 virtualAddress)
 	
 	
 	
-	for (int i = l3Index; i < l3Index + 5; i++)
+	for (UINT32 i = l3Index; i < l3Index + 5; i++)
 	{
 		const PPDPTE& current = &l3[i];
 		loading->WriteLineFormat("  L3: 0x%16x - %d", current->Value, i);
@@ -114,7 +114,7 @@ UINT64 System::ResolveAddress(UINT64 virtualAddress)
 	loading->WriteLineFormat("L2: 0x%16x - 0x%16x", l2, l2[l2Index].Value);
 	
 	
-	for (int i = l2Index; i < l2Index + 5; i++)
+	for (UINT32 i = l2Index; i < l2Index + 5; i++)
 	{
 		const PPDE& current = &l2[i];
 		loading->WriteLineFormat("  L2: 0x%16x - %d", current->Value, i);

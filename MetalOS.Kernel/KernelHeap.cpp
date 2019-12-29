@@ -57,7 +57,7 @@ void KernelHeap::Deallocate(UINT64 address)
 	Assert(address < this->m_address + this->m_size);
 
 	PHEAP_BLOCK pBlock = (PHEAP_BLOCK)(address - sizeof(HEAP_BLOCK));
-	Assert(pBlock->Magic == Magic);//TODO: should this be a return or exception to catch bad pointers in?
+	Assert(pBlock->Magic == Magic);
 	
 	pBlock->Free = true;
 

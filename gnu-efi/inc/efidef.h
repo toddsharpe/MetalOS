@@ -32,7 +32,13 @@ typedef UINT8           BOOLEAN;
 #endif
 
 #ifndef NULL
-    #define NULL    ((VOID *) 0)
+#ifdef __cplusplus
+/*C++ NULL definition*/
+#define NULL 0
+#else
+/*C NULL definition*/
+#define NULL ((void *)0)
+#endif
 #endif
 
 typedef UINTN           EFI_STATUS;

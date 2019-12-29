@@ -1,12 +1,12 @@
 #include "CRT.h"
 
-void CRT::memcpy(void* dest, const void* source, UINT32 size)
+void* CRT::memcpy(void* dest, const void* source, UINT32 size)
 {
 	UINT64* dest_64 = (UINT64*)dest;
 	UINT64* source_64 = (UINT64*)source;
 	UINT32 chunkSize = 8;
 
-	for (int i = 0; i < size / chunkSize; i++)
+	for (size_t i = 0; i < size / chunkSize; i++)
 	{
 		*dest_64 = *source_64;
 		dest_64++;
@@ -15,31 +15,35 @@ void CRT::memcpy(void* dest, const void* source, UINT32 size)
 
 	UINT8* dest_8 = (UINT8*)dest_64;
 	UINT8* source_8 = (UINT8*)source_64;
-	for (int i = 0; i < size % chunkSize; i++)
+	for (size_t i = 0; i < size % chunkSize; i++)
 	{
 		*dest_8 = *source_8;
 		dest_8++;
 		source_8++;
 	}
+
+	return dest;
 }
 
-void CRT::memset(void* dest, UINT32 c, UINT32 size)
+void* CRT::memset(void* dest, UINT32 c, UINT32 size)
 {
 	UINT64* dest_64 = (UINT64*)dest;
 	UINT32 chunkSize = 8;
 
-	for (int i = 0; i < size / chunkSize; i++)
+	for (size_t i = 0; i < size / chunkSize; i++)
 	{
 		*dest_64 = c;
 		dest_64++;
 	}
 
 	UINT8* dest_8 = (UINT8*)dest_64;
-	for (int i = 0; i < size % chunkSize; i++)
+	for (size_t i = 0; i < size % chunkSize; i++)
 	{
 		*dest_8 = c;
 		dest_8++;
 	}
+
+	return dest;
 }
 
 int CRT::memcmp(const void* ptr1, const void* ptr2, UINT32 num)
@@ -48,7 +52,7 @@ int CRT::memcmp(const void* ptr1, const void* ptr2, UINT32 num)
 	UINT64* ptr2_64 = (UINT64*)ptr2;
 	UINT32 chunkSize = 8;
 
-	int i = 0;
+	size_t i = 0;
 	while (i < num / chunkSize)
 	{
 		if (*ptr1_64 < *ptr2_64)
@@ -78,6 +82,43 @@ int CRT::memcmp(const void* ptr1, const void* ptr2, UINT32 num)
 	}
 
 	return 0;
+}
+
+void* CRT::memmove(void* dest, const void* source, UINT32 size)
+{
+	//https://www.student.cs.uwaterloo.ca/~cs350/common/os161-src-html/doxygen/html/memmove_8c_source.html
+	/*
+	 * If the destination is below the source, we have to copy
+	 * front to back.
+	 *
+	 *      dest:   dddddddd
+	 *      src:    ^   ssssssss
+	 *              |___|  ^   |
+	 *                     |___|
+	*/
+	if ((UINT64)dest < (UINT64)source)
+		return CRT::memcpy(dest, source, size);
+
+	/*
+	 * If the destination is above the source, we have to copy
+	 * back to front to avoid overwriting the data we want to
+	 * copy.
+	 *
+	 *      dest:       dddddddd
+	 *      src:    ssssssss   ^
+	 *              |   ^  |___|
+	 *              |___|
+	 *
+	*/
+	//TODO: optimize for UINT32/64?
+	UINT8* dest_8 = (UINT8*)dest;
+	const UINT8* source_8 = (UINT8*)source;
+	for (int i = size - 1; i >= 0; i--)
+	{
+		dest_8[i] = source_8[i];
+	}
+
+	return dest;
 }
 
 UINT32 CRT::strcpy(CHAR16* dest, const CHAR16* source)
@@ -158,5 +199,22 @@ void CRT::GetDirectoryName(const CHAR16* source, CHAR16* destination)
 
 	//Add null
 	destination[marker + 1] = L'\0';
+}
+
+//C function prototypes
+//TODO: remove CRT functions from class?
+extern "C" void* memmove(void* dest, const void* source, UINT32 size)
+{
+	return CRT::memmove(dest, source, size);
+}
+
+extern "C" void* memcpy(void* dest, const void* source, UINT32 size)
+{
+	return CRT::memcpy(dest, source, size);
+}
+
+extern "C" void* memset(void* dest, UINT32 c, UINT32 size)
+{
+	return CRT::memset(dest, c, size);
 }
 

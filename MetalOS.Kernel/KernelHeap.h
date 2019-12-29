@@ -11,6 +11,8 @@ public:
 	UINT64 Allocate(UINT32 size);
 	void Deallocate(UINT64 address);
 
+	void PrintHeap();
+
 	static const INT32 MinBlockSize = 4;
 	static constexpr UINT16 Magic = 0xBEEF;
 
@@ -31,8 +33,6 @@ private:
 		UINT8 Block[0];
 	} HEAP_BLOCK, *PHEAP_BLOCK;
 	static_assert(sizeof(HEAP_BLOCK) == 16, "Heap block has changed");
-
-	void PrintHeap();
 
 	UINT64 m_address;
 	UINT32 m_size;

@@ -46,7 +46,7 @@ bool PageTables::MapPage(UINT64 virtualAddress, UINT64 physicalAddress, UINT32 c
 
 	for (UINT32 i = 0; i < count; i++)
 	{
-		if (!MapPage(virtualAddress + (i << PAGE_SHIFT), physicalAddress + (i << PAGE_SHIFT), global))
+		if (!MapPage(virtualAddress + ((UINT64)i << PAGE_SHIFT), physicalAddress + ((UINT64)i << PAGE_SHIFT), global))
 			return false;
 	}
 

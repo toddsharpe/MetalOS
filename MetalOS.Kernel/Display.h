@@ -3,11 +3,6 @@
 #include "Kernel.h"
 #include "MetalOS.h"
 
-#define GNU_EFI_SETJMP_H
-#include <efi.h>
-#include <efilib.h>
-
-
 class Display
 {
 public:

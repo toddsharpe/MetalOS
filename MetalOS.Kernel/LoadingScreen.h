@@ -19,7 +19,7 @@ public:
 	void ResetY();
 
 private:
-	const UINT32 m_fontScale;
+	const uint8_t m_fontScale;
 	static const Color m_white;
 	Point2D m_position;
 	Display& m_display;

@@ -1,42 +1,41 @@
 #pragma once
 
 #include "Kernel.h"
-#include "Main.h"
 
 class KernelHeap
 {
 public:
-	KernelHeap(UINT64 address, UINT32 size);
+	KernelHeap(uintptr_t address, uint32_t size);
 
-	UINT64 Allocate(UINT32 size);
-	void Deallocate(UINT64 address);
+	uintptr_t Allocate(uint32_t size);
+	void Deallocate(uintptr_t address);
 
 	void PrintHeap();
 
-	static const INT32 MinBlockSize = 4;
-	static constexpr UINT16 Magic = 0xBEEF;
+	static const uint32_t MinBlockSize = 4;
+	static constexpr uint16_t Magic = 0xBEEF;
 
 private:
 	typedef struct _HEAP_BLOCK
 	{
-		UINT32 Size;
+		uint32_t Size;
 		union
 		{
 			struct
 			{
-				UINT16 Free : 1;
-				UINT16 Magic;
+				uint16_t Free : 1;
+				uint16_t Magic;
 			};
-			UINT32 Flags;
+			uint32_t Flags;
 		};
 		_HEAP_BLOCK* Next;
-		UINT8 Block[0];
+		uint8_t Block[0];
 	} HEAP_BLOCK, *PHEAP_BLOCK;
 	static_assert(sizeof(HEAP_BLOCK) == 16, "Heap block has changed");
 
-	UINT64 m_address;
-	UINT32 m_size;
-	UINT32 m_allocated;
+	uint64_t m_address;
+	uint32_t m_size;
+	uint32_t m_allocated;
 	PHEAP_BLOCK m_head;
 };
 

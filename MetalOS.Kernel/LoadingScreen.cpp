@@ -49,14 +49,14 @@ void LoadingScreen::WriteText(const char* text)
 void LoadingScreen::WriteCharacter(char c)
 {
 	const char* map = m_font.GetCharacterMap(c);
-	UINT32 size = 8; // TODO: get from font
+	uint8_t size = 8; // TODO: get from font
 
-	for (UINT32 y = 0; y < size; y++)
+	for (size_t y = 0; y < size; y++)
 	{
 		//Line is reversed
 		char line = map[y];
 
-		UINT32 x = 0;
+		size_t x = 0;
 		unsigned char mask = 0x80;
 		while (mask > 0)
 		{

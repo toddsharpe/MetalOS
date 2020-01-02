@@ -1,9 +1,10 @@
 #include "KernelHeap.h"
 #include "LoadingScreen.h"
+#include "Main.h"
 
 extern LoadingScreen* loading;
 
-KernelHeap::KernelHeap(UINT64 address, UINT32 size) : m_address(address), m_size(size), m_allocated(0), m_head((PHEAP_BLOCK)address)
+KernelHeap::KernelHeap(uintptr_t address, uint32_t size) : m_address(address), m_size(size), m_allocated(0), m_head((PHEAP_BLOCK)address)
 {
 	//Initialize by creating a head free block
 	this->m_head->Size = size;
@@ -14,7 +15,7 @@ KernelHeap::KernelHeap(UINT64 address, UINT32 size) : m_address(address), m_size
 }
 
 //TODO: take into account alignment
-UINT64 KernelHeap::Allocate(UINT32 size)
+uintptr_t KernelHeap::Allocate(uint32_t size)
 {
 	PHEAP_BLOCK pBlock = this->m_head;
 	while (!pBlock->Free || pBlock->Size < size + sizeof(HEAP_BLOCK))
@@ -29,7 +30,7 @@ UINT64 KernelHeap::Allocate(UINT32 size)
 	//Update block
 	pBlock->Free = false;
 
-	UINT64 address = (UINT64)&pBlock->Block;
+	uintptr_t address = (uintptr_t)&pBlock->Block;
 	if (pBlock->Size - (size + sizeof(HEAP_BLOCK)) < KernelHeap::MinBlockSize + sizeof(HEAP_BLOCK))
 	{
 		//Not enough size to split, just return
@@ -51,7 +52,7 @@ UINT64 KernelHeap::Allocate(UINT32 size)
 	return address;
 }
 
-void KernelHeap::Deallocate(UINT64 address)
+void KernelHeap::Deallocate(uintptr_t address)
 {
 	Assert(address >= this->m_address + sizeof(HEAP_BLOCK));
 	Assert(address < this->m_address + this->m_size);

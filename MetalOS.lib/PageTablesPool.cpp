@@ -1,7 +1,6 @@
 #include "PageTablesPool.h"
-#include "Kernel.h"
 
-PageTablesPool::PageTablesPool(UINT64 physicalAddress, UINT32 pageCount) :
+PageTablesPool::PageTablesPool(uint64_t physicalAddress, uint32_t pageCount) :
 	m_virtualAddress(0), m_physicalAddress(physicalAddress), m_pageCount(pageCount), m_index((bool*)m_virtualAddress)
 {
 	//TODO
@@ -10,20 +9,20 @@ PageTablesPool::PageTablesPool(UINT64 physicalAddress, UINT32 pageCount) :
 
 }
 
-void PageTablesPool::SetVirtualAddress(UINT64 virtualAddress)
+void PageTablesPool::SetVirtualAddress(uint64_t virtualAddress)
 {
 	m_virtualAddress = virtualAddress;
 	m_index = ((bool*)virtualAddress);
 }
 
-bool PageTablesPool::AllocatePage(UINT64* addressOut)
+bool PageTablesPool::AllocatePage(uint64_t* addressOut)
 {
 	//First page is index
 	//Simple scheme - a page of booleans
 	//Yes this should be like bitmasks or maybe ints if i used more info here (like if it was backed to disk)
 	//But to stand this up, just booleans
 
-	for (UINT32 i = 1; i < PAGE_SIZE; i++)
+	for (size_t i = 1; i < PAGE_SIZE; i++)
 	{
 		if (m_index[i])
 			continue;
@@ -36,13 +35,13 @@ bool PageTablesPool::AllocatePage(UINT64* addressOut)
 	return false;
 }
 
-bool PageTablesPool::DeallocatePage(UINT64 address)
+bool PageTablesPool::DeallocatePage(uint64_t address)
 {
-	UINT32 relative = (address - m_physicalAddress);
+	uint32_t relative = (address - m_physicalAddress);
 	if (relative % PAGE_SIZE != 0)
 		return false;
 	
-	UINT32 index = relative >> PAGE_SHIFT;
+	size_t index = relative >> PAGE_SHIFT;
 	if (index > (m_pageCount - 1))
 		return false;
 	if (!m_index[index])

@@ -20,14 +20,14 @@ EFI_STATUS InitializeGraphics(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)
 
 	EFI_GRAPHICS_OUTPUT_PROTOCOL* gop = nullptr;
 	ReturnIfNotSuccess(BS->HandleProtocol(ST->ConsoleOutHandle, &GraphicsOutputProtocol, (void**)&gop));
-	CRT::memcpy(display, gop->Mode, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
+	crt::memcpy(display, gop->Mode, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
 
 	//Allocate space for full graphics info
 	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* info = nullptr;
 	UINTN sizeOfInfo = 0;
 	ReturnIfNotSuccess(gop->QueryMode(gop, 0, &sizeOfInfo, &info));
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeOfInfo, (void**)&display->Info));
-	CRT::memcpy(display->Info, info, sizeOfInfo);
+	crt::memcpy(display->Info, info, sizeOfInfo);
 
 	//Kernel will only support one pixel format. If we wait until the kernel is loaded then we cant print to give the error message.
 	//We might be able to with different pixels, but lets just catch it here for now
@@ -221,7 +221,7 @@ PrintGOPFull(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
 			Print(L"ERROR: Bad response from QueryMode: %d\r\n", Status);
 			continue;
 		}
-		Print(L"%c%d: %dx%d ", CRT::memcmp(Info, gop->Mode->Info, sizeof(*Info)) == 0 ? '*' : ' ', i,
+		Print(L"%c%d: %dx%d ", crt::memcmp(Info, gop->Mode->Info, sizeof(*Info)) == 0 ? '*' : ' ', i,
 			Info->HorizontalResolution,
 			Info->VerticalResolution);
 		switch (Info->PixelFormat) {

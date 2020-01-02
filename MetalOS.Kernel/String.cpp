@@ -16,7 +16,7 @@ char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 typedef size_t ssize_t;
 
-UINT32 String::strlen(const char* s)
+uint32_t String::strlen(const char* s)
 {
 	Assert(s != nullptr);
 

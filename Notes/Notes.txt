@@ -105,6 +105,9 @@ https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/x64-architect
 Exceptions:
 https://wiki.osdev.org/Exceptions#Selector_Error_Code
 
+Windowing:
+http://trackze.ro/wsbe-3-i-like-to-move-it/
+
 Ntdll showing off systemcall:
 .text:000000018009C578 algn_18009C578:                         ; DATA XREF: .pdata:00000001801712B8↓o
 .text:000000018009C578                 align 20h

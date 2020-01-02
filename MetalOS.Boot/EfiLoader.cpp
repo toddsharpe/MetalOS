@@ -130,7 +130,7 @@ EFI_STATUS EfiLoader::CrtInitialization(UINT64 imageBase)
 	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
-		if (CRT::strcmp((char*)& section[i].Name, ".CRT") == 0)
+		if (crt::strcmp((char*)& section[i].Name, ".CRT") == 0)
 		{
 			crtSection = &section[i];
 			break;
@@ -142,11 +142,10 @@ EFI_STATUS EfiLoader::CrtInitialization(UINT64 imageBase)
 	//https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-initialization?view=vs-2019
 	//https://docs.microsoft.com/en-us/cpp/error-messages/tool-errors/linker-tools-warning-lnk4210?view=vs-2019
 	//.CRT seems to be a list of function pointers (see asm). Loop through each one and invoke them
-	UINT64* initializer = (UINT64*)(imageBase + crtSection->VirtualAddress);
+	CrtInitializer* initializer = (CrtInitializer*)(imageBase + crtSection->VirtualAddress);
 	while (*initializer)
 	{
-		CrtInitializer initFunction = (CrtInitializer)*initializer;
-		initFunction();
+		(*initializer)();
 		initializer++;
 	}
 

@@ -1,6 +1,7 @@
 #pragma once
+#include <cstdint>
+
 #include "Kernel.h"
-#include "MetalOS.h"
 #include "PageTables.h"
 
 //First page will be our index
@@ -12,18 +13,18 @@ class PageTables;
 class PageTablesPool
 {
 public:
-	PageTablesPool(EFI_PHYSICAL_ADDRESS physicalAddress, UINT32 pageCount);
-	void SetVirtualAddress(UINT64 virtualAddress);
+	PageTablesPool(uint64_t physicalAddress, uint32_t pageCount);
+	void SetVirtualAddress(uint64_t virtualAddress);
 
 	void Activate(PageTables& tables);
 
-	bool AllocatePage(UINT64 *addressOut);
-	bool DeallocatePage(UINT64 address);
+	bool AllocatePage(uint64_t* addressOut);
+	bool DeallocatePage(uint64_t address);
 
 private:
-	UINT64 m_virtualAddress;
-	EFI_PHYSICAL_ADDRESS m_physicalAddress;
-	UINT64 m_pageCount;
+	uint64_t m_virtualAddress;
+	uint64_t m_physicalAddress;
+	uint32_t m_pageCount;
 	bool* m_index;
 };
 

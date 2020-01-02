@@ -159,7 +159,6 @@
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="KernelBugcheck.cpp" />
     <ClCompile Include="KernelHeap.cpp" />
-    <ClCompile Include="Loader.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MemoryMap.cpp" />
@@ -173,7 +172,6 @@
     <ClInclude Include="Font.h" />
     <ClInclude Include="KernelBugcheck.h" />
     <ClInclude Include="KernelHeap.h" />
-    <ClInclude Include="Loader.h" />
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="MemoryMap.h" />

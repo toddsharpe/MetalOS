@@ -1,45 +1,23 @@
 #pragma once
+#include <cstdint>
 
 //Public facing header
-
-//TODO: clean
-typedef unsigned __int64    uint64_t;
-typedef __int64             int64_t;
-typedef unsigned __int32    uint32_t;
-typedef __int32             int32_t;
-typedef unsigned short      uint16_t;
-typedef short               int16_t;
-typedef unsigned char       uint8_t;
-typedef signed char          int8_t;
-typedef long long          intmax_t;
-typedef unsigned long long uintmax_t;
-
-//Types
-typedef uint8_t UINT8;
-typedef uint16_t UINT16;
-typedef uint32_t UINT32;
-typedef uint64_t UINT64;
-
-typedef UINT16          CHAR16;
-typedef UINT64          EFI_PHYSICAL_ADDRESS;
 
 //PixelBlueGreenRedReserved8BitPerColor
 struct BGRRPixel
 {	
-	UINT32 Blue : 8;
-	UINT32 Green : 8;
-	UINT32 Red : 8;
-	UINT32 Reserved : 8;
+	uint32_t Blue : 8;
+	uint32_t Green : 8;
+	uint32_t Red : 8;
+	uint32_t Reserved : 8;
 };
-static_assert(sizeof(BGRRPixel) == sizeof(UINT32), "Pixel greater than UINT32 in size");
+static_assert(sizeof(BGRRPixel) == sizeof(uint32_t), "Pixel greater than UINT32 in size");
 typedef struct BGRRPixel Color;
-
-
 
 struct Point2D
 {
-	UINT32 X;
-	UINT32 Y;
+	uint32_t X;
+	uint32_t Y;
 };
 
 struct Rectangle
@@ -50,16 +28,16 @@ struct Rectangle
 
 struct ProcessInfo
 {
-	UINT32 Id;
+	uint32_t Id;
 };
 
-enum SystemCallResult : UINT32
+enum SystemCallResult : uint32_t
 {
 	Success = 0,
 	Failed
 };
 
-enum SystemCall : UINT32
+enum SystemCall : uint32_t
 {
 	GetProcessInformation = 1,
 };

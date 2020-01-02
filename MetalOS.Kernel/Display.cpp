@@ -1,5 +1,4 @@
 #include "Display.h"
-#include "MetalOS.h"
 #include "Main.h"
 
 //Hyper-V

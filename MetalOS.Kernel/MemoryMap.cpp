@@ -28,6 +28,7 @@ void MemoryMap::ReclaimBootPages()
 	}
 }
 
+//BUG: seems memory map isn't totally sequential
 //Note: m_memoryMapDescriptorSize (0x30) is not the same size as EFI_MEMORY_DESCRIPTOR (0x28)
 void MemoryMap::MergeConventionalPages()
 {

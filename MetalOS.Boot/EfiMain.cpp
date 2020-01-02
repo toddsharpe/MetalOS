@@ -88,9 +88,9 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	//Build path to kernel
 	CHAR16* KernelPath;
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, MaxKernelPath * sizeof(CHAR16), (void**)&KernelPath));
-	CRT::memset((void*)KernelPath, 0, MaxKernelPath * sizeof(CHAR16));
-	CRT::GetDirectoryName(BootFilePath, KernelPath);
-	CRT::strcpy(KernelPath + CRT::strlen(KernelPath), Kernel);
+	crt::memset((void*)KernelPath, 0, MaxKernelPath * sizeof(CHAR16));
+	crt::GetDirectoryName(BootFilePath, KernelPath);
+	crt::strcpy(KernelPath + crt::strlen(KernelPath), Kernel);
 
 	//Load kernel path
 	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem = nullptr;
@@ -174,26 +174,6 @@ EFI_STATUS Keywait(const CHAR16* String)
 	ReturnIfNotSuccess(ST->ConIn->Reset(ST->ConIn, FALSE));
 
 	Print(L"\r\n");
-	return status;
-}
-
-EFI_STATUS DumpGDT()
-{
-	EFI_STATUS status;
-	
-	DESCRIPTOR_TABLE gdt = { 0 };
-	_sgdt(&gdt);
-
-	ReturnIfNotSuccess(Print(L"GDT-Limit: %w\r\n", gdt.Limit));
-	ReturnIfNotSuccess(Print(L"GDT-Address: %q\r\n", gdt.BaseAddress));
-
-	PSEGMENT_DESCRIPTOR pSegDesc = (PSEGMENT_DESCRIPTOR)gdt.BaseAddress;
-	while ((UINT64)pSegDesc < gdt.BaseAddress + gdt.Limit)
-	{
-		ReturnIfNotSuccess(Print(L"  SegDesc: %q\r\n", pSegDesc->Value));
-		pSegDesc++;
-	}
-
 	return status;
 }
 

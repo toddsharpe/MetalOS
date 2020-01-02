@@ -8,7 +8,6 @@
 #include "Main.h"
 #include "System.h"
 #include "MemoryMap.h"
-#include "Loader.h"
 #include <intrin.h>
 #include "CRT.h"
 #include "String.h"
@@ -28,6 +27,8 @@ const Color Black = { 0x00, 0x00, 0x00, 0x00 };
 Display* display;
 LoadingScreen* loading;
 PageTablesPool* pagePool;
+MemoryMap* memoryMap;
+std::vector<KERNEL_PROCESS> *processes;
 
 //Kernel Stack
 KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[KERNEL_STACK_SIZE] = { 0 };
@@ -86,9 +87,9 @@ void operator delete(void* p, size_t n)
 //Copy loader params and all recursive structures to kernel memory
 extern "C" void main_thunk(LOADER_PARAMS* loader)
 {
-	CRT::memcpy(&LoaderParams, loader, sizeof(LOADER_PARAMS));
+	crt::memcpy(&LoaderParams, loader, sizeof(LOADER_PARAMS));
 	LoaderParams.MemoryMap = (EFI_MEMORY_DESCRIPTOR*)EFI_MEMORY_MAP;
-	CRT::memcpy(EFI_MEMORY_MAP, loader->MemoryMap, loader->MemoryMapSize);
+	crt::memcpy(EFI_MEMORY_MAP, loader->MemoryMap, loader->MemoryMapSize);
 
 	main(&LoaderParams);
 }
@@ -130,10 +131,10 @@ void main(LOADER_PARAMS* loader)
 
 	//Access current EFI memory map
 	//Its on its own page so we are fine with resizing
-	MemoryMap memoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, loader->MemoryMap, PAGE_SIZE);
-	memoryMap.ReclaimBootPages();
-	memoryMap.MergeConventionalPages();
-	memoryMap.DumpMemoryMap();
+	memoryMap = new MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, loader->MemoryMap, PAGE_SIZE);
+	memoryMap->ReclaimBootPages();
+	//memoryMap->MergeConventionalPages();
+	memoryMap->DumpMemoryMap();
 
 	__halt();
 }

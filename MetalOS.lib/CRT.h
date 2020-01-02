@@ -1,29 +1,28 @@
 #pragma once
-#include "MetalOS.h"
+#include <cstdint>
 
-class CRT
+namespace crt
 {
-public:
-	CRT() = delete;
+	typedef uint16_t CHAR16;
 
 	//Memory Routines
-	static void* memcpy(void* dest, const void* source, UINT32 size);
-	static void* memset(void* dest, UINT32 c, UINT32 size);
-	static int memcmp(const void* ptr1, const void* ptr2, UINT32 num);
-	static void* memmove(void* dest, const void* source, UINT32 size);
+	void* memcpy(void* _Dst, const void* _Src, size_t _Size);
+	void* memset(void* _Dst, int _Val, size_t _Size);
+	int memcmp(void const* _Buf1, void const* _Buf2, size_t _Size);
+	void* memmove(void* _Dst, void const* _Src, size_t _Size);
 
 	//Wide String (UEFI)
-	static UINT32 strcpy(CHAR16* dest, const CHAR16* source);
-	static UINT32 strlen(const CHAR16* str);
-	static UINT32 strncpy(CHAR16* dest, const CHAR16* source, UINT32 num);
-	static UINT32 strcmp(const CHAR16* str1, const CHAR16* str2);
-	static void strrev(CHAR16* str);
+	uint32_t strcpy(CHAR16* dest, const CHAR16* source);
+	size_t strlen(const CHAR16* str);
+	uint32_t strncpy(CHAR16* dest, const CHAR16* source, uint32_t num);
+	int strcmp(const CHAR16* str1, const CHAR16* str2);
+	void strrev(CHAR16* str);
 
 	//String
-	static UINT32 strlen(const char* str);
-	static UINT32 strcmp(const char* str1, const char* str2);
+	size_t strlen(char const* _Str);
+	int strcmp(char const* _Str1, char const* _Str2);
 
 	//TODO: another file?
 	//Paths
-	static void GetDirectoryName(const CHAR16* source, CHAR16* destination);
+	void GetDirectoryName(const CHAR16* source, CHAR16* destination);
 };

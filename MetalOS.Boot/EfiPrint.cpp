@@ -71,7 +71,7 @@ UINTN EfiPrint::_sprint(OUT CHAR16* Str, IN UINTN StrSize, IN CONST CHAR16* form
 		}
 
 		//Copy contents to this point
-		CRT::strncpy(buffer_ptr, start, (format - start));
+		crt::strncpy(buffer_ptr, start, (format - start));
 		buffer_ptr += (format - start);
 
 		//Advance past %
@@ -152,7 +152,7 @@ UINTN EfiPrint::_sprint(OUT CHAR16* Str, IN UINTN StrSize, IN CONST CHAR16* form
 
 		case L'S':
 		{
-			buffer_ptr += CRT::strcpy(buffer_ptr, va_arg(args, CHAR16*));
+			buffer_ptr += crt::strcpy(buffer_ptr, va_arg(args, CHAR16*));
 			break;
 		}
 
@@ -183,7 +183,7 @@ UINTN EfiPrint::_sprint(OUT CHAR16* Str, IN UINTN StrSize, IN CONST CHAR16* form
 	}
 
 	//Copy end of string
-	CRT::strncpy(buffer_ptr, start, (format - start));
+	crt::strncpy(buffer_ptr, start, (format - start));
 
 	return 0;
 }
@@ -210,7 +210,7 @@ UINT32 EfiPrint::IntToString(int data, CHAR16* str)
 		length++;
 	}
 
-	CRT::strrev(start);
+	crt::strrev(start);
 	return length;
 }
 

@@ -23,10 +23,10 @@ void Error::StatusToString(OUT CHAR16* buffer, IN EFI_STATUS status)
 	{
 		if (ErrorCodeTable[index].Code == status)
 		{
-			CRT::strcpy(buffer, ErrorCodeTable[index].Desc);
+			crt::strcpy(buffer, ErrorCodeTable[index].Desc);
 			return;
 		}
 	}
 
-	CRT::strcpy(buffer, L"StatusNotFound");
+	crt::strcpy(buffer, L"StatusNotFound");
 }

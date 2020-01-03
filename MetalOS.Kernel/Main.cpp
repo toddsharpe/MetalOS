@@ -110,6 +110,7 @@ void main(LOADER_PARAMS* loader)
 
 	//Test interrupts
 	__debugbreak();
+	__debugbreak();
 
 	//Map in kernel to new PT. PageTablesPool has been mapped in by bootloader
 	UINT64 ptRoot;
@@ -133,7 +134,7 @@ void main(LOADER_PARAMS* loader)
 	//Its on its own page so we are fine with resizing
 	memoryMap = new MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, loader->MemoryMap, PAGE_SIZE);
 	memoryMap->ReclaimBootPages();
-	//memoryMap->MergeConventionalPages();
+	memoryMap->MergeConventionalPages();
 	memoryMap->DumpMemoryMap();
 
 	__halt();

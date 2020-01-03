@@ -28,7 +28,6 @@ void MemoryMap::ReclaimBootPages()
 	}
 }
 
-//BUG: seems memory map isn't totally sequential
 //Note: m_memoryMapDescriptorSize (0x30) is not the same size as EFI_MEMORY_DESCRIPTOR (0x28)
 void MemoryMap::MergeConventionalPages()
 {
@@ -45,9 +44,9 @@ void MemoryMap::MergeConventionalPages()
 
 		if (current->Type == EfiConventionalMemory)
 		{
-			//Look ahead for Conventional memory and condense entry
+			//Look ahead for Conventional memory and condense entry if its sequential
 			EFI_MEMORY_DESCRIPTOR* next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
-			while (next->Type == EfiConventionalMemory)
+			while (next->Type == EfiConventionalMemory && next->PhysicalStart == current->PhysicalStart + current->NumberOfPages * PAGE_SIZE)
 			{
 				destination->NumberOfPages += next->NumberOfPages;
 				current = next;

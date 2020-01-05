@@ -76,11 +76,17 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\inc;..\gnu-efi\inc\x86_64;..\gnu-efi\inc;%(AdditionalIncludeDirectories);..\MetalOS.lib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\MetalOS.lib;..\gnu-efi\inc\x86_64;..\gnu-efi\inc;..\gnu-efi\inc\protocol;..\inc</AdditionalIncludeDirectories>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -117,21 +123,26 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;%(AdditionalIncludeDirectories);..\MetalOS.lib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\MetalOS.lib;..\gnu-efi\inc\x86_64;..\gnu-efi\inc;..\gnu-efi\inc\protocol;..\inc</AdditionalIncludeDirectories>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\MetalOS.Boot\Device.cpp" />
+    <ClCompile Include="..\MetalOS.Boot\EfiLoader.cpp" />
     <ClCompile Include="..\MetalOS.Boot\EfiMain.cpp" />
     <ClCompile Include="..\MetalOS.Boot\EfiPrint.cpp" />
     <ClCompile Include="..\MetalOS.Boot\Error.cpp" />
-    <ClCompile Include="..\MetalOS.Boot\Loader.cpp" />
     <ClCompile Include="Main.c" />
   </ItemGroup>
   <ItemGroup>

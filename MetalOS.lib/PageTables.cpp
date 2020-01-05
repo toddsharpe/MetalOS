@@ -39,6 +39,7 @@ void PageTables::SetVirtualOffset(uintptr_t virtualOffset)
 bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count, bool global)
 {
 	Print(L"V: 0x%q P: 0x%q C: 0x%q G: %d VO: 0x%q\r\n", virtualAddress, physicalAddress, count, global, m_virtualOffset);
+	//printf("test %d", 5);
 	
 	//TODO: error code?
 	//Assert(m_pool != nullptr);

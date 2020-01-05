@@ -143,15 +143,23 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Cpu.cpp" />
-    <ClCompile Include="CRT.cpp" />
+    <ClCompile Include="crt_stdlib.c" />
     <ClCompile Include="PageTables.cpp" />
     <ClCompile Include="PageTablesPool.cpp" />
+    <ClCompile Include="Path.cpp" />
+    <ClCompile Include="crt_stdio.c" />
+    <ClCompile Include="crt_string.c" />
+    <ClCompile Include="crt_wchar.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cpu.h" />
-    <ClInclude Include="CRT.h" />
+    <ClInclude Include="crt_stdlib.h" />
     <ClInclude Include="PageTables.h" />
     <ClInclude Include="PageTablesPool.h" />
+    <ClInclude Include="Path.h" />
+    <ClInclude Include="crt_stdio.h" />
+    <ClInclude Include="crt_string.h" />
+    <ClInclude Include="crt_wchar.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

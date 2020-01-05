@@ -59,10 +59,8 @@ typedef struct
     ( ((a) >> PAGE_SHIFT) + ((a) & PAGE_MASK ? 1 : 0) )
 
 //4mb reserved space
-#define BootloaderPagePoolCount 32
+#define BootloaderPagePoolCount 256
 #define ReservedPageTablePages 512
-#define ReservedPageTableSpace (ReservedPageTablePages * PAGE_SIZE)
-#define ReservedPageTableSpaceMask (ReservedPageTableSpace - 1)
 
 //User space starts at   0x00000000 00000000
 //User space stops at    0x00007FFF FFFFFFFF
@@ -76,6 +74,7 @@ typedef struct
 #define KernelBaseAddress (KernelStart + 0x1000000)//16 MB kernel
 #define KernelPageTablesPoolAddress (KernelStart + 0x2000000)//16MB page pool (currently only 2mb is used - 512 * 4096)
 #define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
+#define KernelPhysicalMemoryAddress (KernelStart + 0x100000000000)//Map entire physical memory. Allows for up to 44 bits for RAM addressing
 
 #define KernelHeapSize 0x1000000
 

@@ -1,8 +1,7 @@
-#include <stdlib.h>
-#include <stdio.h>
-
 #include <efi.h>
 #include <efilib.h>
+
+#include <wchar.h>
 
 #define EFI_DEBUG 1
 
@@ -23,7 +22,7 @@ EFI_STATUS
 	IN BOOLEAN                          ExtendedVerification
 	)
 {
-	fflush(stdin);
+	return EFI_SUCCESS;
 }
 
 EFI_STATUS

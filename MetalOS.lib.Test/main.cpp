@@ -1,6 +1,6 @@
 #include "PageTablesPool.h"
 #include <stdio.h>
-#include "CRT.h"
+#include "crt_string.h"
 
 int main(int argc, char** argv)
 {
@@ -36,6 +36,6 @@ int main(int argc, char** argv)
 
 	uint8_t buffer[10] = { 0 };
 	uint8_t buffer2[10] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-	crt::memcpy(buffer, buffer2, 5);
+	memcpy(buffer, buffer2, 5);
 }
 

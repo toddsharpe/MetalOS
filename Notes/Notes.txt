@@ -172,3 +172,5 @@ limit: 3f
 All 20 bits of segment descriptors are on - ignored in 64 bit anyways
 
 
+Windows Libraries:
+libucrt.lib

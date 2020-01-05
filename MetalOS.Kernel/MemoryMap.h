@@ -27,9 +27,11 @@ const char mem_types[16][27] = {
 class MemoryMap
 {
 public:
-	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap) :
-		MemoryMap(MemoryMapSize, MemoryMapDescriptorSize, MemoryMapVersion, MemoryMap, MemoryMapSize) {	}
-	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap, UINTN maxSize);
+	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap) :
+		MemoryMap(MemoryMapSize, MemoryMapDescriptorSize, MemoryMapDescriptorVersion, MemoryMap, MemoryMapSize) {	}
+	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap, UINTN maxSize);
+
+	void SetVirtualOffset(UINTN virtualOffset);
 
 	void ReclaimBootPages();
 	void MergeConventionalPages();
@@ -39,6 +41,8 @@ public:
 
 	void DumpMemoryMap();
 
+	UINTN GetEndAddress();
+
 private:
 	EFI_MEMORY_DESCRIPTOR* ResolveAddress(EFI_PHYSICAL_ADDRESS address);
 
@@ -46,7 +50,7 @@ private:
 
 	UINTN m_memoryMapSize;
 	UINTN m_memoryMapDescriptorSize;
-	UINT32 m_memoryMapVersion;
+	UINT32 m_memoryMapDescriptorVersion;
 	EFI_MEMORY_DESCRIPTOR* m_memoryMap;
 
 	UINTN m_maxSize;

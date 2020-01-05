@@ -1,8 +1,6 @@
 #include "Error.h"
-#include "String.h"
-#include "EfiPrint.h"
 #include "EfiMain.h"
-#include "CRT.h"
+#include <crt_wchar.h>
 
 EFI_STATUS Error::DisplayError(const CHAR16* function, EFI_STATUS status)
 {
@@ -23,10 +21,10 @@ void Error::StatusToString(OUT CHAR16* buffer, IN EFI_STATUS status)
 	{
 		if (ErrorCodeTable[index].Code == status)
 		{
-			crt::strcpy(buffer, ErrorCodeTable[index].Desc);
+			wcscpy(buffer, ErrorCodeTable[index].Desc);
 			return;
 		}
 	}
 
-	crt::strcpy(buffer, L"StatusNotFound");
+	wcscpy(buffer, L"StatusNotFound");
 }

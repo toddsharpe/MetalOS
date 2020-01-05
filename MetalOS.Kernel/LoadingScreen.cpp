@@ -1,6 +1,6 @@
 #include "LoadingScreen.h"
 #include "Main.h"
-#include "String.h"
+#include <crt_stdio.h>
 
 #define PositionToPixelScale 10
 
@@ -18,7 +18,7 @@ void LoadingScreen::WriteLineFormat(const char* format, ...)
 	va_list ap;
 
 	va_start(ap, format);
-	int retval = String::vsprintf(buffer, format, ap);
+	int retval = crt_vsprintf(buffer, format, ap);
 	buffer[retval] = '\0';
 	va_end(ap);
 

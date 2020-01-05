@@ -2,18 +2,28 @@
 #include "LoadingScreen.h"
 #include "LoaderParams.h"
 #include "Main.h"
-#include "CRT.h"
 #include "Kernel.h"
 
-#include <string.h>
+#include <crt_string.h>
 
 extern LOADER_PARAMS* pParams;
 //extern Display display;
 extern LoadingScreen* loading;
 
-MemoryMap::MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap, UINTN maxSize) : 
-	m_memoryMapSize(MemoryMapSize), m_memoryMapDescriptorSize(MemoryMapDescriptorSize), m_memoryMapVersion(MemoryMapVersion), m_memoryMap(MemoryMap), m_maxSize(maxSize)
+MemoryMap::MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap, UINTN maxSize) :
+	m_memoryMapSize(MemoryMapSize), m_memoryMapDescriptorSize(MemoryMapDescriptorSize), m_memoryMapDescriptorVersion(MemoryMapDescriptorVersion), m_memoryMap(MemoryMap), m_maxSize(maxSize)
 {
+}
+
+void MemoryMap::SetVirtualOffset(UINTN virtualOffset)
+{
+	EFI_MEMORY_DESCRIPTOR* current;
+	for (current = m_memoryMap;
+		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
+		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	{
+		current->VirtualStart = current->PhysicalStart + virtualOffset;
+	}
 }
 
 void MemoryMap::ReclaimBootPages()
@@ -134,4 +144,21 @@ EFI_MEMORY_DESCRIPTOR* MemoryMap::ResolveAddress(EFI_PHYSICAL_ADDRESS address)
 	}
 
 	Fatal("ResolveAddress failed");
+}
+
+UINTN MemoryMap::GetEndAddress()
+{
+	UINTN highest = 0;
+
+	EFI_MEMORY_DESCRIPTOR* current;
+	for (current = m_memoryMap;
+		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
+		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	{
+		uintptr_t address = current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT);
+		if (address > highest)
+			highest = address;
+	}
+
+	return highest;
 }

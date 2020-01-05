@@ -4,7 +4,7 @@
 #include <SmBios.h>
 #include <intrin.h>
 #include "Kernel.h"
-#include "CRT.h"
+#include <crt_string.h>
 
 extern LoadingScreen* loading;
 
@@ -25,7 +25,7 @@ UINTN System::GetInstalledSystemRam()
 			guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
 			guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
 
-		if (crt::memcmp(&m_configTables[i].VendorGuid, &Smbios3TableGuid, sizeof(EFI_GUID)) != 0)
+		if (memcmp(&m_configTables[i].VendorGuid, &Smbios3TableGuid, sizeof(EFI_GUID)) != 0)
 			continue;
 
 		SMBIOS_TABLE_3_0_ENTRY_POINT* entry = (SMBIOS_TABLE_3_0_ENTRY_POINT*)m_configTables[i].VendorTable;

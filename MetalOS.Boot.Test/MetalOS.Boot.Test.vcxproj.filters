@@ -30,7 +30,7 @@
     <ClCompile Include="..\MetalOS.Boot\Error.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MetalOS.Boot\Loader.cpp">
+    <ClCompile Include="..\MetalOS.Boot\EfiLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

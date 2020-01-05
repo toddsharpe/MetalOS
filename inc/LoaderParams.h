@@ -19,7 +19,7 @@ typedef struct
 	EFI_MEMORY_DESCRIPTOR* MemoryMap;
 	UINTN MemoryMapSize;
 	UINTN MemoryMapDescriptorSize;
-	UINT32 MemoryMapVersion;
+	UINT32 MemoryMapDescriptorVersion;
 
 	//Page Tables
 	EFI_PHYSICAL_ADDRESS PageTablesPoolAddress;

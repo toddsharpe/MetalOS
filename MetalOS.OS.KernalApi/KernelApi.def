@@ -1,0 +1,4 @@
+LIBRARY MetalOS.OS.KernelApi
+EXPORTS
+	GetSystemInfo
+	GetProcessInfo

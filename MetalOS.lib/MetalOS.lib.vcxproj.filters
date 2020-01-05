@@ -18,13 +18,25 @@
     <ClCompile Include="Cpu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CRT.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PageTables.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PageTablesPool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Path.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="crt_stdio.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="crt_string.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="crt_wchar.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="crt_stdlib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -32,13 +44,25 @@
     <ClInclude Include="Cpu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CRT.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PageTables.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PageTablesPool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="crt_stdio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="crt_string.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="crt_wchar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="crt_stdlib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

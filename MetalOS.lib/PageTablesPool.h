@@ -21,6 +21,8 @@ public:
 	bool AllocatePage(uint64_t* addressOut);
 	bool DeallocatePage(uint64_t address);
 
+	uint32_t AllocatedPageCount();
+
 private:
 	uint64_t m_virtualAddress;
 	uint64_t m_physicalAddress;

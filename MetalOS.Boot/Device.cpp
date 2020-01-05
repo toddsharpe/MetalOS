@@ -1,9 +1,7 @@
 #include "Device.h"
 #include "BootLoader.h"
-#include "EfiPrint.h"
-#include "Memory.h"
 #include "Error.h"
-#include "CRT.h"
+#include <crt_string.h>
 
 //TODO: move to file?
 EFI_GUID gEfiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
@@ -20,14 +18,14 @@ EFI_STATUS InitializeGraphics(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)
 
 	EFI_GRAPHICS_OUTPUT_PROTOCOL* gop = nullptr;
 	ReturnIfNotSuccess(BS->HandleProtocol(ST->ConsoleOutHandle, &GraphicsOutputProtocol, (void**)&gop));
-	crt::memcpy(display, gop->Mode, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
+	memcpy(display, gop->Mode, sizeof(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE));
 
 	//Allocate space for full graphics info
 	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* info = nullptr;
 	UINTN sizeOfInfo = 0;
 	ReturnIfNotSuccess(gop->QueryMode(gop, 0, &sizeOfInfo, &info));
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, sizeOfInfo, (void**)&display->Info));
-	crt::memcpy(display->Info, info, sizeOfInfo);
+	memcpy(display->Info, info, sizeOfInfo);
 
 	//Kernel will only support one pixel format. If we wait until the kernel is loaded then we cant print to give the error message.
 	//We might be able to with different pixels, but lets just catch it here for now
@@ -61,8 +59,8 @@ EFI_STATUS PrintGraphicsDevice(PGRAPHICS_DEVICE pDevice)
 	EFI_STATUS status;
 	
 	ReturnIfNotSuccess(Print(L"Graphics:\r\n"));
-	ReturnIfNotSuccess(Print(L"  FrameBuffer-Base %q, Size: %u\r\n", pDevice->FrameBufferBase, pDevice->FrameBufferSize));
-	ReturnIfNotSuccess(Print(L"  Resulution 0x%4x (0x%4x) x 0x%4x\r\n", pDevice->HorizontalResolution, pDevice->PixelsPerScanLine, pDevice->VerticalResolution));
+	ReturnIfNotSuccess(Print(L"  FrameBuffer-Base 0x%016x, Size: 0x%08x\r\n", pDevice->FrameBufferBase, pDevice->FrameBufferSize));
+	ReturnIfNotSuccess(Print(L"  Resulution 0x%04x (0x%04x) x 0x%04x\r\n", pDevice->HorizontalResolution, pDevice->PixelsPerScanLine, pDevice->VerticalResolution));
 
 	return status;
 }
@@ -221,7 +219,7 @@ PrintGOPFull(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
 			Print(L"ERROR: Bad response from QueryMode: %d\r\n", Status);
 			continue;
 		}
-		Print(L"%c%d: %dx%d ", crt::memcmp(Info, gop->Mode->Info, sizeof(*Info)) == 0 ? '*' : ' ', i,
+		Print(L"%c%d: %dx%d ", memcmp(Info, gop->Mode->Info, sizeof(*Info)) == 0 ? '*' : ' ', i,
 			Info->HorizontalResolution,
 			Info->VerticalResolution);
 		switch (Info->PixelFormat) {

@@ -5,7 +5,7 @@
 #include "Error.h"
 #include <LoaderParams.h>
 #include <Kernel.h>
-#include "CRT.h"
+#include <crt_string.h>
 
 //#include <Windows.h>
 
@@ -114,7 +114,8 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageSizeOut, UINT64* p
 	*pImageSizeOut = pNtHeader->OptionalHeader.SizeOfImage;
 	*pEntryPointOut = pNtHeader->OptionalHeader.ImageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint;
 
-	Print(L"  ImageBase: %q ImageSize: %q\r\n  Entry: %q Physical: %q\r\n", KernelBaseAddress, EFI_SIZE_TO_PAGES(*pImageSizeOut), *pEntryPointOut, *pPhysicalImageBase);
+	Print(L"  ImageBase: 0x%016x ImageSize: 0x%08x\r\n", KernelBaseAddress, EFI_SIZE_TO_PAGES(*pImageSizeOut));
+	Print(L"  Entry: 0x%016x Physical: 0x%016x\r\n", *pEntryPointOut, *pPhysicalImageBase);
 
 	return EFI_SUCCESS;
 }
@@ -130,7 +131,7 @@ EFI_STATUS EfiLoader::CrtInitialization(UINT64 imageBase)
 	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
-		if (crt::strcmp((char*)& section[i].Name, ".CRT") == 0)
+		if (strcmp((char*)& section[i].Name, ".CRT") == 0)
 		{
 			crtSection = &section[i];
 			break;

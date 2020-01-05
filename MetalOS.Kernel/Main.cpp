@@ -1,3 +1,4 @@
+#include "Main.h"
 #include "msvc.h"
 #define GNU_EFI_SETJMP_H
 #include <efi.h>
@@ -5,20 +6,19 @@
 #include "Display.h"
 #include "LoadingScreen.h"
 #include "MetalOS.h"
-#include "Main.h"
 #include "System.h"
 #include "MemoryMap.h"
 #include <intrin.h>
-#include "CRT.h"
-#include "String.h"
+
 #include "PageTables.h"
 #include "PageTablesPool.h"
 #include "x64.h"
 #include "KernelHeap.h"
 
-#include <stdio.h>
-#include <string.h>
+#include <crt_stdio.h>
+
 #include <vector>
+
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -59,7 +59,7 @@ extern "C" void Print(const char* format, ...)
 	va_list ap;
 
 	va_start(ap, format);
-	int retval = String::vsprintf(buffer, format, ap);
+	int retval = crt_vsprintf(buffer, format, ap);
 	buffer[retval] = '\0';
 	va_end(ap);
 
@@ -87,11 +87,16 @@ void operator delete(void* p, size_t n)
 //Copy loader params and all recursive structures to kernel memory
 extern "C" void main_thunk(LOADER_PARAMS* loader)
 {
-	crt::memcpy(&LoaderParams, loader, sizeof(LOADER_PARAMS));
+	memcpy(&LoaderParams, loader, sizeof(LOADER_PARAMS));
 	LoaderParams.MemoryMap = (EFI_MEMORY_DESCRIPTOR*)EFI_MEMORY_MAP;
-	crt::memcpy(EFI_MEMORY_MAP, loader->MemoryMap, loader->MemoryMapSize);
+	memcpy(EFI_MEMORY_MAP, loader->MemoryMap, loader->MemoryMapSize);
 
 	main(&LoaderParams);
+}
+
+extern "C" void syscall()
+{
+	loading->WriteLineFormat("Syscall!");
 }
 
 void main(LOADER_PARAMS* loader)
@@ -101,9 +106,28 @@ void main(LOADER_PARAMS* loader)
 	display->ColorScreen(Black);
 	loading = new LoadingScreen(*display);
 
+	loading->WriteLineFormat("runtime 0x%16x time: 0x%16x", loader->Runtime, loader->Runtime->GetTime);
+
 	//Initialize page tables
-	pagePool = new PageTablesPool(LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
+	pagePool = new PageTablesPool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
 	pagePool->SetVirtualAddress(KernelPageTablesPoolAddress);
+
+	//Initialize memorymap. Call SetVirtualAddressMap, then modify
+	memoryMap = new MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap, PAGE_SIZE);
+	memoryMap->SetVirtualOffset(KernelPhysicalMemoryAddress);
+	Assert(loader->Runtime->SetVirtualAddressMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap) == EFI_SUCCESS);
+	loader->Runtime = MakePtr(EFI_RUNTIME_SERVICES*, loader->Runtime, KernelPhysicalMemoryAddress);
+	//loading->WriteLineFormat("runtime 0x%16x time: 0x%16x", loader->Runtime, loader->Runtime->GetTime);
+	//__halt();
+
+	//EFI_TIME time;
+	//loader->Runtime->GetTime(&time, nullptr);
+	//loading->WriteLineFormat("print 0x%d", time.Hour);
+	//__halt();
+
+	memoryMap->ReclaimBootPages();
+	memoryMap->MergeConventionalPages();
+	memoryMap->DumpMemoryMap();
 
 	//x64 Initialization
 	x64::Initialize();
@@ -121,6 +145,7 @@ void main(LOADER_PARAMS* loader)
 	kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
 	kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
 	kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
+	kernelPT.MapKernelPages(KernelPhysicalMemoryAddress, 0, EFI_SIZE_TO_PAGES(memoryMap->GetEndAddress()));
 	loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
 	__writecr3(ptRoot);
 
@@ -129,13 +154,21 @@ void main(LOADER_PARAMS* loader)
 	loading->WriteLineFormat("ConfigTableSizes: %d", loader->ConfigTableSizes);
 	loading->WriteLineFormat("MemoryMap: 0x%16x", loader->MemoryMap);
 	loading->WriteLineFormat("Display.FrameBufferBase: 0x%16x", loader->Display.FrameBufferBase);
+	loading->WriteLineFormat("PageTablesPool.AllocatedPageCount: 0x%8x", pagePool->AllocatedPageCount());
+
+	loading->WriteLineFormat("runtime 0x%16x", loader->Runtime);
+	uintptr_t address = kernelPT.ResolveAddress((uintptr_t)loader->Runtime);
+	loading->WriteLineFormat("resolved 0x%16x", address);
+	//loading->WriteLineFormat("time: 0x%16x", loader->Runtime->GetTime);
+	__halt();
+
+//EFI_TIME time;
+//loader->Runtime->GetTime(&time, nullptr);
+//loading->WriteLineFormat("print 0x%d", time.Hour);
+//__halt();
 
 	//Access current EFI memory map
 	//Its on its own page so we are fine with resizing
-	memoryMap = new MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapVersion, loader->MemoryMap, PAGE_SIZE);
-	memoryMap->ReclaimBootPages();
-	memoryMap->MergeConventionalPages();
-	memoryMap->DumpMemoryMap();
 
 	__halt();
 }

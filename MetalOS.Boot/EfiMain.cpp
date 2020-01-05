@@ -1,14 +1,15 @@
 #include "EfiMain.h"
 #include "Kernel.h"
 #include "BootLoader.h"
-#include "EfiPrint.h"
-#include "String.h"
 #include "Device.h"
 #include "EfiLoader.h"
 #include "Error.h"
 #include "Memory.h"
 #include <intrin.h>
-#include "CRT.h"
+#include <crt_string.h>
+#include <crt_wchar.h>
+#include <crt_stdlib.h>
+#include <Path.h>
 
 #include <PageTables.h>
 #include <PageTablesPool.h>
@@ -36,6 +37,9 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	//Populate params
 	LoaderParams.ConfigTables = ST->ConfigurationTable;
 	LoaderParams.ConfigTableSizes = ST->NumberOfTableEntries;
+	LoaderParams.Runtime = RT;
+
+	ReturnIfNotSuccess(ST->ConOut->ClearScreen(ST->ConOut));
 
 	//Disable the stupid watchdog - TODO: why doesnt it go away on its own? Maybe because i didnt call SetVirtualAddressMap?
 	ReturnIfNotSuccess(BS->SetWatchdogTimer(0, 0, 0, nullptr));
@@ -43,23 +47,23 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	EFI_LOADED_IMAGE* LoadedImage;
 	ReturnIfNotSuccess(BS->OpenProtocol(ImageHandle, &LoadedImageProtocol, (void**)&LoadedImage, NULL, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
 	AllocationType = LoadedImage->ImageDataType;
-	const CHAR16* BootFilePath = ((FILEPATH_DEVICE_PATH*)LoadedImage->FilePath)->PathName;
+	CHAR16* BootFilePath = ((FILEPATH_DEVICE_PATH*)LoadedImage->FilePath)->PathName;
 
 	//Display some splash info
-	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\n\r"));
-	ReturnIfNotSuccess(Print(L"  Firmware Vendor: %S, Revision: %d\n\r", ST->FirmwareVendor, ST->FirmwareRevision));
-	ReturnIfNotSuccess(Print(L"  Bootloader: %S\r\n", BootFilePath));
-	ReturnIfNotSuccess(Print(L"  ImageHandle: %q\r\n", ImageHandle));
+	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\r\n"));
+	ReturnIfNotSuccess(Print(L"  Firmware Vendor: %s, Revision: %d\r\n", ST->FirmwareVendor, ST->FirmwareRevision));
+	ReturnIfNotSuccess(Print(L"  Bootloader: %s\r\n", BootFilePath));
+	ReturnIfNotSuccess(Print(L"  ImageHandle: 0x%016x\r\n", ImageHandle));
 	ReturnIfNotSuccess(PrintCpuDetails());
 
 	//Display time
 	EFI_TIME time;
 	ReturnIfNotSuccess(RT->GetTime(&time, nullptr));
-	Print(L"Date: %d-%d-%d %d:%d:%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+	Print(L"Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
 	//Determine size of memory map, allocate it in Boot Services Data so Kernel cleans it up
 	UINTN memoryMapKey = 0;
-	status = BS->GetMemoryMap(&LoaderParams.MemoryMapSize, LoaderParams.MemoryMap, &memoryMapKey, &LoaderParams.MemoryMapDescriptorSize, &LoaderParams.MemoryMapVersion);
+	status = BS->GetMemoryMap(&LoaderParams.MemoryMapSize, LoaderParams.MemoryMap, &memoryMapKey, &LoaderParams.MemoryMapDescriptorSize, &LoaderParams.MemoryMapDescriptorVersion);
 	if (status == EFI_BUFFER_TOO_SMALL)
 	{
 		ReturnIfNotSuccess(BS->AllocatePool(EfiBootServicesData, LoaderParams.MemoryMapSize, (void**)&LoaderParams.MemoryMap));
@@ -88,9 +92,9 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	//Build path to kernel
 	CHAR16* KernelPath;
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, MaxKernelPath * sizeof(CHAR16), (void**)&KernelPath));
-	crt::memset((void*)KernelPath, 0, MaxKernelPath * sizeof(CHAR16));
-	crt::GetDirectoryName(BootFilePath, KernelPath);
-	crt::strcpy(KernelPath + crt::strlen(KernelPath), Kernel);
+	memset((void*)KernelPath, 0, MaxKernelPath * sizeof(CHAR16));
+	GetDirectoryName(BootFilePath, KernelPath);
+	wcscpy(KernelPath + wcslen(KernelPath), Kernel);
 
 	//Load kernel path
 	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem = nullptr;
@@ -98,7 +102,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	EFI_FILE* CurrentDriveRoot = nullptr;
 	ReturnIfNotSuccess(fileSystem->OpenVolume(fileSystem, &CurrentDriveRoot));
 	EFI_FILE* KernelFile = nullptr;
-	Print(L"Loading: %S\r\n", KernelPath);
+	Print(L"Loading: %s\r\n", KernelPath);
 	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelFile, KernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
 
 	//Map kernel into memory. It will be relocated at KernelBaseAddress
@@ -114,6 +118,8 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	currentPT.SetPool(&pageTablesPool);
 	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, EFI_SIZE_TO_PAGES(LoaderParams.KernelImageSize));
 	currentPT.MapKernelPages(KernelPageTablesPoolAddress, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
+	//currentPT.MapKernelPages(KernelPhysicalMemoryAddress, 0, EFI_SIZE_TO_PAGES(memoryMap->GetEndAddress()));
+	Print(L"PageTablesPool.AllocatedPageCount: %x\r\n", pageTablesPool.AllocatedPageCount());
 
 	//Re-enable write protection
 	__writecr0(__readcr0() | (1 << 16));
@@ -130,10 +136,14 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Retrieve map from UEFI
 	//This could fail on EFI_BUFFER_TOO_SMALL
-	ReturnIfNotSuccess(BS->GetMemoryMap(&LoaderParams.MemoryMapSize, LoaderParams.MemoryMap, &memoryMapKey, &LoaderParams.MemoryMapDescriptorSize, &LoaderParams.MemoryMapVersion));
-	
+	ReturnIfNotSuccess(BS->GetMemoryMap(&LoaderParams.MemoryMapSize, LoaderParams.MemoryMap, &memoryMapKey, &LoaderParams.MemoryMapDescriptorSize, &LoaderParams.MemoryMapDescriptorVersion));
+
 	//After ExitBootServices we can no longer use the BS handle (no print, memory, etc)
 	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
+
+	//Set virtual address mappings
+	//UINTN addressSize = GetPhysicalAddressSize(LoaderParams.MemoryMapSize, LoaderParams.MemoryMapDescriptorSize, LoaderParams.MemoryMap);
+	//memoryMap = new MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap, PAGE_SIZE);
 
 	//Call into kernel
 	KernelMain kernelMain = (KernelMain)(entryPoint);
@@ -147,14 +157,31 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* pParams)
 {
 	EFI_STATUS status;
 	
-	ReturnIfNotSuccess(Print(L"LoaderParams: %q, Pages: 0x%2x\r\n", pParams, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS))));
-	ReturnIfNotSuccess(Print(L"  Kernel-Address: %q, Pages: 0x%2x\r\n", pParams->KernelAddress, EFI_SIZE_TO_PAGES(pParams->KernelImageSize)));
-	ReturnIfNotSuccess(Print(L"  MemoryMap-Address: %q, Pages: 0x%2x\r\n", pParams->MemoryMap, EFI_SIZE_TO_PAGES(pParams->MemoryMapSize)));
-	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: %q, Pages: 0x%4x\r\n", pParams->PageTablesPoolAddress, pParams->PageTablesPoolPageCount));
-	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: %q, Count: 0x%2x\r\n", pParams->ConfigTables, pParams->ConfigTableSizes));
+	ReturnIfNotSuccess(Print(L"LoaderParams: 0x%016x, Pages: 0x%x\r\n", pParams, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS))));
+	ReturnIfNotSuccess(Print(L"  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", pParams->KernelAddress, EFI_SIZE_TO_PAGES(pParams->KernelImageSize)));
+	ReturnIfNotSuccess(Print(L"  MemoryMap-Address: 0x%016x, Pages: 0x%x\r\n", pParams->MemoryMap, EFI_SIZE_TO_PAGES(pParams->MemoryMapSize)));
+	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: 0x%016x, Pages: 0x%x\r\n", pParams->PageTablesPoolAddress, pParams->PageTablesPoolPageCount));
+	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", pParams->ConfigTables, pParams->ConfigTableSizes));
 
 	PrintGraphicsDevice(&pParams->Display);
 	return status;
+}
+
+#define MAXBUFFER 255
+EFI_STATUS Print(const CHAR16* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	EFI_STATUS status;
+	CHAR16 buffer[MAXBUFFER] = { 0 };
+	vwprintf(buffer, format, args);
+
+	//Write
+	if (EFI_ERROR((status = ST->ConOut->OutputString(ST->ConOut, buffer))))
+		return status;
+
+	return EFI_SUCCESS;
 }
 
 EFI_STATUS Keywait(const CHAR16* String)
@@ -183,13 +210,16 @@ EFI_STATUS PrintCpuDetails()
 	
 	int registers[4] = { -1 };
 	char vendor[13] = { 0 };
+	CHAR16 wideVendor[13] = { 0 };
 
 	__cpuid(registers, 0);
 	*((UINT32*)vendor) = (UINT32)registers[1];
 	*((UINT32*)(vendor + 4)) = (UINT32)registers[3];
 	*((UINT32*)(vendor + 8)) = (UINT32)registers[2];
 
-	ReturnIfNotSuccess(Print(L"CPU vendor: %s\r\n", vendor));
+	mbstowcs(wideVendor, vendor, sizeof(wideVendor));
+
+	ReturnIfNotSuccess(Print(L"CPU vendor: %s\r\n", wideVendor));
 
 	__cpuid(registers, 0x80000001);
 	//This means its supported, may not be active
@@ -201,4 +231,19 @@ EFI_STATUS PrintCpuDetails()
 	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
 
 	return status;
+}
+
+UINTN GetPhysicalAddressSize(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, EFI_MEMORY_DESCRIPTOR* MemoryMap)
+{
+	UINTN highest = 0;
+
+	EFI_MEMORY_DESCRIPTOR* current;
+	for (current = MemoryMap; current < NextMemoryDescriptor(MemoryMap, MemoryMapSize); current = NextMemoryDescriptor(current, MemoryMapDescriptorSize))
+	{
+		uintptr_t address = current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT);
+		if (address > highest)
+			highest = address;
+	}
+
+	return highest;
 }

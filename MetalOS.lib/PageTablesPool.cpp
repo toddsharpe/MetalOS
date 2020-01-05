@@ -22,7 +22,7 @@ bool PageTablesPool::AllocatePage(uint64_t* addressOut)
 	//Yes this should be like bitmasks or maybe ints if i used more info here (like if it was backed to disk)
 	//But to stand this up, just booleans
 
-	for (size_t i = 1; i < PAGE_SIZE; i++)
+	for (size_t i = 1; i < this->m_pageCount; i++)
 	{
 		if (m_index[i])
 			continue;
@@ -49,5 +49,19 @@ bool PageTablesPool::DeallocatePage(uint64_t address)
 
 	m_index[index] = false;
 	return true;
+}
+
+uint32_t PageTablesPool::AllocatedPageCount()
+{
+	uint32_t count = 0;
+	for (size_t i = 1; i < this->m_pageCount; i++)
+	{
+		if (!m_index[i])
+			continue;
+
+		count++;
+	}
+
+	return count;
 }
 

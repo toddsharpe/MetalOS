@@ -1,6 +1,9 @@
-#include "String.h"
-#include "Main.h"
-#include "Kernel.h"
+#include "crt_stdio.h"
+#include <stdint.h>
+
+//Internal protypes
+int kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int radix, va_list ap);
+char* ksprintn(char* nbuf, uintmax_t num, int base, int* len, int upper);
 
 //TODO: convert/rewrite these routines, or at lease source them
 
@@ -16,38 +19,29 @@ char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 typedef size_t ssize_t;
 
-uint32_t String::strlen(const char* s)
+inline int imax(int a, int b)
 {
-	Assert(s != nullptr);
-
-	size_t length = 0;
-	while (*s++)
-		length++;
-	return length;
+	return (a > b ? a : b);
 }
 
-int String::sprintf(char* buf, const char* cfmt, ...)
+int sprintf(char* const _Buffer, char const* const _Format, ...)
 {
 	int retval;
 	va_list ap;
 
-	va_start(ap, cfmt);
-	retval = kvprintf(cfmt, NULL, (void*)buf, 10, ap);
-	buf[retval] = '\0';
+	va_start(ap, _Format);
+	retval = kvprintf(_Format, NULL, (void*)_Buffer, 10, ap);
+	_Buffer[retval] = '\0';
 	va_end(ap);
 	return (retval);
 }
 
-
-/*
- * Scaled down version of vsprintf(3).
- */
-int String::vsprintf(char* buf, const char* cfmt, va_list ap)
+int crt_vsprintf(char* const _Buffer, char const* const _Format, va_list _ArgList)
 {
 	int retval;
 
-	retval = kvprintf(cfmt, NULL, (void*)buf, 10, ap);
-	buf[retval] = '\0';
+	retval = kvprintf(_Format, NULL, (void*)_Buffer, 10, _ArgList);
+	_Buffer[retval] = '\0';
 	return (retval);
 }
 
@@ -57,7 +51,7 @@ int String::vsprintf(char* buf, const char* cfmt, va_list ap)
  * written in the buffer (i.e., the first character of the string).
  * The buffer pointed to by `nbuf' must have length >= MAXNBUF.
  */
-char* String::ksprintn(char* nbuf, uintmax_t num, int base, int* lenp, int upper)
+char* ksprintn(char* nbuf, uintmax_t num, int base, int* lenp, int upper)
 {
 	char* p, c;
 
@@ -98,7 +92,7 @@ char* String::ksprintn(char* nbuf, uintmax_t num, int base, int* lenp, int upper
  *		("%6D", ptr, ":")   -> XX:XX:XX:XX:XX:XX
  *		("%*D", len, ptr, " " -> XX XX XX XX ...
  */
-int String::kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int radix, va_list ap)
+int kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int radix, va_list ap)
 {
 #define PCHAR(c) {int cc=(c); if (func) (*func)(cc,arg); else *d++ = cc; retval++; }
 	char nbuf[MAXNBUF];
@@ -276,7 +270,7 @@ int String::kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int r
 		if (p == NULL)
 			p = "(null)";
 		if (!dot)
-			n = String::strlen(p);
+			n = strlen(p);
 		else
 			for (n = 0; n < dwidth && p[n]; n++)
 				continue;
@@ -300,7 +294,7 @@ int String::kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int r
 		goto handle_nosign;
 	case 'X':
 		upper = 1;
-		__attribute__((fallthrough)); // For GCC to stop warning about a fallthrough here
+		//__attribute__((fallthrough)); // For GCC to stop warning about a fallthrough here
 	case 'x':
 		base = 16;
 		goto handle_nosign;
@@ -376,7 +370,7 @@ int String::kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int r
 
 		if (!ladjust && padc == '0')
 			dwidth = width - tmp;
-		width -= tmp + String::imax(dwidth, n);
+		width -= tmp + imax(dwidth, n);
 		dwidth -= n;
 		if (!ladjust)
 			while (width-- > 0)

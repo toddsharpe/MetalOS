@@ -31,6 +31,18 @@ struct ProcessInfo
 	uint32_t Id;
 };
 
+enum SystemArchitecture
+{
+	Unknown = 0,
+	x64 = 1
+};
+
+struct SystemInfo
+{
+	uint32_t PageSize;
+	SystemArchitecture Architecture;
+};
+
 enum SystemCallResult : uint32_t
 {
 	Success = 0,
@@ -39,7 +51,8 @@ enum SystemCallResult : uint32_t
 
 enum SystemCall : uint32_t
 {
-	GetProcessInformation = 1,
+	GetSystemInfoId = 1,
+	GetProcessInfoId = 2,
 };
 
 #if !defined(EXPORT)
@@ -48,5 +61,10 @@ enum SystemCall : uint32_t
 #define SYSTEMCALL __declspec(dllexport) SystemCallResult
 #endif
 
-//Prototypes
-SYSTEMCALL GetProcessInfo(ProcessInfo* info);
+extern "C"
+{
+	//Prototypes
+	SYSTEMCALL GetSystemInfo(SystemInfo* info);
+	SYSTEMCALL GetProcessInfo(ProcessInfo* info);
+}
+

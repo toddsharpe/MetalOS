@@ -126,7 +126,8 @@
     <Link>
       <SubSystem>EFI Application</SubSystem>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies />
+      <AdditionalDependencies>
+      </AdditionalDependencies>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <EnableUAC>false</EnableUAC>
       <EntryPointSymbol>EfiMain</EntryPointSymbol>
@@ -171,7 +172,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalDependencies />
+      <AdditionalDependencies>
+      </AdditionalDependencies>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <EnableUAC>false</EnableUAC>
       <EntryPointSymbol>EfiMain</EntryPointSymbol>
@@ -184,7 +186,6 @@
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="EfiLoader.cpp" />
     <ClCompile Include="EfiMain.cpp" />
-    <ClCompile Include="EfiPrint.cpp" />
     <ClCompile Include="Error.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -192,7 +193,6 @@
     <ClInclude Include="Device.h" />
     <ClInclude Include="EfiLoader.h" />
     <ClInclude Include="EfiMain.h" />
-    <ClInclude Include="EfiPrint.h" />
     <ClInclude Include="Error.h" />
   </ItemGroup>
   <ItemGroup>

@@ -41,7 +41,7 @@ public:
 
 	void DumpMemoryMap();
 
-	UINTN GetEndAddress();
+	UINTN GetPhysicalAddressSize();
 
 private:
 	EFI_MEMORY_DESCRIPTOR* ResolveAddress(EFI_PHYSICAL_ADDRESS address);

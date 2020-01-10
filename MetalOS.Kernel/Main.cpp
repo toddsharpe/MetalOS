@@ -18,6 +18,7 @@
 #include <crt_stdio.h>
 
 #include <vector>
+#include "Bitmap.h"
 
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
@@ -68,19 +69,19 @@ extern "C" void Print(const char* format, ...)
 
 void* operator new(size_t n)
 {
-	//loading->WriteLineFormat("Allocation size 0x%x", n);
+	loading->WriteLineFormat("Allocation size 0x%x", n);
 	return (void*)heap.Allocate(n);
 }
 
 void operator delete(void* p)
 {
-	//loading->WriteLineFormat("Delete at 0x%16x", p);
+	loading->WriteLineFormat("Delete at 0x%16x", p);
 	heap.Deallocate((UINT64)p);
 }
 
 void operator delete(void* p, size_t n)
 {
-	//loading->WriteLineFormat("Delete at 0x%16x 0x%x", p, n);
+	loading->WriteLineFormat("Delete at 0x%16x 0x%x", p, n);
 	heap.Deallocate((UINT64)p);
 }
 
@@ -106,17 +107,15 @@ void main(LOADER_PARAMS* loader)
 	display->ColorScreen(Black);
 	loading = new LoadingScreen(*display);
 
-	loading->WriteLineFormat("runtime 0x%16x time: 0x%16x", loader->Runtime, loader->Runtime->GetTime);
-
 	//Initialize page tables
 	pagePool = new PageTablesPool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
 	pagePool->SetVirtualAddress(KernelPageTablesPoolAddress);
 
 	//Initialize memorymap. Call SetVirtualAddressMap, then modify
 	memoryMap = new MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap, PAGE_SIZE);
-	memoryMap->SetVirtualOffset(KernelPhysicalMemoryAddress);
-	Assert(loader->Runtime->SetVirtualAddressMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap) == EFI_SUCCESS);
-	loader->Runtime = MakePtr(EFI_RUNTIME_SERVICES*, loader->Runtime, KernelPhysicalMemoryAddress);
+	//memoryMap->SetVirtualOffset(KernelPhysicalMemoryAddress);
+	//Assert(loader->Runtime->SetVirtualAddressMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap) == EFI_SUCCESS);
+	//loader->Runtime = MakePtr(EFI_RUNTIME_SERVICES*, loader->Runtime, KernelPhysicalMemoryAddress);
 	//loading->WriteLineFormat("runtime 0x%16x time: 0x%16x", loader->Runtime, loader->Runtime->GetTime);
 	//__halt();
 
@@ -124,6 +123,16 @@ void main(LOADER_PARAMS* loader)
 	//loader->Runtime->GetTime(&time, nullptr);
 	//loading->WriteLineFormat("print 0x%d", time.Hour);
 	//__halt();
+
+	loading->WriteLineFormat("{");
+	{
+		Bitmap m(PAGE_SIZE);
+		m.Set(65);
+		loading->WriteLineFormat("G: %d", m.Get(65));
+		m.Clear(65);
+		loading->WriteLineFormat("G: %d", m.Get(65));
+	}
+	loading->WriteLineFormat("}");
 
 	memoryMap->ReclaimBootPages();
 	memoryMap->MergeConventionalPages();
@@ -145,7 +154,6 @@ void main(LOADER_PARAMS* loader)
 	kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
 	kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
 	kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
-	kernelPT.MapKernelPages(KernelPhysicalMemoryAddress, 0, EFI_SIZE_TO_PAGES(memoryMap->GetEndAddress()));
 	loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
 	__writecr3(ptRoot);
 
@@ -156,16 +164,6 @@ void main(LOADER_PARAMS* loader)
 	loading->WriteLineFormat("Display.FrameBufferBase: 0x%16x", loader->Display.FrameBufferBase);
 	loading->WriteLineFormat("PageTablesPool.AllocatedPageCount: 0x%8x", pagePool->AllocatedPageCount());
 
-	loading->WriteLineFormat("runtime 0x%16x", loader->Runtime);
-	uintptr_t address = kernelPT.ResolveAddress((uintptr_t)loader->Runtime);
-	loading->WriteLineFormat("resolved 0x%16x", address);
-	//loading->WriteLineFormat("time: 0x%16x", loader->Runtime->GetTime);
-	__halt();
-
-//EFI_TIME time;
-//loader->Runtime->GetTime(&time, nullptr);
-//loading->WriteLineFormat("print 0x%d", time.Hour);
-//__halt();
 
 	//Access current EFI memory map
 	//Its on its own page so we are fine with resizing

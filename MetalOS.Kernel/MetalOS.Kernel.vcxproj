@@ -155,6 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Bitmap.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="KernelBugcheck.cpp" />
@@ -163,10 +164,12 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MemoryMap.cpp" />
     <ClCompile Include="msvc.cpp" />
+    <ClCompile Include="PageFrameAllocator.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="x64.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Bitmap.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="KernelBugcheck.h" />
@@ -175,6 +178,7 @@
     <ClInclude Include="Main.h" />
     <ClInclude Include="MemoryMap.h" />
     <ClInclude Include="msvc.h" />
+    <ClInclude Include="PageFrameAllocator.h" />
     <ClInclude Include="System.h" />
     <ClInclude Include="x64.h" />
     <ClInclude Include="x64_interrupts.h" />

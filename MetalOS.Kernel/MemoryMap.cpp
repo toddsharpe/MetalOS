@@ -146,14 +146,12 @@ EFI_MEMORY_DESCRIPTOR* MemoryMap::ResolveAddress(EFI_PHYSICAL_ADDRESS address)
 	Fatal("ResolveAddress failed");
 }
 
-UINTN MemoryMap::GetEndAddress()
+UINTN MemoryMap::GetPhysicalAddressSize()
 {
 	UINTN highest = 0;
 
 	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap;
-		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
-		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
 		uintptr_t address = current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT);
 		if (address > highest)

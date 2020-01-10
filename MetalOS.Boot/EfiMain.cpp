@@ -118,7 +118,6 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	currentPT.SetPool(&pageTablesPool);
 	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, EFI_SIZE_TO_PAGES(LoaderParams.KernelImageSize));
 	currentPT.MapKernelPages(KernelPageTablesPoolAddress, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
-	//currentPT.MapKernelPages(KernelPhysicalMemoryAddress, 0, EFI_SIZE_TO_PAGES(memoryMap->GetEndAddress()));
 	Print(L"PageTablesPool.AllocatedPageCount: %x\r\n", pageTablesPool.AllocatedPageCount());
 
 	//Re-enable write protection
@@ -140,10 +139,6 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//After ExitBootServices we can no longer use the BS handle (no print, memory, etc)
 	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
-
-	//Set virtual address mappings
-	//UINTN addressSize = GetPhysicalAddressSize(LoaderParams.MemoryMapSize, LoaderParams.MemoryMapDescriptorSize, LoaderParams.MemoryMap);
-	//memoryMap = new MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap, PAGE_SIZE);
 
 	//Call into kernel
 	KernelMain kernelMain = (KernelMain)(entryPoint);

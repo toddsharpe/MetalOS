@@ -28,13 +28,14 @@ class System
 {
 public:
 	System(EFI_CONFIGURATION_TABLE* ConfigurationTables, UINTN NumConfigTables);
+	
 	UINTN GetInstalledSystemRam();
-
-	//These might belong in another class?
-	bool IsPagingEnabled();
-	UINT64 ResolveAddress(UINT64 virtualAddress);
+	void DisplayTableIds();
+	void DisplayAcpi2();
 
 private:
+	bool GetTableByGuid(const EFI_GUID* guid, void** vendorTable);
+
 	EFI_CONFIGURATION_TABLE* m_configTables;
 	UINTN m_configTablesCount;
 };

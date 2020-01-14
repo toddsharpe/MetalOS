@@ -74,6 +74,7 @@ typedef struct
 #define KernelBaseAddress (KernelStart + 0x1000000)//16 MB kernel
 #define KernelPageTablesPoolAddress (KernelStart + 0x2000000)//16MB page pool (currently only 2mb is used - 512 * 4096)
 #define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
+#define KernelRuntimeAddress (KernelStart + 0x100000000000)//
 
 #define KernelHeapSize 0x1000000
 

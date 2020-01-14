@@ -174,3 +174,30 @@ All 20 bits of segment descriptors are on - ignored in 64 bit anyways
 
 Windows Libraries:
 libucrt.lib
+
+// https://github.com/biosbits/bits/blob/master/python/efi.py
+Hyper-V Configuration Tables Count: 0xC
+05AD34BA-6F02-4214-952E-4DA0398E2BB9 - EFI_DXE_SERVICES_TABLE_GUID
+7739f24c-93d7-11d4-9a3a-0090273fc14d - EFI_HOB_LIST_GUID
+4c19049f-4137-4dd3-9c10-8b97a83ffdfa - EFI_MEMORY_TYPE_INFORMATION_GUID
+49152e77-1ada-4764-b7a2-7afefed95e8b - EFI_DEBUG_IMAGE_INFO_TABLE_GUID
+eb9d2d30-2d88-11d3-9a16-0090273fc14d - ACPI_TABLE_GUID (ACPI 1.0)
+8868e871-e4f1-11d3-bc22-0080c73c8881 - EFI_ACPI_TABLE_GUID (ACPI 2.0 and later)
+eb9d2d30-2d88-11d3-9a16-0090273fc14d - ACPI_TABLE_GUID
+f2fd1544-9794-4a2c-992e-e5bbcf20e394 - SMBIOS3_TABLE_GUID
+DCFA911D-26EB-469F-A220-38B7DC461220 - EfiMemoryAttributesTable
+ef9fc172-a1b2-4693-b327-6d32fc416042 - EFI_HII_DATABASE_PROTOCOL_GUID
+587e72d7-cc50-4f79-8209-ca291fc1a10f - EFI_HII_CONFIG_ROUTING_PROTOCOL_GUID
+d719b2cb-3d3a-4596-a3bc-dad00e67656f - EFI_IMAGE_SECURITY_DATABASE
+
+//ACPI
+https://www.kernel.org/doc/Documentation/acpi/namespace.txt
+
+xsdt:
+0x50434146 EFI_ACPI_2_0_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE - Fixed ACPI Description Table
+0x43495041 EFI_ACPI_2_0_MULTIPLE_APIC_DESCRIPTION_TABLE_SIGNATURE - Multiple APIC Description Table
+0x304d454f OEM0_SIGNATURE - used in guest RNG (https://download.microsoft.com/download/1/c/9/1c9813b8-089c-4fef-b2ad-ad80e79403ba/Whitepaper%20-%20The%20Windows%2010%20random%20number%20generation%20infrastructure.pdf)
+0x54454157 WAET_SIGNATURE  
+0x54415253 ACPI_SRAT_SIGNATURE - Cache Coherent NUMA info, topology, way above our paygrades now
+0x54524742 BGRT_SIGNATURE  - Boot graphics
+0x54445046 FPDT_SIGNATURE - firmware performance

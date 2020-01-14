@@ -18,7 +18,8 @@
 #include <crt_stdio.h>
 
 #include <vector>
-#include "Bitmap.h"
+#include "Bitvector.h"
+#include "PageFrameAllocator.h"
 
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
@@ -69,8 +70,9 @@ extern "C" void Print(const char* format, ...)
 
 void* operator new(size_t n)
 {
-	loading->WriteLineFormat("Allocation size 0x%x", n);
-	return (void*)heap.Allocate(n);
+	uintptr_t p = heap.Allocate(n);
+	loading->WriteLineFormat("Allocation 0x%016x (0x%x)", p, n);
+	return (void*)p;
 }
 
 void operator delete(void* p)
@@ -100,6 +102,9 @@ extern "C" void syscall()
 	loading->WriteLineFormat("Syscall!");
 }
 
+//Need to get virtual pointers to acpi struct
+//Find way to keep RuntimeServicesData/Code in kernel address space
+
 void main(LOADER_PARAMS* loader)
 {
 	//Immediately set up graphics device so we can bugcheck gracefully
@@ -124,16 +129,6 @@ void main(LOADER_PARAMS* loader)
 	//loading->WriteLineFormat("print 0x%d", time.Hour);
 	//__halt();
 
-	loading->WriteLineFormat("{");
-	{
-		Bitmap m(PAGE_SIZE);
-		m.Set(65);
-		loading->WriteLineFormat("G: %d", m.Get(65));
-		m.Clear(65);
-		loading->WriteLineFormat("G: %d", m.Get(65));
-	}
-	loading->WriteLineFormat("}");
-
 	memoryMap->ReclaimBootPages();
 	memoryMap->MergeConventionalPages();
 	memoryMap->DumpMemoryMap();
@@ -144,6 +139,12 @@ void main(LOADER_PARAMS* loader)
 	//Test interrupts
 	__debugbreak();
 	__debugbreak();
+
+	System system(loader->ConfigTables, loader->ConfigTableSizes);
+	system.GetInstalledSystemRam();
+	system.DisplayTableIds();
+	system.DisplayAcpi2();
+
 
 	//Map in kernel to new PT. PageTablesPool has been mapped in by bootloader
 	UINT64 ptRoot;
@@ -160,7 +161,7 @@ void main(LOADER_PARAMS* loader)
 	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%16x Size: 0x%x", LoaderParams.KernelAddress, LoaderParams.KernelImageSize);
 	loading->WriteLineFormat("LOADER_PARAMS: 0x%16x", loader);
 	loading->WriteLineFormat("ConfigTableSizes: %d", loader->ConfigTableSizes);
-	loading->WriteLineFormat("MemoryMap: 0x%16x", loader->MemoryMap);
+	loading->WriteLineFormat("MemoryMap: 0x%16x, PhysicalAddressSize: 0x%16x", loader->MemoryMap, memoryMap->GetPhysicalAddressSize());
 	loading->WriteLineFormat("Display.FrameBufferBase: 0x%16x", loader->Display.FrameBufferBase);
 	loading->WriteLineFormat("PageTablesPool.AllocatedPageCount: 0x%8x", pagePool->AllocatedPageCount());
 

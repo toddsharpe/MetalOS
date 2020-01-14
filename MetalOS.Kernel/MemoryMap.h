@@ -3,6 +3,7 @@
 #define GNU_EFI_SETJMP_H
 #include <efi.h>
 
+// https://dox.ipxe.org/UefiMultiPhase_8h.html
 const char mem_types[16][27] = {
 	  "EfiReservedMemoryType     ",
 	  "EfiLoaderCode             ",
@@ -42,6 +43,8 @@ public:
 	void DumpMemoryMap();
 
 	UINTN GetPhysicalAddressSize();
+	UINTN GetLargestConventionalAddress();
+	bool IsConventional(UINTN address);
 
 private:
 	EFI_MEMORY_DESCRIPTOR* ResolveAddress(EFI_PHYSICAL_ADDRESS address);

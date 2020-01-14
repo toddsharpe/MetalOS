@@ -79,7 +79,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2\MdePkg\Include;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;..\tianocore-edk2\MdePkg\Include\IndustryStandard;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -136,7 +136,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2\MdePkg\Include;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;..\tianocore-edk2\MdePkg\Include\IndustryStandard;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
       <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -155,7 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Bitmap.cpp" />
+    <ClCompile Include="Bitvector.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="KernelBugcheck.cpp" />
@@ -169,7 +169,7 @@
     <ClCompile Include="x64.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Bitmap.h" />
+    <ClInclude Include="Bitvector.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="KernelBugcheck.h" />

@@ -48,7 +48,7 @@
     <ClCompile Include="PageFrameAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Bitmap.cpp">
+    <ClCompile Include="Bitvector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -92,7 +92,7 @@
     <ClInclude Include="PageFrameAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Bitmap.h">
+    <ClInclude Include="Bitvector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Boot", "MetalOS.Boo
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Notes", "Notes", "{0FD0A580-6FE6-450C-A93C-F4D016722AC8}"
 	ProjectSection(SolutionItems) = preProject
+		Notes\ACPI_6_3_May16.pdf = Notes\ACPI_6_3_May16.pdf
+		Notes\DSP0134_2.7.1.pdf = Notes\DSP0134_2.7.1.pdf
 		Notes\Intel x64 IA-32 SDM.pdf = Notes\Intel x64 IA-32 SDM.pdf
 		Notes\Notes.txt = Notes\Notes.txt
 		Notes\SMBios.pdf = Notes\SMBios.pdf

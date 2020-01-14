@@ -160,3 +160,37 @@ UINTN MemoryMap::GetPhysicalAddressSize()
 
 	return highest;
 }
+
+UINTN MemoryMap::GetLargestConventionalAddress()
+{
+	EFI_MEMORY_DESCRIPTOR* largest = m_memoryMap;
+
+	EFI_MEMORY_DESCRIPTOR* current;
+	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	{
+		if (current->Type != EfiConventionalMemory)
+			continue;
+
+		if (current->NumberOfPages > largest->NumberOfPages)
+			largest = current;
+	}
+
+	return largest->PhysicalStart;
+}
+
+//TODO: maybe refactor out a "find descriptor" method
+bool MemoryMap::IsConventional(UINTN address)
+{
+	EFI_MEMORY_DESCRIPTOR* current;
+	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	{
+		if (current->Type != EfiConventionalMemory)
+			continue;
+		
+		if ((address >= current->PhysicalStart) && (address < current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT)));
+			return true;
+	}
+
+	return false;
+}
+

@@ -96,6 +96,12 @@ struct EFI_ACPI_XSDT
 	EFI_ACPI_DESCRIPTION_HEADER Header;
 	uint64_t Tables[0];
 };
+
+struct EFI_ACPI_DSDT
+{
+	EFI_ACPI_DESCRIPTION_HEADER Header;
+
+};
 #pragma pack(pop)
 
 void System::DisplayAcpi2()
@@ -133,6 +139,11 @@ void System::DisplayAcpi2()
 				Assert(fadt6->MinorVersion == EFI_ACPI_6_2_FIXED_ACPI_DESCRIPTION_TABLE_MINOR_REVISION);
 				EFI_ACPI_6_2_FIXED_ACPI_DESCRIPTION_TABLE* fadt6_2 = (EFI_ACPI_6_2_FIXED_ACPI_DESCRIPTION_TABLE*)fadt6;
 				loading->WriteLineFormat("    FADT 6.2 detected");
+
+				char sig2[9] = { 0 };
+				EFI_ACPI_DESCRIPTION_HEADER* xdstHeader = (EFI_ACPI_DESCRIPTION_HEADER*)fadt6_2->XDsdt;
+				Assert(xdstHeader->Signature == EFI_ACPI_6_0_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE);
+				loading->WriteLineFormat("    xdstHeader %d sig 0x%x", xdstHeader->Revision, xdstHeader->Signature);
 			}
 			break;
 

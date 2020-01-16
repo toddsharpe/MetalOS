@@ -3,6 +3,7 @@
 #include "Bitvector.h"
 
 //https://wiki.osdev.org/Page_Frame_Allocation
+//TODO: make this take page_size in case usage changes to allocate in groups of N pages
 class PageFrameAllocator
 {
 public:

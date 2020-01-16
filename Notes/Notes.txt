@@ -192,6 +192,7 @@ d719b2cb-3d3a-4596-a3bc-dad00e67656f - EFI_IMAGE_SECURITY_DATABASE
 
 //ACPI
 https://www.kernel.org/doc/Documentation/acpi/namespace.txt
+https://wiki.osdev.org/ACPICA
 
 xsdt:
 0x50434146 EFI_ACPI_2_0_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE - Fixed ACPI Description Table

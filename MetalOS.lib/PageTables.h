@@ -9,8 +9,11 @@ class PageTables
 public:
 	PageTables(uintptr_t physicalAddress);
 
+	//TODO: attributes
 	bool MapUserPages(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count);
 	bool MapKernelPages(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count);
+
+	//TODO: unmap
 
 	void SetPool(PageTablesPool* pool) { m_pool = pool; }
 
@@ -113,7 +116,9 @@ private:
 				uint64_t Dirty : 1;                // If 0, the memory backing this page has not been written to.
 				uint64_t PageAccessType : 1;       // Determines the memory type used to access the memory.
 				uint64_t Global : 1;                // If 1 and the PGE bit of CR4 is set, translations are global.
-				uint64_t Ignored2 : 3;
+				uint64_t OSCopyOnWrite : 1;
+				uint64_t OSPrototypePTE : 1;
+				uint64_t OSWrite : 1;
 				uint64_t PageFrameNumber : 36;     // The page frame number of the backing physical page.
 				uint64_t Reserved : 4;
 				uint64_t Ignored3 : 7;

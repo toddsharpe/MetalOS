@@ -6,9 +6,9 @@ EFI_STATUS Error::DisplayError(const CHAR16* function, EFI_STATUS status)
 {
 	CHAR16 statusString[64];
 	Print(L"Error:\r\n");
-	Print(L"  %S\r\n", function);
+	Print(L"  %s\r\n", function);
 	StatusToString(statusString, status);
-	Print(L"  Status: %d ( %S )\r\n", status, statusString);
+	Print(L"  Status: %d ( %s )\r\n", status, statusString);
 	BS->Stall(1000 * 1000 * 60 * 60);
 	return EFI_ABORTED;
 }

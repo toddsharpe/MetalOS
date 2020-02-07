@@ -51,7 +51,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.lib", "MetalOS.lib\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.lib.Test", "MetalOS.lib.Test\MetalOS.lib.Test.vcxproj", "{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AcpiSubsystem", "_external\acpica\generate\msvc2017\AcpiSubsystem.vcxproj", "{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Acpi", "MetalOS.Acpi\MetalOS.Acpi.vcxproj", "{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -155,15 +155,18 @@ Global
 		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Template|x64.Build.0 = Release|x64
 		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Template|x86.ActiveCfg = Release|Win32
 		{AD7BAFFC-3180-4DBC-B57B-49B044C4CCB4}.Template|x86.Build.0 = Release|Win32
-		{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}.Debug|x64.ActiveCfg = Debug|Win32
-		{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}.Debug|x86.ActiveCfg = Debug|Win32
-		{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}.Debug|x86.Build.0 = Debug|Win32
-		{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}.Release|x64.ActiveCfg = Release|Win32
-		{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}.Release|x86.ActiveCfg = Release|Win32
-		{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}.Release|x86.Build.0 = Release|Win32
-		{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}.Template|x64.ActiveCfg = Template|Win32
-		{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}.Template|x86.ActiveCfg = Template|Win32
-		{768B4FF9-311F-44F1-B0FC-41CC5A9A5053}.Template|x86.Build.0 = Template|Win32
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Debug|x64.ActiveCfg = Debug|x64
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Debug|x64.Build.0 = Debug|x64
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Debug|x86.ActiveCfg = Debug|Win32
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Debug|x86.Build.0 = Debug|Win32
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Release|x64.ActiveCfg = Release|x64
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Release|x64.Build.0 = Release|x64
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Release|x86.ActiveCfg = Release|Win32
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Release|x86.Build.0 = Release|Win32
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Template|x64.ActiveCfg = Release|x64
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Template|x64.Build.0 = Release|x64
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Template|x86.ActiveCfg = Release|Win32
+		{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}.Template|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

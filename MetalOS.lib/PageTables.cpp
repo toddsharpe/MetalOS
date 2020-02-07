@@ -36,6 +36,7 @@ void PageTables::SetVirtualOffset(uintptr_t virtualOffset)
 }
 
 //This should be rewritten to map blocks instead of pages like this, but TODO etc
+//TODO: page attributes!
 bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count, bool global)
 {
 	Print(L"V: 0x%q P: 0x%q C: 0x%q G: %d VO: 0x%q\r\n", virtualAddress, physicalAddress, count, global, m_virtualOffset);

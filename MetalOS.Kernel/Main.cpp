@@ -1,6 +1,5 @@
 #include "Main.h"
 #include "msvc.h"
-#define GNU_EFI_SETJMP_H
 #include <efi.h>
 #include "LoaderParams.h"
 #include "Display.h"
@@ -21,6 +20,11 @@
 #include "Bitvector.h"
 #include "PageFrameAllocator.h"
 
+extern "C"
+{
+#include <acpi.h>
+
+}
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -30,6 +34,7 @@ Display* display;
 LoadingScreen* loading;
 PageTablesPool* pagePool;
 MemoryMap* memoryMap;
+PageFrameAllocator* frameAllocator;
 std::vector<KERNEL_PROCESS> *processes;
 
 //Kernel Stack
@@ -40,7 +45,7 @@ extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[KERNEL_STACK_SIZE];
 KERNEL_PAGE_ALIGN static volatile UINT8 KERNEL_HEAP[KERNEL_HEAP_SIZE] = { 0 };
 KERNEL_GLOBAL_ALIGN static KernelHeap heap((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
 
-KERNEL_GLOBAL_ALIGN static LOADER_PARAMS LoaderParams = { 0 };
+KERNEL_GLOBAL_ALIGN LOADER_PARAMS LoaderParams = { 0 };
 KERNEL_GLOBAL_ALIGN static UINT8 EFI_MEMORY_MAP[MemoryMapReservedSize] = { 0 };
 
 extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
@@ -56,14 +61,18 @@ extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
 
 extern "C" void Print(const char* format, ...)
 {
+	va_list ap;
+	va_start(ap, format);
+	VPrint(format, ap);
+	va_end(ap);
+}
+
+extern "C" void VPrint(const char* format, va_list Args)
+{
 	char buffer[80];
 
-	va_list ap;
-
-	va_start(ap, format);
-	int retval = crt_vsprintf(buffer, format, ap);
+	int retval = crt_vsprintf(buffer, format, Args);
 	buffer[retval] = '\0';
-	va_end(ap);
 
 	loading->WriteLine(buffer);
 }
@@ -109,14 +118,17 @@ void main(LOADER_PARAMS* loader)
 {
 	//Immediately set up graphics device so we can bugcheck gracefully
 	display = new Display(&loader->Display);
-	display->ColorScreen(Black);
+	display->ColorScreen(Red);
 	loading = new LoadingScreen(*display);
+
+	//loading->WriteLineFormat("Syscall!");
+	//__halt();
 
 	//Initialize page tables
 	pagePool = new PageTablesPool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
 	pagePool->SetVirtualAddress(KernelPageTablesPoolAddress);
 
-	//Initialize memorymap. Call SetVirtualAddressMap, then modify
+	//Initialize memorymap. Call SetVirtualAddressMap, then modify - TODO
 	memoryMap = new MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap, PAGE_SIZE);
 	//memoryMap->SetVirtualOffset(KernelPhysicalMemoryAddress);
 	//Assert(loader->Runtime->SetVirtualAddressMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap) == EFI_SUCCESS);
@@ -133,17 +145,31 @@ void main(LOADER_PARAMS* loader)
 	memoryMap->MergeConventionalPages();
 	memoryMap->DumpMemoryMap();
 
+	//Initialize Frame Allocator
+	frameAllocator = new PageFrameAllocator(*memoryMap);
+
 	//x64 Initialization
 	x64::Initialize();
 
 	//Test interrupts
 	__debugbreak();
 	__debugbreak();
+	__halt();
+	//ACPI
+	//ACPI_STATUS Status;
+	//Status = AcpiInitializeSubsystem();
+	//if (ACPI_FAILURE(Status))
+	//{
+	//	Print("Could not initialize ACPI: %d\n", Status);
+	//	__halt();
+	//}
+	//__halt();
+	//AcpiInitializeTables(0, 0, FALSE);
 
-	System system(loader->ConfigTables, loader->ConfigTableSizes);
-	system.GetInstalledSystemRam();
-	system.DisplayTableIds();
-	system.DisplayAcpi2();
+	//System system(loader->ConfigTables, loader->ConfigTableSizes);
+	//system.GetInstalledSystemRam();
+	//system.DisplayTableIds();
+	//system.DisplayAcpi2();
 
 
 	//Map in kernel to new PT. PageTablesPool has been mapped in by bootloader

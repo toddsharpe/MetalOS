@@ -75,6 +75,7 @@ typedef struct
 #define KernelPageTablesPoolAddress (KernelStart + 0x2000000)//16MB page pool (currently only 2mb is used - 512 * 4096)
 #define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
 #define KernelRuntimeAddress (KernelStart + 0x100000000000)//
+#define KernelACPIAddress (KernelStart + 0x200000000000)//ACPI Request area. ACPI requests pages to be mapped so use this chunk
 
 #define KernelHeapSize 0x1000000
 
@@ -103,9 +104,6 @@ typedef struct
 #define KERNEL_GLOBAL_ALIGN __declspec(align(64))
 #define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
 
-//We should just change the base address of the kernel image
-//#define KernelBaseAddress 0x100000
-
 typedef struct
 {
 	uintptr_t FrameBufferBase;
@@ -114,6 +112,31 @@ typedef struct
 	uint32_t VerticalResolution;
 	uint32_t PixelsPerScanLine;
 } GRAPHICS_DEVICE, * PGRAPHICS_DEVICE;
+
+//Page Frame Number Database
+//Windows Internals, Part 2, Page 297
+enum PAGE_STATE
+{
+	Active,
+	Transition,
+	Standby,
+	Modified,
+	ModifiedNoWrite,
+	Free,
+	Zeroed,
+	Rom,
+	Bad
+};
+
+//Virtual Address Descriptor
+//Virtual Page Number
+typedef struct _VAD_NODE
+{
+	uint64_t StartPN;
+	uint64_t EndPN;
+	//commit - mapped, private
+	//protection - readwrite, readonly, writecopy, execute_writecopy
+} VAD_NODE, *PVAD_NODE;
 
 typedef struct
 {

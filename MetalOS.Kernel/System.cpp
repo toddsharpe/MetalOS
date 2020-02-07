@@ -4,7 +4,7 @@
 typedef EFI_GUID GUID;
 #include <SmBios.h>
 #define PACKED
-#include <Acpi.h>
+#include <PlatformAcpi.h>
 #include <intrin.h>
 #include "Kernel.h"
 #include <crt_string.h>

@@ -51,6 +51,12 @@
     <ClCompile Include="Bitvector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AcpiServices.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AddressSpace.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Display.h">
@@ -93,6 +99,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Bitvector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AcpiServices.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AddressSpace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -191,6 +191,9 @@
     <ClInclude Include="x64_support.h" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MetalOS.Acpi\MetalOS.Acpi.vcxproj">
+      <Project>{48e6f78a-5c2b-4c66-8767-df5be189bd2c}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">
       <Project>{53afb5f2-11ec-448c-bfb6-2d4d9f5eabad}</Project>
     </ProjectReference>

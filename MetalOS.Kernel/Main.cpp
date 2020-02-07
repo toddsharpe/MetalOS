@@ -45,7 +45,7 @@ extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[KERNEL_STACK_SIZE];
 KERNEL_PAGE_ALIGN static volatile UINT8 KERNEL_HEAP[KERNEL_HEAP_SIZE] = { 0 };
 KERNEL_GLOBAL_ALIGN static KernelHeap heap((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
 
-KERNEL_GLOBAL_ALIGN LOADER_PARAMS LoaderParams = { 0 };
+KERNEL_GLOBAL_ALIGN static LOADER_PARAMS LoaderParams = { 0 };
 KERNEL_GLOBAL_ALIGN static UINT8 EFI_MEMORY_MAP[MemoryMapReservedSize] = { 0 };
 
 extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
@@ -118,7 +118,7 @@ void main(LOADER_PARAMS* loader)
 {
 	//Immediately set up graphics device so we can bugcheck gracefully
 	display = new Display(&loader->Display);
-	display->ColorScreen(Red);
+	display->ColorScreen(Black);
 	loading = new LoadingScreen(*display);
 
 	//loading->WriteLineFormat("Syscall!");
@@ -154,17 +154,17 @@ void main(LOADER_PARAMS* loader)
 	//Test interrupts
 	__debugbreak();
 	__debugbreak();
-	__halt();
+
 	//ACPI
-	//ACPI_STATUS Status;
-	//Status = AcpiInitializeSubsystem();
-	//if (ACPI_FAILURE(Status))
-	//{
-	//	Print("Could not initialize ACPI: %d\n", Status);
-	//	__halt();
-	//}
-	//__halt();
-	//AcpiInitializeTables(0, 0, FALSE);
+	ACPI_STATUS Status;
+	Status = AcpiInitializeSubsystem();
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not initialize ACPI: %d\n", Status);
+		__halt();
+	}
+	__halt();
+	AcpiInitializeTables(0, 0, FALSE);
 
 	//System system(loader->ConfigTables, loader->ConfigTableSizes);
 	//system.GetInstalledSystemRam();

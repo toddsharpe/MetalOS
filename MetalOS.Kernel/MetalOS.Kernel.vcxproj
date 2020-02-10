@@ -158,7 +158,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AcpiServices.cpp" />
-    <ClCompile Include="AddressSpace.cpp" />
+    <ClCompile Include="VirtualAddressSpace.cpp" />
     <ClCompile Include="Bitvector.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Font.cpp" />
@@ -169,12 +169,13 @@
     <ClCompile Include="MemoryMap.cpp" />
     <ClCompile Include="msvc.cpp" />
     <ClCompile Include="PageFrameAllocator.cpp" />
+    <ClCompile Include="PageFrameNumberDatabase.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="x64.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcpiServices.h" />
-    <ClInclude Include="AddressSpace.h" />
+    <ClInclude Include="VirtualAddressSpace.h" />
     <ClInclude Include="Bitvector.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
@@ -185,6 +186,7 @@
     <ClInclude Include="MemoryMap.h" />
     <ClInclude Include="msvc.h" />
     <ClInclude Include="PageFrameAllocator.h" />
+    <ClInclude Include="PageFrameNumberDatabase.h" />
     <ClInclude Include="System.h" />
     <ClInclude Include="x64.h" />
     <ClInclude Include="x64_interrupts.h" />

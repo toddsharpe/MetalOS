@@ -54,7 +54,10 @@
     <ClCompile Include="AcpiServices.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AddressSpace.cpp">
+    <ClCompile Include="PageFrameNumberDatabase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VirtualAddressSpace.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -104,7 +107,10 @@
     <ClInclude Include="AcpiServices.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AddressSpace.h">
+    <ClInclude Include="PageFrameNumberDatabase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VirtualAddressSpace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

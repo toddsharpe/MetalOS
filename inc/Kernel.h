@@ -113,19 +113,46 @@ typedef struct
 	uint32_t PixelsPerScanLine;
 } GRAPHICS_DEVICE, * PGRAPHICS_DEVICE;
 
-//Page Frame Number Database
-//Windows Internals, Part 2, Page 297
-enum PAGE_STATE
+//Forward declarations of structs
+struct _KERNEL_PROCESS;
+
+enum MemoryAllocationType
 {
-	Active,
-	Transition,
-	Standby,
-	Modified,
-	ModifiedNoWrite,
-	Free,
-	Zeroed,
-	Rom,
-	Bad
+	MemCommit = 1 << 0,
+	MemReserve = 1 << 1,
+	MemReset = 1 << 2,
+	MemResetUndo = 1 << 3
+};
+
+// https://docs.microsoft.com/en-us/windows/win32/memory/memory-protection-constants
+//enum MemoryProtection
+//{
+//	PageNoAccess,
+//	PageReadOnly,
+//	PageReadWrite,
+//	PageWriteCopy,
+//	PageExecute,
+//	PageExecuteRead,
+//	PageExecuteReadWrite,
+//	PageExecuteWriteCopy,
+//	PageGuard
+//};
+
+struct MemoryAllocation
+{
+	uint8_t Commit : 1;
+	uint8_t Reserve : 1;
+};
+
+struct MemoryProtection
+{
+	uint8_t Read : 1;
+	uint8_t Write : 1;
+	uint8_t Execute : 1;
+	uint8_t CopyOnWrite : 1;
+	uint8_t Guard : 1;
+
+	static const uint8_t NoAccess = 0;
 };
 
 //Virtual Address Descriptor
@@ -134,13 +161,53 @@ typedef struct _VAD_NODE
 {
 	uint64_t StartPN;
 	uint64_t EndPN;
+
+	struct
+	{
+		MemoryAllocation Allocation;
+		MemoryProtection Protection;
+	} Flags;
+
+	_KERNEL_PROCESS* Process;
 	//commit - mapped, private
 	//protection - readwrite, readonly, writecopy, execute_writecopy
 } VAD_NODE, *PVAD_NODE;
 
-typedef struct
+class VirtualAddressSpace;
+
+typedef struct _CONTEXT
+{
+	uint64_t RAX;
+	uint64_t RCX;
+	uint64_t RDX;
+	uint64_t RBX;
+	uint64_t RSI;
+	uint64_t RDI;
+	uint64_t R8;
+	uint64_t R9;
+	uint64_t R10;
+	uint64_t R11;
+	uint64_t R12;
+	uint64_t R13;
+	uint64_t R14;
+	uint64_t R15;
+	uint64_t RBP;
+} CONTEXT, *PCONTEXT;
+
+#define SemaphoreLen 32
+typedef struct _SEMAPHORE
+{
+	uint64_t Limit;
+	char Name[32];
+} SEMAPHORE, *PSEMAPHORE;
+
+#define ProcessLen 32
+typedef struct _KERNEL_PROCESS
 {
 	uint32_t Id;
+	char Name[ProcessLen];
 	time_t CreateTime;
 	time_t ExitTime;
+	CONTEXT Context;
+	VirtualAddressSpace* VirtualAddress;
 } KERNEL_PROCESS, * PKERNEL_PROCESS;

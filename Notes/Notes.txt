@@ -202,3 +202,7 @@ xsdt:
 0x54415253 ACPI_SRAT_SIGNATURE - Cache Coherent NUMA info, topology, way above our paygrades now
 0x54524742 BGRT_SIGNATURE  - Boot graphics
 0x54445046 FPDT_SIGNATURE - firmware performance
+
+Undocumented Windows Kernel Structures:
+https://www.vergiliusproject.com/kernels/x64/Windows%2010%20%7C%202016/1909%2019H2%20(November%202019%20Update)/_MMVAD_SHORT
+

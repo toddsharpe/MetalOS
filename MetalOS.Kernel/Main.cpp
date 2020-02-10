@@ -23,8 +23,8 @@
 extern "C"
 {
 #include <acpi.h>
-
 }
+
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -35,7 +35,12 @@ LoadingScreen* loading;
 PageTablesPool* pagePool;
 MemoryMap* memoryMap;
 PageFrameAllocator* frameAllocator;
+uint32_t LastProcessId = 0;
 std::vector<KERNEL_PROCESS> *processes;
+
+//Queues
+//std::queue<uint32_t> readyQueue;
+//std::list<uint32_t> sleepQueue;
 
 //Kernel Stack
 KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[KERNEL_STACK_SIZE] = { 0 };
@@ -156,15 +161,15 @@ void main(LOADER_PARAMS* loader)
 	__debugbreak();
 
 	//ACPI
-	ACPI_STATUS Status;
-	Status = AcpiInitializeSubsystem();
-	if (ACPI_FAILURE(Status))
-	{
-		Print("Could not initialize ACPI: %d\n", Status);
-		__halt();
-	}
-	__halt();
-	AcpiInitializeTables(0, 0, FALSE);
+	//ACPI_STATUS Status;
+	//Status = AcpiInitializeSubsystem();
+	//if (ACPI_FAILURE(Status))
+	//{
+	//	Print("Could not initialize ACPI: %d\n", Status);
+	//	__halt();
+	//}
+	//__halt();
+	//AcpiInitializeTables(0, 0, FALSE);
 
 	//System system(loader->ConfigTables, loader->ConfigTableSizes);
 	//system.GetInstalledSystemRam();

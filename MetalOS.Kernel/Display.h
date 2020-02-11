@@ -1,12 +1,15 @@
 #pragma once
 
-#include "Kernel.h"
+#include <efi.h>
+#include <LoaderParams.h>
+
+#include "MetalOS.Kernel.h"
 #include "MetalOS.h"
 
 class Display
 {
 public:
-	Display(PGRAPHICS_DEVICE pDevice);
+	Display(PEFI_GRAPHICS_DEVICE pDevice);
 	::NO_COPY_OR_ASSIGN(Display);
 
 	void ColorScreen(Color color);
@@ -14,6 +17,6 @@ public:
 	void ColorPixel(Color color, Point2D position);
 
 private:
-	PGRAPHICS_DEVICE m_pDevice;
+	PEFI_GRAPHICS_DEVICE m_pDevice;
 };
 

@@ -1,13 +1,14 @@
 #include "System.h"
-#include "LoadingScreen.h"
-#include "Memory.h"
+
 typedef EFI_GUID GUID;
 #include <SmBios.h>
 #define PACKED
 #include <PlatformAcpi.h>
 #include <intrin.h>
-#include "Kernel.h"
 #include <crt_string.h>
+#include "MetalOS.Kernel.h"
+#include "LoadingScreen.h"
+#include "Memory.h"
 #include "KernelBugcheck.h"
 #include "Main.h"
 

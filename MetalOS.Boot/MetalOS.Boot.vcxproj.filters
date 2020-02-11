@@ -38,10 +38,10 @@
     <ClInclude Include="Error.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BootLoader.h">
+    <ClInclude Include="EfiLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="EfiLoader.h">
+    <ClInclude Include="MetalOS.Boot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

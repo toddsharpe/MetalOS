@@ -1,10 +1,11 @@
 #include "Display.h"
+
 #include "Main.h"
 
 //Hyper-V
 //PixelBlueGreenRedReserved8BitPerColor
 
-Display::Display(PGRAPHICS_DEVICE pDevice) : m_pDevice(pDevice)
+Display::Display(PEFI_GRAPHICS_DEVICE pDevice) : m_pDevice(pDevice)
 {
 
 }

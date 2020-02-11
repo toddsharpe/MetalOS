@@ -1,13 +1,12 @@
 #include "EfiLoader.h"
-#include "BootLoader.h"
-#include "WindowsPE.h"
+
+#include <MetalOS.Internal.h>
+#include <LoaderParams.h>
+#include <crt_string.h>
+#include <WindowsPE.h>
+#include "MetalOS.Boot.h"
 #include "Memory.h"
 #include "Error.h"
-#include <LoaderParams.h>
-#include <Kernel.h>
-#include <crt_string.h>
-
-//#include <Windows.h>
 
 EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
 EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
@@ -15,21 +14,21 @@ EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID
 typedef void (*CrtInitializer)();
 
 //This method should check the memory map file and ensure nobody else has this reservation
-EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageSizeOut, UINT64* pEntryPointOut, EFI_PHYSICAL_ADDRESS* pPhysicalImageBase)
+EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64* pImageSizeOut, UINT64* pEntryPointOut, EFI_PHYSICAL_ADDRESS* pPhysicalImageBase)
 {
 	EFI_STATUS status;
 
 	//Dos header
 	UINTN size = sizeof(IMAGE_DOS_HEADER);
 	IMAGE_DOS_HEADER dosHeader;
-	ReturnIfNotSuccess(file->Read(file, &size, &dosHeader));
+	ReturnIfNotSuccess(pFile->Read(pFile, &size, &dosHeader));
 	ReturnIfNotSuccess(dosHeader.e_magic);
 
 	//NT Header
 	size = sizeof(IMAGE_NT_HEADERS64);
 	IMAGE_NT_HEADERS64 peHeader;
-	ReturnIfNotSuccess(file->SetPosition(file, (UINT64)dosHeader.e_lfanew));
-	ReturnIfNotSuccess(file->Read(file, &size, &peHeader));
+	ReturnIfNotSuccess(pFile->SetPosition(pFile, (UINT64)dosHeader.e_lfanew));
+	ReturnIfNotSuccess(pFile->Read(pFile, &size, &peHeader));
 
 	//Verify image
 	if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
@@ -47,8 +46,8 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageSizeOut, UINT64* p
 
 	//Read headers into memory
 	size = peHeader.OptionalHeader.SizeOfHeaders;
-	ReturnIfNotSuccess(file->SetPosition(file, 0));
-	ReturnIfNotSuccess(file->Read(file, &size, (void*)*pPhysicalImageBase));
+	ReturnIfNotSuccess(pFile->SetPosition(pFile, 0));
+	ReturnIfNotSuccess(pFile->Read(pFile, &size, (void*)*pPhysicalImageBase));
 
 	//Pointer into NTHeader loaded in memory
 	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(*pPhysicalImageBase + dosHeader.e_lfanew);
@@ -63,8 +62,8 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* file, UINT64* pImageSizeOut, UINT64* p
 		UINTN rawSize = section[i].SizeOfRawData;
 		if (rawSize != 0)
 		{
-			ReturnIfNotSuccess(file->SetPosition(file, section[i].PointerToRawData));
-			ReturnIfNotSuccess(file->Read(file, &rawSize, (void*)destination));
+			ReturnIfNotSuccess(pFile->SetPosition(pFile, section[i].PointerToRawData));
+			ReturnIfNotSuccess(pFile->Read(pFile, &rawSize, (void*)destination));
 		}
 	}
 
@@ -137,6 +136,7 @@ EFI_STATUS EfiLoader::CrtInitialization(UINT64 imageBase)
 			break;
 		}
 	}
+
 	if (crtSection == nullptr)
 		return EFI_NOT_FOUND;
 	

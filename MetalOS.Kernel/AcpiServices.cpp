@@ -2,13 +2,12 @@
 
 #include "msvc.h"
 #include "PageFrameAllocator.h"
-#include <Kernel.h>
+#include "MetalOS.Kernel.h"
 #include "Main.h"
 #include "LoadingScreen.h"
 #include "PageTables.h"
 #include "PageTablesPool.h"
 #include <intrin.h>
-#include "LoaderParams.h"
 
 extern PageTablesPool* pagePool;
 extern LoadingScreen* loading;

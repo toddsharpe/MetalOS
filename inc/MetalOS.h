@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 
 //Public facing header
 
@@ -61,10 +62,16 @@ enum SystemCall : uint32_t
 #define SYSTEMCALL __declspec(dllexport) SystemCallResult
 #endif
 
+typedef size_t Handle;
+
 extern "C"
 {
 	//Prototypes
 	SYSTEMCALL GetSystemInfo(SystemInfo* info);
 	SYSTEMCALL GetProcessInfo(ProcessInfo* info);
+
+	//Semaphores
+	Handle CreateSemaphore(size_t initial, size_t maximum, std::string name);
+	SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t& previousCount);
 }
 

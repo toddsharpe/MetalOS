@@ -23,7 +23,6 @@ const char mem_types[16][27] = {
 	  "EfiMaxMemoryType          "
 };
 
-//#define NextMemoryDescriptor(Ptr,Size)  ((EFI_MEMORY_DESCRIPTOR *) (((UINT8 *) Ptr) + Size))
 #define PrevMemoryDescriptor(Ptr,Size)  ((EFI_MEMORY_DESCRIPTOR *) (((UINT8 *) Ptr) - Size))
 class MemoryMap
 {

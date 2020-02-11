@@ -1,6 +1,7 @@
 #include "Error.h"
-#include "EfiMain.h"
+
 #include <crt_wchar.h>
+#include "EfiMain.h"
 
 EFI_STATUS Error::DisplayError(const CHAR16* function, EFI_STATUS status)
 {

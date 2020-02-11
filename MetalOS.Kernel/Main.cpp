@@ -1,22 +1,21 @@
 #include "Main.h"
+
 #include "msvc.h"
 #include <efi.h>
-#include "LoaderParams.h"
+#include <LoaderParams.h>
+#include <crt_stdio.h>
+#include <vector>
+#include <intrin.h>
+#include "MetalOS.Kernel.h"
 #include "Display.h"
 #include "LoadingScreen.h"
 #include "MetalOS.h"
 #include "System.h"
 #include "MemoryMap.h"
-#include <intrin.h>
-
 #include "PageTables.h"
 #include "PageTablesPool.h"
 #include "x64.h"
 #include "KernelHeap.h"
-
-#include <crt_stdio.h>
-
-#include <vector>
 #include "Bitvector.h"
 #include "PageFrameAllocator.h"
 
@@ -24,7 +23,6 @@ extern "C"
 {
 #include <acpi.h>
 }
-
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -107,7 +105,6 @@ extern "C" void main_thunk(LOADER_PARAMS* loader)
 	memcpy(&LoaderParams, loader, sizeof(LOADER_PARAMS));
 	LoaderParams.MemoryMap = (EFI_MEMORY_DESCRIPTOR*)EFI_MEMORY_MAP;
 	memcpy(EFI_MEMORY_MAP, loader->MemoryMap, loader->MemoryMapSize);
-
 	main(&LoaderParams);
 }
 
@@ -125,9 +122,6 @@ void main(LOADER_PARAMS* loader)
 	display = new Display(&loader->Display);
 	display->ColorScreen(Black);
 	loading = new LoadingScreen(*display);
-
-	//loading->WriteLineFormat("Syscall!");
-	//__halt();
 
 	//Initialize page tables
 	pagePool = new PageTablesPool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);

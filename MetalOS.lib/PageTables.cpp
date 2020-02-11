@@ -1,5 +1,7 @@
 #include "PageTables.h"
 
+#include <MetalOS.Internal.h>
+
 #define PhysicalToVirtual(x) ((x) + m_virtualOffset)
 
 //typedef uint64_t   UINTN;

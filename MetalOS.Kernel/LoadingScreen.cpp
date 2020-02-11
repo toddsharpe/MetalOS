@@ -1,6 +1,7 @@
 #include "LoadingScreen.h"
-#include "Main.h"
+
 #include <crt_stdio.h>
+#include "Main.h"
 
 #define PositionToPixelScale 10
 

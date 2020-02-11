@@ -1,18 +1,17 @@
 #include "EfiMain.h"
-#include "Kernel.h"
-#include "BootLoader.h"
-#include "Device.h"
-#include "EfiLoader.h"
-#include "Error.h"
-#include "Memory.h"
+
 #include <intrin.h>
 #include <crt_string.h>
 #include <crt_wchar.h>
 #include <crt_stdlib.h>
 #include <Path.h>
-
 #include <PageTables.h>
 #include <PageTablesPool.h>
+#include "MetalOS.Boot.h"
+#include "Device.h"
+#include "EfiLoader.h"
+#include "Error.h"
+#include "Memory.h"
 
 #define EFI_DEBUG 1
 #define Kernel L"moskrnl.exe"

@@ -104,15 +104,6 @@ typedef struct
 #define KERNEL_GLOBAL_ALIGN __declspec(align(64))
 #define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
 
-typedef struct
-{
-	uintptr_t FrameBufferBase;
-	uint32_t FrameBufferSize;
-	uint32_t HorizontalResolution;
-	uint32_t VerticalResolution;
-	uint32_t PixelsPerScanLine;
-} GRAPHICS_DEVICE, * PGRAPHICS_DEVICE;
-
 //Forward declarations of structs
 struct _KERNEL_PROCESS;
 

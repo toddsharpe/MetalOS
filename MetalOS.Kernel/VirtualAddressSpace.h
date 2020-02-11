@@ -2,7 +2,7 @@
 
 #include "msvc.h"
 #include <list>
-#include <Kernel.h>
+#include "MetalOS.Kernel.h"
 
 class VirtualAddressSpace
 {

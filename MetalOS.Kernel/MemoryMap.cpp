@@ -1,10 +1,9 @@
 #include "MemoryMap.h"
-#include "LoadingScreen.h"
-#include "LoaderParams.h"
-#include "Main.h"
-#include "Kernel.h"
 
 #include <crt_string.h>
+#include "MetalOS.Kernel.h"
+#include "LoadingScreen.h"
+#include "Main.h"
 
 extern LOADER_PARAMS* pParams;
 //extern Display display;

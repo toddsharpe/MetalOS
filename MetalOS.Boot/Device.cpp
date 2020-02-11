@@ -1,7 +1,8 @@
 #include "Device.h"
-#include "BootLoader.h"
-#include "Error.h"
+
 #include <crt_string.h>
+#include "MetalOS.Boot.h"
+#include "Error.h"
 
 //TODO: move to file?
 EFI_GUID gEfiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
@@ -36,7 +37,7 @@ EFI_STATUS InitializeGraphics(EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE* display)
 	return EFI_SUCCESS;
 }
 
-EFI_STATUS InitializeGraphics(PGRAPHICS_DEVICE pDevice)
+EFI_STATUS InitializeGraphics(PEFI_GRAPHICS_DEVICE pDevice)
 {
 	EFI_STATUS status;
 	EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE mode;
@@ -54,7 +55,7 @@ EFI_STATUS InitializeGraphics(PGRAPHICS_DEVICE pDevice)
 	return status;
 }
 
-EFI_STATUS PrintGraphicsDevice(PGRAPHICS_DEVICE pDevice)
+EFI_STATUS PrintGraphicsDevice(PEFI_GRAPHICS_DEVICE pDevice)
 {
 	EFI_STATUS status;
 	

@@ -1,5 +1,6 @@
 #include "PageFrameAllocator.h"
-#include <Kernel.h>
+
+#include "MetalOS.Kernel.h"
 #include "Main.h"
 #include "LoadingScreen.h"
 

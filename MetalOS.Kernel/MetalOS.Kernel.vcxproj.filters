@@ -113,6 +113,9 @@
     <ClInclude Include="VirtualAddressSpace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MetalOS.Kernel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="x64_support.asm">

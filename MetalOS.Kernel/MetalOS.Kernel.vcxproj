@@ -175,6 +175,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcpiServices.h" />
+    <ClInclude Include="MetalOS.Kernel.h" />
     <ClInclude Include="VirtualAddressSpace.h" />
     <ClInclude Include="Bitvector.h" />
     <ClInclude Include="Display.h" />

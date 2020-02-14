@@ -2,6 +2,7 @@
 
 #include <intrin.h>
 #include <cstdarg>
+#include "x64.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -9,6 +10,8 @@ const Color Black = { 0x00, 0x00, 0x00, 0x00 };
 Kernel::Kernel() :
 	m_address(0),
 	m_imageSize(0),
+	m_pPagePool(nullptr),
+	m_pMemoryMap(nullptr),
 	m_pLoading(nullptr),
 	m_pDisplay(nullptr),
 	m_lastProcessId(0),
@@ -27,12 +30,29 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Initialize Heap
 
-	
+	//Initialize Display
 	m_pDisplay = new Display(params->Display);
 	m_pDisplay->ColorScreen(Black);
 	m_pLoading = new LoadingScreen(*m_pDisplay);
 
-	m_pLoading->WriteText("Kernel");
+	//Initialize page tables
+	m_pPagePool = new PageTablesPool(params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	m_pPagePool->SetVirtualAddress(KernelPageTablesPoolAddress);
+	
+	//Initialize memory map
+	m_pMemoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
+	m_pMemoryMap->ReclaimBootPages();
+	m_pMemoryMap->MergeConventionalPages();
+	m_pMemoryMap->DumpMemoryMap();
+
+	//Initialize platform
+	x64::Initialize();
+
+	//Test interrupts
+	__debugbreak();
+	__debugbreak();
+
+	m_pLoading->WriteText("Kernel Initialized");
 }
 
 void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)

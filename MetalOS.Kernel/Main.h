@@ -11,9 +11,7 @@
 #define Assert(x) if (!(x)) { kernel.Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
 #define Fatal(x) kernel.Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); 
 
-
-extern "C" void main_thunk(LOADER_PARAMS* loader);
-void main(LOADER_PARAMS* loader);
+extern "C" void main(LOADER_PARAMS* loader);
 
 void* operator new(size_t n);
 void operator delete(void* p);

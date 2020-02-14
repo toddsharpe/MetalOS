@@ -7,8 +7,6 @@
 #include <vector>
 #include <intrin.h>
 #include "MetalOS.Kernel.h"
-#include "Display.h"
-#include "LoadingScreen.h"
 #include "MetalOS.h"
 #include "System.h"
 #include "MemoryMap.h"
@@ -25,8 +23,6 @@ extern "C"
 }
 
 //Kernel members
-PageTablesPool* pagePool;
-MemoryMap* memoryMap;
 PageFrameAllocator* frameAllocator;
 
 Kernel kernel;
@@ -38,9 +34,6 @@ extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[KERNEL_STACK_SIZE];
 //Kernel Heap
 KERNEL_PAGE_ALIGN static volatile UINT8 KERNEL_HEAP[KERNEL_HEAP_SIZE] = { 0 };
 KERNEL_GLOBAL_ALIGN static KernelHeap heap((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
-
-KERNEL_GLOBAL_ALIGN static LOADER_PARAMS LoaderParams = { 0 };
-KERNEL_GLOBAL_ALIGN static UINT8 EFI_MEMORY_MAP[MemoryMapReservedSize] = { 0 };
 
 extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
 {
@@ -80,15 +73,6 @@ void operator delete(void* p, size_t n)
 	heap.Deallocate((UINT64)p);
 }
 
-//Copy loader params and all recursive structures to kernel memory
-extern "C" void main_thunk(LOADER_PARAMS* loader)
-{
-	memcpy(&LoaderParams, loader, sizeof(LOADER_PARAMS));
-	LoaderParams.MemoryMap = (EFI_MEMORY_DESCRIPTOR*)EFI_MEMORY_MAP;
-	memcpy(EFI_MEMORY_MAP, loader->MemoryMap, loader->MemoryMapSize);
-	main(&LoaderParams);
-}
-
 extern "C" void syscall()
 {
 	Print("Syscall!");
@@ -100,14 +84,10 @@ extern "C" void syscall()
 void main(LOADER_PARAMS* loader)
 {
 	kernel.Initialize(loader);
-	__halt();
 
-	//Initialize page tables
-	pagePool = new PageTablesPool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
-	pagePool->SetVirtualAddress(KernelPageTablesPoolAddress);
 
 	//Initialize memorymap. Call SetVirtualAddressMap, then modify - TODO
-	memoryMap = new MemoryMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap, PAGE_SIZE);
+	
 	//memoryMap->SetVirtualOffset(KernelPhysicalMemoryAddress);
 	//Assert(loader->Runtime->SetVirtualAddressMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap) == EFI_SUCCESS);
 	//loader->Runtime = MakePtr(EFI_RUNTIME_SERVICES*, loader->Runtime, KernelPhysicalMemoryAddress);
@@ -119,19 +99,12 @@ void main(LOADER_PARAMS* loader)
 	//loading->WriteLineFormat("print 0x%d", time.Hour);
 	//__halt();
 
-	memoryMap->ReclaimBootPages();
-	memoryMap->MergeConventionalPages();
-	memoryMap->DumpMemoryMap();
-
 	//Initialize Frame Allocator
-	frameAllocator = new PageFrameAllocator(*memoryMap);
+	//frameAllocator = new PageFrameAllocator(*memoryMap);
 
 	//x64 Initialization
-	x64::Initialize();
 
-	//Test interrupts
-	__debugbreak();
-	__debugbreak();
+
 
 	//ACPI
 	//ACPI_STATUS Status;
@@ -151,23 +124,23 @@ void main(LOADER_PARAMS* loader)
 
 
 	//Map in kernel to new PT. PageTablesPool has been mapped in by bootloader
-	UINT64 ptRoot;
-	Assert(pagePool->AllocatePage(&ptRoot));
-	PageTables kernelPT(ptRoot);
-	kernelPT.SetPool(pagePool);
-	kernelPT.SetVirtualOffset(KernelPageTablesPoolAddress - LoaderParams.PageTablesPoolAddress);
-	kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
-	kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
-	kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
-	loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
-	__writecr3(ptRoot);
+	//UINT64 ptRoot;
+	//Assert(pagePool->AllocatePage(&ptRoot));
+	//PageTables kernelPT(ptRoot);
+	//kernelPT.SetPool(pagePool);
+	//kernelPT.SetVirtualOffset(KernelPageTablesPoolAddress - LoaderParams.PageTablesPoolAddress);
+	//kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
+	//kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
+	//kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
+	//loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
+	//__writecr3(ptRoot);
 
-	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x", LoaderParams.KernelAddress, LoaderParams.KernelImageSize);
-	Print("LOADER_PARAMS: 0x%16x", loader);
-	Print("ConfigTableSizes: %d", loader->ConfigTableSizes);
-	Print("MemoryMap: 0x%16x, PhysicalAddressSize: 0x%16x", loader->MemoryMap, memoryMap->GetPhysicalAddressSize());
-	Print("Display.FrameBufferBase: 0x%16x", loader->Display.FrameBufferBase);
-	Print("PageTablesPool.AllocatedPageCount: 0x%8x", pagePool->AllocatedPageCount());
+	//Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x", LoaderParams.KernelAddress, LoaderParams.KernelImageSize);
+	//Print("LOADER_PARAMS: 0x%16x", loader);
+	//Print("ConfigTableSizes: %d", loader->ConfigTableSizes);
+	//Print("MemoryMap: 0x%16x, PhysicalAddressSize: 0x%16x", loader->MemoryMap, memoryMap->GetPhysicalAddressSize());
+	//Print("Display.FrameBufferBase: 0x%16x", loader->Display.FrameBufferBase);
+	//Print("PageTablesPool.AllocatedPageCount: 0x%8x", pagePool->AllocatedPageCount());
 
 
 	//Access current EFI memory map

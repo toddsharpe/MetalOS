@@ -27,9 +27,10 @@ const char mem_types[16][27] = {
 class MemoryMap
 {
 public:
-	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap) :
-		MemoryMap(MemoryMapSize, MemoryMapDescriptorSize, MemoryMapDescriptorVersion, MemoryMap, MemoryMapSize) {	}
-	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap, UINTN maxSize);
+	//Allocate the current size of the map plus space for more entries
+	static const size_t BufferCount = 3;
+
+	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap);
 
 	void SetVirtualOffset(UINTN virtualOffset);
 
@@ -51,10 +52,9 @@ private:
 	const char(*MemTypes)[16][27] = &mem_types;
 
 	UINTN m_memoryMapSize;
+	UINTN m_memoryMapMaxSize;
 	UINTN m_memoryMapDescriptorSize;
 	UINT32 m_memoryMapDescriptorVersion;
 	EFI_MEMORY_DESCRIPTOR* m_memoryMap;
-
-	UINTN m_maxSize;
 };
 

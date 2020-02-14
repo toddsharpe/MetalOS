@@ -5,6 +5,8 @@
 #include "MetalOS.Kernel.h"
 #include "Display.h"
 #include "LoadingScreen.h"
+#include <PageTablesPool.h>
+#include "MemoryMap.h"
 
 class Kernel
 {
@@ -23,6 +25,11 @@ private:
 	//Save from LoaderParams
 	uintptr_t m_address;
 	size_t m_imageSize;
+
+	PageTablesPool* m_pPagePool;
+	MemoryMap* m_pMemoryMap;
+
+
 
 	Display* m_pDisplay;
 	LoadingScreen* m_pLoading;

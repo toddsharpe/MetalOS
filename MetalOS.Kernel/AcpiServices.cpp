@@ -9,8 +9,6 @@
 #include "PageTablesPool.h"
 #include <intrin.h>
 
-extern PageTablesPool* pagePool;
-extern LoadingScreen* loading;
 extern PageFrameAllocator* frameAllocator;
 //extern LOADER_PARAMS LoaderParams;
 
@@ -59,7 +57,7 @@ void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length)
 	uintptr_t physicalBase = PhysicalAddress & ~PAGE_MASK;
 
 	PageTables* current = new PageTables(__readcr3());
-	current->SetPool(pagePool);
+	//current->SetPool(pagePool);
 	//current->SetVirtualOffset(KernelPageTablesPoolAddress - LoaderParams.PageTablesPoolAddress);
 	current->MapKernelPages(KernelACPIAddress + physicalBase, physicalBase, pageCount);
 

@@ -6,9 +6,17 @@
 
 extern LOADER_PARAMS* pParams;
 
-MemoryMap::MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap, UINTN maxSize) :
-	m_memoryMapSize(MemoryMapSize), m_memoryMapDescriptorSize(MemoryMapDescriptorSize), m_memoryMapDescriptorVersion(MemoryMapDescriptorVersion), m_memoryMap(MemoryMap), m_maxSize(maxSize)
+MemoryMap::MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap) :
+	m_memoryMapSize(MemoryMapSize),
+	m_memoryMapMaxSize(MemoryMapSize + BufferCount * MemoryMapDescriptorSize),
+	m_memoryMapDescriptorSize(MemoryMapDescriptorSize),
+	m_memoryMapDescriptorVersion(MemoryMapDescriptorVersion)
 {
+	Assert(MemoryMapSize % MemoryMapDescriptorSize == 0);
+
+	m_memoryMap = (EFI_MEMORY_DESCRIPTOR*)operator new(m_memoryMapMaxSize);
+	Assert(m_memoryMap);
+	memcpy(m_memoryMap, MemoryMap, MemoryMapSize);
 }
 
 void MemoryMap::SetVirtualOffset(UINTN virtualOffset)
@@ -84,7 +92,7 @@ EFI_PHYSICAL_ADDRESS MemoryMap::AllocatePages(UINT32 count)
 	Assert(current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize));
 	if (current->NumberOfPages > count)
 	{
-		Assert(m_memoryMapSize + m_memoryMapDescriptorSize <= m_maxSize);
+		Assert(m_memoryMapSize + m_memoryMapDescriptorSize <= m_memoryMapMaxSize);
 
 		UINT32 index = (UINTN)(m_memoryMap - current) / m_memoryMapDescriptorSize;
 		UINT32 length = m_memoryMapSize / m_memoryMapDescriptorSize;

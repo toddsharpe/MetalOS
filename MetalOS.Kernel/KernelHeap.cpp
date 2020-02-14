@@ -1,9 +1,6 @@
 #include "KernelHeap.h"
 
-#include "LoadingScreen.h"
 #include "Main.h"
-
-extern LoadingScreen* loading;
 
 KernelHeap::KernelHeap(uintptr_t address, uint32_t size) : m_address(address), m_size(size), m_allocated(0), m_head((PHEAP_BLOCK)address)
 {
@@ -78,7 +75,7 @@ void KernelHeap::PrintHeap()
 	PHEAP_BLOCK current = this->m_head;
 	while (current != nullptr)
 	{
-		loading->WriteLineFormat("  P 0x%16x S: 0x%8x F: 0x%8x N: 0x%16x", current, current->Size, current->Flags, current->Next);
+		Print("  P 0x%16x S: 0x%8x F: 0x%8x N: 0x%16x", current, current->Size, current->Flags, current->Next);
 		current = current->Next;
 	}
 }

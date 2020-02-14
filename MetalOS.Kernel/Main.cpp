@@ -24,21 +24,12 @@ extern "C"
 #include <acpi.h>
 }
 
-const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
-const Color Black = { 0x00, 0x00, 0x00, 0x00 };
-
 //Kernel members
-Display* display;
-LoadingScreen* loading;
 PageTablesPool* pagePool;
 MemoryMap* memoryMap;
 PageFrameAllocator* frameAllocator;
-uint32_t LastProcessId = 0;
-std::vector<KERNEL_PROCESS> *processes;
 
-//Queues
-//std::queue<uint32_t> readyQueue;
-//std::list<uint32_t> sleepQueue;
+Kernel kernel;
 
 //Kernel Stack
 KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[KERNEL_STACK_SIZE] = { 0 };
@@ -53,49 +44,39 @@ KERNEL_GLOBAL_ALIGN static UINT8 EFI_MEMORY_MAP[MemoryMapReservedSize] = { 0 };
 
 extern "C" void INTERRUPT_HANDLER(size_t vector, PINTERRUPT_FRAME pFrame)
 {
-	loading->WriteLineFormat("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP);
-	switch (vector)
-	{
-	case 14:
-		loading->WriteLineFormat("CR2: 0x%16x", __readcr2());
-		break;
-	}
+	kernel.HandleInterrupt(vector, pFrame);
 }
 
 extern "C" void Print(const char* format, ...)
 {
-	va_list ap;
-	va_start(ap, format);
-	VPrint(format, ap);
-	va_end(ap);
+	va_list args;
+
+	va_start(args, format);
+	kernel.Print(format, args);
+	va_end(args);
 }
 
-extern "C" void VPrint(const char* format, va_list Args)
+extern "C" void VPrint(const char* format, va_list args)
 {
-	char buffer[80];
-
-	int retval = crt_vsprintf(buffer, format, Args);
-	buffer[retval] = '\0';
-
-	loading->WriteLine(buffer);
+	kernel.Print(format, args);
 }
 
 void* operator new(size_t n)
 {
 	uintptr_t p = heap.Allocate(n);
-	loading->WriteLineFormat("Allocation 0x%016x (0x%x)", p, n);
+	Print("Allocation 0x%016x (0x%x)", p, n);
 	return (void*)p;
 }
 
 void operator delete(void* p)
 {
-	loading->WriteLineFormat("Delete at 0x%16x", p);
+	Print("Delete at 0x%16x", p);
 	heap.Deallocate((UINT64)p);
 }
 
 void operator delete(void* p, size_t n)
 {
-	loading->WriteLineFormat("Delete at 0x%16x 0x%x", p, n);
+	Print("Delete at 0x%16x 0x%x", p, n);
 	heap.Deallocate((UINT64)p);
 }
 
@@ -110,7 +91,7 @@ extern "C" void main_thunk(LOADER_PARAMS* loader)
 
 extern "C" void syscall()
 {
-	loading->WriteLineFormat("Syscall!");
+	Print("Syscall!");
 }
 
 //Need to get virtual pointers to acpi struct
@@ -118,10 +99,8 @@ extern "C" void syscall()
 
 void main(LOADER_PARAMS* loader)
 {
-	//Immediately set up graphics device so we can bugcheck gracefully
-	display = new Display(&loader->Display);
-	display->ColorScreen(Black);
-	loading = new LoadingScreen(*display);
+	kernel.Initialize(loader);
+	__halt();
 
 	//Initialize page tables
 	pagePool = new PageTablesPool(loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
@@ -183,32 +162,17 @@ void main(LOADER_PARAMS* loader)
 	loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
 	__writecr3(ptRoot);
 
-	loading->WriteLineFormat("MetalOS.Kernel - Base:0x%16x Size: 0x%x", LoaderParams.KernelAddress, LoaderParams.KernelImageSize);
-	loading->WriteLineFormat("LOADER_PARAMS: 0x%16x", loader);
-	loading->WriteLineFormat("ConfigTableSizes: %d", loader->ConfigTableSizes);
-	loading->WriteLineFormat("MemoryMap: 0x%16x, PhysicalAddressSize: 0x%16x", loader->MemoryMap, memoryMap->GetPhysicalAddressSize());
-	loading->WriteLineFormat("Display.FrameBufferBase: 0x%16x", loader->Display.FrameBufferBase);
-	loading->WriteLineFormat("PageTablesPool.AllocatedPageCount: 0x%8x", pagePool->AllocatedPageCount());
+	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x", LoaderParams.KernelAddress, LoaderParams.KernelImageSize);
+	Print("LOADER_PARAMS: 0x%16x", loader);
+	Print("ConfigTableSizes: %d", loader->ConfigTableSizes);
+	Print("MemoryMap: 0x%16x, PhysicalAddressSize: 0x%16x", loader->MemoryMap, memoryMap->GetPhysicalAddressSize());
+	Print("Display.FrameBufferBase: 0x%16x", loader->Display.FrameBufferBase);
+	Print("PageTablesPool.AllocatedPageCount: 0x%8x", pagePool->AllocatedPageCount());
 
 
 	//Access current EFI memory map
 	//Its on its own page so we are fine with resizing
 
-	__halt();
-}
-
-//TODO: fix when merging loading screen and display
-void KernelBugcheck(const char* file, const char* line, const char* assert)
-{
-	//display.ColorScreen(Red);
-	
-	//loading->ResetX();
-	//loading->ResetY();
-	loading->WriteLine(file);
-	loading->WriteLine(line);
-	loading->WriteLine(assert);
-
-	//halt
 	__halt();
 }
 

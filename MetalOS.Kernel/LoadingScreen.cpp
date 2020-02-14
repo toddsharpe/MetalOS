@@ -14,14 +14,19 @@ LoadingScreen::LoadingScreen(Display& display) : m_display(display), m_fontScale
 
 void LoadingScreen::WriteLineFormat(const char* format, ...)
 {
+	va_list args;
+
+	va_start(args, format);
+	this->WriteLineFormat(format, args);
+	va_end(args);
+}
+
+void LoadingScreen::WriteLineFormat(const char* format, va_list args)
+{
 	char buffer[255];
 
-	va_list ap;
-
-	va_start(ap, format);
-	int retval = crt_vsprintf(buffer, format, ap);
+	int retval = crt_vsprintf(buffer, format, args);
 	buffer[retval] = '\0';
-	va_end(ap);
 
 	WriteLine(buffer);
 }

@@ -1,15 +1,16 @@
 #pragma once
 
+#define GNU_EFI_SETJMP_H
 #include <efi.h>
 #include <LoaderParams.h>
 
-#include "MetalOS.Kernel.h"
 #include "MetalOS.h"
+#include "MetalOS.Kernel.h"
 
 class Display
 {
 public:
-	Display(PEFI_GRAPHICS_DEVICE pDevice);
+	Display(EFI_GRAPHICS_DEVICE& device);
 	::NO_COPY_OR_ASSIGN(Display);
 
 	void ColorScreen(Color color);
@@ -17,6 +18,6 @@ public:
 	void ColorPixel(Color color, Point2D position);
 
 private:
-	PEFI_GRAPHICS_DEVICE m_pDevice;
+	EFI_GRAPHICS_DEVICE m_device;
 };
 

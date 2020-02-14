@@ -2,13 +2,10 @@
 
 #include <cstdint>
 #include <time.h>
+#include "msvc.h"
+#include <list>
 
-#define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
 #define NO_COPY_OR_ASSIGN(X) X(const X&) = delete; X& operator = (const X&) = delete;
-#define Assert(x) if (!(x)) { KernelBugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
-#define Fatal(x) KernelBugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); 
-
 #define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
 
 //Paging Structures - https://gist.github.com/mvankuipers/
@@ -185,13 +182,6 @@ typedef struct _CONTEXT
 	uint64_t RBP;
 } CONTEXT, *PCONTEXT;
 
-#define SemaphoreLen 32
-typedef struct _SEMAPHORE
-{
-	uint64_t Limit;
-	char Name[32];
-} SEMAPHORE, *PSEMAPHORE;
-
 #define ProcessLen 32
 typedef struct _KERNEL_PROCESS
 {
@@ -202,3 +192,11 @@ typedef struct _KERNEL_PROCESS
 	CONTEXT Context;
 	VirtualAddressSpace* VirtualAddress;
 } KERNEL_PROCESS, * PKERNEL_PROCESS;
+
+#define SemaphoreLen 32
+typedef struct _SEMAPHORE
+{
+	uint64_t Limit;
+	char Name[32];
+	std::list<PKERNEL_PROCESS> WaitList;
+} SEMAPHORE, * PSEMAPHORE;

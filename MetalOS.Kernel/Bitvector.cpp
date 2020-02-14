@@ -1,6 +1,5 @@
 #include "Bitvector.h"
 
-#include "MetalOS.Kernel.h"
 #include "Main.h"
 
 constexpr size_t Bitvector::GetMapSize(size_t length)

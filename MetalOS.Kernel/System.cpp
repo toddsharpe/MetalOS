@@ -7,12 +7,9 @@ typedef EFI_GUID GUID;
 #include <intrin.h>
 #include <crt_string.h>
 #include "MetalOS.Kernel.h"
-#include "LoadingScreen.h"
 #include "Memory.h"
-#include "KernelBugcheck.h"
 #include "Main.h"
 
-extern LoadingScreen* loading;
 
 System::System(EFI_CONFIGURATION_TABLE* ConfigurationTables, UINTN NumConfigTables) : m_configTables(ConfigurationTables), m_configTablesCount(NumConfigTables)
 {
@@ -60,7 +57,7 @@ UINTN System::GetInstalledSystemRam()
 		continue;
 	}
 
-	loading->WriteLineFormat("RAM %d MB", ram / 1024 / 1024);
+	Print("RAM %d MB", ram / 1024 / 1024);
 	return ram;
 }
 
@@ -70,7 +67,7 @@ void System::DisplayTableIds()
 	{
 		EFI_GUID& guid = m_configTables[i].VendorGuid;
 
-		loading->WriteLineFormat("Guid = {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
+		Print("Guid = {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
 			guid.Data1, guid.Data2, guid.Data3,
 			guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
 			guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
@@ -114,22 +111,22 @@ void System::DisplayAcpi2()
 	EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER* entry = (EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER*)table;
 	char sig[9] = { 0 };
 	memcpy(&sig, &entry->Signature, sizeof(entry->Signature));
-	loading->WriteLineFormat("Sig: %s Version: %d Address: 0x%016x", sig, entry->Revision, entry->XsdtAddress);
+	Print("Sig: %s Version: %d Address: 0x%016x", sig, entry->Revision, entry->XsdtAddress);
 
 	EFI_ACPI_XSDT* xdt = (EFI_ACPI_XSDT*)entry->XsdtAddress;
 	size_t size = (xdt->Header.Length - sizeof(xdt->Header)) / sizeof(uintptr_t);
-	loading->WriteLineFormat("  size: 0x%x", size);
+	Print("  size: 0x%x", size);
 
 	char oemId[7] = { 0 };
 	memcpy(oemId, xdt->Header.OemId, 6);
 	char tableId[9] = { 0 };
 	memcpy(tableId, &xdt->Header.OemTableId, 8);
-	loading->WriteLineFormat("  OemId: %s TableId %s", oemId, tableId);
+	Print("  OemId: %s TableId %s", oemId, tableId);
 
 	for (size_t i = 0; i < size; i++)
 	{
 		EFI_ACPI_DESCRIPTION_HEADER* header = (EFI_ACPI_DESCRIPTION_HEADER*)xdt->Tables[i];
-		loading->WriteLineFormat("  %8x, Size: 0x%x, Revision: %d OemRevision: %d", header->Signature, header->Length, header->Revision, header->OemRevision);
+		Print("  %8x, Size: 0x%x, Revision: %d OemRevision: %d", header->Signature, header->Length, header->Revision, header->OemRevision);
 
 		switch (header->Signature)
 		{
@@ -139,12 +136,12 @@ void System::DisplayAcpi2()
 				EFI_ACPI_6_0_FIXED_ACPI_DESCRIPTION_TABLE* fadt6 = (EFI_ACPI_6_0_FIXED_ACPI_DESCRIPTION_TABLE*)xdt->Tables[i];
 				Assert(fadt6->MinorVersion == EFI_ACPI_6_2_FIXED_ACPI_DESCRIPTION_TABLE_MINOR_REVISION);
 				EFI_ACPI_6_2_FIXED_ACPI_DESCRIPTION_TABLE* fadt6_2 = (EFI_ACPI_6_2_FIXED_ACPI_DESCRIPTION_TABLE*)fadt6;
-				loading->WriteLineFormat("    FADT 6.2 detected");
+				Print("    FADT 6.2 detected");
 
 				char sig2[9] = { 0 };
 				EFI_ACPI_DESCRIPTION_HEADER* xdstHeader = (EFI_ACPI_DESCRIPTION_HEADER*)fadt6_2->XDsdt;
 				Assert(xdstHeader->Signature == EFI_ACPI_6_0_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE);
-				loading->WriteLineFormat("    xdstHeader %d sig 0x%x", xdstHeader->Revision, xdstHeader->Signature);
+				Print("    xdstHeader %d sig 0x%x", xdstHeader->Revision, xdstHeader->Signature);
 			}
 			break;
 
@@ -153,13 +150,13 @@ void System::DisplayAcpi2()
 
 				Assert(header->Revision == EFI_ACPI_6_0_MULTIPLE_APIC_DESCRIPTION_TABLE_REVISION);
 				EFI_ACPI_6_0_MULTIPLE_APIC_DESCRIPTION_TABLE_HEADER* madt6 = (EFI_ACPI_6_0_MULTIPLE_APIC_DESCRIPTION_TABLE_HEADER*)xdt->Tables[i];
-				loading->WriteLineFormat("    MADT 6 detected");
+				Print("    MADT 6 detected");
 			}
 			break;
 		}
 
-		//loading->WriteLineFormat("0x%016x 0x%016x", &xdt->Tables[i], xdt->Tables[i]);
+		//Print("0x%016x 0x%016x", &xdt->Tables[i], xdt->Tables[i]);
 		//uint8_t* p = (uint8_t*)&xdt->Tables[i - 5];
-		//loading->WriteLineFormat("0x%016x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", &xdt->Tables[i-5], p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+		//Print("0x%016x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", &xdt->Tables[i-5], p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
 	}
 }

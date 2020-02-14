@@ -86,7 +86,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <SupportJustMyCode>false</SupportJustMyCode>
       <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
-      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -142,7 +142,7 @@
       <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
-      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -158,11 +158,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AcpiServices.cpp" />
+    <ClCompile Include="Kernel.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
     <ClCompile Include="Bitvector.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Font.cpp" />
-    <ClCompile Include="KernelBugcheck.cpp" />
     <ClCompile Include="KernelHeap.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -175,12 +175,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcpiServices.h" />
+    <ClInclude Include="Kernel.h" />
     <ClInclude Include="MetalOS.Kernel.h" />
     <ClInclude Include="VirtualAddressSpace.h" />
     <ClInclude Include="Bitvector.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
-    <ClInclude Include="KernelBugcheck.h" />
     <ClInclude Include="KernelHeap.h" />
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Main.h" />

@@ -2,12 +2,9 @@
 
 #include <crt_string.h>
 #include "MetalOS.Kernel.h"
-#include "LoadingScreen.h"
 #include "Main.h"
 
 extern LOADER_PARAMS* pParams;
-//extern Display display;
-extern LoadingScreen* loading;
 
 MemoryMap::MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap, UINTN maxSize) :
 	m_memoryMapSize(MemoryMapSize), m_memoryMapDescriptorSize(MemoryMapDescriptorSize), m_memoryMapDescriptorVersion(MemoryMapDescriptorVersion), m_memoryMap(MemoryMap), m_maxSize(maxSize)
@@ -121,13 +118,13 @@ bool MemoryMap::AddressFree(EFI_PHYSICAL_ADDRESS address)
 
 void MemoryMap::DumpMemoryMap()
 {
-	loading->WriteLineFormat("MapSize: 0x%x, DescSize: 0x%x", m_memoryMapSize, m_memoryMapDescriptorSize);
+	Print("MapSize: 0x%x, DescSize: 0x%x", m_memoryMapSize, m_memoryMapDescriptorSize);
 	EFI_MEMORY_DESCRIPTOR* current;
 	for (current = m_memoryMap;
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
-		loading->WriteLineFormat("Physical: %16x Virtual: %16x T:%s NumPages: 0x%x", current->PhysicalStart, current->VirtualStart, (*MemTypes)[current->Type], current->NumberOfPages);
+		Print("Physical: %16x Virtual: %16x T:%s NumPages: 0x%x", current->PhysicalStart, current->VirtualStart, (*MemTypes)[current->Type], current->NumberOfPages);
 	}
 }
 

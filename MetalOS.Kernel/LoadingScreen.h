@@ -9,6 +9,7 @@ public:
 	LoadingScreen(Display& display);
 
 	void WriteLineFormat(const char* format, ...);
+	void WriteLineFormat(const char* format, va_list args);
 	void WriteLine(const char* s);
 	void WriteText(const char* text);
 	void WriteCharacter(char c);

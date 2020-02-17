@@ -19,17 +19,6 @@ MemoryMap::MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 
 	memcpy(m_memoryMap, MemoryMap, MemoryMapSize);
 }
 
-void MemoryMap::SetVirtualOffset(UINTN virtualOffset)
-{
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap;
-		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
-		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
-	{
-		current->VirtualStart = current->PhysicalStart + virtualOffset;
-	}
-}
-
 void MemoryMap::ReclaimBootPages()
 {
 	EFI_MEMORY_DESCRIPTOR* current;
@@ -37,6 +26,7 @@ void MemoryMap::ReclaimBootPages()
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
+		Assert((current->Attribute & EFI_MEMORY_RUNTIME) == 0);
 		if ((current->Type == EfiBootServicesCode) || (current->Type == EfiBootServicesData) || (current->Type == EfiLoaderCode))
 			current->Type = EfiConventionalMemory;
 	}
@@ -132,7 +122,8 @@ void MemoryMap::DumpMemoryMap()
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
-		Print("Physical: %16x Virtual: %16x T:%s NumPages: 0x%x", current->PhysicalStart, current->VirtualStart, (*MemTypes)[current->Type], current->NumberOfPages);
+		const bool runtime = (current->Attribute & EFI_MEMORY_RUNTIME) != 0;
+		Print("P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c", current->PhysicalStart, current->VirtualStart, (*MemTypes)[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
 	}
 }
 

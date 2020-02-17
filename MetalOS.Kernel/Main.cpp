@@ -83,6 +83,10 @@ extern "C" void syscall()
 
 void main(LOADER_PARAMS* loader)
 {
+	//Initialize platform
+	x64::Initialize();
+	
+	//Initialize kernel
 	kernel.Initialize(loader);
 
 

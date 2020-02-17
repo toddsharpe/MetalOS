@@ -116,6 +116,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	PageTables currentPT(__readcr3());
 	currentPT.SetPool(&pageTablesPool);
 	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, EFI_SIZE_TO_PAGES(LoaderParams.KernelImageSize));
+	Print(L"PageTablesPool.AllocatedPageCount: %x\r\n", pageTablesPool.AllocatedPageCount());
 	currentPT.MapKernelPages(KernelPageTablesPoolAddress, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
 	Print(L"PageTablesPool.AllocatedPageCount: %x\r\n", pageTablesPool.AllocatedPageCount());
 
@@ -138,6 +139,20 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//After ExitBootServices we can no longer use the BS handle (no print, memory, etc)
 	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
+
+	//Assign virtual mappings for runtime sections
+	for (EFI_MEMORY_DESCRIPTOR* current = LoaderParams.MemoryMap;
+		current < NextMemoryDescriptor(LoaderParams.MemoryMap, LoaderParams.MemoryMapSize);
+		current = NextMemoryDescriptor(current, LoaderParams.MemoryMapDescriptorSize))
+	{
+		if ((current->Attribute & EFI_MEMORY_RUNTIME) == 0)
+			continue;
+
+		current->VirtualStart = current->PhysicalStart + KernelRuntimeAddress;
+	}
+
+	//Update UEFI virtual address map
+	ReturnIfNotSuccessNoDisplay(RT->SetVirtualAddressMap(LoaderParams.MemoryMapSize, LoaderParams.MemoryMapDescriptorSize, LoaderParams.MemoryMapDescriptorVersion, LoaderParams.MemoryMap));
 
 	//Call into kernel
 	KernelMain kernelMain = (KernelMain)(entryPoint);

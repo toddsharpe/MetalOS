@@ -12,8 +12,10 @@
 //	...
 //);
 
-#define Print(x)
+//#define Print(x)
 #define Keywait(x)
+
+extern "C"  void Print(const char* format, ...);
 
 //extern EFI_STATUS Keywait(const CHAR16* String);
 
@@ -41,8 +43,7 @@ void PageTables::SetVirtualOffset(uintptr_t virtualOffset)
 //TODO: page attributes!
 bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count, bool global)
 {
-	Print(L"V: 0x%q P: 0x%q C: 0x%q G: %d VO: 0x%q\r\n", virtualAddress, physicalAddress, count, global, m_virtualOffset);
-	//printf("test %d", 5);
+	Print("V: 0x%016x P: 0x%016x C: 0x%x G: %d VO: 0x%016x\r\n", virtualAddress, physicalAddress, count, global, m_virtualOffset);
 	
 	//TODO: error code?
 	//Assert(m_pool != nullptr);
@@ -61,18 +62,20 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 	uintptr_t newPageAddress;
 	uint32_t offset = virtualAddress & 0xFFF;
 
+	Print("V: 0x%016x P: 0x%016x\r\n", virtualAddress, physicalAddress);
+
 	//TODO: error code?
 	//Assert(m_pool != nullptr);
 
 	PPML4E l4 = (PPML4E)PhysicalToVirtual(m_physicalAddress);
 	uint32_t l4Index = (virtualAddress >> 39) & 0x1FF;
-	Print(L"L4: 0x%q, Index: %d\r\n", l4, l4Index);
+	Print("L4: 0x%016x, Index: %d\r\n", l4, l4Index);
 
 	if (l4[l4Index].Value == 0)
 	{
 		if (!m_pool->AllocatePage(&newPageAddress))
 			return false;
-		Print(L"page: 0x%q - r: 0x%q c: 0x%q\r\n", newPageAddress, &(l4[l4Index]), l4 + l4Index);
+		Print("page: 0x%q - r: 0x%q c: 0x%q\r\n", newPageAddress, &(l4[l4Index]), l4 + l4Index);
 		Keywait(L"asd\r\n");
 
 		l4[l4Index].Value = newPageAddress;
@@ -80,11 +83,11 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 		l4[l4Index].ReadWrite = true;
 		l4[l4Index].UserSupervisor = true;//TODO: make this false
 		l4[l4Index].Accessed = true;
-		Print(L"  0x%q:", l4[l4Index].Value);
+		Print("  0x%q:", l4[l4Index].Value);
 	}
 	PPDPTE l3 = (PPDPTE)(PhysicalToVirtual(l4[l4Index].Value & ~0xFFF));
 	uint32_t l3Index = (virtualAddress >> 30) & 0x1FF;
-	Print(L"L3: 0x%q, Index: %d\r\n", l3, l3Index);
+	Print("L3: 0x%q, Index: %d\r\n", l3, l3Index);
 	Keywait(L"asd2\r\n");
 
 	if (l3[l3Index].Value == 0)
@@ -98,7 +101,7 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 		l3[l3Index].ReadWrite = true;
 		l3[l3Index].UserSupervisor = true;//TODO: make this false
 		l3[l3Index].Accessed = true;
-		Print(L"  0x%q:", l3[l3Index].Value);
+		Print("  0x%q:", l3[l3Index].Value);
 	}
 	PPDE l2 = (PPDE)(PhysicalToVirtual(l3[l3Index].Value & ~0xFFF));
 	Keywait(L"asd\r\n");
@@ -137,11 +140,11 @@ uintptr_t PageTables::ResolveAddress(uintptr_t virtualAddress)
 	uint32_t l4Index = (virtualAddress >> 39) & 0x1FF;
 
 	PPML4E l4 = (PPML4E)PhysicalToVirtual(m_physicalAddress);
-	Print(L"L4: 0x%q, P: %d, RW: %d S: %d -\r\n", l4[l4Index].Value, l4[l4Index].Present, l4[l4Index].ReadWrite, l4[l4Index].UserSupervisor);
+	Print("L4: 0x%q, P: %d, RW: %d S: %d -\r\n", l4[l4Index].Value, l4[l4Index].Present, l4[l4Index].ReadWrite, l4[l4Index].UserSupervisor);
 	PPDPTE l3 = (PPDPTE)PhysicalToVirtual(l4[l4Index].Value & ~0xFFF);
-	Print(L"L3: 0x%q, P: %d, RW: %d S: %d -\r\n", l3[l3Index].Value, l3[l3Index].Present, l3[l3Index].ReadWrite, l3[l3Index].UserSupervisor);
+	Print("L3: 0x%q, P: %d, RW: %d S: %d -\r\n", l3[l3Index].Value, l3[l3Index].Present, l3[l3Index].ReadWrite, l3[l3Index].UserSupervisor);
 	PPDE l2 = (PPDE)PhysicalToVirtual(l3[l3Index].Value & ~0xFFF);
-	Print(L"L2: 0x%q, P: %d, RW: %d S: %d -\r\n", l2[l2Index].Value, l2[l2Index].Present, l2[l2Index].ReadWrite, l2[l2Index].UserSupervisor);
+	Print("L2: 0x%q, P: %d, RW: %d S: %d -\r\n", l2[l2Index].Value, l2[l2Index].Present, l2[l2Index].ReadWrite, l2[l2Index].UserSupervisor);
 
 	if (l2[l2Index].PageSize == 1)
 	{
@@ -152,7 +155,7 @@ uintptr_t PageTables::ResolveAddress(uintptr_t virtualAddress)
 	//L2 maps a 4k page
 
 	PPTE l1 = (PPTE)PhysicalToVirtual(l2[l2Index].Value & ~0xFFF);
-	Print(L"L1: 0x%q, P: %d, RW: %d S: %d -\r\n", l1[l1Index].Value, l1[l1Index].Present, l1[l1Index].ReadWrite, l1[l1Index].UserSupervisor);
+	Print("L1: 0x%q, P: %d, RW: %d S: %d -\r\n", l1[l1Index].Value, l1[l1Index].Present, l1[l1Index].ReadWrite, l1[l1Index].UserSupervisor);
 	return (l1[l1Index].Value & ~0xFFF) + offset;
 }
 

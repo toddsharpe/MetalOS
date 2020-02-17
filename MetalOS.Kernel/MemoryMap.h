@@ -32,8 +32,6 @@ public:
 
 	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap);
 
-	void SetVirtualOffset(UINTN virtualOffset);
-
 	void ReclaimBootPages();
 	void MergeConventionalPages();
 	EFI_PHYSICAL_ADDRESS AllocatePages(UINT32 count);

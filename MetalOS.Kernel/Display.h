@@ -11,6 +11,7 @@ class Display
 {
 public:
 	Display(EFI_GRAPHICS_DEVICE& device);
+	Display(EFI_GRAPHICS_DEVICE& device, uintptr_t virtualAddress);
 	::NO_COPY_OR_ASSIGN(Display);
 
 	void ColorScreen(Color color);
@@ -18,6 +19,7 @@ public:
 	void ColorPixel(Color color, Point2D position);
 
 private:
+	uintptr_t m_address;
 	EFI_GRAPHICS_DEVICE m_device;
 };
 

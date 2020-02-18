@@ -12,6 +12,7 @@
 #include "EfiLoader.h"
 #include "Error.h"
 #include "Memory.h"
+#include <crt_stdio.h>
 
 #define EFI_DEBUG 1
 #define Kernel L"moskrnl.exe"
@@ -108,17 +109,19 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	UINT64 entryPoint;
 	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &LoaderParams.KernelImageSize, &entryPoint, &LoaderParams.KernelAddress));
 
+	//Initialize graphics
+	ReturnIfNotSuccess(InitializeGraphics(&LoaderParams.Display));
+
 	//Disable write protection, allowing current page tables to be modified
 	__writecr0(__readcr0() & ~(1 << 16));
 
-	//Expand current page tables to include Kernel address space and pagetables
+	//Map in Kernel Space
 	PageTablesPool pageTablesPool(bootloaderPagePoolAddress, BootloaderPagePoolCount);
 	PageTables currentPT(__readcr3());
 	currentPT.SetPool(&pageTablesPool);
 	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, EFI_SIZE_TO_PAGES(LoaderParams.KernelImageSize));
-	Print(L"PageTablesPool.AllocatedPageCount: %x\r\n", pageTablesPool.AllocatedPageCount());
 	currentPT.MapKernelPages(KernelPageTablesPoolAddress, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
-	Print(L"PageTablesPool.AllocatedPageCount: %x\r\n", pageTablesPool.AllocatedPageCount());
+	currentPT.MapKernelPages(KernelGraphicsDeviceAddress, LoaderParams.Display.FrameBufferBase, EFI_SIZE_TO_PAGES(LoaderParams.Display.FrameBufferSize));
 
 	//Re-enable write protection
 	__writecr0(__readcr0() | (1 << 16));
@@ -126,8 +129,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	//Finish kernel image initialization now that address space is constructed
 	ReturnIfNotSuccess(EfiLoader::CrtInitialization(KernelBaseAddress));
 
-	//Technically everything after allocating the loader block needs to free that memory before dying
-	ReturnIfNotSuccess(InitializeGraphics(&LoaderParams.Display));
+	//Display graphics
 	ReturnIfNotSuccess(DisplayLoaderParams(&LoaderParams));
 
 	//Pause here before booting kernel to inspect bootloader outputs
@@ -177,6 +179,22 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* pParams)
 }
 
 #define MAXBUFFER 255
+extern "C" void Print(const char* format, ...)
+{
+	char buffer[MAXBUFFER / 2] = { 0 };
+
+	va_list args;
+	va_start(args, format);
+	crt_vsprintf(buffer, format, args);
+	va_end(args);
+
+	CHAR16 wideBuffer[MAXBUFFER] = { 0 };
+	mbstowcs(wideBuffer, buffer, sizeof(wideBuffer));
+
+	//Write
+	ST->ConOut->OutputString(ST->ConOut, wideBuffer);
+}
+
 EFI_STATUS Print(const CHAR16* format, ...)
 {
 	va_list args;
@@ -185,6 +203,7 @@ EFI_STATUS Print(const CHAR16* format, ...)
 	EFI_STATUS status;
 	CHAR16 buffer[MAXBUFFER] = { 0 };
 	vwprintf(buffer, format, args);
+	va_end(args);
 
 	//Write
 	if (EFI_ERROR((status = ST->ConOut->OutputString(ST->ConOut, buffer))))

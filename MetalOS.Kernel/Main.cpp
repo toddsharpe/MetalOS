@@ -89,26 +89,8 @@ void main(LOADER_PARAMS* loader)
 	//Initialize kernel
 	kernel.Initialize(loader);
 
-
-	//Initialize memorymap. Call SetVirtualAddressMap, then modify - TODO
-	
-	//memoryMap->SetVirtualOffset(KernelPhysicalMemoryAddress);
-	//Assert(loader->Runtime->SetVirtualAddressMap(loader->MemoryMapSize, loader->MemoryMapDescriptorSize, loader->MemoryMapDescriptorVersion, loader->MemoryMap) == EFI_SUCCESS);
-	//loader->Runtime = MakePtr(EFI_RUNTIME_SERVICES*, loader->Runtime, KernelPhysicalMemoryAddress);
-	//loading->WriteLineFormat("runtime 0x%16x time: 0x%16x", loader->Runtime, loader->Runtime->GetTime);
-	//__halt();
-
-	//EFI_TIME time;
-	//loader->Runtime->GetTime(&time, nullptr);
-	//loading->WriteLineFormat("print 0x%d", time.Hour);
-	//__halt();
-
 	//Initialize Frame Allocator
 	//frameAllocator = new PageFrameAllocator(*memoryMap);
-
-	//x64 Initialization
-
-
 
 	//ACPI
 	//ACPI_STATUS Status;
@@ -126,30 +108,5 @@ void main(LOADER_PARAMS* loader)
 	//system.DisplayTableIds();
 	//system.DisplayAcpi2();
 
-
-	//Map in kernel to new PT. PageTablesPool has been mapped in by bootloader
-	//UINT64 ptRoot;
-	//Assert(pagePool->AllocatePage(&ptRoot));
-	//PageTables kernelPT(ptRoot);
-	//kernelPT.SetPool(pagePool);
-	//kernelPT.SetVirtualOffset(KernelPageTablesPoolAddress - LoaderParams.PageTablesPoolAddress);
-	//kernelPT.MapKernelPages(KernelBaseAddress, loader->KernelAddress, EFI_SIZE_TO_PAGES(loader->KernelImageSize));
-	//kernelPT.MapKernelPages(KernelPageTablesPoolAddress, loader->PageTablesPoolAddress, loader->PageTablesPoolPageCount);
-	//kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, loader->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(loader->Display.FrameBufferSize));
-	//loader->Display.FrameBufferBase = KernelGraphicsDeviceAddress;
-	//__writecr3(ptRoot);
-
-	//Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x", LoaderParams.KernelAddress, LoaderParams.KernelImageSize);
-	//Print("LOADER_PARAMS: 0x%16x", loader);
-	//Print("ConfigTableSizes: %d", loader->ConfigTableSizes);
-	//Print("MemoryMap: 0x%16x, PhysicalAddressSize: 0x%16x", loader->MemoryMap, memoryMap->GetPhysicalAddressSize());
-	//Print("Display.FrameBufferBase: 0x%16x", loader->Display.FrameBufferBase);
-	//Print("PageTablesPool.AllocatedPageCount: 0x%8x", pagePool->AllocatedPageCount());
-
-
-	//Access current EFI memory map
-	//Its on its own page so we are fine with resizing
-
 	__halt();
 }
-

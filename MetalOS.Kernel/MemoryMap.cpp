@@ -14,9 +14,13 @@ MemoryMap::MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 
 {
 	Assert(MemoryMapSize % MemoryMapDescriptorSize == 0);
 
+	//Allocate copy of memory map
 	m_memoryMap = (EFI_MEMORY_DESCRIPTOR*)operator new(m_memoryMapMaxSize);
 	Assert(m_memoryMap);
 	memcpy(m_memoryMap, MemoryMap, MemoryMapSize);
+
+	//Update pointers
+
 }
 
 void MemoryMap::ReclaimBootPages()
@@ -26,9 +30,11 @@ void MemoryMap::ReclaimBootPages()
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
-		Assert((current->Attribute & EFI_MEMORY_RUNTIME) == 0);
 		if ((current->Type == EfiBootServicesCode) || (current->Type == EfiBootServicesData) || (current->Type == EfiLoaderCode))
+		{
+			Assert((current->Attribute & EFI_MEMORY_RUNTIME) == 0);
 			current->Type = EfiConventionalMemory;
+		}
 	}
 }
 

@@ -18,12 +18,12 @@ public:
 
 	void SetPool(PageTablesPool* pool) { m_pool = pool; }
 
-	void SetVirtualOffset(uintptr_t virtualOffset);
-
 	bool EnableWrite(uintptr_t virtualAddress);
 
 	//Is there a use for this besides testing?
 	uintptr_t ResolveAddress(uintptr_t virtualAddress);
+
+	void Display();
 	 
 private:
 #pragma pack(push, 1)
@@ -137,6 +137,5 @@ private:
 
 	PageTablesPool* m_pool;
 	uintptr_t m_physicalAddress;
-	uintptr_t m_virtualOffset;
 };
 

@@ -1,11 +1,17 @@
 #include "Display.h"
 
+#include <algorithm>
 #include "Main.h"
 
 //Hyper-V
 //PixelBlueGreenRedReserved8BitPerColor
 
-Display::Display(EFI_GRAPHICS_DEVICE& device) : m_device(device)
+Display::Display(EFI_GRAPHICS_DEVICE& device) : Display(device, device.FrameBufferBase)
+{
+
+}
+
+Display::Display(EFI_GRAPHICS_DEVICE& device, uintptr_t virtualAddress) : m_address(virtualAddress), m_device(device)
 {
 
 }
@@ -20,7 +26,7 @@ void Display::ColorScreen(Color color)
 
 void Display::ColorRectangle(Color color, Rectangle* region)
 {
-	uint32_t* start = (uint32_t*)m_device.FrameBufferBase;
+	uint32_t* start = (uint32_t*)m_address;
 
 	//y * width + x
 	//This can definitely be done faster with memory ops
@@ -28,6 +34,8 @@ void Display::ColorRectangle(Color color, Rectangle* region)
 	{
 		for (uint32_t y = region->P1.Y; y < region->P2.Y; y++)
 		{
+			std::clamp(x, 0U, m_device.HorizontalResolution - 1);
+			std::clamp(y, 0U, m_device.VerticalResolution - 1);
 			uint32_t* cell = start + (y * m_device.PixelsPerScanLine) + x;
 			*(Color*)cell = color;//We can do this because of the static assert in metalos.h
 		}
@@ -39,7 +47,8 @@ void Display::ColorPixel(Color color, Point2D position)
 	Assert(position.X < m_device.HorizontalResolution);
 	Assert(position.Y < m_device.VerticalResolution);
 
-	uint32_t* start = (uint32_t*)m_device.FrameBufferBase;
+	uint32_t* start = (uint32_t*)m_address;
 	uint32_t* cell = start + (position.Y * m_device.PixelsPerScanLine) + position.X;
 	*(Color*)cell = color;
 }
+

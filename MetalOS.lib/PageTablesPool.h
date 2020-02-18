@@ -9,20 +9,19 @@
 //Gives us 1024 * 8 bits to signify pages
 #define PageTablesPoolMax (PAGE_SIZE * 8)
 
-//Class assumes region is Zeroe'd out first
 class PageTables;
 class PageTablesPool
 {
 public:
 	PageTablesPool(uint64_t physicalAddress, uint32_t pageCount);
-	void SetVirtualAddress(uint64_t virtualAddress);
-
-	void Activate(PageTables& tables);
+	PageTablesPool(uint64_t virtualAddress, uint64_t physicalAddress, uint32_t pageCount);
 
 	bool AllocatePage(uint64_t* addressOut);
 	bool DeallocatePage(uint64_t address);
 
 	uint32_t AllocatedPageCount();
+
+	uint64_t GetVirtualAddress(uint64_t physicalAddress);
 
 private:
 	uint64_t m_virtualAddress;

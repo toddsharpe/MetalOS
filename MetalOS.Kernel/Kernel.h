@@ -25,11 +25,10 @@ private:
 	//Save from LoaderParams
 	uintptr_t m_address;
 	size_t m_imageSize;
+	EFI_RUNTIME_SERVICES m_runtime;
 
 	PageTablesPool* m_pPagePool;
 	MemoryMap* m_pMemoryMap;
-
-
 
 	Display* m_pDisplay;
 	LoadingScreen* m_pLoading;

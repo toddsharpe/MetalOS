@@ -10,6 +10,7 @@ const Color Black = { 0x00, 0x00, 0x00, 0x00 };
 Kernel::Kernel() :
 	m_address(0),
 	m_imageSize(0),
+	m_runtime(),
 	m_pPagePool(nullptr),
 	m_pMemoryMap(nullptr),
 	m_pLoading(nullptr),
@@ -30,23 +31,34 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Save Loader Params
 	m_address = params->KernelAddress;
 	m_imageSize = params->KernelImageSize;
+	m_runtime = *params->Runtime;
 
 	//Initialize Heap
 
 	//Initialize Display
-	m_pDisplay = new Display(params->Display);
+	m_pDisplay = new Display(params->Display, KernelGraphicsDeviceAddress);
 	m_pDisplay->ColorScreen(Black);
 	m_pLoading = new LoadingScreen(*m_pDisplay);
 
-	//Initialize page tables
-	m_pPagePool = new PageTablesPool(params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
-	m_pPagePool->SetVirtualAddress(KernelPageTablesPoolAddress);
+	//Initialize memory map
+	m_pMemoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
+	m_pMemoryMap->ReclaimBootPages();
+	m_pMemoryMap->MergeConventionalPages();
+	m_pMemoryMap->DumpMemoryMap();
+
+	//Initialize page table pool
+	m_pPagePool = new PageTablesPool(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 	
-	//Access current PT
-	PageTables kernelPT(__readcr3());
+	//Construct kernel page table
+	UINT64 ptRoot;
+	Assert(m_pPagePool->AllocatePage(&ptRoot));
+	PageTables kernelPT(ptRoot);
 	kernelPT.SetPool(m_pPagePool);
-	kernelPT.SetVirtualOffset(KernelPageTablesPoolAddress - params->PageTablesPoolAddress);
-	
+	kernelPT.MapKernelPages(KernelBaseAddress, params->KernelAddress, EFI_SIZE_TO_PAGES(params->KernelImageSize));
+	kernelPT.MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	kernelPT.MapKernelPages(KernelGraphicsDeviceAddress, params->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(params->Display.FrameBufferSize));
+
+	//Map in runtime addresses
 	EFI_MEMORY_DESCRIPTOR* current;
 	for (current = params->MemoryMap;
 		current < NextMemoryDescriptor(params->MemoryMap, params->MemoryMapSize);
@@ -58,35 +70,31 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 		Assert(kernelPT.MapKernelPages(current->VirtualStart, current->PhysicalStart, current->NumberOfPages));
 	}
 
-	//Initialize memory map
-	m_pMemoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
+	//Use new Kernel PT
+	//Identity mappings are not possible now, lost access to params
+	//Alternatively - remove physical identity mappings from bootloader PT since entry in pt root can be cleared and subsequent pages are going to be eaten (since they are in boot memory)
+	__writecr3(ptRoot);
+
+	//Test UEFI runtime access
 	EFI_TIME time;
-	//params->Runtime->GetTime(&time, nullptr);
+	m_runtime.GetTime(&time, nullptr);
 	Print("Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
-
-	//s = params->Runtime->ConvertPointer(0, (void**)&params->Runtime->ResetSystem);
-	//m_pLoading->WriteLineFormat("R %d", s);
-
-//	m_pMemoryMap->ReclaimBootPages();
-//	m_pMemoryMap->MergeConventionalPages();
-	m_pMemoryMap->DumpMemoryMap();
-
-
 
 	//Test interrupts
 	__debugbreak();
 	__debugbreak();
 
-	m_pLoading->WriteText("Kernel Initialized");
-	m_pLoading->WriteLineFormat("CRC: 0x%08x", params->Runtime->Hdr.CRC32);
-	m_pLoading->WriteLineFormat("GetTime: 0x%16x", params->Runtime->GetTime);
-	m_pLoading->WriteLineFormat("CP: 0x%16x", params->Runtime->ConvertPointer);
+	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x", m_address, m_imageSize);
+	//Print("ConfigTableSizes: %d", loader->ConfigTableSizes);
+	Print("  PhysicalAddressSize: 0x%16x", m_pMemoryMap->GetPhysicalAddressSize());
+	//Print("  PageTablesPool.AllocatedPageCount: 0x%8x", m_pPagePool->AllocatedPageCount());
 
+	m_pLoading->WriteText("Kernel Initialized");
 }
 
 void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 {
-	m_pLoading->WriteLineFormat("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP);
+	m_pLoading->WriteLineFormat("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x, Code: 0x%16x", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->ErrorCode);
 	switch (vector)
 	{
 	case 14:

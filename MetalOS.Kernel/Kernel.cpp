@@ -73,6 +73,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Use new Kernel PT
 	//Identity mappings are not possible now, lost access to params
 	//Alternatively - remove physical identity mappings from bootloader PT since entry in pt root can be cleared and subsequent pages are going to be eaten (since they are in boot memory)
+	//This requires copying at least the root
 	__writecr3(ptRoot);
 
 	//Test UEFI runtime access

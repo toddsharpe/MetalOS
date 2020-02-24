@@ -1,0 +1,3 @@
+[submodule "acpica"]
+	path = acpica
+	url = https://github.com/toddsharpe/acpica.git

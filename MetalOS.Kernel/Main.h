@@ -10,6 +10,7 @@
 #define STR(x) STR_HELPER(x)
 #define Assert(x) if (!(x)) { kernel.Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
 #define Fatal(x) kernel.Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); 
+#define Trace() kernel.Print(__FILE__ "-" STR(__LINE__));
 
 extern "C" void main(LOADER_PARAMS* loader);
 

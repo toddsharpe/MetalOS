@@ -24,7 +24,7 @@ public:
 	uintptr_t ResolveAddress(uintptr_t virtualAddress);
 
 	void Display();
-	 
+
 private:
 #pragma pack(push, 1)
 	typedef struct _PML4E

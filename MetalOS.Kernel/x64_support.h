@@ -43,7 +43,11 @@ extern "C"
 	def_x64_GPR_RW(R14);
 	def_x64_GPR_RW(R15);
 
+	void x64_pause();
+
 	//Helpers
+	cpu_flags_t __stdcall x64_disable_interrupts();
+	void __stdcall x64_restore_flags(cpu_flags_t flags);
 	void __stdcall x64_update_segments(uint16_t data_selector, uint16_t code_selector);
 }
 

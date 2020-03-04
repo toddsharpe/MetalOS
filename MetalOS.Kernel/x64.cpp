@@ -334,3 +334,31 @@ x64::DESCRIPTOR_TABLE x64::IDTR =
 	sizeof(IDT) - 1,
 	(uint64_t)IDT
 };
+
+uint32_t x64_read_port(uint32_t port, uint8_t width)
+{
+	switch (width)
+	{
+		case 8:
+			return __inbyte(port);
+		case 16:
+			return __inword(port);
+		case 32:
+			return __indword(port);
+		default:
+			return 0;
+	}
+}
+
+void x64_write_port(uint32_t port, uint32_t value, uint8_t width)
+{
+	switch (width)
+	{
+		case 8:
+			return __outbyte(port, value);
+		case 16:
+			return __outword(port, value);
+		case 32:
+			return __outdword(port, value);
+	}
+}

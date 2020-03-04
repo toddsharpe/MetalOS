@@ -57,19 +57,19 @@ extern "C" void VPrint(const char* format, va_list args)
 void* operator new(size_t n)
 {
 	uintptr_t p = heap.Allocate(n);
-	Print("Allocation 0x%016x (0x%x)", p, n);
+	//Print("Allocation 0x%016x (0x%x)", p, n);
 	return (void*)p;
 }
 
 void operator delete(void* p)
 {
-	Print("Delete at 0x%16x", p);
+	//Print("Delete at 0x%16x", p);
 	heap.Deallocate((UINT64)p);
 }
 
 void operator delete(void* p, size_t n)
 {
-	Print("Delete at 0x%16x 0x%x", p, n);
+	//Print("Delete at 0x%16x 0x%x", p, n);
 	heap.Deallocate((UINT64)p);
 }
 
@@ -93,15 +93,49 @@ void main(LOADER_PARAMS* loader)
 	//frameAllocator = new PageFrameAllocator(*memoryMap);
 
 	//ACPI
-	//ACPI_STATUS Status;
-	//Status = AcpiInitializeSubsystem();
-	//if (ACPI_FAILURE(Status))
-	//{
-	//	Print("Could not initialize ACPI: %d\n", Status);
-	//	__halt();
-	//}
-	//__halt();
-	//AcpiInitializeTables(0, 0, FALSE);
+	ACPI_STATUS Status;
+	Status = AcpiInitializeSubsystem();
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiInitializeSubsystem: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiInitializeSubsystem");
+
+	Status = AcpiInitializeTables(nullptr, 0, FALSE);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiInitializeTables: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiInitializeTables");
+
+	//TODO: notify handlers
+
+	Status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiEnableSubsystem: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiEnableSubsystem");
+
+	Status = AcpiLoadTables();
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiEnableSubsystem: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiLoadTables");
+
+	Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiEnableSubsystem: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiInitializeObjects");
+	Print("ACPI Finished");
 
 	//System system(loader->ConfigTables, loader->ConfigTableSizes);
 	//system.GetInstalledSystemRam();

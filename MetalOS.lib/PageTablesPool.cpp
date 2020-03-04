@@ -7,7 +7,7 @@ PageTablesPool::PageTablesPool(uint64_t physicalAddress, uint32_t pageCount) : P
 }
 
 PageTablesPool::PageTablesPool(uint64_t virtualAddress, uint64_t physicalAddress, uint32_t pageCount) :
-	m_virtualAddress(physicalAddress), m_physicalAddress(physicalAddress), m_pageCount(pageCount), m_index((bool*)m_virtualAddress)
+	m_virtualAddress(virtualAddress), m_physicalAddress(physicalAddress), m_pageCount(pageCount), m_index((bool*)m_virtualAddress)
 {
 	memset((void*)m_virtualAddress, 0, PAGE_SIZE);
 }

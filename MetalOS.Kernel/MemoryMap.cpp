@@ -188,10 +188,22 @@ bool MemoryMap::IsConventional(UINTN address)
 		if (current->Type != EfiConventionalMemory)
 			continue;
 		
-		if ((address >= current->PhysicalStart) && (address < current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT)));
+		if ((address >= current->PhysicalStart) && (address < current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT)))
 			return true;
 	}
 
 	return false;
 }
 
+UINTN MemoryMap::GetVirtualAddress(EFI_PHYSICAL_ADDRESS address) const
+{
+	EFI_MEMORY_DESCRIPTOR* current;
+	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	{
+		const UINTN end = current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT);
+		if ((address >= current->PhysicalStart) && (address < end))
+			return current->VirtualStart + (address - current->PhysicalStart);
+	}
+
+	return 0;
+}

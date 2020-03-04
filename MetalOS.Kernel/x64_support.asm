@@ -134,4 +134,22 @@ x64_GPR_RW <R13>
 x64_GPR_RW <R14>
 x64_GPR_RW <R15>
 
-end
+x64_disable_interrupts PROC
+	pushfq
+	cli
+	pop rax
+	ret
+x64_disable_interrupts ENDP
+
+x64_restore_flags PROC
+	push rcx
+	popfq
+	ret
+x64_restore_flags ENDP
+
+x64_pause PROC
+	pause
+	ret
+x64_pause ENDP
+
+END

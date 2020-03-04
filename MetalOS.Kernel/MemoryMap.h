@@ -44,6 +44,8 @@ public:
 	UINTN GetLargestConventionalAddress();
 	bool IsConventional(UINTN address);
 
+	UINTN GetVirtualAddress(EFI_PHYSICAL_ADDRESS address) const;
+
 private:
 	EFI_MEMORY_DESCRIPTOR* ResolveAddress(EFI_PHYSICAL_ADDRESS address);
 

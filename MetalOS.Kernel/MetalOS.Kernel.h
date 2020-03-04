@@ -1,8 +1,10 @@
 #pragma once
 
+#include <MetalOS.h>
 #include <cstdint>
 #include <time.h>
 #include "msvc.h"
+#include <string>
 #include <list>
 
 #define NO_COPY_OR_ASSIGN(X) X(const X&) = delete; X& operator = (const X&) = delete;
@@ -116,6 +118,9 @@ enum MemoryAllocationType
 //	PageGuard
 //};
 
+typedef size_t cpu_flags_t;
+
+
 struct MemoryAllocation
 {
 	uint8_t Commit : 1;
@@ -172,21 +177,31 @@ typedef struct _CONTEXT
 	uint64_t RBP;
 } CONTEXT, *PCONTEXT;
 
-#define ProcessLen 32
+typedef struct _SPIN_LOCK
+{
+	Handle Id;
+	size_t Value;
+} SPIN_LOCK, * PSPIN_LOCK;
+
+//Handle could be smarter to have upper bits to specify type
 typedef struct _KERNEL_PROCESS
 {
 	uint32_t Id;
-	char Name[ProcessLen];
+	std::string Name;
 	time_t CreateTime;
 	time_t ExitTime;
 	CONTEXT Context;
 	VirtualAddressSpace* VirtualAddress;
 } KERNEL_PROCESS, * PKERNEL_PROCESS;
 
-#define SemaphoreLen 32
 typedef struct _SEMAPHORE
 {
-	uint64_t Limit;
-	char Name[32];
+	Handle Id;
+	size_t Value;
+	size_t Limit;
+	Handle SpinLock;
+	std::string Name;
 	std::list<PKERNEL_PROCESS> WaitList;
 } SEMAPHORE, * PSEMAPHORE;
+
+

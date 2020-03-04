@@ -24,19 +24,19 @@ void Display::ColorScreen(Color color)
 	this->ColorRectangle(color, &rectangle);
 }
 
+//This can definitely be done faster with memory ops
 void Display::ColorRectangle(Color color, Rectangle* region)
 {
 	uint32_t* start = (uint32_t*)m_address;
 
 	//y * width + x
-	//This can definitely be done faster with memory ops
 	for (uint32_t x = region->P1.X; x < region->P2.X; x++)
 	{
 		for (uint32_t y = region->P1.Y; y < region->P2.Y; y++)
 		{
 			std::clamp(x, 0U, m_device.HorizontalResolution - 1);
 			std::clamp(y, 0U, m_device.VerticalResolution - 1);
-			uint32_t* cell = start + (y * m_device.PixelsPerScanLine) + x;
+			uint32_t* cell = start + ((size_t)y * m_device.PixelsPerScanLine) + x;
 			*(Color*)cell = color;//We can do this because of the static assert in metalos.h
 		}
 	}
@@ -48,7 +48,7 @@ void Display::ColorPixel(Color color, Point2D position)
 	Assert(position.Y < m_device.VerticalResolution);
 
 	uint32_t* start = (uint32_t*)m_address;
-	uint32_t* cell = start + (position.Y * m_device.PixelsPerScanLine) + position.X;
+	uint32_t* cell = start + ((size_t)position.Y * m_device.PixelsPerScanLine) + position.X;
 	*(Color*)cell = color;
 }
 

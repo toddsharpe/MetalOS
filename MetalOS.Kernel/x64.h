@@ -2,6 +2,13 @@
 
 #include "MetalOS.Kernel.h"
 
+//Helpers
+extern "C"
+{
+	uint32_t x64_read_port(uint32_t port, uint8_t width);
+	void x64_write_port(uint32_t port, uint32_t value, uint8_t width);
+}
+
 class x64
 {
 public:

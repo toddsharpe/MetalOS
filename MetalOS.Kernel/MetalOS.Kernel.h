@@ -177,12 +177,6 @@ typedef struct _CONTEXT
 	uint64_t RBP;
 } CONTEXT, *PCONTEXT;
 
-typedef struct _SPIN_LOCK
-{
-	Handle Id;
-	size_t Value;
-} SPIN_LOCK, * PSPIN_LOCK;
-
 //Handle could be smarter to have upper bits to specify type
 typedef struct _KERNEL_PROCESS
 {
@@ -193,15 +187,4 @@ typedef struct _KERNEL_PROCESS
 	CONTEXT Context;
 	VirtualAddressSpace* VirtualAddress;
 } KERNEL_PROCESS, * PKERNEL_PROCESS;
-
-typedef struct _SEMAPHORE
-{
-	Handle Id;
-	size_t Value;
-	size_t Limit;
-	Handle SpinLock;
-	std::string Name;
-	std::list<PKERNEL_PROCESS> WaitList;
-} SEMAPHORE, * PSEMAPHORE;
-
 

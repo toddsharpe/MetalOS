@@ -48,9 +48,6 @@
     <ClCompile Include="Bitvector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AcpiServices.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PageFrameNumberDatabase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -61,6 +58,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ConfigTables.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AcpiOsLayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="KSpinLock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="KSemaphore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="KernelAcpi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -104,9 +113,6 @@
     <ClInclude Include="Bitvector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AcpiServices.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PageFrameNumberDatabase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -120,6 +126,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ConfigTables.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="KSpinLock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="KSemaphore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

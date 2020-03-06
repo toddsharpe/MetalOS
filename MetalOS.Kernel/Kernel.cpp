@@ -22,8 +22,6 @@ Kernel::Kernel() :
 	m_lastProcessId(0),
 	m_processes(nullptr),
 	m_objectId(0),
-	m_spinLocks(),
-	m_semaphores(),
 	m_pdata(nullptr)
 {
 
@@ -103,8 +101,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Complete initialization
 	m_processes = new std::list<KERNEL_PROCESS>();
-	m_spinLocks = new std::list<PSPIN_LOCK>();
-	m_semaphores = new std::list<PSEMAPHORE>();
 
 	m_pdata = GetKernelSection(".pdata");
 
@@ -161,113 +157,6 @@ void Kernel::Print(const char* format, va_list args)
 	m_pLoading->WriteLineFormat(format, args);
 }
 
-PSPIN_LOCK Kernel::GetSpinLock(Handle id)
-{
-	for (const PSPIN_LOCK& item : *m_spinLocks)
-	{
-		if (item->Id == id)
-			return item;
-	}
-
-	return nullptr;
-}
-
-Handle Kernel::CreateSpinlock()
-{
-	PSPIN_LOCK pLock = new SPIN_LOCK();
-	Assert(pLock != nullptr);
-
-	pLock->Id = m_objectId++;
-	pLock->Value = 0;
-
-	m_spinLocks->push_back(pLock);
-
-	return pLock->Id;
-}
-
-cpu_flags_t Kernel::AcquireSpinlock(Handle id)
-{
-	PSPIN_LOCK pLock = GetSpinLock(id);
-	Assert(pLock != nullptr);
-
-	cpu_flags_t flags = x64_disable_interrupts();
-	
-	static_assert(std::numeric_limits<size_t>::digits == 64);
-	while (_InterlockedCompareExchange64((volatile long long*)& pLock->Value, 0, 1) != 0)
-		x64_pause();
-
-	return flags;
-}
-
-void Kernel::ReleaseSpinlock(Handle id, cpu_flags_t flags)
-{
-	PSPIN_LOCK pLock = GetSpinLock(id);
-	Assert(pLock != nullptr);
-
-	pLock->Value = 0;
-
-	x64_restore_flags(flags);
-}
-
-PSEMAPHORE Kernel::GetSemaphore(Handle id)
-{
-	for (const PSEMAPHORE& item : *m_semaphores)
-	{
-		if (item->Id == id)
-			return item;
-	}
-
-	return nullptr;
-}
-
-Handle Kernel::CreateSemaphore(uint32_t initial, uint32_t maximum, const char* name)
-{
-	PSEMAPHORE pSemaphore = new SEMAPHORE();
-	Assert(pSemaphore != nullptr);
-	pSemaphore->Id = m_objectId++;
-	pSemaphore->SpinLock = CreateSpinlock();
-	pSemaphore->Value = initial;
-	pSemaphore->Limit = maximum;
-	pSemaphore->Name = name;
-
-	m_semaphores->push_back(pSemaphore);
-
-	return pSemaphore->Id;
-}
-
-//TODO: timeout
-bool Kernel::WaitSemaphore(Handle id, size_t count, size_t timeout)
-{
-	//Acquire semaphore
-	PSEMAPHORE semaphore = GetSemaphore(id);
-	cpu_flags_t flags = AcquireSpinlock(semaphore->SpinLock);
-
-	bool loop = semaphore->Value >= count;
-	while (!loop)
-	{
-		ReleaseSpinlock(semaphore->SpinLock, flags);
-		x64_pause();
-		flags = AcquireSpinlock(semaphore->SpinLock);
-		loop = semaphore->Value >= count;
-	}
-
-	semaphore->Value -= count;
-	ReleaseSpinlock(semaphore->SpinLock, flags);
-
-	return true;
-}
-
-void Kernel::SignalSemaphore(Handle id, size_t count)
-{
-	//Acquire semaphore
-	PSEMAPHORE semaphore = GetSemaphore(id);
-	cpu_flags_t flags = AcquireSpinlock(semaphore->SpinLock);
-
-	semaphore->Value += count;
-
-	ReleaseSpinlock(semaphore->SpinLock, flags);
-}
-
 PIMAGE_SECTION_HEADER Kernel::GetKernelSection(const std::string& name)
 {
 	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)KernelBaseAddress;
@@ -288,29 +177,3 @@ PIMAGE_SECTION_HEADER Kernel::GetKernelSection(const std::string& name)
 	return nullptr;
 }
 
-void* Kernel::GetAcpiRoot()
-{
-	return m_pConfigTables->GetAcpiTable();
-}
-
-//TODO: fix this mathy shit
-uint64_t Kernel::GetAcpiTimer()
-{
-	EFI_TIME time;
-	m_runtime.GetTime(&time, nullptr);
-	uint64_t timer;
-	uint16_t year = time.Year;
-	uint8_t month = time.Month;
-	uint8_t day = time.Day;
-	timer = ((uint64_t)(year / 4 - year / 100 + year / 400 + 367 * month / 12 + day) +
-		year * 365 - 719499);
-	timer *= 24;
-	timer += time.Hour;
-	timer *= 60;
-	timer += time.Minute;
-	timer *= 60;
-	timer += time.Second;
-	timer *= 10000000;	//100 n intervals
-	timer += time.Nanosecond / 100;
-	return timer;
-}

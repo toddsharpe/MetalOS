@@ -4,12 +4,18 @@
 #include <LoaderParams.h>
 #include <MetalOS.h>
 #include <WindowsPE.h>
+#include "msvc.h"
 #include "MetalOS.Kernel.h"
 #include "Display.h"
 #include "LoadingScreen.h"
 #include <PageTablesPool.h>
 #include "MemoryMap.h"
 #include "ConfigTables.h"
+extern "C"
+{
+#include <acpi.h>
+}
+#include <map>
 
 class Kernel
 {
@@ -24,27 +30,45 @@ public:
 	void Print(const char* format, ...);
 	void Print(const char* format, va_list args);
 
-	//Spinlocks
-	PSPIN_LOCK GetSpinLock(Handle id);
-	Handle CreateSpinlock();
-	cpu_flags_t AcquireSpinlock(Handle id);
-	void ReleaseSpinlock(Handle id, cpu_flags_t flags);
-
-	//Semaphores
-	PSEMAPHORE GetSemaphore(Handle id);
-	Handle CreateSemaphore(uint32_t initial, uint32_t maximum, const char* name);
-	bool WaitSemaphore(Handle id, size_t count, size_t timeout);//semaphore->P()
-	void SignalSemaphore(Handle id, size_t count);//semaphore->V()
-
-	//Get tables
-	void* GetAcpiRoot();
-
-	PageTables* GetPageTables()
-	{
-		return m_pageTables;
-	}
-
-	uint64_t GetAcpiTimer();
+#pragma region ACPI
+	ACPI_STATUS AcpiOsInitialize();
+	ACPI_STATUS AcpiOsTerminate();
+	ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer();
+	ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES* PredefinedObject, ACPI_STRING* NewValue);
+	ACPI_STATUS AcpiOsTableOverride(ACPI_TABLE_HEADER* ExistingTable, ACPI_TABLE_HEADER** NewTable);
+	void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length);
+	void AcpiOsUnmapMemory(void* where, ACPI_SIZE length);
+	ACPI_STATUS AcpiOsGetPhysicalAddress(void* LogicalAddress, ACPI_PHYSICAL_ADDRESS* PhysicalAddress);
+	void* AcpiOsAllocate(ACPI_SIZE Size);
+	void AcpiOsFree(void* Memory);
+	BOOLEAN AcpiOsReadable(void* Memory, ACPI_SIZE Length);
+	BOOLEAN AcpiOsWritable(void* Memory, ACPI_SIZE Length);
+	ACPI_THREAD_ID AcpiOsGetThreadId();
+	ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Function, void* Context);
+	void AcpiOsSleep(UINT64 Milliseconds);
+	void AcpiOsStall(UINT32 Microseconds);
+	ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEMAPHORE* OutHandle);
+	ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle);
+	void AcpiOsVprintf(const char* Format, va_list Args);
+	ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout);
+	ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units);
+	ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK* OutHandle);
+	void AcpiOsDeleteLock(ACPI_SPINLOCK Handle);
+	ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle);
+	void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags);
+	ACPI_STATUS AcpiOsSignal(UINT32 Function, void* Info);
+	ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64* Value, UINT32 Width);
+	ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT32 Width);
+	ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32* Value, UINT32 Width);
+	ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width);
+	UINT64 AcpiOsGetTimer();
+	void AcpiOsWaitEventsComplete();
+	ACPI_STATUS AcpiOsReadPciConfiguration(ACPI_PCI_ID* PciId, UINT32 Reg, UINT64* Value, UINT32 Width);
+	ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID* PciId, UINT32 Reg, UINT64 Value, UINT32 Width);
+	ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptLevel, ACPI_OSD_HANDLER Handler, void* Context);
+	ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER Handler);
+	ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER* ExistingTable, ACPI_PHYSICAL_ADDRESS* NewAddress, UINT32* NewTableLength);
+#pragma endregion
 
 private:
 	PIMAGE_SECTION_HEADER GetKernelSection(const std::string& name);
@@ -67,8 +91,6 @@ private:
 	std::list<KERNEL_PROCESS>* m_processes;
 
 	Handle m_objectId;
-	std::list<PSPIN_LOCK>* m_spinLocks;
-	std::list<PSEMAPHORE>* m_semaphores;
 
 	//Sections
 	PIMAGE_SECTION_HEADER m_pdata;

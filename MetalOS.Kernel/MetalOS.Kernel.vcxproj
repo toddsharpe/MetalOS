@@ -159,9 +159,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AcpiServices.cpp" />
+    <ClCompile Include="AcpiOsLayer.cpp" />
     <ClCompile Include="ConfigTables.cpp" />
     <ClCompile Include="Kernel.cpp" />
+    <ClCompile Include="KernelAcpi.cpp" />
+    <ClCompile Include="KSemaphore.cpp" />
+    <ClCompile Include="KSpinLock.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
     <ClCompile Include="Bitvector.cpp" />
     <ClCompile Include="Display.cpp" />
@@ -177,9 +180,10 @@
     <ClCompile Include="x64.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AcpiServices.h" />
     <ClInclude Include="ConfigTables.h" />
     <ClInclude Include="Kernel.h" />
+    <ClInclude Include="KSemaphore.h" />
+    <ClInclude Include="KSpinLock.h" />
     <ClInclude Include="MetalOS.Kernel.h" />
     <ClInclude Include="VirtualAddressSpace.h" />
     <ClInclude Include="Bitvector.h" />

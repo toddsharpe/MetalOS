@@ -49,11 +49,11 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_pMemoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
 	m_pMemoryMap->ReclaimBootPages();
 	m_pMemoryMap->MergeConventionalPages();
-	//m_pMemoryMap->DumpMemoryMap();
+	m_pMemoryMap->DumpMemoryMap();
 
 	//Config Tables
 	m_pConfigTables = new ConfigTables(params->ConfigTables, params->ConfigTableSizes);
-	//m_pConfigTables->Dump();
+	m_pConfigTables->Dump();
 
 	//Initialize page table pool
 	m_pPagePool = new PageTablesPool(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
@@ -94,9 +94,9 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//__debugbreak();
 	//__debugbreak();
 
-	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x", m_physicalAddress, m_imageSize);
+	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
 	//Print("ConfigTableSizes: %d", loader->ConfigTableSizes);
-	Print("  PhysicalAddressSize: 0x%16x", m_pMemoryMap->GetPhysicalAddressSize());
+	Print("  PhysicalAddressSize: 0x%16x\n", m_pMemoryMap->GetPhysicalAddressSize());
 	//Print("  PageTablesPool.AllocatedPageCount: 0x%8x", m_pPagePool->AllocatedPageCount());
 
 	//Complete initialization
@@ -104,24 +104,24 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	m_pdata = GetKernelSection(".pdata");
 
-	Print("m_pdata: 0x%16x", (uintptr_t)m_pdata);
+	Print("m_pdata: 0x%16x\n", (uintptr_t)m_pdata);
 
-	m_pLoading->WriteText("Kernel Initialized");
+	Print("Kernel Initialized\n");
 }
 
 void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 {
 	__halt();
 	
-	m_pLoading->WriteLineFormat("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
-	m_pLoading->WriteLineFormat("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
+	m_pLoading->WriteLine("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
+	m_pLoading->WriteLine("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
 	switch (vector)
 	{
 	//Let debug continue (we use this to check ISRs on bootup)
 	case 3:
 		return;
 	case 14:
-		m_pLoading->WriteLineFormat("CR2: 0x%16x", __readcr2());
+		m_pLoading->WriteLine("CR2: 0x%16x\n", __readcr2());
 	}
 
 	//shitty stalk walk
@@ -148,13 +148,13 @@ void Kernel::Print(const char* format, ...)
 	va_list args;
 
 	va_start(args, format);
-	m_pLoading->WriteLineFormat(format, args);
+	m_pLoading->Write(format, args);
 	va_end(args);
 }
 
 void Kernel::Print(const char* format, va_list args)
 {
-	m_pLoading->WriteLineFormat(format, args);
+	m_pLoading->Write(format, args);
 }
 
 PIMAGE_SECTION_HEADER Kernel::GetKernelSection(const std::string& name)

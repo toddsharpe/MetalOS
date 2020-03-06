@@ -122,14 +122,14 @@ bool MemoryMap::AddressFree(EFI_PHYSICAL_ADDRESS address)
 
 void MemoryMap::DumpMemoryMap()
 {
-	Print("MapSize: 0x%x, DescSize: 0x%x", m_memoryMapSize, m_memoryMapDescriptorSize);
+	Print("MapSize: 0x%x, DescSize: 0x%x\n", m_memoryMapSize, m_memoryMapDescriptorSize);
 	EFI_MEMORY_DESCRIPTOR* current;
 	for (current = m_memoryMap;
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
 		const bool runtime = (current->Attribute & EFI_MEMORY_RUNTIME) != 0;
-		Print("P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c", current->PhysicalStart, current->VirtualStart, (*MemTypes)[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
+		Print("P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, (*MemTypes)[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
 	}
 }
 

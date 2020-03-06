@@ -100,7 +100,7 @@ void main(LOADER_PARAMS* loader)
 		Print("Could not AcpiInitializeSubsystem: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiInitializeSubsystem");
+	Print("AcpiInitializeSubsystem\n");
 
 	Status = AcpiInitializeTables(nullptr, 0, FALSE);
 	if (ACPI_FAILURE(Status))
@@ -108,7 +108,7 @@ void main(LOADER_PARAMS* loader)
 		Print("Could not AcpiInitializeTables: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiInitializeTables");
+	Print("AcpiInitializeTables\n");
 
 	//TODO: notify handlers
 
@@ -118,7 +118,7 @@ void main(LOADER_PARAMS* loader)
 		Print("Could not AcpiEnableSubsystem: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiEnableSubsystem");
+	Print("AcpiEnableSubsystem\n");
 
 	Status = AcpiLoadTables();
 	if (ACPI_FAILURE(Status))
@@ -126,7 +126,7 @@ void main(LOADER_PARAMS* loader)
 		Print("Could not AcpiEnableSubsystem: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiLoadTables");
+	Print("AcpiLoadTables\n");
 
 	Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 	if (ACPI_FAILURE(Status))
@@ -134,8 +134,8 @@ void main(LOADER_PARAMS* loader)
 		Print("Could not AcpiEnableSubsystem: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiInitializeObjects");
-	Print("ACPI Finished");
+	Print("AcpiInitializeObjects\n");
+	Print("ACPI Finished\n");
 
 	//System system(loader->ConfigTables, loader->ConfigTableSizes);
 	//system.GetInstalledSystemRam();

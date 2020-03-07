@@ -178,7 +178,6 @@ ACPI_STATUS Kernel::AcpiOsSignal(UINT32 Function, void* Info)
 	return AE_NOT_FOUND;
 }
 
-
 ACPI_STATUS Kernel::AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64* Value, UINT32 Width)
 {
 	Assert(false);

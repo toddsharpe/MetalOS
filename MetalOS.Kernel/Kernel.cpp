@@ -49,11 +49,11 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_pMemoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
 	m_pMemoryMap->ReclaimBootPages();
 	m_pMemoryMap->MergeConventionalPages();
-	m_pMemoryMap->DumpMemoryMap();
+	//m_pMemoryMap->DumpMemoryMap();
 
 	//Config Tables
 	m_pConfigTables = new ConfigTables(params->ConfigTables, params->ConfigTableSizes);
-	m_pConfigTables->Dump();
+	//m_pConfigTables->Dump();
 
 	//Initialize page table pool
 	m_pPagePool = new PageTablesPool(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);

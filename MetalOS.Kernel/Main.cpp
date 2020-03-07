@@ -81,6 +81,7 @@ extern "C" void syscall()
 //Need to get virtual pointers to acpi struct
 //Find way to keep RuntimeServicesData/Code in kernel address space
 
+ACPI_STATUS PrintDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue);
 void main(LOADER_PARAMS* loader)
 {
 	//Initialize platform
@@ -92,7 +93,7 @@ void main(LOADER_PARAMS* loader)
 	//Initialize Frame Allocator
 	//frameAllocator = new PageFrameAllocator(*memoryMap);
 
-	//ACPI
+	//ACPI - ACPI CA Page 41
 	ACPI_STATUS Status;
 	Status = AcpiInitializeSubsystem();
 	if (ACPI_FAILURE(Status))
@@ -123,7 +124,7 @@ void main(LOADER_PARAMS* loader)
 	Status = AcpiLoadTables();
 	if (ACPI_FAILURE(Status))
 	{
-		Print("Could not AcpiEnableSubsystem: %d\n", Status);
+		Print("Could not AcpiLoadTables: %d\n", Status);
 		__halt();
 	}
 	Print("AcpiLoadTables\n");
@@ -131,10 +132,20 @@ void main(LOADER_PARAMS* loader)
 	Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 	if (ACPI_FAILURE(Status))
 	{
-		Print("Could not AcpiEnableSubsystem: %d\n", Status);
+		Print("Could not AcpiInitializeObjects: %d\n", Status);
 		__halt();
 	}
 	Print("AcpiInitializeObjects\n");
+
+	//Attempt to walk namespace
+	Status = AcpiGetDevices(NULL, PrintDevice, NULL, NULL);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiEnableSubsystem: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiGetDevices\n");
+
 	Print("ACPI Finished\n");
 
 	//System system(loader->ConfigTables, loader->ConfigTableSizes);
@@ -144,3 +155,36 @@ void main(LOADER_PARAMS* loader)
 
 	__halt();
 }
+
+//http://quest.bu.edu/qxr/source/kernel/smp/acpi.c#0433
+ACPI_STATUS PrintDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue)
+{
+	ACPI_STATUS Status;
+	char Buffer[256];
+	ACPI_BUFFER Path = { sizeof(Buffer), &Buffer };
+	
+	Status = AcpiGetName(Object, ACPI_FULL_PATHNAME, &Path);
+	if (ACPI_SUCCESS(Status))
+		Print("%s: ", Path.Pointer);
+	else
+		Print("<Name>: ");
+
+	ACPI_DEVICE_INFO* Info;
+	Status = AcpiGetObjectInfo(Object, &Info);
+	if (ACPI_SUCCESS(Status))
+	{
+		if (Info->Flags & ACPI_PCI_ROOT_BRIDGE)
+		{
+			Print(" PCI_ROOT ");
+		}
+	}
+	else
+	{
+		Print(" <FLAGS> ");
+	}
+
+	Print("\n");
+	return AE_OK;
+}
+
+

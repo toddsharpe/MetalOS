@@ -60,9 +60,6 @@
     <ClCompile Include="ConfigTables.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AcpiOsLayer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="KSpinLock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -70,6 +67,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="KernelAcpi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AcpiOSL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

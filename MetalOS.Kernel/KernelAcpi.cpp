@@ -122,7 +122,7 @@ ACPI_STATUS Kernel::AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle)
 
 void Kernel::AcpiOsVprintf(const char* Format, va_list Args)
 {
-	Print(Format, Args);
+	//Print(Format, Args);
 }
 
 ACPI_STATUS Kernel::AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout)

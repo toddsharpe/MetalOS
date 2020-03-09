@@ -103,7 +103,9 @@ void main(LOADER_PARAMS* loader)
 	}
 	Print("AcpiInitializeSubsystem\n");
 
-	Status = AcpiInitializeTables(nullptr, 0, FALSE);
+	//AcpiReallocateRootTable ?
+
+	Status = AcpiInitializeTables(nullptr, 16, FALSE);
 	if (ACPI_FAILURE(Status))
 	{
 		Print("Could not AcpiInitializeTables: %d\n", Status);
@@ -113,6 +115,16 @@ void main(LOADER_PARAMS* loader)
 
 	//TODO: notify handlers
 
+	Status = AcpiLoadTables();
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiLoadTables: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiLoadTables\n");
+
+	//Local handlers should be installed here
+
 	Status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
 	if (ACPI_FAILURE(Status))
 	{
@@ -121,13 +133,7 @@ void main(LOADER_PARAMS* loader)
 	}
 	Print("AcpiEnableSubsystem\n");
 
-	Status = AcpiLoadTables();
-	if (ACPI_FAILURE(Status))
-	{
-		Print("Could not AcpiLoadTables: %d\n", Status);
-		__halt();
-	}
-	Print("AcpiLoadTables\n");
+
 
 	Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 	if (ACPI_FAILURE(Status))
@@ -165,7 +171,7 @@ ACPI_STATUS PrintDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, 
 	
 	Status = AcpiGetName(Object, ACPI_FULL_PATHNAME, &Path);
 	if (ACPI_SUCCESS(Status))
-		Print("%s: ", Path.Pointer);
+		Print("%-16s: ", Path.Pointer);
 	else
 		Print("<Name>: ");
 
@@ -173,17 +179,24 @@ ACPI_STATUS PrintDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, 
 	Status = AcpiGetObjectInfo(Object, &Info);
 	if (ACPI_SUCCESS(Status))
 	{
-		if (Info->Flags & ACPI_PCI_ROOT_BRIDGE)
-		{
-			Print(" PCI_ROOT ");
-		}
-	}
-	else
-	{
-		Print(" <FLAGS> ");
+		Print("F: 0x%02x V: 0x%04x T: 0x%08x\n", Info->Flags, Info->Valid, Info->Type);
+
+		if (Info->Valid & ACPI_VALID_ADR)
+			Print("    ADR: 0x%x\n", Info->Address);
+
+		if (Info->Valid & ACPI_VALID_HID)
+			Print("    HID: %s\n", Info->HardwareId.String);
+
+		if (Info->Valid & ACPI_VALID_UID)
+			Print("    UID: %s\n", Info->UniqueId.String);
+
+		if (Info->Valid & ACPI_VALID_CID)
+			for (size_t i = 0; i < Info->CompatibleIdList.Count; i++)
+			{
+				Print("    CID: %s\n", Info->CompatibleIdList.Ids[i].String);
+			}
 	}
 
-	Print("\n");
 	return AE_OK;
 }
 

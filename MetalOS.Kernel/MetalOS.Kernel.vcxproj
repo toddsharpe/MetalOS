@@ -159,7 +159,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AcpiOsLayer.cpp" />
+    <ClCompile Include="AcpiOSL.cpp" />
     <ClCompile Include="ConfigTables.cpp" />
     <ClCompile Include="Kernel.cpp" />
     <ClCompile Include="KernelAcpi.cpp" />

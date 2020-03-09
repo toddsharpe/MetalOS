@@ -206,3 +206,14 @@ xsdt:
 Undocumented Windows Kernel Structures:
 https://www.vergiliusproject.com/kernels/x64/Windows%2010%20%7C%202016/1909%2019H2%20(November%202019%20Update)/_MMVAD_SHORT
 
+ACPI:
+https://wiki.osdev.org/User_talk:Cognition
+http://quest.bu.edu/qxr/source/kernel/smp/acpi.c#0433
+https://docs.microsoft.com/en-us/windows-hardware/drivers/kernel/device-tree
+
+
+https://docs.microsoft.com/en-us/windows-hardware/drivers/bringup/other-acpi-namespace-objects
+
+PNP0B00 - real time clock
+ACPI0007 - processor
+

@@ -108,7 +108,7 @@ void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char* Format, ...)
 
 void AcpiOsVprintf(const char* Format, va_list Args)
 {
-	kernel.Print(Format, Args);
+	kernel.AcpiOsVprintf(Format, Args);
 }
 
 ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout)

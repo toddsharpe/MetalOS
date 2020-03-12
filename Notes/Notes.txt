@@ -211,9 +211,31 @@ https://wiki.osdev.org/User_talk:Cognition
 http://quest.bu.edu/qxr/source/kernel/smp/acpi.c#0433
 https://docs.microsoft.com/en-us/windows-hardware/drivers/kernel/device-tree
 
+Tables:
+RSDP - Root System Description Pointer
+XSDT - eXtended System Descriptor Table
+FACP - Fixed ACPI Description Table
+DSDT - Differentiated System Description Table
+FACS - Firmware ACPI Control Structure
+APIC - Multiple APIC Description Table
+WAET - Windows ACPI Emulated devices Table
+SRAT - System Resource Affinity Table
+BGRT - Boot Graphics Resource Table
+FPDT - Firmware Performance Data Table
+
 
 https://docs.microsoft.com/en-us/windows-hardware/drivers/bringup/other-acpi-namespace-objects
 
+ACPI0004 - _SB_.VMOD - ACPI Module Device (main tree)
+        - Hyper-V Generation Counter
 PNP0B00 - real time clock
 ACPI0007 - processor
 
+
+Devices:
+_SB_
+_SB_.VMOD
+_SB_.VMOD.ACPI
+_SB_.VMOD.VMBS
+_SB_.GENC
+_SB_.TRC0

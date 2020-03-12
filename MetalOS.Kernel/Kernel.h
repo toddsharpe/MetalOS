@@ -71,6 +71,7 @@ public:
 #pragma endregion
 
 private:
+	void InitializeAcpi();
 	PIMAGE_SECTION_HEADER GetKernelSection(const std::string& name);
 
 private:

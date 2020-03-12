@@ -1,10 +1,15 @@
 #include "Kernel.h"
 
+typedef EFI_GUID GUID;
+#define PACKED
+#include <PlatformAcpi.h>
 #include <intrin.h>
 #include <cstdarg>
 #include "x64.h"
 #include "x64_support.h"
 #include "System.h"
+#include "Main.h"
+#include <functional>
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -104,8 +109,10 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	m_pdata = GetKernelSection(".pdata");
 
-	Print("m_pdata: 0x%16x\n", (uintptr_t)m_pdata);
+	//Initialized IO
+	this->InitializeAcpi();
 
+	//Done
 	Print("Kernel Initialized\n");
 }
 
@@ -155,6 +162,65 @@ void Kernel::Print(const char* format, ...)
 void Kernel::Print(const char* format, va_list args)
 {
 	m_pLoading->Write(format, args);
+}
+
+void Kernel::InitializeAcpi()
+{
+	ACPI_STATUS Status;
+	Status = AcpiInitializeSubsystem();
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiInitializeSubsystem: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiInitializeSubsystem\n");
+
+	Status = AcpiInitializeTables(nullptr, 16, FALSE);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiInitializeTables: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiInitializeTables\n");
+
+	//TODO: notify handlers
+
+	Status = AcpiLoadTables();
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiLoadTables: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiLoadTables\n");
+
+	//Local handlers should be installed here
+
+	Status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiEnableSubsystem: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiEnableSubsystem\n");
+
+	Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiInitializeObjects: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiInitializeObjects\n");
+
+	//Attempt to walk namespace
+	Status = AcpiGetDevices(NULL, PrintAcpiDevice, this, NULL);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("Could not AcpiEnableSubsystem: %d\n", Status);
+		__halt();
+	}
+	Print("AcpiGetDevices\n");
+
+	Print("ACPI Finished\n");
 }
 
 PIMAGE_SECTION_HEADER Kernel::GetKernelSection(const std::string& name)

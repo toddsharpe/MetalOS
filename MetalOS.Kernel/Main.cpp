@@ -81,7 +81,6 @@ extern "C" void syscall()
 //Need to get virtual pointers to acpi struct
 //Find way to keep RuntimeServicesData/Code in kernel address space
 
-ACPI_STATUS PrintDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue);
 void main(LOADER_PARAMS* loader)
 {
 	//Initialize platform
@@ -94,65 +93,7 @@ void main(LOADER_PARAMS* loader)
 	//frameAllocator = new PageFrameAllocator(*memoryMap);
 
 	//ACPI - ACPI CA Page 41
-	ACPI_STATUS Status;
-	Status = AcpiInitializeSubsystem();
-	if (ACPI_FAILURE(Status))
-	{
-		Print("Could not AcpiInitializeSubsystem: %d\n", Status);
-		__halt();
-	}
-	Print("AcpiInitializeSubsystem\n");
-
-	//AcpiReallocateRootTable ?
-
-	Status = AcpiInitializeTables(nullptr, 16, FALSE);
-	if (ACPI_FAILURE(Status))
-	{
-		Print("Could not AcpiInitializeTables: %d\n", Status);
-		__halt();
-	}
-	Print("AcpiInitializeTables\n");
-
-	//TODO: notify handlers
-
-	Status = AcpiLoadTables();
-	if (ACPI_FAILURE(Status))
-	{
-		Print("Could not AcpiLoadTables: %d\n", Status);
-		__halt();
-	}
-	Print("AcpiLoadTables\n");
-
-	//Local handlers should be installed here
-
-	Status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-	if (ACPI_FAILURE(Status))
-	{
-		Print("Could not AcpiEnableSubsystem: %d\n", Status);
-		__halt();
-	}
-	Print("AcpiEnableSubsystem\n");
-
-
-
-	Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
-	if (ACPI_FAILURE(Status))
-	{
-		Print("Could not AcpiInitializeObjects: %d\n", Status);
-		__halt();
-	}
-	Print("AcpiInitializeObjects\n");
-
-	//Attempt to walk namespace
-	Status = AcpiGetDevices(NULL, PrintDevice, NULL, NULL);
-	if (ACPI_FAILURE(Status))
-	{
-		Print("Could not AcpiEnableSubsystem: %d\n", Status);
-		__halt();
-	}
-	Print("AcpiGetDevices\n");
-
-	Print("ACPI Finished\n");
+	
 
 	//System system(loader->ConfigTables, loader->ConfigTableSizes);
 	//system.GetInstalledSystemRam();
@@ -163,12 +104,12 @@ void main(LOADER_PARAMS* loader)
 }
 
 //http://quest.bu.edu/qxr/source/kernel/smp/acpi.c#0433
-ACPI_STATUS PrintDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue)
+ACPI_STATUS PrintAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue)
 {
 	ACPI_STATUS Status;
 	char Buffer[256];
 	ACPI_BUFFER Path = { sizeof(Buffer), &Buffer };
-	
+
 	Status = AcpiGetName(Object, ACPI_FULL_PATHNAME, &Path);
 	if (ACPI_SUCCESS(Status))
 		Print("%-16s: ", Path.Pointer);
@@ -199,5 +140,4 @@ ACPI_STATUS PrintDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, 
 
 	return AE_OK;
 }
-
 

@@ -22,3 +22,5 @@ extern "C" void Print(const char* format, ...);
 extern "C" void VPrint(const char* format, va_list args);
 
 extern Kernel kernel;
+
+ACPI_STATUS PrintAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue);

@@ -10,6 +10,8 @@ typedef EFI_GUID GUID;
 #include "System.h"
 #include "Main.h"
 #include <functional>
+#include "AcpiDevice.h"
+#include "UartDriver.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -27,7 +29,8 @@ Kernel::Kernel() :
 	m_lastProcessId(0),
 	m_processes(nullptr),
 	m_objectId(0),
-	m_pdata(nullptr)
+	m_pdata(nullptr),
+	m_deviceTree()
 {
 
 }
@@ -112,14 +115,23 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Initialized IO
 	this->InitializeAcpi();
 
+	//Devices
+	m_deviceTree.Populate();
+	m_deviceTree.PrintTree();
+
+	//Save reference to Com1 for debugprint
+	Assert(m_deviceTree.GetDeviceByName("COM1", &m_com1));
+
+	//Test it
+	const char* message = "Com1 initialized\n";
+	m_com1->GetDriver()->Write(message, strlen(message));
+
 	//Done
 	Print("Kernel Initialized\n");
 }
 
 void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 {
-	__halt();
-	
 	m_pLoading->WriteLine("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
 	m_pLoading->WriteLine("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
 	switch (vector)
@@ -129,10 +141,13 @@ void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 		return;
 	case 14:
 		m_pLoading->WriteLine("CR2: 0x%16x\n", __readcr2());
+		if (__readcr2() == 0)
+			m_pLoading->WriteLine("Null pointer dereference\n", __readcr2());
 	}
 
 	//shitty stalk walk
 	uint64_t ip = pFrame->RIP;
+	__halt();
 
 }
 
@@ -164,6 +179,18 @@ void Kernel::Print(const char* format, va_list args)
 	m_pLoading->Write(format, args);
 }
 
+void Kernel::PrintArray(char* buffer, size_t length)
+{
+	for (size_t i = 0; i < length; i++)
+	{
+		m_pLoading->Write("%02x ", (unsigned char)buffer[i]);
+
+		if (i != 0 && i % 32 == 0)
+			m_pLoading->Write("\n");
+	}
+	m_pLoading->Write("\n");
+}
+
 void Kernel::InitializeAcpi()
 {
 	ACPI_STATUS Status;
@@ -173,7 +200,6 @@ void Kernel::InitializeAcpi()
 		Print("Could not AcpiInitializeSubsystem: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiInitializeSubsystem\n");
 
 	Status = AcpiInitializeTables(nullptr, 16, FALSE);
 	if (ACPI_FAILURE(Status))
@@ -181,9 +207,30 @@ void Kernel::InitializeAcpi()
 		Print("Could not AcpiInitializeTables: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiInitializeTables\n");
 
 	//TODO: notify handlers
+
+	/* Install the default address space handlers. */
+	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_SYSTEM_MEMORY, ACPI_DEFAULT_HANDLER, NULL, NULL);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("ACPI", "Could not initialise SystemMemory handler, %s!", AcpiFormatException(Status));
+		__halt();
+	}
+
+	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_SYSTEM_IO, ACPI_DEFAULT_HANDLER, NULL, NULL);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("ACPI", "Could not initialise SystemIO handler, %s!", AcpiFormatException(Status));
+		__halt();
+	}
+
+	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_PCI_CONFIG, ACPI_DEFAULT_HANDLER, NULL, NULL);
+	if (ACPI_FAILURE(Status))
+	{
+		Print("ACPI", "Could not initialise PciConfig handler, %s!", AcpiFormatException(Status));
+		__halt();
+	}
 
 	Status = AcpiLoadTables();
 	if (ACPI_FAILURE(Status))
@@ -191,7 +238,6 @@ void Kernel::InitializeAcpi()
 		Print("Could not AcpiLoadTables: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiLoadTables\n");
 
 	//Local handlers should be installed here
 
@@ -201,7 +247,6 @@ void Kernel::InitializeAcpi()
 		Print("Could not AcpiEnableSubsystem: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiEnableSubsystem\n");
 
 	Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 	if (ACPI_FAILURE(Status))
@@ -209,16 +254,6 @@ void Kernel::InitializeAcpi()
 		Print("Could not AcpiInitializeObjects: %d\n", Status);
 		__halt();
 	}
-	Print("AcpiInitializeObjects\n");
-
-	//Attempt to walk namespace
-	Status = AcpiGetDevices(NULL, PrintAcpiDevice, this, NULL);
-	if (ACPI_FAILURE(Status))
-	{
-		Print("Could not AcpiEnableSubsystem: %d\n", Status);
-		__halt();
-	}
-	Print("AcpiGetDevices\n");
 
 	Print("ACPI Finished\n");
 }

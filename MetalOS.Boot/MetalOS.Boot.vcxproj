@@ -188,6 +188,7 @@
     <ClCompile Include="EfiLoader.cpp" />
     <ClCompile Include="EfiMain.cpp" />
     <ClCompile Include="Error.cpp" />
+    <ClCompile Include="System.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MetalOS.Boot.h" />
@@ -195,6 +196,7 @@
     <ClInclude Include="EfiLoader.h" />
     <ClInclude Include="EfiMain.h" />
     <ClInclude Include="Error.h" />
+    <ClInclude Include="System.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">

@@ -40,3 +40,8 @@ extern "C" void __chkstk()
 {
 
 }
+
+extern "C" int _cdecl _purecall(void)
+{
+	return 0;
+}

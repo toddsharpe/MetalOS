@@ -16,6 +16,8 @@ extern "C"
 #include <acpi.h>
 }
 #include <map>
+#include "AcpiDeviceTree.h"
+#include "UartDriver.h"
 
 class Kernel
 {
@@ -29,6 +31,7 @@ public:
 
 	void Print(const char* format, ...);
 	void Print(const char* format, va_list args);
+	void PrintArray(char* buffer, size_t length);
 
 #pragma region ACPI
 	ACPI_STATUS AcpiOsInitialize();
@@ -99,5 +102,10 @@ private:
 	//Queues
 	//std::queue<uint32_t> readyQueue;
 	//std::list<uint32_t> sleepQueue;
+
+	AcpiDeviceTree m_deviceTree;
+
+	//Debug device
+	AcpiDevice* m_com1;
 };
 

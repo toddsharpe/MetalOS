@@ -6,7 +6,7 @@
 echo select vdisk file=%VHD%
 echo attach vdisk
 echo select partition=2
-echo assign letter="X"
+echo assign letter="Y"
 echo exit
 )>%VHD_SCRIPT%
 

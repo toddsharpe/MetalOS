@@ -122,7 +122,8 @@ ACPI_STATUS Kernel::AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle)
 
 void Kernel::AcpiOsVprintf(const char* Format, va_list Args)
 {
-	Print(Format, Args);
+	//Reduce ACPI talk for now (soon, pump to uart?)
+	//Print(Format, Args);
 }
 
 ACPI_STATUS Kernel::AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout)
@@ -134,7 +135,10 @@ ACPI_STATUS Kernel::AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UIN
 	if (pSemaphore->Wait(Units, Timeout))
 		return AE_OK;
 	else
+	{
+		Assert(false);
 		return AE_TIME;
+	}
 }
 
 ACPI_STATUS Kernel::AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units)

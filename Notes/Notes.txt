@@ -175,6 +175,16 @@ All 20 bits of segment descriptors are on - ignored in 64 bit anyways
 Windows Libraries:
 libucrt.lib
 
+//UEFI Protocols by LoadedImage->DeviceHandle
+964e5b22-6459-11d2-8e39-00a0c969723b - EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID
+151c8eae-7f2c-472c-9e54-9828194f6a88 - EFI_DISK_IO2_PROTOCOL_GUID
+ce345171-ba0b-11d2-8e4f-00a0c969723b - EFI_DISK_IO_PROTOCOL_GUID
+c12a7328-f81f-11d2-ba4b-00a0c93ec93b - GPT???
+8CF2F62C-BC9B-4821-808D-EC9EC421A1A0 - Partition Information Protocol
+a77b2472-e282-4e9f-a245-c2c0e27bbcc1 - EFI_BLOCK_IO2_PROTOCOL_GUID
+964e5b21-6459-11d2-8e39-00a0c969723b - EFI_BLOCK_IO_PROTOCOL_GUID
+09576e91-6d3f-11d2-8e39-00a0c969723b - gEfiDevicePathProtocolGuid
+
 // https://github.com/biosbits/bits/blob/master/python/efi.py
 Hyper-V Configuration Tables Count: 0xC
 05AD34BA-6F02-4214-952E-4DA0398E2BB9 - EFI_DXE_SERVICES_TABLE_GUID
@@ -198,7 +208,7 @@ xsdt:
 0x50434146 EFI_ACPI_2_0_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE - Fixed ACPI Description Table
 0x43495041 EFI_ACPI_2_0_MULTIPLE_APIC_DESCRIPTION_TABLE_SIGNATURE - Multiple APIC Description Table
 0x304d454f OEM0_SIGNATURE - used in guest RNG (https://download.microsoft.com/download/1/c/9/1c9813b8-089c-4fef-b2ad-ad80e79403ba/Whitepaper%20-%20The%20Windows%2010%20random%20number%20generation%20infrastructure.pdf)
-0x54454157 WAET_SIGNATURE  
+0x54454157 WAET_SIGNATURE
 0x54415253 ACPI_SRAT_SIGNATURE - Cache Coherent NUMA info, topology, way above our paygrades now
 0x54524742 BGRT_SIGNATURE  - Boot graphics
 0x54445046 FPDT_SIGNATURE - firmware performance
@@ -231,7 +241,6 @@ ACPI0004 - _SB_.VMOD - ACPI Module Device (main tree)
 PNP0B00 - real time clock
 ACPI0007 - processor
 
-
 Devices:
 _SB_
 _SB_.VMOD
@@ -239,3 +248,36 @@ _SB_.VMOD.ACPI
 _SB_.VMOD.VMBS
 _SB_.GENC
 _SB_.TRC0
+
+Enabling Gen2 Uart:
+https://docs.microsoft.com/en-us/archive/blogs/jhoward/hyper-v-generation-2-virtual-machines-part-5
+Get-VMComPort -VMName MetalOS
+Set-VMComPort -VMName MetalOS -Path \\.\pipe\metalos_com1 -Number 1
+Get-VMComPort -VMName MetalOS
+
+_SB_.UAR1
+_SB_.UAR2
+https://github.com/microsoft/Windows-driver-samples/tree/master/serial/serial
+drivers\tty\serial\8250\8250_pnp.c
+https://en.wikipedia.org/wiki/16550_UART
+
+
+WDF:
+NTSTATUS DriverEntry( IN PDRIVER_OBJECT DriverObject, IN PUNICODE_STRING RegistryPath )
+	* WdfDriverCreate(DriverObject,
+                           RegistryPath,
+                           &attributes,
+                           &config,
+                           &hDriver);
+	* Read from registry
+	- Must call WdfDriverCreate to create a framework driver object.
+		Provides EvtDriverDeviceAdd, callback for PNP manager when it detects existence of device driver supports
+		Register cleanup when driver object is deleted during driver unload
+
+
+
+
+
+TODO: ACPI_STRING is defined as char *, however MSVC treats string literals as const char * (conformance mode: permissive is set). For now const_cast
+
+

@@ -16,7 +16,6 @@ public:
 	UartDriver(AcpiDevice& device);
 
 	void Write(const char* buffer, size_t length);
-	void Write(const std::string& str);
 
 private:
 	struct _INTERRUPT_ENABLE_REGISTER //RW

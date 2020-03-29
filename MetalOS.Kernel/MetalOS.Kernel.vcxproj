@@ -168,6 +168,7 @@
     <ClCompile Include="KernelAcpi.cpp" />
     <ClCompile Include="KSemaphore.cpp" />
     <ClCompile Include="KSpinLock.cpp" />
+    <ClCompile Include="RuntimeSupport.cpp" />
     <ClCompile Include="UartDriver.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
     <ClCompile Include="Bitvector.cpp" />
@@ -192,6 +193,7 @@
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />
     <ClInclude Include="MetalOS.Kernel.h" />
+    <ClInclude Include="RuntimeSupport.h" />
     <ClInclude Include="UartDriver.h" />
     <ClInclude Include="VirtualAddressSpace.h" />
     <ClInclude Include="Bitvector.h" />

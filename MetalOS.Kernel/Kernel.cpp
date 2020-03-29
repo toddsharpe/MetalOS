@@ -12,6 +12,7 @@ typedef EFI_GUID GUID;
 #include <functional>
 #include "AcpiDevice.h"
 #include "UartDriver.h"
+#include "RuntimeSupport.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -29,7 +30,6 @@ Kernel::Kernel() :
 	m_lastProcessId(0),
 	m_processes(nullptr),
 	m_objectId(0),
-	m_pdata(nullptr),
 	m_deviceTree()
 {
 
@@ -100,7 +100,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Test interrupts
 	//__debugbreak();
-	//__debugbreak();
 
 	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
 	//Print("ConfigTableSizes: %d", loader->ConfigTableSizes);
@@ -109,8 +108,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Complete initialization
 	m_processes = new std::list<KERNEL_PROCESS>();
-
-	m_pdata = GetKernelSection(".pdata");
 
 	//Initialized IO
 	this->InitializeAcpi();
@@ -121,10 +118,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Save reference to Com1 for debugprint
 	Assert(m_deviceTree.GetDeviceByName("COM1", &m_com1));
-
-	//Test it
-	const char* message = "Com1 initialized\n";
-	m_com1->GetDriver()->Write(message, strlen(message));
+	m_com1->GetDriver()->Write("Com1 initialized\n");
 
 	//Done
 	Print("Kernel Initialized\n");
@@ -146,7 +140,6 @@ void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 	}
 
 	//shitty stalk walk
-	uint64_t ip = pFrame->RIP;
 	__halt();
 
 }
@@ -183,10 +176,10 @@ void Kernel::PrintArray(char* buffer, size_t length)
 {
 	for (size_t i = 0; i < length; i++)
 	{
-		m_pLoading->Write("%02x ", (unsigned char)buffer[i]);
-
 		if (i != 0 && i % 32 == 0)
 			m_pLoading->Write("\n");
+
+		m_pLoading->Write("%02x ", (unsigned char)buffer[i]);
 	}
 	m_pLoading->Write("\n");
 }
@@ -257,24 +250,3 @@ void Kernel::InitializeAcpi()
 
 	Print("ACPI Finished\n");
 }
-
-PIMAGE_SECTION_HEADER Kernel::GetKernelSection(const std::string& name)
-{
-	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)KernelBaseAddress;
-	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(KernelBaseAddress + dosHeader->e_lfanew);
-
-	//Find section
-	PIMAGE_SECTION_HEADER crtSection = nullptr;
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
-	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
-	{
-		if ((char*)&section[i].Name == name)
-		{
-			return &section[i];
-		}
-	}
-
-	Assert(false);
-	return nullptr;
-}
-

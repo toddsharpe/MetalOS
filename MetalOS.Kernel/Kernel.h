@@ -75,7 +75,6 @@ public:
 
 private:
 	void InitializeAcpi();
-	PIMAGE_SECTION_HEADER GetKernelSection(const std::string& name);
 
 private:
 	//Save from LoaderParams
@@ -95,9 +94,6 @@ private:
 	std::list<KERNEL_PROCESS>* m_processes;
 
 	Handle m_objectId;
-
-	//Sections
-	PIMAGE_SECTION_HEADER m_pdata;
 
 	//Queues
 	//std::queue<uint32_t> readyQueue;

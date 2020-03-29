@@ -31,7 +31,6 @@ public:
 
 	void Print(const char* format, ...);
 	void Print(const char* format, va_list args);
-	void PrintArray(char* buffer, size_t length);
 
 #pragma region ACPI
 	ACPI_STATUS AcpiOsInitialize();

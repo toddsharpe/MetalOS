@@ -2,26 +2,21 @@
 
 #include "Display.h"
 #include "Font.h"
+#include "StringPrinter.h"
 
-class LoadingScreen
+class LoadingScreen: public StringPrinter
 {
 public:
 	LoadingScreen(Display& display);
 
-	void WriteLine(const char* format, ...);
-	void WriteLine(const char* format, va_list args);
-	void Write(const char* format, ...);
-	void Write(const char* format, va_list args);
+	void Write(const char* string);
 
+private:
 	void WriteCharacter(char c);
-
 	void AdvanceX();
 	void ResetX();
 	void AdvanceY();
 	void ResetY();
-
-private:
-	void WriteText(const char* text);
 
 	const uint8_t m_fontScale;
 	static const Color m_white;

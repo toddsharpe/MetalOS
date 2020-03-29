@@ -4,18 +4,20 @@
 #include <string>
 #include "Driver.h"
 #include "AcpiDevice.h"
+#include "StringPrinter.h"
 
 //https://www.lammertbies.nl/comm/info/serial-uart
 //https://www.freebsd.org/doc/en_US.ISO8859-1/articles/serial-uart/index.html
 //PNP0501 - Generic 16550A-compatible COM port
 //Bit field note: https://docs.microsoft.com/en-us/cpp/cpp/cpp-bit-fields?view=vs-2019
 //Microsoft Specific: The ordering of data declared as bit fields is from low to high bit, as shown in the figure above.
-class UartDriver : public Driver
+class UartDriver : public Driver, public StringPrinter
 {
 public:
 	UartDriver(AcpiDevice& device);
 
 	void Write(const char* buffer, size_t length);
+	void Write(const char* string);
 
 private:
 	struct _INTERRUPT_ENABLE_REGISTER //RW

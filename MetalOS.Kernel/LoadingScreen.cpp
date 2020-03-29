@@ -11,48 +11,7 @@ LoadingScreen::LoadingScreen(Display& display) : m_display(display), m_fontScale
 {
 	m_position = { 0 };
 }
-
-void LoadingScreen::WriteLine(const char* format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	this->WriteLine(format, args);
-	va_end(args);
-}
-
-void LoadingScreen::WriteLine(const char* format, va_list args)
-{
-	char buffer[255];
-
-	int retval = crt_vsprintf(buffer, format, args);
-	buffer[retval] = '\0';
-
-	this->WriteText(buffer);
-	AdvanceY();
-	ResetX();
-}
-
-void LoadingScreen::Write(const char* format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	this->Write(format, args);
-	va_end(args);
-}
-
-void LoadingScreen::Write(const char* format, va_list args)
-{
-	char buffer[255];
-
-	int retval = crt_vsprintf(buffer, format, args);
-	buffer[retval] = '\0';
-
-	this->WriteText(buffer);
-}
-
-void LoadingScreen::WriteText(const char* text)
+void LoadingScreen::Write(const char* text)
 {
 	Assert(text != nullptr);
 

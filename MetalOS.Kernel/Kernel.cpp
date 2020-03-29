@@ -118,7 +118,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Save reference to Com1 for debugprint
 	Assert(m_deviceTree.GetDeviceByName("COM1", &m_com1));
-	m_com1->GetDriver()->Write("Com1 initialized\n");
+	((UartDriver*)(m_com1->GetDriver()))->Write("Com1 initialized\n");
 
 	//Done
 	Print("Kernel Initialized\n");
@@ -126,17 +126,17 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 {
-	m_pLoading->WriteLine("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
-	m_pLoading->WriteLine("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
+	m_pLoading->Printf("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
+	m_pLoading->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
 	switch (vector)
 	{
 	//Let debug continue (we use this to check ISRs on bootup)
 	case 3:
 		return;
 	case 14:
-		m_pLoading->WriteLine("CR2: 0x%16x\n", __readcr2());
+		m_pLoading->Printf("CR2: 0x%16x\n", __readcr2());
 		if (__readcr2() == 0)
-			m_pLoading->WriteLine("Null pointer dereference\n", __readcr2());
+			m_pLoading->Printf("Null pointer dereference\n", __readcr2());
 	}
 
 	//shitty stalk walk
@@ -151,9 +151,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 
 	//loading->ResetX();
 	//loading->ResetY();
-	m_pLoading->WriteLine(file);
-	m_pLoading->WriteLine(line);
-	m_pLoading->WriteLine(assert);
+	m_pLoading->Printf("%s\n%s\n%s", file, line, assert);
 
 	__halt();
 }
@@ -163,25 +161,13 @@ void Kernel::Print(const char* format, ...)
 	va_list args;
 
 	va_start(args, format);
-	m_pLoading->Write(format, args);
+	m_pLoading->Printf(format, args);
 	va_end(args);
 }
 
 void Kernel::Print(const char* format, va_list args)
 {
-	m_pLoading->Write(format, args);
-}
-
-void Kernel::PrintArray(char* buffer, size_t length)
-{
-	for (size_t i = 0; i < length; i++)
-	{
-		if (i != 0 && i % 32 == 0)
-			m_pLoading->Write("\n");
-
-		m_pLoading->Write("%02x ", (unsigned char)buffer[i]);
-	}
-	m_pLoading->Write("\n");
+	m_pLoading->Printf(format, args);
 }
 
 void Kernel::InitializeAcpi()

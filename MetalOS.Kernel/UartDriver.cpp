@@ -16,6 +16,11 @@ void UartDriver::Write(const char* buffer, size_t length)
 	}
 }
 
+void UartDriver::Write(const char* string)
+{
+	this->Write(string, strlen(string));
+}
+
 uint8_t UartDriver::Read(uint8_t offset)
 {
 	return x64_read_port(m_port + offset, std::numeric_limits<uint8_t>::digits);

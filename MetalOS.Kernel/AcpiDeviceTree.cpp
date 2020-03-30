@@ -68,20 +68,10 @@ ACPI_STATUS AcpiDeviceTree::AddAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLeve
 	return AE_OK;
 }
 
-void AcpiDeviceTree::PrintTree() const
+void AcpiDeviceTree::Display() const
 {
-	std::stack<AcpiDevice*> stack;
-	stack.push(m_root);
-
-	while (!stack.empty())
-	{
-		AcpiDevice* current = stack.top();
-		stack.pop();
-
-		Print("%s - %s - %s\n", current->GetFullName(), current->GetHid(), current->GetName());
-		for (auto& child : current->GetChildren())
-			stack.push(child);
-	}
+	Assert(this->m_root);
+	this->m_root->Display();
 }
 
 bool AcpiDeviceTree::GetDeviceByHid(const std::string& hid, AcpiDevice** device)

@@ -26,7 +26,7 @@ Kernel::Kernel() :
 	m_pConfigTables(nullptr),
 	m_pageTables(nullptr),
 	m_pDisplay(nullptr),
-	m_pLoading(nullptr),
+	m_textScreen(),
 	m_lastProcessId(0),
 	m_processes(nullptr),
 	m_objectId(0),
@@ -51,17 +51,16 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Initialize Display
 	m_pDisplay = new Display(params->Display, KernelGraphicsDeviceAddress);
 	m_pDisplay->ColorScreen(Black);
-	m_pLoading = new LoadingScreen(*m_pDisplay);
+	m_textScreen = new TextScreen(*m_pDisplay);
+	m_printer = m_textScreen;
 
 	//Initialize memory map
 	m_pMemoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
 	m_pMemoryMap->ReclaimBootPages();
 	m_pMemoryMap->MergeConventionalPages();
-	//m_pMemoryMap->DumpMemoryMap();
 
 	//Config Tables
 	m_pConfigTables = new ConfigTables(params->ConfigTables, params->ConfigTableSizes);
-	//m_pConfigTables->Dump();
 
 	//Initialize page table pool
 	m_pPagePool = new PageTablesPool(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
@@ -114,11 +113,17 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Devices
 	m_deviceTree.Populate();
-	m_deviceTree.PrintTree();
 
-	//Save reference to Com1 for debugprint
-	Assert(m_deviceTree.GetDeviceByName("COM1", &m_com1));
-	((UartDriver*)(m_com1->GetDriver()))->Write("Com1 initialized\n");
+	//Swap output to uart
+	AcpiDevice* com1;
+	Assert(m_deviceTree.GetDeviceByName("COM1", &com1));
+	this->m_printer = ((UartDriver*)com1->GetDriver());
+	Print("COM1 initialized\n");
+	
+	//Output full current state
+	m_pMemoryMap->DumpMemoryMap();
+	m_pConfigTables->Dump();
+	m_deviceTree.Display();
 
 	//Done
 	Print("Kernel Initialized\n");
@@ -126,22 +131,21 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 {
-	m_pLoading->Printf("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
-	m_pLoading->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
+	m_textScreen->Printf("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
+	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
 	switch (vector)
 	{
 	//Let debug continue (we use this to check ISRs on bootup)
 	case 3:
 		return;
 	case 14:
-		m_pLoading->Printf("CR2: 0x%16x\n", __readcr2());
+		m_textScreen->Printf("CR2: 0x%16x\n", __readcr2());
 		if (__readcr2() == 0)
-			m_pLoading->Printf("Null pointer dereference\n", __readcr2());
+			m_textScreen->Printf("Null pointer dereference\n", __readcr2());
 	}
 
-	//shitty stalk walk
+	//TODO: stack walk
 	__halt();
-
 }
 
 void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
@@ -151,23 +155,23 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 
 	//loading->ResetX();
 	//loading->ResetY();
-	m_pLoading->Printf("%s\n%s\n%s", file, line, assert);
+	m_textScreen->Printf("%s\n%s\n%s", file, line, assert);
 
 	__halt();
 }
 
-void Kernel::Print(const char* format, ...)
+void Kernel::Printf(const char* format, ...)
 {
 	va_list args;
 
 	va_start(args, format);
-	m_pLoading->Printf(format, args);
+	this->Printf(format, args);
 	va_end(args);
 }
 
-void Kernel::Print(const char* format, va_list args)
+void Kernel::Printf(const char* format, va_list args)
 {
-	m_pLoading->Printf(format, args);
+	m_printer->Printf(format, args);
 }
 
 void Kernel::InitializeAcpi()

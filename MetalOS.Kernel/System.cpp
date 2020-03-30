@@ -104,6 +104,7 @@ struct EFI_ACPI_DSDT
 };
 #pragma pack(pop)
 
+//Not really needed since acpica is working
 void System::DisplayAcpi2()
 {
 	void* table = nullptr;

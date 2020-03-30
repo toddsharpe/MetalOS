@@ -15,6 +15,7 @@ class AcpiDevice
 {
 public:
 	static ACPI_STATUS AttachResource(ACPI_RESOURCE* Resource, void* Context);
+	static ACPI_STATUS DisplayResource(const ACPI_RESOURCE& Resource);
 
 	AcpiDevice(ACPI_HANDLE object);
 	ACPI_STATUS Initialize();
@@ -48,6 +49,8 @@ public:
 	{
 		return m_driver;
 	}
+
+	void Display() const;
 
 	const ACPI_RESOURCE* GetResource(uint32_t type) const;
 

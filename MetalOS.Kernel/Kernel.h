@@ -7,7 +7,7 @@
 #include "msvc.h"
 #include "MetalOS.Kernel.h"
 #include "Display.h"
-#include "LoadingScreen.h"
+#include "TextScreen.h"
 #include <PageTablesPool.h>
 #include "MemoryMap.h"
 #include "ConfigTables.h"
@@ -29,8 +29,8 @@ public:
 	void HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame);
 	void Bugcheck(const char* file, const char* line, const char* assert);
 
-	void Print(const char* format, ...);
-	void Print(const char* format, va_list args);
+	void Printf(const char* format, ...);
+	void Printf(const char* format, va_list args);
 
 #pragma region ACPI
 	ACPI_STATUS AcpiOsInitialize();
@@ -87,7 +87,7 @@ private:
 	PageTables* m_pageTables;
 
 	Display* m_pDisplay;
-	LoadingScreen* m_pLoading;
+	TextScreen* m_textScreen;
 
 	size_t m_lastProcessId;
 	std::list<KERNEL_PROCESS>* m_processes;
@@ -101,6 +101,6 @@ private:
 	AcpiDeviceTree m_deviceTree;
 
 	//Debug device
-	AcpiDevice* m_com1;
+	StringPrinter* m_printer;
 };
 

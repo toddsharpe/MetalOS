@@ -2,9 +2,7 @@
 
 #include "MetalOS.Kernel.h"
 #include "Main.h"
-#include "LoadingScreen.h"
-
-extern LoadingScreen* loading;
+#include "TextScreen.h"
 
 PageFrameAllocator::PageFrameAllocator(MemoryMap& memoryMap) :
 	m_nextIndex((memoryMap.GetLargestConventionalAddress() / PAGE_SIZE) - 1),

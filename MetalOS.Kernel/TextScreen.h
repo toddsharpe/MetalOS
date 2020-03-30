@@ -4,10 +4,10 @@
 #include "Font.h"
 #include "StringPrinter.h"
 
-class LoadingScreen: public StringPrinter
+class TextScreen: public StringPrinter
 {
 public:
-	LoadingScreen(Display& display);
+	TextScreen(Display& display);
 
 	void Write(const char* string);
 

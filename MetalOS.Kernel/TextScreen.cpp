@@ -1,17 +1,18 @@
-#include "LoadingScreen.h"
+#include "TextScreen.h"
 
 #include <crt_stdio.h>
 #include "Main.h"
 
 #define PositionToPixelScale 10
 
-const Color LoadingScreen::m_white = { 0xFF, 0xFF, 0xFF, 0x00 };
+const Color TextScreen::m_white = { 0xFF, 0xFF, 0xFF, 0x00 };
 
-LoadingScreen::LoadingScreen(Display& display) : m_display(display), m_fontScale(1)
+TextScreen::TextScreen(Display& display) : m_display(display), m_fontScale(1)
 {
 	m_position = { 0 };
 }
-void LoadingScreen::Write(const char* text)
+
+void TextScreen::Write(const char* text)
 {
 	Assert(text != nullptr);
 
@@ -33,7 +34,7 @@ void LoadingScreen::Write(const char* text)
 }
 
 //TODO: edgecases
-void LoadingScreen::WriteCharacter(char c)
+void TextScreen::WriteCharacter(char c)
 {
 	const char* map = m_font.GetCharacterMap(c);
 	uint8_t size = 8; // TODO: get from font
@@ -66,22 +67,22 @@ void LoadingScreen::WriteCharacter(char c)
 	}
 }
 
-void LoadingScreen::ResetX()
+void TextScreen::ResetX()
 {
 	m_position.X = 0;
 }
 
-void LoadingScreen::AdvanceY()
+void TextScreen::AdvanceY()
 {
 	m_position.Y = (m_position.Y += PositionToPixelScale);
 }
 
-void LoadingScreen::ResetY()
+void TextScreen::ResetY()
 {
 	m_position.Y = 0;
 }
 
-void LoadingScreen::AdvanceX()
+void TextScreen::AdvanceX()
 {
 	m_position.X = (m_position.X += PositionToPixelScale);
 }

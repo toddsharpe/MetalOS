@@ -286,3 +286,8 @@ https://stackoverflow.com/questions/9794547/structures-contained-in-the-pdata-se
 http://www.nynaeve.net/?p=106
 https://docs.microsoft.com/en-us/windows/win32/api/winnt/nf-winnt-rtllookupfunctionentry
 http://www.nynaeve.net/Code/StackWalk64.cpp
+
+Hyper-V:
+https://github.com/MicrosoftDocs/Virtualization-Documentation
+
+

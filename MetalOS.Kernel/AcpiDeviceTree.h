@@ -7,7 +7,7 @@ class AcpiDeviceTree
 public:
 	AcpiDeviceTree();
 	ACPI_STATUS Populate();
-	void PrintTree() const;
+	void Display() const;
 
 	bool GetDeviceByHid(const std::string& hid, AcpiDevice** device);
 	bool GetDeviceByName(const std::string& name, AcpiDevice** device);

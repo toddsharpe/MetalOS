@@ -176,7 +176,7 @@
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Font.cpp" />
     <ClCompile Include="KernelHeap.cpp" />
-    <ClCompile Include="LoadingScreen.cpp" />
+    <ClCompile Include="TextScreen.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MemoryMap.cpp" />
     <ClCompile Include="msvc.cpp" />
@@ -202,7 +202,7 @@
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
     <ClInclude Include="KernelHeap.h" />
-    <ClInclude Include="LoadingScreen.h" />
+    <ClInclude Include="TextScreen.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="MemoryMap.h" />
     <ClInclude Include="msvc.h" />

@@ -19,8 +19,5 @@ void operator delete(void* p);
 void operator delete(void* p, size_t n);
 
 extern "C" void Print(const char* format, ...);
-extern "C" void VPrint(const char* format, va_list args);
 
 extern Kernel kernel;
-
-ACPI_STATUS PrintAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue);

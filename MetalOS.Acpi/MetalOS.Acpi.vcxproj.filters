@@ -635,5 +635,8 @@
     <ClCompile Include="..\acpica\source\components\utilities\utresdecode.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\acpica\source\common\ahids.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -4,6 +4,9 @@
 #include "msvc.h"
 #include <map>
 #include <stack>
+#include "RtcDriver.h"
+#include "IoApicDriver.h"
+#include "ProcessorDriver.h"
 
 AcpiDeviceTree::AcpiDeviceTree()
 {
@@ -48,6 +51,12 @@ ACPI_STATUS AcpiDeviceTree::AddAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLeve
 	//TODO: proper pnp/driver manager?
 	if (device->GetHid() == "PNP0501")
 		device->SetDriver(new UartDriver(*device));
+	else if (device->GetHid() == "PNP0B00")
+		device->SetDriver(new RtcDriver(*device));
+	else if (device->GetHid() == "PNP0003")
+		device->SetDriver(new IoApicDriver(*device));
+	else if (device->GetHid() == "ACPI0007")
+		device->SetDriver(new ProcessorDriver(*device));
 
 	//Add new device to map
 	pDevices->insert({ Object, device });

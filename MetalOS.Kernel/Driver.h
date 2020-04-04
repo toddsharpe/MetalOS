@@ -10,7 +10,7 @@ public:
 	//virtual void Read(const char* buffer, )
 	virtual void Write(const char* buffer, size_t length) = 0;
 
-private:
+protected:
 	AcpiDevice& m_device;
 };
 

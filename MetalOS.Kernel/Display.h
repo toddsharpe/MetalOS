@@ -16,7 +16,19 @@ public:
 
 	void ColorScreen(Color color);
 	void ColorRectangle(Color color, Rectangle* region);
-	void ColorPixel(Color color, Point2D position);
+
+	void SetPixel(Color color, Point2D position);
+	Color GetPixel(Point2D position);
+
+	uint32_t GetWidth() const
+	{
+		return m_device.HorizontalResolution;
+	}
+
+	uint32_t GetHeight() const
+	{
+		return m_device.VerticalResolution;
+	}
 
 private:
 	uintptr_t m_address;

@@ -1,5 +1,11 @@
 #include "AcpiDevice.h"
 #include "Main.h"
+extern "C"
+{
+#include <aclocal.h>
+}
+
+extern "C" const AH_DEVICE_ID* AcpiAhMatchHardwareId(char* HardwareId);
 
 AcpiDevice::AcpiDevice(ACPI_HANDLE object) :
 	m_acpiObject(object),
@@ -27,7 +33,14 @@ ACPI_STATUS AcpiDevice::Initialize()
 		return status;
 
 	if (info->Valid & ACPI_VALID_HID)
+	{
 		m_hid = info->HardwareId.String;
+
+		//Get description
+		const AH_DEVICE_ID* id = ::AcpiAhMatchHardwareId(info->HardwareId.String);
+		if (id != NULL)
+			m_description = id->Description;
+	}
 	
 	//These comments were helpful during bringup, probably dont need them anymore
 	/*
@@ -88,9 +101,10 @@ ACPI_STATUS AcpiDevice::AttachResource(ACPI_RESOURCE* Resource, void* Context)
 
 void AcpiDevice::Display() const
 {
-	Print("%s\n", this->m_fullName);
-	Print("    DDN: %s\n", this->GetName());
-	Print("    HID: %s\n", this->GetHid());
+	Print("%s\n", this->GetFullName().c_str());
+	Print("    DDN: %s\n", this->GetName().c_str());
+	Print("    HID: %s (%s)\n", this->GetHid().c_str(), this->GetDescription().c_str());
+
 	for (const auto& item : m_resources)
 		DisplayResource(item);
 

@@ -5,6 +5,7 @@
 UartDriver::UartDriver(AcpiDevice& device) : Driver(device)
 {
 	const ACPI_RESOURCE* resource = device.GetResource(ACPI_RESOURCE_TYPE_IO);
+	Assert(resource->Data.Io.AddressLength == 8);
 	m_port = resource->Data.Io.Minimum;
 }
 

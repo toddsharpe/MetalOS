@@ -189,6 +189,7 @@
     <ClInclude Include="..\acpica\source\include\platform\acwin64.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\acpica\source\common\ahids.c" />
     <ClCompile Include="..\acpica\source\components\dispatcher\dsargs.c" />
     <ClCompile Include="..\acpica\source\components\dispatcher\dscontrol.c" />
     <ClCompile Include="..\acpica\source\components\dispatcher\dsdebug.c" />

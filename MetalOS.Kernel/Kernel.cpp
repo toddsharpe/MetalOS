@@ -13,6 +13,9 @@ typedef EFI_GUID GUID;
 #include "AcpiDevice.h"
 #include "UartDriver.h"
 #include "RuntimeSupport.h"
+#include "LoadingScreen.h"
+#include "RtcDriver.h"
+#include "x64PIC.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -120,10 +123,25 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	this->m_printer = ((UartDriver*)com1->GetDriver());
 	Print("COM1 initialized\n");
 	
+	//Show loading screen
+	//LoadingScreen loadingScreen(*m_pDisplay);
+	//loadingScreen.Draw();
+	//__halt();
+
 	//Output full current state
 	m_pMemoryMap->DumpMemoryMap();
 	m_pConfigTables->Dump();
 	m_deviceTree.Display();
+
+	//Output from drivers
+	AcpiDevice* rtc;
+	Assert(m_deviceTree.GetDeviceByHid("PNP0B00", &rtc));
+	RtcDriver* rtcDriver = ((RtcDriver*)rtc->GetDriver());
+	rtcDriver->Display();
+	rtcDriver->Enable();
+	rtcDriver->Display();
+
+	//Apic discovery?
 
 	//Done
 	Print("Kernel Initialized\n");
@@ -197,21 +215,21 @@ void Kernel::InitializeAcpi()
 	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_SYSTEM_MEMORY, ACPI_DEFAULT_HANDLER, NULL, NULL);
 	if (ACPI_FAILURE(Status))
 	{
-		Print("ACPI", "Could not initialise SystemMemory handler, %s!", AcpiFormatException(Status));
+		Print("Could not initialise SystemMemory handler, %s!", AcpiFormatException(Status));
 		__halt();
 	}
 
 	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_SYSTEM_IO, ACPI_DEFAULT_HANDLER, NULL, NULL);
 	if (ACPI_FAILURE(Status))
 	{
-		Print("ACPI", "Could not initialise SystemIO handler, %s!", AcpiFormatException(Status));
+		Print("Could not initialise SystemIO handler, %s!", AcpiFormatException(Status));
 		__halt();
 	}
 
 	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_PCI_CONFIG, ACPI_DEFAULT_HANDLER, NULL, NULL);
 	if (ACPI_FAILURE(Status))
 	{
-		Print("ACPI", "Could not initialise PciConfig handler, %s!", AcpiFormatException(Status));
+		Print("Could not initialise PciConfig handler, %s!", AcpiFormatException(Status));
 		__halt();
 	}
 

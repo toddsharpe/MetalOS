@@ -160,14 +160,21 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AcpiOSL.cpp" />
+    <ClCompile Include="Colors.cpp" />
     <ClCompile Include="ConfigTables.cpp" />
     <ClCompile Include="AcpiDevice.cpp" />
     <ClCompile Include="AcpiDeviceTree.cpp" />
+    <ClCompile Include="Cpuid.cpp" />
     <ClCompile Include="Driver.cpp" />
+    <ClCompile Include="IoApicDriver.cpp" />
     <ClCompile Include="Kernel.cpp" />
     <ClCompile Include="KernelAcpi.cpp" />
     <ClCompile Include="KSemaphore.cpp" />
     <ClCompile Include="KSpinLock.cpp" />
+    <ClCompile Include="LoadingScreen.cpp" />
+    <ClCompile Include="ProcessorDriver.cpp" />
+    <ClCompile Include="msvc.cpp" />
+    <ClCompile Include="RtcDriver.cpp" />
     <ClCompile Include="RuntimeSupport.cpp" />
     <ClCompile Include="StringPrinter.cpp" />
     <ClCompile Include="UartDriver.cpp" />
@@ -179,21 +186,28 @@
     <ClCompile Include="TextScreen.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MemoryMap.cpp" />
-    <ClCompile Include="msvc.cpp" />
     <ClCompile Include="PageFrameAllocator.cpp" />
     <ClCompile Include="PageFrameNumberDatabase.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="x64.cpp" />
+    <ClCompile Include="x64PIC.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Colors.h" />
     <ClInclude Include="ConfigTables.h" />
     <ClInclude Include="AcpiDevice.h" />
     <ClInclude Include="AcpiDeviceTree.h" />
+    <ClInclude Include="Cpuid.h" />
     <ClInclude Include="Driver.h" />
+    <ClInclude Include="IoApicDriver.h" />
     <ClInclude Include="Kernel.h" />
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />
+    <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="MetalOS.Kernel.h" />
+    <ClInclude Include="ProcessorDriver.h" />
+    <ClInclude Include="msvc.h" />
+    <ClInclude Include="RtcDriver.h" />
     <ClInclude Include="RuntimeSupport.h" />
     <ClInclude Include="StringPrinter.h" />
     <ClInclude Include="UartDriver.h" />
@@ -205,11 +219,11 @@
     <ClInclude Include="TextScreen.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="MemoryMap.h" />
-    <ClInclude Include="msvc.h" />
     <ClInclude Include="PageFrameAllocator.h" />
     <ClInclude Include="PageFrameNumberDatabase.h" />
     <ClInclude Include="System.h" />
     <ClInclude Include="x64.h" />
+    <ClInclude Include="x64PIC.h" />
     <ClInclude Include="x64_interrupts.h" />
     <ClInclude Include="x64_support.h" />
   </ItemGroup>

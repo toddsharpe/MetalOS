@@ -290,4 +290,13 @@ http://www.nynaeve.net/Code/StackWalk64.cpp
 Hyper-V:
 https://github.com/MicrosoftDocs/Virtualization-Documentation
 
+IO Ports for x86:
+https://wiki.osdev.org/I/O_Ports
+Port scanned Hyper-V from 0-2048. Non-mapped io ports return 0xFF
+0x70-0x77 - RTC/CMOS interface
+0xB2-0xB3 - SMI interface
+0x2f8-0x2ff - com1
+0x3f8-0x3ff - com2
+0x400-0x43f - unknown
 
+PIC at 0x20/0xA0 not found, no pic in gen2 hyperv

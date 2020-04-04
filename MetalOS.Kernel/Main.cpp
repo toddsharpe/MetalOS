@@ -20,6 +20,7 @@
 extern "C"
 {
 #include <acpi.h>
+#include "x64_support.h"
 }
 
 //The one and only
@@ -77,5 +78,7 @@ void main(LOADER_PARAMS* loader)
 	//Initialize kernel
 	kernel.Initialize(loader);
 
-	__halt();
+	//Idle
+	while (true)
+		__halt();
 }

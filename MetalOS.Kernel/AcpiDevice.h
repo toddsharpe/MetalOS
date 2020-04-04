@@ -18,11 +18,16 @@ public:
 	static ACPI_STATUS DisplayResource(const ACPI_RESOURCE& Resource);
 
 	AcpiDevice(ACPI_HANDLE object);
-	ACPI_STATUS Initialize();
+	virtual ACPI_STATUS Initialize();
 
 	std::list<AcpiDevice*>& GetChildren()
 	{
 		return this->m_children;
+	}
+
+	const ACPI_HANDLE GetHandle() const
+	{
+		return m_acpiObject;
 	}
 
 	const std::string& GetName() const
@@ -38,6 +43,11 @@ public:
 	const std::string& GetHid() const
 	{
 		return m_hid;
+	}
+
+	const std::string& GetDescription() const
+	{
+		return m_description;
 	}
 
 	void SetDriver(Driver* driver)
@@ -59,6 +69,7 @@ private:
 	std::string m_fullName;
 	std::string m_name;
 	std::string m_hid;
+	std::string m_description;
 	std::list<AcpiDevice*> m_children;
 	std::list<ACPI_RESOURCE> m_resources;
 

@@ -42,7 +42,7 @@ void Display::ColorRectangle(Color color, Rectangle* region)
 	}
 }
 
-void Display::ColorPixel(Color color, Point2D position)
+void Display::SetPixel(Color color, Point2D position)
 {
 	Assert(position.X < m_device.HorizontalResolution);
 	Assert(position.Y < m_device.VerticalResolution);
@@ -52,3 +52,12 @@ void Display::ColorPixel(Color color, Point2D position)
 	*(Color*)cell = color;
 }
 
+Color Display::GetPixel(Point2D position)
+{
+	Assert(position.X < m_device.HorizontalResolution);
+	Assert(position.Y < m_device.VerticalResolution);
+
+	uint32_t* start = (uint32_t*)m_address;
+	uint32_t* cell = start + ((size_t)position.Y * m_device.PixelsPerScanLine) + position.X;
+	return *(Color*)cell;
+}

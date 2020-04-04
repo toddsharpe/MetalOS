@@ -142,7 +142,6 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Cpu.cpp" />
     <ClCompile Include="crt_stdlib.c" />
     <ClCompile Include="PageTables.cpp" />
     <ClCompile Include="PageTablesPool.cpp" />
@@ -152,7 +151,6 @@
     <ClCompile Include="crt_wchar.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Cpu.h" />
     <ClInclude Include="crt_stdlib.h" />
     <ClInclude Include="MetalOS.lib.h" />
     <ClInclude Include="PageTables.h" />

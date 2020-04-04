@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Cpu.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PageTables.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -41,9 +38,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Cpu.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PageTables.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -11,6 +11,8 @@ public:
 
 	}
 
+	void Display();
+
 private:
 	//Each register is 32 bits, aligned on 128bit boundaries
 	//LVT - Local Vector Table
@@ -103,9 +105,102 @@ private:
 			{
 				uint32_t Version : 8;
 				uint32_t Reserved0 : 8;
-				uint32_t MaxLVTEntry : 7;
+				uint32_t MaxLVTEntry : 8;
 				uint32_t EOIBroadcastSuppressionSupport : 1;
-				uint32_t Reserved1 : 8;
+				uint32_t Reserved1 : 7;
+			};
+			uint32_t Value;
+		};
+	};
+
+	enum _LVT_TIMER_MODE : uint32_t
+	{
+		OneShot = 0b00,
+		Periodic = 0b01,
+		TSC_Deadline = 0b10
+	};
+
+	//Other combinations reserved
+	enum _LVT_DELIVERY_MODE : uint32_t
+	{
+		Fixed = 0b000,
+		SMI = 0b010,
+		NMI = 0b100,
+		ExtINT = 0b111,
+	};
+
+	enum _LVT_TRIGGER_MODE : uint32_t
+	{
+		Edge = 0,
+		Level = 1
+	};
+
+	//Intel SDM Vol. 3A Figure 10-8
+	//
+	struct _LVT_REGISTER
+	{
+		union
+		{
+			struct
+			{
+				uint32_t Vector : 8;
+				_LVT_DELIVERY_MODE : 3;
+				uint32_t Reserved0 : 1;
+				uint32_t DeliveryStatus : 1;
+				uint32_t InputPinPolarity : 1;
+				uint32_t RemoteIRR : 1;
+				_LVT_TRIGGER_MODE TriggerMode : 1;
+				uint32_t Mask : 1;
+				_LVT_TIMER_MODE Mode : 2;
+				uint32_t Reserved2 : 13;
+			};
+			uint32_t Value;
+		};
+	};
+	static const uint32_t LVT_REGISTER_DEFAULT = 0x10000;
+
+	//"Before attempt to read from the ESR, software should first write to it."
+	struct _ERROR_STATUS_REGISTER
+	{
+		union
+		{
+			struct
+			{
+				uint32_t SendChecksumError : 1;
+				uint32_t ReceiveChecksumError : 1;
+				uint32_t SendAcceptError : 1;
+				uint32_t ReceiveAcceptError : 1;
+				uint32_t RedirectableIPI : 1;
+				uint32_t SendIllegalVector : 1;
+				uint32_t ReceivedIllegalVector : 1;
+				uint32_t IllegalRegisterAddress : 1;
+				uint32_t Reserved : 24;
+			};
+			uint32_t Value;
+		};
+	};
+
+	//Note: bit 2 is reserved (so always 0)
+	enum _TIMER_DIVIDE : uint32_t
+	{
+		DivideBy2 = 0b0000,
+		DivideBy4 = 0b0001,
+		DivideBy8 = 0b0010,
+		DivideBy16 = 0b0011,
+		DivideBy32 = 0b1000,
+		DivideBy64 = 0b1001,
+		DivideBy128 = 0b1010,
+		DivideBy1 = 0b1011,
+	};
+
+	struct _TIMER_DIVIDE_CONFIG_REGISTER
+	{
+		union
+		{
+			struct
+			{
+				_TIMER_DIVIDE DivideValue : 4;
+				uint32_t Reserved : 28;
 			};
 			uint32_t Value;
 		};
@@ -115,5 +210,7 @@ private:
 
 	static void WriteRegister(_LAPIC_REGISTERS reg, uint32_t value);
 	static uint32_t ReadRegister(_LAPIC_REGISTERS reg);
+
+	void* m_apic;
 };
 

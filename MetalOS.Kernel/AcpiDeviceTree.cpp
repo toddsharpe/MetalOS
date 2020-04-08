@@ -7,6 +7,8 @@
 #include "RtcDriver.h"
 #include "IoApicDriver.h"
 #include "ProcessorDriver.h"
+#include "Cpuid.h"
+#include "HyperV.h"
 
 AcpiDeviceTree::AcpiDeviceTree()
 {
@@ -18,7 +20,7 @@ ACPI_STATUS AcpiDeviceTree::Populate()
 	//Map of discovered devices
 	std::map<ACPI_HANDLE, AcpiDevice*> devices;
 	
-	//Construct root device
+	//Construct ACPI root device
 	ACPI_HANDLE root;
 	ACPI_STATUS status = AcpiGetHandle(NULL, ACPI_STRING(ACPI_NS_ROOT_PATH), &root);
 	Assert(ACPI_SUCCESS(status));
@@ -51,12 +53,12 @@ ACPI_STATUS AcpiDeviceTree::AddAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLeve
 	//TODO: proper pnp/driver manager?
 	if (device->GetHid() == "PNP0501")
 		device->SetDriver(new UartDriver(*device));
-	else if (device->GetHid() == "PNP0B00")
-		device->SetDriver(new RtcDriver(*device));
-	else if (device->GetHid() == "PNP0003")
-		device->SetDriver(new IoApicDriver(*device));
-	else if (device->GetHid() == "ACPI0007")
-		device->SetDriver(new ProcessorDriver(*device));
+	//else if (device->GetHid() == "PNP0B00")
+		//device->SetDriver(new RtcDriver(*device));
+	//else if (device->GetHid() == "PNP0003")
+		//device->SetDriver(new IoApicDriver(*device));
+	//else if (device->GetHid() == "ACPI0007")
+		//device->SetDriver(new ProcessorDriver(*device));
 
 	//Add new device to map
 	pDevices->insert({ Object, device });

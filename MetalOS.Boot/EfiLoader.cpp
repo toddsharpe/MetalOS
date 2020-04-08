@@ -67,12 +67,13 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64* pImageSizeOut, UINT64* 
 		}
 	}
 
+	bool relocate = pNtHeader->OptionalHeader.ImageBase != KernelBaseAddress;
 	//Update NTHeader to point to new virtual address
 	pNtHeader->OptionalHeader.ImageBase = KernelBaseAddress;
 
 	//Relocate image to KernelSpace. It gets allocated at KernelStart + ImageBase
 	IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-	Print(L"  Relocations: %u\r\n", relocationDirectory.Size);
+	Print(L"  Relocations: %u Relocate: %d\r\n", relocationDirectory.Size, relocate);
 	if (relocationDirectory.Size)
 	{
 		PIMAGE_BASE_RELOCATION pBaseRelocation = (PIMAGE_BASE_RELOCATION)(*pPhysicalImageBase + relocationDirectory.VirtualAddress);

@@ -12,6 +12,7 @@
 #define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
 #define KernelRuntimeAddress (KernelStart + 0x100000000000)//UEFI services needed to exist in runtime
 #define KernelACPIAddress (KernelStart + 0x200000000000)//ACPI Request area. ACPI requests pages to be mapped so use this chunk
+#define KernerDriverIOAddress (KernelStart + 0x300000000000)//Driver IO space
 
 #define PAGE_SHIFT  12
 #define PAGE_SIZE (1 << PAGE_SHIFT)

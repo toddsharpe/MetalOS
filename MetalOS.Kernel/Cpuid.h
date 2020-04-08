@@ -16,7 +16,7 @@ public:
 	bool HyperThreading() { return m_func1Edx[28]; }
 	bool Apic() { return m_func1Edx[9]; }
 	bool X2Apic() { return m_func1Ecx[21]; }
-	bool Hypervisor() { return m_func1Ecx[31]; }
+	bool IsHypervisor() { return m_func1Ecx[31]; }
 
 private:
 	typedef std::bitset<std::numeric_limits<uint32_t>::digits> bitset_32;

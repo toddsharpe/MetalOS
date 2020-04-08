@@ -188,3 +188,5 @@ typedef struct _KERNEL_PROCESS
 	VirtualAddressSpace* VirtualAddress;
 } KERNEL_PROCESS, * PKERNEL_PROCESS;
 
+typedef uintptr_t paddr_t;
+

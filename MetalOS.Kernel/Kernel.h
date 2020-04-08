@@ -72,6 +72,12 @@ public:
 	ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER* ExistingTable, ACPI_PHYSICAL_ADDRESS* NewAddress, UINT32* NewTableLength);
 #pragma endregion
 
+#pragma region Driver Interface
+	void* DriverMapIoSpace(paddr_t PhysicalAddress, size_t NumberOfBytes);
+
+#pragma endregion
+
+
 private:
 	void InitializeAcpi();
 

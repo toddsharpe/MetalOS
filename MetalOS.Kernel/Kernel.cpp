@@ -16,6 +16,8 @@ typedef EFI_GUID GUID;
 #include "LoadingScreen.h"
 #include "RtcDriver.h"
 #include "x64PIC.h"
+#include "ProcessorDriver.h"
+#include "HyperVTimer.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -134,14 +136,23 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_deviceTree.Display();
 
 	//Output from drivers
-	AcpiDevice* rtc;
-	Assert(m_deviceTree.GetDeviceByHid("PNP0B00", &rtc));
-	RtcDriver* rtcDriver = ((RtcDriver*)rtc->GetDriver());
-	rtcDriver->Display();
-	rtcDriver->Enable();
-	rtcDriver->Display();
+	//AcpiDevice* rtc;
+	//Assert(m_deviceTree.GetDeviceByHid("PNP0B00", &rtc));
+	//RtcDriver* rtcDriver = ((RtcDriver*)rtc->GetDriver());
+	//rtcDriver->Display();
+	//rtcDriver->Enable();
+	//rtcDriver->Display();
 
-	//Apic discovery?
+	//Apic
+	//AcpiDevice* proc;
+	//Assert(m_deviceTree.GetDeviceByHid("ACPI0007", &proc));
+	//ProcessorDriver* procDriver = ((ProcessorDriver*)proc->GetDriver());
+	//procDriver->Display();
+
+	HyperVTimer timer(0);
+	timer.SetPeriodic(1, 0x40);
+	timer.Display();
+	timer.Display();
 
 	//Done
 	Print("Kernel Initialized\n");
@@ -149,7 +160,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 {
-	m_textScreen->Printf("ISR: %d, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
+	m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
 	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
 	switch (vector)
 	{
@@ -162,8 +173,12 @@ void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 			m_textScreen->Printf("Null pointer dereference\n", __readcr2());
 	}
 
+	if (vector == 0x40)
+	{
+		__writemsr(0x40000070, 0);//HV_X64_MSR_EOI
+	}
+
 	//TODO: stack walk
-	__halt();
 }
 
 void Kernel::Bugcheck(const char* file, const char* line, const char* assert)

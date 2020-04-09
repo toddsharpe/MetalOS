@@ -5,7 +5,6 @@
 #include <map>
 #include <stack>
 #include "RtcDriver.h"
-#include "IoApicDriver.h"
 #include "ProcessorDriver.h"
 #include "Cpuid.h"
 #include "HyperV.h"

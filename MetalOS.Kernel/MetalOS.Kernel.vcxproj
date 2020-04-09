@@ -168,7 +168,6 @@
     <ClCompile Include="Driver.cpp" />
     <ClCompile Include="HyperV.cpp" />
     <ClCompile Include="HyperVTimer.cpp" />
-    <ClCompile Include="IoApicDriver.cpp" />
     <ClCompile Include="Kernel.cpp" />
     <ClCompile Include="KernelAcpi.cpp" />
     <ClCompile Include="KernelDriverInterface.cpp" />
@@ -193,7 +192,6 @@
     <ClCompile Include="PageFrameNumberDatabase.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="x64.cpp" />
-    <ClCompile Include="x64PIC.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Colors.h" />
@@ -204,7 +202,6 @@
     <ClInclude Include="Driver.h" />
     <ClInclude Include="HyperV.h" />
     <ClInclude Include="HyperVTimer.h" />
-    <ClInclude Include="IoApicDriver.h" />
     <ClInclude Include="Kernel.h" />
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />
@@ -228,7 +225,6 @@
     <ClInclude Include="PageFrameNumberDatabase.h" />
     <ClInclude Include="System.h" />
     <ClInclude Include="x64.h" />
-    <ClInclude Include="x64PIC.h" />
     <ClInclude Include="x64_interrupts.h" />
     <ClInclude Include="x64_support.h" />
   </ItemGroup>

@@ -18,15 +18,18 @@ extern "C"
 #include <map>
 #include "AcpiDeviceTree.h"
 #include "UartDriver.h"
+#include "HyperVTimer.h"
+
 
 class Kernel
 {
+
 public:
 	Kernel();
 	::NO_COPY_OR_ASSIGN(Kernel);
 	void Initialize(const PLOADER_PARAMS params);
 
-	void HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame);
+	void HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame);
 	void Bugcheck(const char* file, const char* line, const char* assert);
 
 	void Printf(const char* format, ...);
@@ -74,12 +77,14 @@ public:
 
 #pragma region Driver Interface
 	void* DriverMapIoSpace(paddr_t PhysicalAddress, size_t NumberOfBytes);
-
 #pragma endregion
 
-
 private:
+	typedef void (Kernel::*IrqHandler)(void* arg);
+
 	void InitializeAcpi();
+
+	void OnTimer0(void* arg);
 
 private:
 	//Save from LoaderParams
@@ -105,6 +110,11 @@ private:
 	//std::list<uint32_t> sleepQueue;
 
 	AcpiDeviceTree m_deviceTree;
+
+	//TODO: should be an interface
+	HyperVTimer* m_timer;
+
+	std::map<InterruptVector, IrqHandler>* m_interruptHandlers;
 
 	//Debug device
 	StringPrinter* m_printer;

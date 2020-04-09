@@ -96,12 +96,6 @@
     <ClCompile Include="RtcDriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="IoApicDriver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="x64PIC.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="msvc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -204,12 +198,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RtcDriver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IoApicDriver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="x64PIC.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="msvc.h">

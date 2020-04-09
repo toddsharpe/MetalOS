@@ -190,3 +190,40 @@ typedef struct _KERNEL_PROCESS
 
 typedef uintptr_t paddr_t;
 
+enum InterruptVector : uint8_t
+{
+	//Externel Interrupts
+	DivideError = 0,
+	DebugException = 1,
+	NMIInterrupt = 2,
+	Breakpoint = 3,
+	Overflow = 4,
+	BoundRangeExceeded = 5,
+	InvalidOpcode = 6,
+	DeviceNotAvailable = 7,
+	DoubleFault = 8,
+	CoprocessorSegmentOverrun = 9,
+	InvalidTSS = 10,
+	SegmentNotPresent = 11,
+	StackSegmentFault = 12,
+	GeneralProtectionFault = 13,
+	PageFault = 14,
+	Reserved = 15,
+	FPUMathFault = 16,
+	AlignmentCheck = 17,
+	MachineCheck = 18,
+	SIMDException = 19,
+	VirtualizationException = 20,
+	Last = 32,
+
+	//IRQs
+	Timer0 = 0x80,
+
+};
+
+enum InterruptSubsystemType
+{
+	Native, //Platform interrupts (intel x64, etc)
+	Irq
+};
+

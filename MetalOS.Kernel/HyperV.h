@@ -3,6 +3,7 @@
 #include "msvc.h"
 #include <string>
 #include <bitset>
+#include <intrin.h>
 
 class HyperV
 {
@@ -17,6 +18,11 @@ public:
 	}
 
 	bool DirectSyntheticTimers() { return m_featuresEdx[19]; }
+
+	static void EOI()
+	{
+		__writemsr(HV_X64_MSR_EOI, 0);
+	}
 
 private:
 	typedef std::bitset<std::numeric_limits<uint32_t>::digits> bitset_32;
@@ -52,6 +58,7 @@ private:
 	enum HV_REG
 	{
 		HV_X64_MSR_GUEST_OS_ID = 0x40000000,
+		HV_X64_MSR_EOI = 0x40000070,
 
 		//HyperV TLFS 11.8
 		SCONTROl = 0x40000080, //SynIC Control

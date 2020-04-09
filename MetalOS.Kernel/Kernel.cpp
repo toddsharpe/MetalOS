@@ -15,9 +15,9 @@ typedef EFI_GUID GUID;
 #include "RuntimeSupport.h"
 #include "LoadingScreen.h"
 #include "RtcDriver.h"
-#include "x64PIC.h"
 #include "ProcessorDriver.h"
 #include "HyperVTimer.h"
+#include "HyperV.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -112,6 +112,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Complete initialization
 	m_processes = new std::list<KERNEL_PROCESS>();
+	m_interruptHandlers = new std::map<InterruptVector, IrqHandler>();
 
 	//Initialized IO
 	this->InitializeAcpi();
@@ -149,17 +150,24 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//ProcessorDriver* procDriver = ((ProcessorDriver*)proc->GetDriver());
 	//procDriver->Display();
 
-	HyperVTimer timer(0);
-	timer.SetPeriodic(1, 0x40);
-	timer.Display();
-	timer.Display();
+	m_timer = new HyperVTimer(0);
+	m_timer->SetPeriodic(1, InterruptVector::Timer0);
+	m_interruptHandlers->insert({ InterruptVector::Timer0, &Kernel::OnTimer0 });
 
 	//Done
 	Print("Kernel Initialized\n");
 }
 
-void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
+void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
+	const auto& it = m_interruptHandlers->find(vector);
+	if (it != m_interruptHandlers->end())
+	{
+		IrqHandler h = it->second;
+		(this->*h)(pFrame);
+		return;
+	}
+	
 	m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
 	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
 	switch (vector)
@@ -171,11 +179,6 @@ void Kernel::HandleInterrupt(size_t vector, PINTERRUPT_FRAME pFrame)
 		m_textScreen->Printf("CR2: 0x%16x\n", __readcr2());
 		if (__readcr2() == 0)
 			m_textScreen->Printf("Null pointer dereference\n", __readcr2());
-	}
-
-	if (vector == 0x40)
-	{
-		__writemsr(0x40000070, 0);//HV_X64_MSR_EOI
 	}
 
 	//TODO: stack walk
@@ -272,4 +275,10 @@ void Kernel::InitializeAcpi()
 	}
 
 	Print("ACPI Finished\n");
+}
+
+void Kernel::OnTimer0(void* arg)
+{
+	m_textScreen->Printf("Timer!\n");
+	HyperV::EOI();
 }

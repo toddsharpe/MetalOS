@@ -4,13 +4,17 @@
 #include <string>
 #include <bitset>
 #include <intrin.h>
+#include "MetalOS.Kernel.h"
 
+//TODO: separate into hypervplatform and hypervinfo
+//platform is basically the hal
+//hypervinfo will be like cpuid, just a light weight way to check features
 class HyperV
 {
 public:
 	HyperV();
 
-	void ReportGuestID();
+	void Initialize();
 
 	bool IsPresent()
 	{
@@ -19,9 +23,17 @@ public:
 
 	bool DirectSyntheticTimers() { return m_featuresEdx[19]; }
 
+	bool AccessPartitionReferenceCounter() { return m_featuresEax[9]; }
+
 	static void EOI()
 	{
 		__writemsr(HV_X64_MSR_EOI, 0);
+	}
+
+	uint64_t ReadTsc();
+	uint64_t TscFreq()
+	{
+		return __readmsr(HV_X64_MSR_TSC_FREQUENCY);
 	}
 
 private:
@@ -58,7 +70,27 @@ private:
 	enum HV_REG
 	{
 		HV_X64_MSR_GUEST_OS_ID = 0x40000000,
+		HV_X64_MSR_HYPERCALL = 0x40000001,
+		HV_X64_MSR_VP_INDEX = 0x40000002,
+		HV_X64_MSR_RESET = 0x40000003,
+		HV_X64_MSR_VP_RUNTIME = 0x40000010,
+		HV_X64_MSR_TIME_REF_COUNT = 0x40000020,
+		HV_X64_MSR_REFERENCE_TSC = 0x40000021,
+		HV_X64_MSR_TSC_FREQUENCY = 0x40000022, //Frequency of TSC in Hz
+		HV_X64_MSR_APIC_FREQUENCY = 0x40000023,
+		HV_X64_MSR_NPIEP_CONFIG = 0x40000040,
 		HV_X64_MSR_EOI = 0x40000070,
+		HV_X64_MSR_ICR = 0x40000071,
+		HV_X64_MSR_TPR = 0x40000072,
+
+		HV_X64_MSR_STIMER0_CONFIG = 0x400000B0,
+		HV_X64_MSR_STIMER0_COUNT = 0x400000B1,
+		HV_X64_MSR_STIMER1_CONFIG = 0x400000B2,
+		HV_X64_MSR_STIMER1_COUNT = 0x400000B3,
+		HV_X64_MSR_STIMER2_CONFIG = 0x400000B4,
+		HX_X64_MSR_STIMER2_COUNT = 0x400000B5,
+		HV_X64_MSR_STIMER3_CONFIG = 0x400000B6,
+		HV_X64_MSR_STIMER3_COUNT = 0x400000B7,
 
 		//HyperV TLFS 11.8
 		SCONTROl = 0x40000080, //SynIC Control
@@ -83,6 +115,29 @@ private:
 		SINT14 = 0x4000009E, //Interrupt Source 14
 		SINT15 = 0x4000009F, //Interrupt Source 15
 	};
+
+	struct HV_REF_TSC_REG
+	{
+		union
+		{
+			struct
+			{
+				uint64_t Enable : 1;
+				uint64_t Reserved : 11;
+				uint64_t GPAPageNumber : 52;
+			};
+			uint64_t AsUint64;
+		};
+	};
+
+	typedef struct _HV_REFERENCE_TSC_PAGE
+	{
+		volatile uint32_t TscSequence;
+		uint32_t Reserved1;
+		volatile uint64_t TscScale;
+		volatile int64_t TscOffset;
+		uint64_t Reserved2[509];
+	} HV_REFERENCE_TSC_PAGE, * PHV_REFERENCE_TSC_PAGE;
 
 	struct HV_SCONTROL_REGISTER
 	{
@@ -362,6 +417,11 @@ private:
 	uint32_t m_highestLeaf;
 	std::string m_vendor;
 	bool m_isPresent;
+	bitset_32 m_featuresEax;//4.2.2 Partition Privilege Flags
+	bitset_32 m_featuresEbx;
 	bitset_32 m_featuresEdx;
+
+	//State
+	static KERNEL_PAGE_ALIGN HV_REFERENCE_TSC_PAGE TscPage;
 };
 

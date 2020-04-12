@@ -98,7 +98,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	__writecr3(ptRoot);
 
 	//Test UEFI runtime access
-	EFI_TIME time;
+	EFI_TIME time = { 0 };
 	m_runtime.GetTime(&time, nullptr);
 	Print("Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
@@ -113,6 +113,20 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Complete initialization
 	m_processes = new std::list<KERNEL_PROCESS>();
 	m_interruptHandlers = new std::map<InterruptVector, IrqHandler>();
+	m_threads = new std::list<KernelThread>();
+
+	//Initialize our boot thread
+	m_current = new KernelThread();
+	m_current->Id = ++m_lastId;
+	m_threads->push_back(*m_current);
+
+	//Initialize Hyperv
+	m_hyperV = new HyperV();
+	Assert(m_hyperV->IsPresent());
+	Assert(m_hyperV->DirectSyntheticTimers());
+	Assert(m_hyperV->AccessPartitionReferenceCounter());
+	m_hyperV->Initialize();
+	Print("0x%016x\n", m_hyperV->TscFreq());
 
 	//Initialized IO
 	this->InitializeAcpi();
@@ -279,6 +293,15 @@ void Kernel::InitializeAcpi()
 
 void Kernel::OnTimer0(void* arg)
 {
-	m_textScreen->Printf("Timer!\n");
+	m_textScreen->Printf("Timer! - 0x%016x\n", m_hyperV->ReadTsc());
 	HyperV::EOI();
+}
+
+void Kernel::CreateThread(ThreadStart start, void* context)
+{
+	KernelThread* thread = new KernelThread();
+	memset(thread, 0, sizeof(KernelThread));
+	thread->Id = ++m_lastId;
+
+	m_threads->push_back(*thread);
 }

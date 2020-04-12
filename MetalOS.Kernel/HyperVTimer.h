@@ -7,31 +7,19 @@ public:
 	HyperVTimer(uint32_t timer);
 	void SetPeriodic(double seconds, uint8_t vector);
 
-	void Display();
+	void Display() const;
 
 private:
 	static const uint32_t NumTimers = 4;
 	//Hypervisor TLFS 12.5
-	enum HV_REG
+	enum MSR_REGS
 	{
 		HV_X64_MSR_STIMER0_CONFIG = 0x400000B0,
 		HV_X64_MSR_STIMER0_COUNT = 0x400000B1,
-		HV_X64_MSR_STIMER1_CONFIG = 0x400000B2,
-		HV_X64_MSR_STIMER1_COUNT = 0x400000B3,
-		HV_X64_MSR_STIMER2_CONFIG = 0x400000B4,
-		HX_X64_MSR_STIMER2_COUNT = 0x400000B5,
-		HV_X64_MSR_STIMER3_CONFIG = 0x400000B6,
-		HV_X64_MSR_STIMER3_COUNT = 0x400000B7,
 	};
 	//Counts: time value measured in 100 nanosecond units
 	//One-shot: absolute expiration of time
 	//Periodic: period of timer
-
-	static uint64_t GetConfigRegister(uint32_t timer);
-	static void SetConfigRegister(uint32_t timer, uint64_t value);
-
-	static uint64_t GetCountRegister(uint32_t timer);
-	static void SetCountRegister(uint32_t timer, uint64_t value);
 
 	struct HV_STIMER_CONFIG_REG
 	{
@@ -49,11 +37,13 @@ private:
 				uint64_t Source : 4;
 				uint64_t Reserved1 : 44;
 			};
-			uint64_t Value;
+			uint64_t AsUint64;
 		};
 	};
 
 private:
 	uint32_t m_timerId;
+	uint32_t m_configRegister;
+	uint32_t m_countRegister;
 };
 

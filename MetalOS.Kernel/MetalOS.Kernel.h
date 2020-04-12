@@ -158,14 +158,43 @@ typedef struct _VAD_NODE
 
 class VirtualAddressSpace;
 
+typedef struct __declspec(align(16)) {
+	uint64_t Low;
+	uint64_t High;
+} M128A, * PM128A;
+
+//TODO:
+typedef struct __declspec(align(16))
+{
+	uint16_t ControlWord;
+	uint16_t StatusWord;
+	uint8_t TagWord;
+	uint8_t Reserved1;
+	uint16_t Opcode;
+} XSAVE_FORMAT, *PXSAVE_FORMAT;
+
 typedef struct _CONTEXT
 {
-	uint64_t RAX;
-	uint64_t RCX;
-	uint64_t RDX;
-	uint64_t RBX;
-	uint64_t RSI;
-	uint64_t RDI;
+	//Segment Registers and Flags
+	uint16_t SegCs;
+	uint16_t SegDs;
+	uint16_t SegEs;
+	uint16_t SegFs;
+	uint16_t SegGs;
+	uint16_t SegSs;
+	uint64_t RFlags;
+
+	//Debug registers TODO
+	
+	//Integer registers
+	uint64_t Rax;
+	uint64_t RcX;
+	uint64_t RdX;
+	uint64_t RbX;
+	uint64_t Rsp;
+	uint64_t Rbp;
+	uint64_t Rsi;
+	uint64_t Rdi;
 	uint64_t R8;
 	uint64_t R9;
 	uint64_t R10;
@@ -174,8 +203,60 @@ typedef struct _CONTEXT
 	uint64_t R13;
 	uint64_t R14;
 	uint64_t R15;
-	uint64_t RBP;
+
+	//Program counter
+	uint64_t Rip;
+
+	//Floating point state
+	//FXSAVE vs XSAVE?
+	union
+	{
+		XSAVE_FORMAT FltSave;
+		struct
+		{
+			M128A Header[2];
+			M128A Legacy[8];
+			M128A Xmm0;
+			M128A Xmm1;
+			M128A Xmm2;
+			M128A Xmm3;
+			M128A Xmm4;
+			M128A Xmm5;
+			M128A Xmm6;
+			M128A Xmm7;
+			M128A Xmm8;
+			M128A Xmm9;
+			M128A Xmm10;
+			M128A Xmm11;
+			M128A Xmm12;
+			M128A Xmm13;
+			M128A Xmm14;
+			M128A Xmm15;
+		};
+	};
+
+	//Vector registers
+	M128A VectorRegister[26];
+	uint64_t VectorControl;
+
+	//TODO: debug control registers
+
 } CONTEXT, *PCONTEXT;
+
+template <class T>
+class Node
+{
+	T Data;
+	Node* Next;
+	Node* Previous;
+};
+
+//Structure just for threads in the kernel
+struct KernelThread
+{
+	uint32_t Id;
+	INTERRUPT_FRAME Context;
+};
 
 //Handle could be smarter to have upper bits to specify type
 typedef struct _KERNEL_PROCESS
@@ -184,7 +265,9 @@ typedef struct _KERNEL_PROCESS
 	std::string Name;
 	time_t CreateTime;
 	time_t ExitTime;
-	CONTEXT Context;
+
+	//TODO: something holding CR3
+
 	VirtualAddressSpace* VirtualAddress;
 } KERNEL_PROCESS, * PKERNEL_PROCESS;
 

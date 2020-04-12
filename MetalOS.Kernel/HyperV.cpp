@@ -9,6 +9,8 @@
 #define ECX 2
 #define EDX 3
 
+HyperV::HV_REFERENCE_TSC_PAGE HyperV::TscPage = { 0 };
+
 HyperV::HyperV()
 {
 	//Verify we are in a hypervisor
@@ -31,17 +33,56 @@ HyperV::HyperV()
 
 	//Feature identification
 	__cpuid(registers, HV_CPUID::FEATURES);
+	m_featuresEax = registers[EAX];
+	m_featuresEbx = registers[EBX];
 	m_featuresEdx = registers[EDX];
 }
 
-void HyperV::ReportGuestID()
+void HyperV::Initialize()
 {
+	Assert(this->IsPresent());
+	Assert(this->DirectSyntheticTimers());
+	Assert(this->AccessPartitionReferenceCounter());
+	
 	GUEST_OS_ID_REG guestId = { 0 };
 	guestId.BuildNumber = 0x02;
 	guestId.Version = 0x01;
 	guestId.OSID = 0x1;
 	guestId.OSType = OSType::Linux;//Specify linux for now?
 	guestId.OpenSource = true;
-
 	__writemsr(HV_REG::HV_X64_MSR_GUEST_OS_ID, guestId.Value);
+
+	//Enable TSC
+	HV_REF_TSC_REG tscReg = { 0 };
+	tscReg.AsUint64 = __readmsr(HV_REG::HV_X64_MSR_REFERENCE_TSC);
+	tscReg.Enable = true;
+	tscReg.GPAPageNumber = kernel.VirtualToPhysical((uint64_t)&TscPage) >> PAGE_SHIFT;
+	__writemsr(HV_REG::HV_X64_MSR_REFERENCE_TSC, tscReg.AsUint64);
+
+	Print("0x%016x\n", ReadTsc());
+	Print("0x%016x\n", ReadTsc());
+}
+
+//HyperV TLFS 6.0 12.7.3.3
+uint64_t HyperV::ReadTsc()
+{
+	uint64_t Scale, Offset;
+	uint32_t StartSequence, EndSequence;
+	uint64_t Tsc;
+
+	do {
+		StartSequence = TscPage.TscSequence;
+		Assert(StartSequence);
+
+		Tsc = __rdtsc();
+		// Assigning Scale and Offset should neither happen before
+		// setting StartSequence, nor after setting EndSequence.
+		Scale = TscPage.TscScale;
+		Offset = TscPage.TscOffset;
+		EndSequence = TscPage.TscSequence;
+	} while (EndSequence != StartSequence);
+	// The result of the multiplication is treated as a 128-bit value.
+	int64_t highProduct = 0;
+	_mul128(Tsc, Scale, &highProduct);
+	return highProduct + Offset;
 }

@@ -114,6 +114,9 @@
     <ClCompile Include="HyperV.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="IoApicDriver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Display.h">
@@ -213,6 +216,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HyperV.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IoApicDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

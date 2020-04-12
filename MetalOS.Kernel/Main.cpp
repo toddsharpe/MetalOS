@@ -16,12 +16,12 @@
 #include "KernelHeap.h"
 #include "Bitvector.h"
 #include "PageFrameAllocator.h"
-
 extern "C"
 {
 #include <acpi.h>
-#include "x64_support.h"
 }
+#include "x64_support.h"
+
 
 //The one and only
 Kernel kernel;
@@ -74,7 +74,7 @@ void main(LOADER_PARAMS* loader)
 {
 	//Initialize platform
 	x64::Initialize();
-	
+
 	//Initialize kernel
 	kernel.Initialize(loader);
 

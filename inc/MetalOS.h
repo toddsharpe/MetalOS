@@ -75,3 +75,5 @@ extern "C"
 	Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
 	SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t& previousCount);
 }
+
+typedef uint32_t (*ThreadStart)(void* parameter);

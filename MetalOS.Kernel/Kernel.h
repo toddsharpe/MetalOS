@@ -19,7 +19,7 @@ extern "C"
 #include "AcpiDeviceTree.h"
 #include "UartDriver.h"
 #include "HyperVTimer.h"
-
+#include "HyperV.h"
 
 class Kernel
 {
@@ -34,6 +34,14 @@ public:
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
+
+	//This method only works because the loader ensures we are physically contiguous
+	uint64_t VirtualToPhysical(uint64_t virtualAddress)
+	{
+		//TODO: assert
+		uint64_t rva = virtualAddress - KernelBaseAddress;
+		return m_physicalAddress + rva;
+	}
 
 #pragma region ACPI
 	ACPI_STATUS AcpiOsInitialize();
@@ -79,6 +87,10 @@ public:
 	void* DriverMapIoSpace(paddr_t PhysicalAddress, size_t NumberOfBytes);
 #pragma endregion
 
+#pragma region Kernel Interface
+	void CreateThread(ThreadStart start, void* context);
+#pragma endregion
+
 private:
 	typedef void (Kernel::*IrqHandler)(void* arg);
 
@@ -104,6 +116,10 @@ private:
 	std::list<KERNEL_PROCESS>* m_processes;
 
 	Handle m_objectId;
+	uint32_t m_lastId;
+
+	KernelThread* m_current;
+	std::list<KernelThread>* m_threads;
 
 	//Queues
 	//std::queue<uint32_t> readyQueue;
@@ -118,5 +134,7 @@ private:
 
 	//Debug device
 	StringPrinter* m_printer;
+
+	HyperV* m_hyperV;
 };
 

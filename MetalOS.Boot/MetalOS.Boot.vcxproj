@@ -189,6 +189,7 @@
     <ClCompile Include="EfiMain.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="System.cpp" />
+    <ClCompile Include="Uart.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MetalOS.Boot.h" />
@@ -197,6 +198,7 @@
     <ClInclude Include="EfiMain.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="System.h" />
+    <ClInclude Include="Uart.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">

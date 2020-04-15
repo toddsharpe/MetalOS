@@ -20,6 +20,9 @@ extern "C"
 #include "UartDriver.h"
 #include "HyperVTimer.h"
 #include "HyperV.h"
+#include "PhysicalMemoryManager.h"
+#include "VirtualAddressSpace.h"
+#include "VirtualMemoryManager.h"
 
 class Kernel
 {
@@ -42,6 +45,9 @@ public:
 		uint64_t rva = virtualAddress - KernelBaseAddress;
 		return m_physicalAddress + rva;
 	}
+
+	uintptr_t m_pfnDbAddress;
+	size_t m_pfnDbSize;
 
 #pragma region ACPI
 	ACPI_STATUS AcpiOsInitialize();
@@ -88,7 +94,10 @@ public:
 #pragma endregion
 
 #pragma region Kernel Interface
+	void* MapPage(paddr_t physicalAddress);
+	void* UnmapPage(paddr_t physicalAddress);
 	void CreateThread(ThreadStart start, void* context);
+	void Sleep(uint64_t sleep); //Should this be an interrupt? figure out how to get context
 #pragma endregion
 
 private:
@@ -100,7 +109,7 @@ private:
 
 private:
 	//Save from LoaderParams
-	uintptr_t m_physicalAddress;
+	paddr_t m_physicalAddress;
 	size_t m_imageSize;
 	EFI_RUNTIME_SERVICES m_runtime;
 
@@ -108,6 +117,9 @@ private:
 	MemoryMap* m_pMemoryMap;
 	ConfigTables* m_pConfigTables;
 	PageTables* m_pageTables;
+	PhysicalMemoryManager* m_pfnDb;
+	VirtualMemoryManager* m_virtualMemory;
+	VirtualAddressSpace* m_addressSpace;
 
 	Display* m_pDisplay;
 	TextScreen* m_textScreen;
@@ -136,5 +148,7 @@ private:
 	StringPrinter* m_printer;
 
 	HyperV* m_hyperV;
+
+
 };
 

@@ -6,15 +6,15 @@ class LoadingScreen
 {
 public:
 	LoadingScreen(Display& display);
-
-	void Draw();
+	void Initialize();
 
 private:
+	static uint32_t ThreadLoop(void* arg);
 	//DOOM Fire implmentation
 	//http://fabiensanglard.net/doom_fire_psx/
 	//JS implementation uses a index 'firePixels' which is as big as the whole screen
 	//To save room, stuff the index into the reserved field in the color
-	void Initialize();
+	void Draw();
 	void DoFire();
 	void SpreadFire(Point2D point);
 

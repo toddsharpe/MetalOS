@@ -189,9 +189,9 @@
     <ClCompile Include="TextScreen.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MemoryMap.cpp" />
-    <ClCompile Include="PageFrameAllocator.cpp" />
-    <ClCompile Include="PageFrameNumberDatabase.cpp" />
+    <ClCompile Include="PhysicalMemoryManager.cpp" />
     <ClCompile Include="System.cpp" />
+    <ClCompile Include="VirtualMemoryManager.cpp" />
     <ClCompile Include="x64.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -223,9 +223,9 @@
     <ClInclude Include="TextScreen.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="MemoryMap.h" />
-    <ClInclude Include="PageFrameAllocator.h" />
-    <ClInclude Include="PageFrameNumberDatabase.h" />
+    <ClInclude Include="PhysicalMemoryManager.h" />
     <ClInclude Include="System.h" />
+    <ClInclude Include="VirtualMemoryManager.h" />
     <ClInclude Include="x64.h" />
     <ClInclude Include="x64_interrupts.h" />
     <ClInclude Include="x64_support.h" />

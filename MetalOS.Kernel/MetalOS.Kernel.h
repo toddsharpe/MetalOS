@@ -6,6 +6,7 @@
 #include "msvc.h"
 #include <string>
 #include <list>
+#include <vector>
 
 #define NO_COPY_OR_ASSIGN(X) X(const X&) = delete; X& operator = (const X&) = delete;
 #define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
@@ -76,7 +77,7 @@ typedef struct
 #define DEF_ISR_HANDLER(x) void ISR_HANDLER(x) ## ()
 
 #define KERNEL_STACK_SIZE (1 << 20)
-#define KERNEL_HEAP_SIZE (1 << 20)
+#define KERNEL_HEAP_SIZE (1 << 20)//32MB heap
 
 #define IDT_COUNT 256
 #define IST_STACK_SIZE (1 << 12)
@@ -132,8 +133,15 @@ struct MemoryProtection
 	uint8_t Read : 1;
 	uint8_t Write : 1;
 	uint8_t Execute : 1;
-	uint8_t CopyOnWrite : 1;
-	uint8_t Guard : 1;
+	//uint8_t CopyOnWrite : 1;
+	//uint8_t Guard : 1;
+
+	MemoryProtection(bool read = false, bool write = false, bool execute = false)
+	{
+		Read = read;
+		Write = write;
+		Execute = execute;
+	}
 
 	static const uint8_t NoAccess = 0;
 };
@@ -258,6 +266,8 @@ struct KernelThread
 	INTERRUPT_FRAME Context;
 };
 
+#define KERNEL_THREAD_STACK_SIZE 2
+
 //Handle could be smarter to have upper bits to specify type
 typedef struct _KERNEL_PROCESS
 {
@@ -267,6 +277,7 @@ typedef struct _KERNEL_PROCESS
 	time_t ExitTime;
 
 	//TODO: something holding CR3
+	uint64_t CR3;
 
 	VirtualAddressSpace* VirtualAddress;
 } KERNEL_PROCESS, * PKERNEL_PROCESS;

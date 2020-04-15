@@ -53,8 +53,6 @@ LoadingScreen::LoadingScreen(Display& display) :
 
 void LoadingScreen::Draw()
 {
-	this->Initialize();
-
 	//Run it a bunch of times
 	for (size_t i = 0; i < 32; i++)
 		DoFire();
@@ -62,12 +60,27 @@ void LoadingScreen::Draw()
 
 void LoadingScreen::Initialize()
 {
+	Print("LoadingScreen::Initialize\n");
 	//Set screen to black
-	m_display.ColorScreen(FireColors[36]);
+	//TODO: uncomment after its proven
+	//m_display.ColorScreen(FireColors[36]);
 
-	//Set bottom line to last color
-	for (uint32_t x = 0; x < m_display.GetWidth(); x++)
-		m_display.SetPixel(FireColors[36], { x, m_display.GetHeight() - 1 });
+	////Set bottom line to last color
+	//for (uint32_t x = 0; x < m_display.GetWidth(); x++)
+	//	m_display.SetPixel(FireColors[36], { x, m_display.GetHeight() - 1 });
+
+	//Create thread
+	kernel.CreateThread(LoadingScreen::ThreadLoop, this);
+}
+
+uint32_t LoadingScreen::ThreadLoop(void* arg)
+{
+	LoadingScreen* screen = (LoadingScreen*)arg;
+	while (true)
+	{
+		screen->DoFire();
+		kernel.Sleep(0LL);//TODO:
+	}
 }
 
 void LoadingScreen::DoFire()
@@ -91,6 +104,5 @@ void LoadingScreen::SpreadFire(Point2D point)
 		//m_display.SetPixel(FireColors[0], { point.X, point.Y-- });
 		m_display.SetPixel(FireColors[index - 1], { point.X, point.Y-- });
 		//Print("SpreadFire 0x%x, 0x%x. Index: 0x%d NewIndex: 0x%d\n", point.X, point.Y, index, index-1);
-
 	}
 }

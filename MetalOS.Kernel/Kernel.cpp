@@ -78,6 +78,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_pageTables->MapKernelPages(KernelBaseAddress, params->KernelAddress, EFI_SIZE_TO_PAGES(params->KernelImageSize));
 	m_pageTables->MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 	m_pageTables->MapKernelPages(KernelGraphicsDeviceAddress, params->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(params->Display.FrameBufferSize));
+	m_pageTables->MapKernelPages(KernelPfnDbStart, params->PfnDbAddress, EFI_SIZE_TO_PAGES(params->PfnDbSize));
 
 	//Map in runtime addresses
 	EFI_MEMORY_DESCRIPTOR* current;
@@ -95,6 +96,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Identity mappings are not possible now, lost access to params
 	//Alternatively - remove physical identity mappings from bootloader PT since entry in pt root can be cleared and subsequent pages are going to be eaten (since they are in boot memory)
 	//This requires copying at least the root
+	m_pfnDbSize = params->PfnDbSize;
+	m_pfnDbAddress = params->PfnDbAddress;
 	__writecr3(ptRoot);
 
 	//Test UEFI runtime access
@@ -110,10 +113,15 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	Print("  PhysicalAddressSize: 0x%16x\n", m_pMemoryMap->GetPhysicalAddressSize());
 	//Print("  PageTablesPool.AllocatedPageCount: 0x%8x", m_pPagePool->AllocatedPageCount());
 
+	//Initialize PFN database
+	m_pfnDb = new PhysicalMemoryManager(*m_pMemoryMap);
+
 	//Complete initialization
 	m_processes = new std::list<KERNEL_PROCESS>();
 	m_interruptHandlers = new std::map<InterruptVector, IrqHandler>();
 	m_threads = new std::list<KernelThread>();
+	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb, *m_pPagePool);
+	m_addressSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
 
 	//Initialize our boot thread
 	m_current = new KernelThread();
@@ -141,8 +149,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	Print("COM1 initialized\n");
 	
 	//Show loading screen
-	//LoadingScreen loadingScreen(*m_pDisplay);
-	//loadingScreen.Draw();
+	LoadingScreen loadingScreen(*m_pDisplay);
+	loadingScreen.Initialize();
 	//__halt();
 
 	//Output full current state
@@ -165,7 +173,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//procDriver->Display();
 
 	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(1, InterruptVector::Timer0);
+	//m_timer->SetPeriodic(1, InterruptVector::Timer0);
 	m_interruptHandlers->insert({ InterruptVector::Timer0, &Kernel::OnTimer0 });
 
 	//Done
@@ -174,6 +182,9 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
+	//if (vector == InterruptVector::DoubleFault)
+		//__halt();
+
 	const auto& it = m_interruptHandlers->find(vector);
 	if (it != m_interruptHandlers->end())
 	{
@@ -299,9 +310,20 @@ void Kernel::OnTimer0(void* arg)
 
 void Kernel::CreateThread(ThreadStart start, void* context)
 {
+	Print("Kernel::CreateThread\n");
 	KernelThread* thread = new KernelThread();
 	memset(thread, 0, sizeof(KernelThread));
 	thread->Id = ++m_lastId;
 
 	m_threads->push_back(*thread);
+
+	//Create thread stack
+	void* stack = m_virtualMemory->Allocate(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection(true, true, false), *m_addressSpace);
+	Print("Stacl: 0x%016x\n", stack);
+
+}
+
+void Kernel::Sleep(uint64_t sleep)
+{
+
 }

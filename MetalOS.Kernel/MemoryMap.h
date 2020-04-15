@@ -2,6 +2,7 @@
 
 #define GNU_EFI_SETJMP_H
 #include <efi.h>
+#include <cstdint>
 
 // https://dox.ipxe.org/UefiMultiPhase_8h.html
 const char mem_types[16][27] = {
@@ -24,6 +25,7 @@ const char mem_types[16][27] = {
 };
 
 #define PrevMemoryDescriptor(Ptr,Size)  ((EFI_MEMORY_DESCRIPTOR *) (((UINT8 *) Ptr) - Size))
+#define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
 class MemoryMap
 {
 public:
@@ -45,6 +47,19 @@ public:
 	bool IsConventional(UINTN address);
 
 	UINTN GetVirtualAddress(EFI_PHYSICAL_ADDRESS address) const;
+
+	//Iterator interface
+	//m_memoryMapDescriptorSize != sizeof(EFI_MEMORY_DESCRIPTOR)
+	size_t Length()
+	{
+		return m_memoryMapSize / m_memoryMapDescriptorSize;
+	}
+
+	EFI_MEMORY_DESCRIPTOR* Get(size_t index)
+	{
+		//Assert(index < Length());
+		return MakePtr(EFI_MEMORY_DESCRIPTOR*, m_memoryMap, index * m_memoryMapDescriptorSize);
+	}
 
 private:
 	EFI_MEMORY_DESCRIPTOR* ResolveAddress(EFI_PHYSICAL_ADDRESS address);

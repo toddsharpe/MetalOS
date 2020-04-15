@@ -15,7 +15,6 @@
 #include "x64.h"
 #include "KernelHeap.h"
 #include "Bitvector.h"
-#include "PageFrameAllocator.h"
 extern "C"
 {
 #include <acpi.h>
@@ -54,6 +53,12 @@ void* operator new(size_t n)
 	uintptr_t p = heap.Allocate(n);
 	return (void*)p;
 }
+
+//void* operator new[](size_t n)
+//{
+//	uintptr_t p = heap.Allocate(n);
+//	return (void*)p;
+//}
 
 void operator delete(void* p)
 {

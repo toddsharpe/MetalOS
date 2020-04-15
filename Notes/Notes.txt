@@ -1,4 +1,12 @@
-﻿Bootloader using C#:
+﻿Goals:
+* Ring 1/3
+* Proper 64bit kernel space without identity mapping
+
+Non-Goals:
+* Run off Hyper-V Gen2
+
+
+Bootloader using C#:
 https://github.com/MichalStrehovsky/zerosharp/blob/master/efi-no-runtime/zerosharp.cs
 
 Alternate Headers:
@@ -295,8 +303,22 @@ https://wiki.osdev.org/I/O_Ports
 Port scanned Hyper-V from 0-2048. Non-mapped io ports return 0xFF
 0x70-0x77 - RTC/CMOS interface
 0xB2-0xB3 - SMI interface
-0x2f8-0x2ff - com1
-0x3f8-0x3ff - com2
+0x2f8-0x2ff - com2
+0x3f8-0x3ff - com1
 0x400-0x43f - unknown
 
 PIC at 0x20/0xA0 not found, no pic in gen2 hyperv
+
+Recursive mapping vs identity mapping address space
+https://github.com/phil-opp/blog_os/issues/545
+what to do about kernel being mapped at random physical address?
+
+Memory Manager:
+
+user:
+* allocate page
+  -get region in address space
+  -get physical page
+  -map region in page tables
+  -mark region as allocated
+

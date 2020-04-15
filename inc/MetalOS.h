@@ -67,13 +67,16 @@ typedef uintptr_t Handle;
 
 extern "C"
 {
-	//Prototypes
+	//Info
 	SYSTEMCALL GetSystemInfo(SystemInfo* info);
 	SYSTEMCALL GetProcessInfo(ProcessInfo* info);
 
 	//Semaphores
 	Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
 	SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t& previousCount);
+
+	//Virtual
+	//SYSTEMCALL void* VirtualAlloc(void* address);
 }
 
 typedef uint32_t (*ThreadStart)(void* parameter);

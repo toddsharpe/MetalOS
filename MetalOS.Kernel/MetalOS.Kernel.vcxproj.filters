@@ -36,13 +36,7 @@
     <ClCompile Include="KernelHeap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PageFrameAllocator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Bitvector.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PageFrameNumberDatabase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="VirtualAddressSpace.cpp">
@@ -117,6 +111,12 @@
     <ClCompile Include="IoApicDriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PhysicalMemoryManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VirtualMemoryManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Display.h">
@@ -146,13 +146,7 @@
     <ClInclude Include="KernelHeap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PageFrameAllocator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Bitvector.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PageFrameNumberDatabase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="VirtualAddressSpace.h">
@@ -219,6 +213,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="IoApicDriver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicalMemoryManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VirtualMemoryManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

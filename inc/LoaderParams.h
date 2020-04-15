@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 //PixelsPerScanLine could be larger than HorizonalResolution if theres padding
 typedef struct
 {
@@ -9,6 +11,43 @@ typedef struct
 	UINT32 VerticalResolution;
 	UINT32 PixelsPerScanLine;
 } EFI_GRAPHICS_DEVICE, * PEFI_GRAPHICS_DEVICE;
+
+//Windows Internals, Part 2, Page 297
+typedef enum : uint8_t
+{
+	Zeroed,
+	Free,
+	//Standby,
+	//Modified,
+	//ModifiedNoWrite,
+	//Bad,
+	Active,
+	//Transition,
+	Platform //Used for acpi/runtime/reserved pages
+} PhysicalPageState;
+
+//Windows Internals, Part 2, Page 316
+typedef struct _PFN_ENTRY
+{
+	//Pointers when placing frames on the lists
+	_PFN_ENTRY* Prev;
+	_PFN_ENTRY* Next;
+
+	//uintptr_t PTEAddress;
+	//uint8_t ShareCount;
+	PhysicalPageState State;
+
+	struct
+	{
+		uint8_t WriteInProgress : 1;
+		uint8_t Modified : 1;
+		uint8_t ReadInProgress : 1;
+	} Flags;
+	uint8_t Priority;//Unused
+
+	uintptr_t PteFrame;
+
+} PFN_ENTRY, * PPFN_ENTRY;
 
 //No point in supporting multiple monitors since this is built for hyper-v
 typedef struct
@@ -29,6 +68,10 @@ typedef struct
 	//Page Tables
 	EFI_PHYSICAL_ADDRESS PageTablesPoolAddress;
 	UINT32 PageTablesPoolPageCount;
+
+	//PhysicaMemoryManager
+	EFI_PHYSICAL_ADDRESS PfnDbAddress;
+	size_t PfnDbSize;
 
 	EFI_GRAPHICS_DEVICE Display;
 

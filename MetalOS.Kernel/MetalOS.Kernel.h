@@ -259,11 +259,24 @@ class Node
 	Node* Previous;
 };
 
+typedef enum
+{
+	Ready,
+	Running,
+	Waiting,
+	Terminated,
+	Initialized
+} ThreadState;
+
 //Structure just for threads in the kernel
 struct KernelThread
 {
 	uint32_t Id;
-	INTERRUPT_FRAME Context;
+	ThreadState State;
+	ThreadStart Start;
+	void* Arg;
+	//TODO: x64_CONTEXT_SIZE is const, pipe constant from masm to c
+	void* Context;//Pointer to x64 CONTEXT structure (masm)
 };
 
 #define KERNEL_THREAD_STACK_SIZE 2

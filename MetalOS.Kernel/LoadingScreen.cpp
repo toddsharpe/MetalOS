@@ -78,8 +78,10 @@ uint32_t LoadingScreen::ThreadLoop(void* arg)
 	LoadingScreen* screen = (LoadingScreen*)arg;
 	while (true)
 	{
-		screen->DoFire();
-		kernel.Sleep(0LL);//TODO:
+		//screen->DoFire();
+		Print("ThreadLoop\n");
+		//kernel.Sleep(0LL);//TODO:
+		__halt();
 	}
 }
 

@@ -4,8 +4,15 @@
 	uint64_t __stdcall x64_Read ## name ## (); \
 	void __stdcall x64_Write ## name ## (uint64_t value);
 
+//extern const uint64_t x64_CONTEXT_SIZE;
 extern "C"
 {
+	//Context
+	extern uint64_t x64_CONTEXT_SIZE;
+	int x64_save_context(void* context);
+	int x64_load_context(void* context);
+	void x64_init_context(void* context, void* stack, void* entry);
+	
 	//Omitted from intrinsics
 	void __stdcall x64_ltr(uint16_t entry);
 	uint64_t __stdcall x64_rflags();

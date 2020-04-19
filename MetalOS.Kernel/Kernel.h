@@ -23,6 +23,7 @@ extern "C"
 #include "PhysicalMemoryManager.h"
 #include "VirtualAddressSpace.h"
 #include "VirtualMemoryManager.h"
+#include <queue>
 
 class Kernel
 {
@@ -96,8 +97,13 @@ public:
 #pragma region Kernel Interface
 	void* MapPage(paddr_t physicalAddress);
 	void* UnmapPage(paddr_t physicalAddress);
-	void CreateThread(ThreadStart start, void* context);
+	void CreateThread(ThreadStart start, void* arg);
+	static void ThreadInitThunk();
 	void Sleep(uint64_t sleep); //Should this be an interrupt? figure out how to get context
+#pragma endregion
+
+#pragma region Debug
+	void DisplayThreadContext(KernelThread* thread);
 #pragma endregion
 
 private:
@@ -131,10 +137,10 @@ private:
 	uint32_t m_lastId;
 
 	KernelThread* m_current;
-	std::list<KernelThread>* m_threads;
+	std::map<uint32_t, KernelThread*>* m_threads;
 
 	//Queues
-	//std::queue<uint32_t> readyQueue;
+	std::queue<uint32_t>* m_readyQueue;
 	//std::list<uint32_t> sleepQueue;
 
 	AcpiDeviceTree m_deviceTree;

@@ -1,5 +1,85 @@
 .code
 
+; https://docs.microsoft.com/en-us/cpp/build/x64-software-conventions?view=vs-2019
+CONTEXT struct
+	_r12 qword ?
+	_r13 qword ?
+	_r14 qword ?
+	_r15 qword ?
+	_rdi qword ?
+	_rsi qword ?
+	_rbx qword ?
+	_rbp qword ?
+	_rsp qword ?
+	_rip qword ?
+	_rflags qword ?
+CONTEXT ends
+
+.data
+
+public x64_CONTEXT_SIZE
+x64_CONTEXT_SIZE QWORD SIZEOF CONTEXT
+
+.code
+
+; Context save and restore
+; void* context
+x64_save_context proc
+	mov [rcx + CONTEXT._r12], r12
+	mov [rcx + CONTEXT._r13], r13
+	mov [rcx + CONTEXT._r14], r14
+	mov [rcx + CONTEXT._r15], r15
+	mov [rcx + CONTEXT._rdi], rdi
+	mov [rcx + CONTEXT._rsi], rsi
+	mov [rcx + CONTEXT._rbx], rbx
+	mov [rcx + CONTEXT._rbp], rbp
+	;RFLAGS
+	pushfq
+	pop rax
+	mov [rcx + CONTEXT._rflags], rax
+	;Return Address
+	pop rdx
+	mov [rcx + CONTEXT._rip], rdx
+	mov [rcx + CONTEXT._rsp], rsp
+	;Return 0 from function
+	xor rax, rax
+	jmp rdx
+x64_save_context endp
+
+x64_load_context proc
+	mov r12, [rcx + CONTEXT._r12]
+	mov r13, [rcx + CONTEXT._r13]
+	mov r14, [rcx + CONTEXT._r14]
+	mov r15, [rcx + CONTEXT._r15]
+	mov rdi, [rcx + CONTEXT._rdi]
+	mov rsi, [rcx + CONTEXT._rsi]
+	mov rbx, [rcx + CONTEXT._rbx]
+	mov rbp, [rcx + CONTEXT._rbp]
+	mov rsp, [rcx + CONTEXT._rsp]
+	; Return 1 from function
+	mov rax, 1
+	;Restore flags right befor jump
+	mov r8, [rcx + CONTEXT._rflags]
+	mov r9, [rcx + CONTEXT._rip]
+	push r8
+	popfq
+	jmp r9
+x64_load_context endp
+
+; void* context, void* stack, void* entry
+; RCX RDX R8
+x64_init_context proc
+	;Setup stack and entry
+	mov [rcx + CONTEXT._rsp], rdx
+	mov [rcx + CONTEXT._rip], r8
+	;Setup flags with interrupts enabled (so its ready to go upon restore)
+	pushfq
+	pop rax
+	or rax, 200h
+	mov [rcx + CONTEXT._rflags], rax
+	ret
+x64_init_context endp
+
 x64_ltr proc
 	ltr cx
 	ret

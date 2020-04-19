@@ -16,7 +16,7 @@ class UartDriver : public Driver, public StringPrinter
 public:
 	UartDriver(AcpiDevice& device);
 
-	void Write(const char* buffer, size_t length);
+	void Write(const char* buffer, size_t length) override;
 	void Write(const char* string);
 
 private:

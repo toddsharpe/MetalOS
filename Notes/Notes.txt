@@ -92,6 +92,9 @@ https://www.exploit-db.com/papers/13177
 Push: dec, then write
 Pop: read, then inc
 
+Call: Push RIP (incremented passed call instruction), branch to destination
+ret: Pop stack into RIP
+
 MASM:
 http://www.phatcode.net/res/223/files/html/Chapter_8/CH08-7.html
 https://www.csie.ntu.edu.tw/~acpang/course/asm_2004/slides/chapt_10_PartIIbw.pdf

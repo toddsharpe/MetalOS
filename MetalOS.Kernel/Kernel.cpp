@@ -59,6 +59,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_textScreen = new TextScreen(*m_pDisplay);
 	m_printer = m_textScreen;
 
+	Print("Flags: 0x%016x\n", x64_rflags());
+
 	//Initialize memory map
 	m_pMemoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
 	m_pMemoryMap->ReclaimBootPages();
@@ -119,14 +121,17 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Complete initialization
 	m_processes = new std::list<KERNEL_PROCESS>();
 	m_interruptHandlers = new std::map<InterruptVector, IrqHandler>();
-	m_threads = new std::list<KernelThread>();
+	m_threads = new std::map<uint32_t, KernelThread*>();
 	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb, *m_pPagePool);
 	m_addressSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
+	m_readyQueue = new std::queue<uint32_t>();
 
 	//Initialize our boot thread
 	m_current = new KernelThread();
 	m_current->Id = ++m_lastId;
-	m_threads->push_back(*m_current);
+	m_current->State == ThreadState::Running;
+	m_current->Context = new uint8_t[x64_CONTEXT_SIZE];
+	m_threads->insert({ m_current->Id, m_current });
 
 	//Initialize Hyperv
 	m_hyperV = new HyperV();
@@ -137,7 +142,9 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	Print("0x%016x\n", m_hyperV->TscFreq());
 
 	//Initialized IO
+	Print("Flags: 0x%016x\n", x64_rflags());
 	this->InitializeAcpi();
+	Print("Flags: 0x%016x\n", x64_rflags());
 
 	//Devices
 	m_deviceTree.Populate();
@@ -172,19 +179,21 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//ProcessorDriver* procDriver = ((ProcessorDriver*)proc->GetDriver());
 	//procDriver->Display();
 
-	m_timer = new HyperVTimer(0);
-	//m_timer->SetPeriodic(1, InterruptVector::Timer0);
 	m_interruptHandlers->insert({ InterruptVector::Timer0, &Kernel::OnTimer0 });
+	m_timer = new HyperVTimer(0);
+	m_timer->SetPeriodic(10, InterruptVector::Timer0);
 
 	//Done
 	Print("Kernel Initialized\n");
+	Print("Flags: 0x%016x\n", x64_rflags());
 }
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
-	//if (vector == InterruptVector::DoubleFault)
-		//__halt();
+	if (vector == InterruptVector::DoubleFault)
+		__halt();
 
+	Print("HandleInterrupt Flags: 0x%016x\n", x64_rflags());
 	const auto& it = m_interruptHandlers->find(vector);
 	if (it != m_interruptHandlers->end())
 	{
@@ -305,22 +314,105 @@ void Kernel::InitializeAcpi()
 void Kernel::OnTimer0(void* arg)
 {
 	m_textScreen->Printf("Timer! - 0x%016x\n", m_hyperV->ReadTsc());
+	m_textScreen->Printf("Threads %d\n", m_threads->size());
+
+	cpu_flags_t flags = x64_disable_interrupts();
 	HyperV::EOI();
+
+	//Save current context
+	if (x64_save_context(m_current->Context) == 0)
+	{
+		DisplayThreadContext(m_current);
+
+		//Queue current thread
+		m_current->State = ThreadState::Ready;
+		m_readyQueue->push(m_current->Id);
+
+		//Get next thread
+		uint32_t nextId = m_readyQueue->front();
+		m_readyQueue->pop();
+		const auto& it = m_threads->find(nextId);
+		Assert(it != m_threads->end());
+		KernelThread* next = it->second;
+		Assert(next);
+
+		Print("Current: 0x%x Next: 0x%x\n", m_current->Id, next->Id);
+
+		//Switch to thread
+		DisplayThreadContext(next);
+		m_current = next;
+		x64_load_context(next->Context);
+	}
+
+	x64_restore_flags(flags);
 }
 
-void Kernel::CreateThread(ThreadStart start, void* context)
+//Push context
+
+
+//Kernel threads are setup as if an interrupt occured (so our interrupt handler can switch between them)
+void Kernel::CreateThread(ThreadStart start, void* arg)
 {
 	Print("Kernel::CreateThread\n");
+
 	KernelThread* thread = new KernelThread();
 	memset(thread, 0, sizeof(KernelThread));
 	thread->Id = ++m_lastId;
+	thread->State == ThreadState::Ready;
+	thread->Start = start;
+	thread->Arg = arg;
+	m_threads->insert({ thread->Id, thread });
+	m_readyQueue->push(thread->Id);
 
-	m_threads->push_back(*thread);
+	//Create thread stack, point to bottom (stack grows shallow)
+	uintptr_t stack = (uintptr_t)m_virtualMemory->Allocate(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection(true, true, false), *m_addressSpace);
+	stack += (KERNEL_THREAD_STACK_SIZE << PAGE_SHIFT);//Since pop reads first, subtract stack width to be on valid address
 
-	//Create thread stack
-	void* stack = m_virtualMemory->Allocate(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection(true, true, false), *m_addressSpace);
-	Print("Stacl: 0x%016x\n", stack);
+	//Subtract paramater area
+	stack -= 32;
 
+	//Allocate space for context
+	thread->Context = new uint8_t[x64_CONTEXT_SIZE];
+	x64_init_context(thread->Context, (void*)stack, &Kernel::ThreadInitThunk);
+
+	//Display context
+	DisplayThreadContext(thread);
+}
+
+//TODO: somehow export struct from asm
+struct x64_context
+{
+	uint64_t R12;
+	uint64_t R13;
+	uint64_t R14;
+	uint64_t R15;
+	uint64_t Rdi;
+	uint64_t Rsi;
+	uint64_t Rbx;
+	uint64_t Rbp;
+	uint64_t Rsp;
+	uint64_t Rip;
+	uint64_t Rflags;
+};
+
+void Kernel::DisplayThreadContext(KernelThread* thread)
+{
+	x64_context* context = (x64_context*)thread->Context;
+	Printf("Rbp: 0x%016x Rsp: 0x%016x Rip: 0x%016x RFlags:0x%08x\n",
+		context->Rbp, context->Rsp, context->Rip, (uint32_t)context->Rflags);
+}
+
+void Kernel::ThreadInitThunk()
+{
+	Print("Kernel::ThreadInitThunk\n");
+	KernelThread* current = kernel.m_current;
+	Print("Start: 0x%016x, Arg: 0x%016x\n", current->Start, current->Arg);
+	
+	//Run thread
+	current->Start(current->Arg);
+
+	//Exit thread TODO
+	__halt();
 }
 
 void Kernel::Sleep(uint64_t sleep)

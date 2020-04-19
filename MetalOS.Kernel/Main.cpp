@@ -54,12 +54,6 @@ void* operator new(size_t n)
 	return (void*)p;
 }
 
-//void* operator new[](size_t n)
-//{
-//	uintptr_t p = heap.Allocate(n);
-//	return (void*)p;
-//}
-
 void operator delete(void* p)
 {
 	heap.Deallocate((UINT64)p);

@@ -83,15 +83,17 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_pageTables->MapKernelPages(KernelPfnDbStart, params->PfnDbAddress, EFI_SIZE_TO_PAGES(params->PfnDbSize));
 
 	//Map in runtime addresses
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = params->MemoryMap;
-		current < NextMemoryDescriptor(params->MemoryMap, params->MemoryMapSize);
-		current = NextMemoryDescriptor(current, params->MemoryMapDescriptorSize))
 	{
-		if ((current->Attribute & EFI_MEMORY_RUNTIME) == 0)
-			continue;
+		EFI_MEMORY_DESCRIPTOR* current;
+		for (current = params->MemoryMap;
+			current < NextMemoryDescriptor(params->MemoryMap, params->MemoryMapSize);
+			current = NextMemoryDescriptor(current, params->MemoryMapDescriptorSize))
+		{
+			if ((current->Attribute & EFI_MEMORY_RUNTIME) == 0)
+				continue;
 
-		Assert(m_pageTables->MapKernelPages(current->VirtualStart, current->PhysicalStart, current->NumberOfPages));
+			Assert(m_pageTables->MapKernelPages(current->VirtualStart, current->PhysicalStart, current->NumberOfPages));
+		}
 	}
 
 	//Use new Kernel PT
@@ -125,13 +127,19 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb, *m_pPagePool);
 	m_addressSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
 	m_readyQueue = new std::queue<uint32_t>();
+	m_scheduler = new Scheduler();
 
 	//Initialize our boot thread
-	m_current = new KernelThread();
-	m_current->Id = ++m_lastId;
-	m_current->State == ThreadState::Running;
-	m_current->Context = new uint8_t[x64_CONTEXT_SIZE];
-	m_threads->insert({ m_current->Id, m_current });
+	KernelThread* current = new KernelThread();
+	memset(current, 0, sizeof(KernelThread));
+	current->Id = ++m_lastId;
+	current->State == ThreadState::Running;
+	current->Context = new uint8_t[x64_CONTEXT_SIZE];
+	current->TEB = new ThreadEnvironmentBlock();
+	current->TEB->SelfPointer = current->TEB;
+	current->TEB->ThreadId = current->Id;
+	m_threads->insert({ current->Id, current });
+	x64::SetKernelTEB(current->TEB);
 
 	//Initialize Hyperv
 	m_hyperV = new HyperV();
@@ -142,9 +150,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	Print("0x%016x\n", m_hyperV->TscFreq());
 
 	//Initialized IO
-	Print("Flags: 0x%016x\n", x64_rflags());
 	this->InitializeAcpi();
-	Print("Flags: 0x%016x\n", x64_rflags());
 
 	//Devices
 	m_deviceTree.Populate();
@@ -185,7 +191,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Done
 	Print("Kernel Initialized\n");
-	Print("Flags: 0x%016x\n", x64_rflags());
 }
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
@@ -193,7 +198,6 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	if (vector == InterruptVector::DoubleFault)
 		__halt();
 
-	Print("HandleInterrupt Flags: 0x%016x\n", x64_rflags());
 	const auto& it = m_interruptHandlers->find(vector);
 	if (it != m_interruptHandlers->end())
 	{
@@ -314,41 +318,14 @@ void Kernel::InitializeAcpi()
 void Kernel::OnTimer0(void* arg)
 {
 	m_textScreen->Printf("Timer! - 0x%016x\n", m_hyperV->ReadTsc());
-	m_textScreen->Printf("Threads %d\n", m_threads->size());
 
 	cpu_flags_t flags = x64_disable_interrupts();
 	HyperV::EOI();
 
-	//Save current context
-	if (x64_save_context(m_current->Context) == 0)
-	{
-		DisplayThreadContext(m_current);
-
-		//Queue current thread
-		m_current->State = ThreadState::Ready;
-		m_readyQueue->push(m_current->Id);
-
-		//Get next thread
-		uint32_t nextId = m_readyQueue->front();
-		m_readyQueue->pop();
-		const auto& it = m_threads->find(nextId);
-		Assert(it != m_threads->end());
-		KernelThread* next = it->second;
-		Assert(next);
-
-		Print("Current: 0x%x Next: 0x%x\n", m_current->Id, next->Id);
-
-		//Switch to thread
-		DisplayThreadContext(next);
-		m_current = next;
-		x64_load_context(next->Context);
-	}
+	m_scheduler->Schedule();
 
 	x64_restore_flags(flags);
 }
-
-//Push context
-
 
 //Kernel threads are setup as if an interrupt occured (so our interrupt handler can switch between them)
 void Kernel::CreateThread(ThreadStart start, void* arg)
@@ -361,8 +338,10 @@ void Kernel::CreateThread(ThreadStart start, void* arg)
 	thread->State == ThreadState::Ready;
 	thread->Start = start;
 	thread->Arg = arg;
+	thread->TEB = new ThreadEnvironmentBlock();
+	thread->TEB->SelfPointer = thread->TEB;
+	thread->TEB->ThreadId = thread->Id;
 	m_threads->insert({ thread->Id, thread });
-	m_readyQueue->push(thread->Id);
 
 	//Create thread stack, point to bottom (stack grows shallow)
 	uintptr_t stack = (uintptr_t)m_virtualMemory->Allocate(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection(true, true, false), *m_addressSpace);
@@ -375,37 +354,14 @@ void Kernel::CreateThread(ThreadStart start, void* arg)
 	thread->Context = new uint8_t[x64_CONTEXT_SIZE];
 	x64_init_context(thread->Context, (void*)stack, &Kernel::ThreadInitThunk);
 
-	//Display context
-	DisplayThreadContext(thread);
-}
-
-//TODO: somehow export struct from asm
-struct x64_context
-{
-	uint64_t R12;
-	uint64_t R13;
-	uint64_t R14;
-	uint64_t R15;
-	uint64_t Rdi;
-	uint64_t Rsi;
-	uint64_t Rbx;
-	uint64_t Rbp;
-	uint64_t Rsp;
-	uint64_t Rip;
-	uint64_t Rflags;
-};
-
-void Kernel::DisplayThreadContext(KernelThread* thread)
-{
-	x64_context* context = (x64_context*)thread->Context;
-	Printf("Rbp: 0x%016x Rsp: 0x%016x Rip: 0x%016x RFlags:0x%08x\n",
-		context->Rbp, context->Rsp, context->Rip, (uint32_t)context->Rflags);
+	//Add to scheduler
+	m_scheduler->Add(*thread);
 }
 
 void Kernel::ThreadInitThunk()
 {
 	Print("Kernel::ThreadInitThunk\n");
-	KernelThread* current = kernel.m_current;
+	KernelThread* current = kernel.GetCurrentThread();
 	Print("Start: 0x%016x, Arg: 0x%016x\n", current->Start, current->Arg);
 	
 	//Run thread
@@ -415,7 +371,28 @@ void Kernel::ThreadInitThunk()
 	__halt();
 }
 
-void Kernel::Sleep(uint64_t sleep)
+void Kernel::Sleep(double seconds)
 {
+	const uint64_t value = seconds * 1000000000 / 100;
+}
 
+ThreadEnvironmentBlock* Kernel::GetTEB()
+{
+	return (ThreadEnvironmentBlock*)__readgsqword(offsetof(ThreadEnvironmentBlock, SelfPointer));
+}
+
+KernelThread* Kernel::GetKernelThread(uint32_t threadId)
+{
+	const auto& it = m_threads->find(threadId);
+	Assert(it != m_threads->end());
+	return it->second;
+}
+
+KernelThread* Kernel::GetCurrentThread()
+{
+	ThreadEnvironmentBlock* teb = kernel.GetTEB();
+	Assert(teb);
+	KernelThread* current = kernel.GetKernelThread(teb->ThreadId);
+	Assert(current);
+	return current;
 }

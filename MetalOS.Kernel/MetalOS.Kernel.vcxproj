@@ -179,6 +179,7 @@
     <ClCompile Include="msvc.cpp" />
     <ClCompile Include="RtcDriver.cpp" />
     <ClCompile Include="RuntimeSupport.cpp" />
+    <ClCompile Include="Scheduler.cpp" />
     <ClCompile Include="StringPrinter.cpp" />
     <ClCompile Include="UartDriver.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
@@ -213,6 +214,7 @@
     <ClInclude Include="msvc.h" />
     <ClInclude Include="RtcDriver.h" />
     <ClInclude Include="RuntimeSupport.h" />
+    <ClInclude Include="Scheduler.h" />
     <ClInclude Include="StringPrinter.h" />
     <ClInclude Include="UartDriver.h" />
     <ClInclude Include="VirtualAddressSpace.h" />

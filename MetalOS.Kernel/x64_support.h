@@ -9,8 +9,8 @@ extern "C"
 {
 	//Context
 	extern uint64_t x64_CONTEXT_SIZE;
-	int x64_save_context(void* context);
-	int x64_load_context(void* context);
+	int x64_save_context(void* context);//Returns 0
+	int x64_load_context(void* context);//Returns 1
 	void x64_init_context(void* context, void* stack, void* entry);
 	
 	//Omitted from intrinsics

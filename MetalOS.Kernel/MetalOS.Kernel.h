@@ -268,6 +268,13 @@ typedef enum
 	Initialized
 } ThreadState;
 
+struct ThreadEnvironmentBlock
+{
+	ThreadEnvironmentBlock* SelfPointer;
+	uint32_t ThreadId;
+	uint32_t LastError;
+};
+
 //Structure just for threads in the kernel
 struct KernelThread
 {
@@ -277,6 +284,7 @@ struct KernelThread
 	void* Arg;
 	//TODO: x64_CONTEXT_SIZE is const, pipe constant from masm to c
 	void* Context;//Pointer to x64 CONTEXT structure (masm)
+	ThreadEnvironmentBlock* TEB;
 };
 
 #define KERNEL_THREAD_STACK_SIZE 2
@@ -333,4 +341,3 @@ enum InterruptSubsystemType
 	Native, //Platform interrupts (intel x64, etc)
 	Irq
 };
-

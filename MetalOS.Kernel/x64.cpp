@@ -4,6 +4,11 @@
 #include "x64_support.h"
 #include "x64_interrupts.h"
 
+void x64::SetKernelTEB(ThreadEnvironmentBlock* teb)
+{
+	__writemsr(MSR::MSR_IA32_GS_BASE, (uintptr_t)teb);
+}
+
 void x64::Initialize()
 {
 	//Load new segments

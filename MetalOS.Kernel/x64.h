@@ -15,7 +15,16 @@ public:
 	x64() = delete;
 	static void Initialize();
 
+	static void SetKernelTEB(ThreadEnvironmentBlock* teb);
+
 private:
+	enum MSR
+	{
+		MSR_IA32_FS_BASE = 0xC0000100,
+		MSR_IA32_GS_BASE = 0xC0000101,
+		MSR_IA32_KERNELGS_BASE = 0xC0000102
+	};
+
 #define GDT_EMPTY 0
 #define GDT_KERNEL_CODE 1
 #define GDT_KERNEL_DATA 2

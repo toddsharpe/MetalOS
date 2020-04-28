@@ -101,6 +101,11 @@ x64_cli proc
 	ret
 x64_cli endp
 
+x64_swapgs proc
+	swapgs
+	ret
+x64_swapgs endp
+
 ; mov's into CS isn't allowed. Therefore
 ; https://stackoverflow.com/questions/34264752/change-gdt-and-update-cs-while-in-long-mode
 ; https://forum.osdev.org/viewtopic.php?f=1&t=29883&sid=b954100cc5c685faa4a7f958bad5291a&start=15

@@ -129,25 +129,26 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_readyQueue = new std::queue<uint32_t>();
 	m_scheduler = new Scheduler();
 
-	//Initialize our boot thread
-	KernelThread* current = new KernelThread();
-	memset(current, 0, sizeof(KernelThread));
-	current->Id = ++m_lastId;
-	current->State == ThreadState::Running;
-	current->Context = new uint8_t[x64_CONTEXT_SIZE];
-	current->TEB = new ThreadEnvironmentBlock();
-	current->TEB->SelfPointer = current->TEB;
-	current->TEB->ThreadId = current->Id;
-	m_threads->insert({ current->Id, current });
-	x64::SetKernelTEB(current->TEB);
-
 	//Initialize Hyperv
 	m_hyperV = new HyperV();
 	Assert(m_hyperV->IsPresent());
 	Assert(m_hyperV->DirectSyntheticTimers());
 	Assert(m_hyperV->AccessPartitionReferenceCounter());
 	m_hyperV->Initialize();
-	Print("0x%016x\n", m_hyperV->TscFreq());
+	Print("TscFreq: 0x%016x\n", m_hyperV->TscFreq());
+
+	//Initialize our boot thread
+	KernelThread* current = new KernelThread();
+	memset(current, 0, sizeof(KernelThread));
+	current->Id = ++m_lastId;
+	current->State = ThreadState::Running;
+	current->Context = new uint8_t[x64_CONTEXT_SIZE];
+	current->TEB = new ThreadEnvironmentBlock();
+	current->TEB->SelfPointer = current->TEB;
+	current->TEB->ThreadId = current->Id;
+	m_threads->insert({ current->Id, current });
+	x64::SetKernelTEB(current->TEB);
+	x64_swapgs();
 
 	//Initialized IO
 	this->InitializeAcpi();
@@ -187,7 +188,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	m_interruptHandlers->insert({ InterruptVector::Timer0, &Kernel::OnTimer0 });
 	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(10, InterruptVector::Timer0);
+	m_timer->SetPeriodic(SECOND / 128, InterruptVector::Timer0);
 
 	//Done
 	Print("Kernel Initialized\n");
@@ -317,20 +318,17 @@ void Kernel::InitializeAcpi()
 
 void Kernel::OnTimer0(void* arg)
 {
-	m_textScreen->Printf("Timer! - 0x%016x\n", m_hyperV->ReadTsc());
-
 	cpu_flags_t flags = x64_disable_interrupts();
 	HyperV::EOI();
 
 	m_scheduler->Schedule();
-
 	x64_restore_flags(flags);
 }
 
 //Kernel threads are setup as if an interrupt occured (so our interrupt handler can switch between them)
 void Kernel::CreateThread(ThreadStart start, void* arg)
 {
-	Print("Kernel::CreateThread\n");
+	//Print("Kernel::CreateThread\n");
 
 	KernelThread* thread = new KernelThread();
 	memset(thread, 0, sizeof(KernelThread));
@@ -360,9 +358,9 @@ void Kernel::CreateThread(ThreadStart start, void* arg)
 
 void Kernel::ThreadInitThunk()
 {
-	Print("Kernel::ThreadInitThunk\n");
+	//Print("Kernel::ThreadInitThunk\n");
 	KernelThread* current = kernel.GetCurrentThread();
-	Print("Start: 0x%016x, Arg: 0x%016x\n", current->Start, current->Arg);
+	//Print("Start: 0x%016x, Arg: 0x%016x\n", current->Start, current->Arg);
 	
 	//Run thread
 	current->Start(current->Arg);
@@ -371,9 +369,9 @@ void Kernel::ThreadInitThunk()
 	__halt();
 }
 
-void Kernel::Sleep(double seconds)
+void Kernel::Sleep(nano_t value)
 {
-	const uint64_t value = seconds * 1000000000 / 100;
+	m_scheduler->Sleep(value);
 }
 
 ThreadEnvironmentBlock* Kernel::GetTEB()
@@ -388,6 +386,7 @@ KernelThread* Kernel::GetKernelThread(uint32_t threadId)
 	return it->second;
 }
 
+//Uses GS register and does lookup, ensuring both exist
 KernelThread* Kernel::GetCurrentThread()
 {
 	ThreadEnvironmentBlock* teb = kernel.GetTEB();
@@ -395,4 +394,19 @@ KernelThread* Kernel::GetCurrentThread()
 	KernelThread* current = kernel.GetKernelThread(teb->ThreadId);
 	Assert(current);
 	return current;
+}
+
+void Kernel::GetSystemTime(SystemTime* time)
+{
+	EFI_TIME efiTime = { 0 };
+	Assert(!EFI_ERROR(m_runtime.GetTime(&efiTime, nullptr)));
+
+	time->Year = efiTime.Year;
+	time->Month = efiTime.Month;
+	//TODO: day of the week
+	time->Day = efiTime.Day;
+	time->Hour = efiTime.Hour;
+	time->Minute = efiTime.Minute;
+	time->Second = efiTime.Second;
+	time->Milliseconds = efiTime.Nanosecond / 1000;
 }

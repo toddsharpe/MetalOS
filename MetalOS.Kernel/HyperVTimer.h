@@ -1,11 +1,12 @@
 #pragma once
 #include <cstdint>
+#include "MetalOS.Kernel.h"
 
 class HyperVTimer
 {
 public:
 	HyperVTimer(uint32_t timer);
-	void SetPeriodic(double seconds, uint8_t vector);
+	void SetPeriodic(nano_t value, uint8_t vector);
 
 	void Display() const;
 

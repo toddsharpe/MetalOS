@@ -31,6 +31,29 @@ struct ProcessInfo
 	uint32_t Id;
 };
 
+enum DayOfWeek : uint16_t
+{
+	Sunday,
+	Monday,
+	Tuesday,
+	Wednesday,
+	Thursday,
+	Friday,
+	Saturday
+};
+
+struct SystemTime
+{
+	uint16_t Year;
+	uint16_t Month;
+	DayOfWeek DayOfTheWeek;
+	uint16_t Day;
+	uint16_t Hour;
+	uint16_t Minute;
+	uint16_t Second;
+	uint16_t Milliseconds;
+};
+
 enum SystemArchitecture
 {
 	Unknown = 0,

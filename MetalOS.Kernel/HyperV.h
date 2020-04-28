@@ -30,7 +30,7 @@ public:
 		__writemsr(HV_X64_MSR_EOI, 0);
 	}
 
-	uint64_t ReadTsc();
+	nano100_t ReadTsc();
 	uint64_t TscFreq()
 	{
 		return __readmsr(HV_X64_MSR_TSC_FREQUENCY);

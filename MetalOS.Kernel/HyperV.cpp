@@ -64,7 +64,8 @@ void HyperV::Initialize()
 }
 
 //HyperV TLFS 6.0 12.7.3.3
-uint64_t HyperV::ReadTsc()
+//Returns value in 100ns increments
+nano100_t HyperV::ReadTsc()
 {
 	uint64_t Scale, Offset;
 	uint32_t StartSequence, EndSequence;
@@ -83,6 +84,6 @@ uint64_t HyperV::ReadTsc()
 	} while (EndSequence != StartSequence);
 	// The result of the multiplication is treated as a 128-bit value.
 	int64_t highProduct = 0;
-	_mul128(Tsc, Scale, &highProduct);
+	int64_t lowProduct = _mul128(Tsc, Scale, &highProduct);
 	return highProduct + Offset;
 }

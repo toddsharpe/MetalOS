@@ -60,7 +60,7 @@ void LoadingScreen::Draw()
 
 void LoadingScreen::Initialize()
 {
-	Print("LoadingScreen::Initialize\n");
+	Print("LoadingScreen::Initialize1\n");
 	//Set screen to black
 	//TODO: uncomment after its proven
 	//m_display.ColorScreen(FireColors[36]);
@@ -80,8 +80,11 @@ uint32_t LoadingScreen::ThreadLoop(void* arg)
 	{
 		//screen->DoFire();
 		Print("ThreadLoop\n");
-		//kernel.Sleep(0LL);//TODO:
-		__halt();
+		SystemTime time = { 0 };
+		kernel.GetSystemTime(&time);
+
+		Print("Date: %02d-%02d-%02d %02d:%02d:%02d.%d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second, time.Milliseconds);
+		kernel.Sleep(SECOND / 4);//TODO 60
 	}
 }
 

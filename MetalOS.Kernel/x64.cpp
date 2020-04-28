@@ -6,7 +6,7 @@
 
 void x64::SetKernelTEB(ThreadEnvironmentBlock* teb)
 {
-	__writemsr(MSR::MSR_IA32_GS_BASE, (uintptr_t)teb);
+	__writemsr(MSR::MSR_IA32_KERNELGS_BASE, (uintptr_t)teb);
 }
 
 void x64::Initialize()

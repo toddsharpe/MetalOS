@@ -11,10 +11,10 @@ HyperVTimer::HyperVTimer(uint32_t timerId) :
 	Assert(timerId < NumTimers);
 }
 
-void HyperVTimer::SetPeriodic(double seconds, uint8_t vector)
+void HyperVTimer::SetPeriodic(nano_t value, uint8_t vector)
 {
-	const uint64_t value = seconds * 1000000000 / 100;
-	__writemsr(m_countRegister, value);
+	const nano100_t value100 = value / 100;
+	__writemsr(m_countRegister, value100);
 
 	HV_STIMER_CONFIG_REG config = { 0 };
 	config.Enable = true;

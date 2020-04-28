@@ -35,7 +35,7 @@ public:
 	void Initialize(const PLOADER_PARAMS params);
 
 	void HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame);
-	void Bugcheck(const char* file, const char* line, const char* assert);
+	void Bugcheck(const char* file, const char* line, const char* assert);//__declspec(noreturn) ?
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
@@ -100,10 +100,11 @@ public:
 	void* UnmapPage(paddr_t physicalAddress);
 	void CreateThread(ThreadStart start, void* arg);
 	static void ThreadInitThunk();
-	void Sleep(double seconds);
+	void Sleep(nano_t value);
 	KernelThread* GetCurrentThread();
 	ThreadEnvironmentBlock* GetTEB();
 	KernelThread* GetKernelThread(uint32_t threadId);
+	void GetSystemTime(SystemTime* time);
 #pragma endregion
 
 private:

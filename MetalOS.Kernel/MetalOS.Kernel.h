@@ -120,6 +120,8 @@ enum MemoryAllocationType
 //};
 
 typedef size_t cpu_flags_t;
+typedef uint64_t nano_t;//Time in nanoseconds
+typedef uint64_t nano100_t;//Time in 100 nanoseconds
 
 
 struct MemoryAllocation
@@ -272,7 +274,6 @@ struct ThreadEnvironmentBlock
 {
 	ThreadEnvironmentBlock* SelfPointer;
 	uint32_t ThreadId;
-	uint32_t LastError;
 };
 
 //Structure just for threads in the kernel
@@ -285,6 +286,8 @@ struct KernelThread
 	//TODO: x64_CONTEXT_SIZE is const, pipe constant from masm to c
 	void* Context;//Pointer to x64 CONTEXT structure (masm)
 	ThreadEnvironmentBlock* TEB;
+	uint64_t Scheduler;
+	nano100_t SleepWake; //100ns
 };
 
 #define KERNEL_THREAD_STACK_SIZE 2
@@ -341,3 +344,7 @@ enum InterruptSubsystemType
 	Native, //Platform interrupts (intel x64, etc)
 	Irq
 };
+
+#define SECOND 1000000000 //1billion nano seconds
+#define SECOND100NS (SECOND / 100) //# of 100ns segments in a second
+#define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))

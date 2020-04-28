@@ -16,8 +16,9 @@ extern "C"
 	//Omitted from intrinsics
 	void __stdcall x64_ltr(uint16_t entry);
 	uint64_t __stdcall x64_rflags();
-	void __stdcall x64_sti();
-	void __stdcall x64_cli();
+	void __stdcall x64_sti(); //_enable?
+	void __stdcall x64_cli(); //_disable?
+	void __stdcall x64_swapgs();
 
 	//Segment Registers RW
 	uint16_t __stdcall x64_ReadCS();

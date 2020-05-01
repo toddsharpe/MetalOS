@@ -20,13 +20,19 @@ uintptr_t KernelHeap::Allocate(uint32_t size)
 	{
 		//End of the list, no space
 		if (pBlock->Next == nullptr)
+		{
+			Assert(false);
 			return 0;
+		}
 
 		pBlock = pBlock->Next;
 	}
 
 	//Update block
 	pBlock->Free = false;
+
+	//Update statistics
+	this->m_allocated += size;
 
 	uintptr_t address = (uintptr_t)&pBlock->Block;
 	if (pBlock->Size - (size + sizeof(HEAP_BLOCK)) < KernelHeap::MinBlockSize + sizeof(HEAP_BLOCK))

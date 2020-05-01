@@ -11,12 +11,13 @@ public:
 
 	void Write(const char* string);
 
+	void ResetX();
+	void ResetY();
+
 private:
 	void WriteCharacter(char c);
 	void AdvanceX();
-	void ResetX();
 	void AdvanceY();
-	void ResetY();
 
 	const uint8_t m_fontScale;
 	static const Color m_white;

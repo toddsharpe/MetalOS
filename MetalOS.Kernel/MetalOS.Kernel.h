@@ -290,7 +290,7 @@ struct KernelThread
 	nano100_t SleepWake; //100ns
 };
 
-#define KERNEL_THREAD_STACK_SIZE 2
+#define KERNEL_THREAD_STACK_SIZE 8
 
 //Handle could be smarter to have upper bits to specify type
 typedef struct _KERNEL_PROCESS

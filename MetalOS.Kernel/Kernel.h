@@ -120,43 +120,39 @@ private:
 	size_t m_imageSize;
 	EFI_RUNTIME_SERVICES m_runtime;
 
-	PageTablesPool* m_pPagePool;
-	MemoryMap* m_pMemoryMap;
-	ConfigTables* m_pConfigTables;
+	//Basic output drivers
+	Display* m_display;
+	TextScreen* m_textScreen;
+	StringPrinter* m_printer;
+
+	//Initialize before PT switch
+	MemoryMap* m_memoryMap;
+	ConfigTables* m_configTables;
+	PageTablesPool* m_pagePool;
 	PageTables* m_pageTables;
+
+	//Memory Management
 	PhysicalMemoryManager* m_pfnDb;
 	VirtualMemoryManager* m_virtualMemory;
 	VirtualAddressSpace* m_addressSpace;
 
-	Display* m_pDisplay;
-	TextScreen* m_textScreen;
+	//Interrupts
+	std::map<InterruptVector, IrqHandler>* m_interruptHandlers;
 
-	size_t m_lastProcessId;
+	//Process and Thread management
 	std::list<KERNEL_PROCESS>* m_processes;
-
-	Handle m_objectId;
 	uint32_t m_lastId;
-
 	std::map<uint32_t, KernelThread*>* m_threads;
-
 	Scheduler* m_scheduler;
+	
+	//Platform
+	HyperV* m_hyperV;
 
-	//Queues
-	std::queue<uint32_t>* m_readyQueue;
-	std::list<uint32_t>* m_sleepQueue;
-
+	//IO
 	AcpiDeviceTree m_deviceTree;
 
 	//TODO: should be an interface
 	HyperVTimer* m_timer;
-
-	std::map<InterruptVector, IrqHandler>* m_interruptHandlers;
-
-	//Debug device
-	StringPrinter* m_printer;
-
-	HyperV* m_hyperV;
-
 
 };
 

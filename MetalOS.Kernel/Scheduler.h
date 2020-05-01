@@ -17,6 +17,8 @@ public:
 
 	void Display();
 
+	bool Enabled;
+
 private:
 	static const uint64_t PreemptiveQuota = 0.01 * 1000000000 / 100;
 

@@ -23,7 +23,7 @@ ACPI_PHYSICAL_ADDRESS acpiRoot = 0;
 ACPI_PHYSICAL_ADDRESS Kernel::AcpiOsGetRootPointer()
 {
 	if (acpiRoot == 0)
-		acpiRoot = (ACPI_PHYSICAL_ADDRESS)m_pConfigTables->GetAcpiTable();
+		acpiRoot = (ACPI_PHYSICAL_ADDRESS)m_configTables->GetAcpiTable();
 	return acpiRoot;
 }
 

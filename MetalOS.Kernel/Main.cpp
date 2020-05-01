@@ -32,7 +32,7 @@ extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[KERNEL_STACK_SIZE];
 //Kernel Heap
 //TODO: It's scratch space now, bring into kernel and make proper heap
 KERNEL_PAGE_ALIGN static volatile UINT8 KERNEL_HEAP[KERNEL_HEAP_SIZE] = { 0 };
-KERNEL_GLOBAL_ALIGN static KernelHeap heap((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
+KERNEL_GLOBAL_ALIGN KernelHeap heap((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
 
 extern "C" void INTERRUPT_HANDLER(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {

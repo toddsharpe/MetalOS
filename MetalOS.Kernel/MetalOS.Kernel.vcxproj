@@ -209,6 +209,7 @@
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />
     <ClInclude Include="LoadingScreen.h" />
+    <ClInclude Include="Matrix.h" />
     <ClInclude Include="MetalOS.Kernel.h" />
     <ClInclude Include="ProcessorDriver.h" />
     <ClInclude Include="msvc.h" />

@@ -40,6 +40,8 @@ HyperV::HyperV()
 
 void HyperV::Initialize()
 {
+	Print("HyperV::Initialize\n");
+
 	Assert(this->IsPresent());
 	Assert(this->DirectSyntheticTimers());
 	Assert(this->AccessPartitionReferenceCounter());
@@ -59,8 +61,7 @@ void HyperV::Initialize()
 	tscReg.GPAPageNumber = kernel.VirtualToPhysical((uint64_t)&TscPage) >> PAGE_SHIFT;
 	__writemsr(HV_REG::HV_X64_MSR_REFERENCE_TSC, tscReg.AsUint64);
 
-	Print("0x%016x\n", ReadTsc());
-	Print("0x%016x\n", ReadTsc());
+	Print("  Tsc: 0x%016x\n", ReadTsc());
 }
 
 //HyperV TLFS 6.0 12.7.3.3

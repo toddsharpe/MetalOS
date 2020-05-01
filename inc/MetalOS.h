@@ -6,18 +6,25 @@
 //PixelBlueGreenRedReserved8BitPerColor
 struct BGRRPixel
 {	
-	uint32_t Blue : 8;
-	uint32_t Green : 8;
-	uint32_t Red : 8;
-	uint32_t Reserved : 8;
+	union
+	{
+		struct
+		{
+			uint32_t Blue : 8;
+			uint32_t Green : 8;
+			uint32_t Red : 8;
+			uint32_t Reserved : 8;
+		};
+		uint32_t AsUint32;
+	};
 };
 static_assert(sizeof(BGRRPixel) == sizeof(uint32_t), "Pixel greater than UINT32 in size");
 typedef struct BGRRPixel Color;
 
 struct Point2D
 {
-	uint32_t X;
-	uint32_t Y;
+	size_t X;
+	size_t Y;
 };
 
 struct Rectangle

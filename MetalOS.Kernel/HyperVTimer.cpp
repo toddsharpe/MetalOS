@@ -25,6 +25,15 @@ void HyperVTimer::SetPeriodic(nano_t value, uint8_t vector)
 	__writemsr(m_configRegister, config.AsUint64);
 }
 
+void HyperVTimer::Disable()
+{
+	HV_STIMER_CONFIG_REG config = { 0 };
+	config.AsUint64 = __readmsr(m_configRegister);
+
+	config.Enable = false;
+	__writemsr(m_configRegister, config.AsUint64);
+}
+
 void HyperVTimer::Display() const
 {
 	const uint64_t config = __readmsr(m_configRegister);

@@ -3,12 +3,15 @@
 #include "x64_support.h"
 #include "x64.h"
 
-Scheduler::Scheduler() : m_hyperv(), m_readyQueue(), m_sleepQueue()
+Scheduler::Scheduler() : m_hyperv(), Enabled(), m_readyQueue(), m_sleepQueue()
 {
 }
 
 void Scheduler::Schedule()
 {
+	if (!Enabled)
+		return;
+	
 	const uint64_t tsc = m_hyperv.ReadTsc();
 	KernelThread* current = kernel.GetCurrentThread();
 	

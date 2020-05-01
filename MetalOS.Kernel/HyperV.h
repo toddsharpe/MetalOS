@@ -137,7 +137,8 @@ private:
 		volatile uint64_t TscScale;
 		volatile int64_t TscOffset;
 		uint64_t Reserved2[509];
-	} HV_REFERENCE_TSC_PAGE, * PHV_REFERENCE_TSC_PAGE;
+	} HV_REFERENCE_TSC_PAGE, * PHV_REFERENCE_TSC_PAGE;
+
 
 	struct HV_SCONTROL_REGISTER
 	{

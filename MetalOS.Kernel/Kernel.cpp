@@ -18,27 +18,42 @@ typedef EFI_GUID GUID;
 #include "ProcessorDriver.h"
 #include "HyperVTimer.h"
 #include "HyperV.h"
+#include "KernelHeap.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
 
 Kernel::Kernel() :
-	m_physicalAddress(0),
-	m_imageSize(0),
+	m_physicalAddress(),
+	m_imageSize(),
 	m_runtime(),
-	m_pPagePool(nullptr),
-	m_pMemoryMap(nullptr),
-	m_pConfigTables(nullptr),
-	m_pageTables(nullptr),
-	m_pDisplay(nullptr),
+
+	m_memoryMap(),
+	m_configTables(),
+	m_pagePool(),
+	m_pageTables(),
+	m_pfnDb(),
+	m_virtualMemory(),
+	m_addressSpace(),
+
+	m_display(),
 	m_textScreen(),
-	m_lastProcessId(0),
-	m_processes(nullptr),
-	m_objectId(0),
-	m_deviceTree()
+
+	m_processes(),
+	m_lastId(),
+	m_threads(),
+	m_scheduler(),
+	m_deviceTree(),
+
+	m_timer(),
+	m_interruptHandlers(),
+	m_printer(),
+	m_hyperV()
 {
 
 }
+
+extern KernelHeap heap;
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
@@ -51,38 +66,36 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_imageSize = params->KernelImageSize;
 	m_runtime = *params->Runtime;//UEFI has rewritten these pointers, now we copy them locally
 
-	//Initialize Heap
+	//Initialize Heap TODO
 
 	//Initialize Display
-	m_pDisplay = new Display(params->Display, KernelGraphicsDeviceAddress);
-	m_pDisplay->ColorScreen(Black);
-	m_textScreen = new TextScreen(*m_pDisplay);
+	m_display = new Display(params->Display, KernelGraphicsDeviceAddress);
+	m_display->ColorScreen(Black);
+	m_textScreen = new TextScreen(*m_display);
 	m_printer = m_textScreen;
 
-	Print("Flags: 0x%016x\n", x64_rflags());
+	//Initialize and process memory map
+	m_memoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
+	m_memoryMap->ReclaimBootPages();
+	m_memoryMap->MergeConventionalPages();
 
-	//Initialize memory map
-	m_pMemoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
-	m_pMemoryMap->ReclaimBootPages();
-	m_pMemoryMap->MergeConventionalPages();
-
-	//Config Tables
-	m_pConfigTables = new ConfigTables(params->ConfigTables, params->ConfigTableSizes);
+	//UEFI configuration tables
+	m_configTables = new ConfigTables(params->ConfigTables, params->ConfigTableSizes);
 
 	//Initialize page table pool
-	m_pPagePool = new PageTablesPool(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	m_pagePool = new PageTablesPool(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 
 	//Construct kernel page table
 	UINT64 ptRoot;
-	Assert(m_pPagePool->AllocatePage(&ptRoot));
+	Assert(m_pagePool->AllocatePage(&ptRoot));
 	m_pageTables = new PageTables(ptRoot);
-	m_pageTables->SetPool(m_pPagePool);
+	m_pageTables->SetPool(m_pagePool);
 	m_pageTables->MapKernelPages(KernelBaseAddress, params->KernelAddress, EFI_SIZE_TO_PAGES(params->KernelImageSize));
 	m_pageTables->MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 	m_pageTables->MapKernelPages(KernelGraphicsDeviceAddress, params->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(params->Display.FrameBufferSize));
 	m_pageTables->MapKernelPages(KernelPfnDbStart, params->PfnDbAddress, EFI_SIZE_TO_PAGES(params->PfnDbSize));
 
-	//Map in runtime addresses
+	//Map in runtime sections
 	{
 		EFI_MEMORY_DESCRIPTOR* current;
 		for (current = params->MemoryMap;
@@ -104,40 +117,39 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_pfnDbAddress = params->PfnDbAddress;
 	__writecr3(ptRoot);
 
+	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
+	Print("  PhysicalAddressSize: 0x%16x\n", m_memoryMap->GetPhysicalAddressSize());
+
+	Print("Heap: 0x%016x\n", heap.GetAllocated());
+
 	//Test UEFI runtime access
 	EFI_TIME time = { 0 };
 	m_runtime.GetTime(&time, nullptr);
-	Print("Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
-
-	//Test interrupts
-	//__debugbreak();
-
-	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
-	//Print("ConfigTableSizes: %d", loader->ConfigTableSizes);
-	Print("  PhysicalAddressSize: 0x%16x\n", m_pMemoryMap->GetPhysicalAddressSize());
-	//Print("  PageTablesPool.AllocatedPageCount: 0x%8x", m_pPagePool->AllocatedPageCount());
-
-	//Initialize PFN database
-	m_pfnDb = new PhysicalMemoryManager(*m_pMemoryMap);
+	Print("  Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
 	//Complete initialization
-	m_processes = new std::list<KERNEL_PROCESS>();
-	m_interruptHandlers = new std::map<InterruptVector, IrqHandler>();
-	m_threads = new std::map<uint32_t, KernelThread*>();
-	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb, *m_pPagePool);
+	m_pfnDb = new PhysicalMemoryManager(*m_memoryMap);
+	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb, *m_pagePool);
 	m_addressSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
-	m_readyQueue = new std::queue<uint32_t>();
+	
+	m_interruptHandlers = new std::map<InterruptVector, IrqHandler>();
+	m_interruptHandlers->insert({ InterruptVector::Timer0, &Kernel::OnTimer0 });
+
+	//Test interrupts
+	__debugbreak();
+
+	m_processes = new std::list<KERNEL_PROCESS>();
+	m_threads = new std::map<uint32_t, KernelThread*>();
 	m_scheduler = new Scheduler();
 
-	//Initialize Hyperv
+	//Initialize Platform
 	m_hyperV = new HyperV();
 	Assert(m_hyperV->IsPresent());
 	Assert(m_hyperV->DirectSyntheticTimers());
 	Assert(m_hyperV->AccessPartitionReferenceCounter());
 	m_hyperV->Initialize();
-	Print("TscFreq: 0x%016x\n", m_hyperV->TscFreq());
 
-	//Initialize our boot thread
+	//Initialize boot thread
 	KernelThread* current = new KernelThread();
 	memset(current, 0, sizeof(KernelThread));
 	current->Id = ++m_lastId;
@@ -163,30 +175,16 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	Print("COM1 initialized\n");
 	
 	//Show loading screen
-	LoadingScreen loadingScreen(*m_pDisplay);
+	LoadingScreen loadingScreen(*m_display);
 	loadingScreen.Initialize();
-	//__halt();
 
 	//Output full current state
-	m_pMemoryMap->DumpMemoryMap();
-	m_pConfigTables->Dump();
+	m_memoryMap->DumpMemoryMap();
+	m_configTables->Dump();
 	m_deviceTree.Display();
 
-	//Output from drivers
-	//AcpiDevice* rtc;
-	//Assert(m_deviceTree.GetDeviceByHid("PNP0B00", &rtc));
-	//RtcDriver* rtcDriver = ((RtcDriver*)rtc->GetDriver());
-	//rtcDriver->Display();
-	//rtcDriver->Enable();
-	//rtcDriver->Display();
-
-	//Apic
-	//AcpiDevice* proc;
-	//Assert(m_deviceTree.GetDeviceByHid("ACPI0007", &proc));
-	//ProcessorDriver* procDriver = ((ProcessorDriver*)proc->GetDriver());
-	//procDriver->Display();
-
-	m_interruptHandlers->insert({ InterruptVector::Timer0, &Kernel::OnTimer0 });
+	//Timer
+	m_scheduler->Enabled = true;
 	m_timer = new HyperVTimer(0);
 	m_timer->SetPeriodic(SECOND / 128, InterruptVector::Timer0);
 
@@ -213,11 +211,12 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	{
 	//Let debug continue (we use this to check ISRs on bootup)
 	case 3:
+		m_textScreen->Printf("  Debug Breakpoint Exception\n");
 		return;
 	case 14:
-		m_textScreen->Printf("CR2: 0x%16x\n", __readcr2());
+		m_textScreen->Printf("  CR2: 0x%16x\n", __readcr2());
 		if (__readcr2() == 0)
-			m_textScreen->Printf("Null pointer dereference\n", __readcr2());
+			m_textScreen->Printf("  Null pointer dereference\n", __readcr2());
 	}
 
 	//TODO: stack walk
@@ -225,11 +224,13 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 
 void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 {
-	//display.ColorScreen(Red);
-	//TODO: color background function (pass lambda bool to colorscreen)
+	m_scheduler->Enabled = false;
+	//m_timer->Disable();
 
-	//loading->ResetX();
-	//loading->ResetY();
+	m_display->ColorScreen(Red);
+
+	m_textScreen->ResetX();
+	m_textScreen->ResetY();
 	m_textScreen->Printf("%s\n%s\n%s", file, line, assert);
 
 	__halt();
@@ -325,11 +326,8 @@ void Kernel::OnTimer0(void* arg)
 	x64_restore_flags(flags);
 }
 
-//Kernel threads are setup as if an interrupt occured (so our interrupt handler can switch between them)
 void Kernel::CreateThread(ThreadStart start, void* arg)
 {
-	//Print("Kernel::CreateThread\n");
-
 	KernelThread* thread = new KernelThread();
 	memset(thread, 0, sizeof(KernelThread));
 	thread->Id = ++m_lastId;
@@ -393,7 +391,7 @@ KernelThread* Kernel::GetCurrentThread()
 	Assert(teb);
 	KernelThread* current = kernel.GetKernelThread(teb->ThreadId);
 	Assert(current);
-	return current;
+	return current; 
 }
 
 void Kernel::GetSystemTime(SystemTime* time)

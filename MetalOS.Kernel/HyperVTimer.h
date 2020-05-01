@@ -7,6 +7,7 @@ class HyperVTimer
 public:
 	HyperVTimer(uint32_t timer);
 	void SetPeriodic(nano_t value, uint8_t vector);
+	void Disable();
 
 	void Display() const;
 

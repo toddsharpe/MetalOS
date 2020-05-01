@@ -11,6 +11,10 @@ public:
 	void Deallocate(uintptr_t address);
 
 	void PrintHeap();
+	uint32_t GetAllocated()
+	{
+		return m_allocated;
+	}
 
 	static const uint32_t MinBlockSize = 4;
 	static constexpr uint16_t Magic = 0xBEEF;
@@ -35,7 +39,7 @@ private:
 
 	uint64_t m_address;
 	uint32_t m_size;
-	uint32_t m_allocated;
+	uint32_t m_allocated; //Total size of objects allocated, not space being taken up with padding/alignment/overhead
 	PHEAP_BLOCK m_head;
 };
 

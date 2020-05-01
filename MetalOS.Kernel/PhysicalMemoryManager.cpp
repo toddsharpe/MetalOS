@@ -18,7 +18,6 @@ PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 	memset(m_db, 0, sizeof(PFN_ENTRY) * length);
 
 	//Populate page states
-	Print("Length 0x%x\n", memoryMap.Length());
 	for (size_t i = 0; i < memoryMap.Length(); i++)
 	{
 		const EFI_MEMORY_DESCRIPTOR* desc = memoryMap.Get(i);

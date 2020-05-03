@@ -20,7 +20,7 @@ extern "C"
 #include <acpi.h>
 }
 #include "x64_support.h"
-
+#include "BootHeap.h"
 
 //The one and only
 Kernel kernel;
@@ -29,10 +29,9 @@ Kernel kernel;
 KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[KERNEL_STACK_SIZE] = { 0 };
 extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[KERNEL_STACK_SIZE];
 
-//Kernel Heap
-//TODO: It's scratch space now, bring into kernel and make proper heap
-KERNEL_PAGE_ALIGN static volatile UINT8 KERNEL_HEAP[KERNEL_HEAP_SIZE] = { 0 };
-KERNEL_GLOBAL_ALIGN KernelHeap heap((UINT64)KERNEL_HEAP, KERNEL_HEAP_SIZE);
+//Boot Heap
+KERNEL_PAGE_ALIGN static volatile UINT8 BOOT_HEAP[BOOT_HEAP_SIZE] = { 0 };
+KERNEL_GLOBAL_ALIGN BootHeap bootHeap((void*)BOOT_HEAP, BOOT_HEAP_SIZE);
 
 extern "C" void INTERRUPT_HANDLER(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
@@ -50,18 +49,26 @@ extern "C" void Print(const char* format, ...)
 
 void* operator new(size_t n)
 {
-	uintptr_t p = heap.Allocate(n);
-	return (void*)p;
+	if (kernel.IsHeapInitialized())
+		return kernel.Allocate(n);
+	else
+		return (void*)bootHeap.Allocate(n);
 }
 
 void operator delete(void* p)
 {
-	heap.Deallocate((UINT64)p);
+	if (kernel.IsHeapInitialized())
+		kernel.Deallocate(p);
+	else
+		bootHeap.Deallocate(p);
 }
 
 void operator delete(void* p, size_t n)
 {
-	heap.Deallocate((UINT64)p);
+	if (kernel.IsHeapInitialized())
+		kernel.Deallocate(p);
+	else
+		bootHeap.Deallocate(p);
 }
 
 extern "C" void syscall()

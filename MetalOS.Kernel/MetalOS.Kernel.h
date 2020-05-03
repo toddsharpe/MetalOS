@@ -77,7 +77,7 @@ typedef struct
 #define DEF_ISR_HANDLER(x) void ISR_HANDLER(x) ## ()
 
 #define KERNEL_STACK_SIZE (1 << 20)
-#define KERNEL_HEAP_SIZE (1 << 20)//32MB heap
+#define BOOT_HEAP_SIZE EFI_PAGE_SIZE //4KB Boot heap
 
 #define IDT_COUNT 256
 #define IST_STACK_SIZE (1 << 12)

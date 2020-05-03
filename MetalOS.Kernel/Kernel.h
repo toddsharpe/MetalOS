@@ -24,6 +24,7 @@ extern "C"
 #include "VirtualAddressSpace.h"
 #include "VirtualMemoryManager.h"
 #include "Scheduler.h"
+#include "KernelHeap.h"
 #include <queue>
 
 class Kernel
@@ -40,6 +41,11 @@ public:
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
 
+	bool IsHeapInitialized()
+	{
+		return m_heapInitialized;
+	}
+
 	//This method only works because the loader ensures we are physically contiguous
 	uint64_t VirtualToPhysical(uint64_t virtualAddress)
 	{
@@ -50,6 +56,15 @@ public:
 
 	uintptr_t m_pfnDbAddress;
 	size_t m_pfnDbSize;
+
+#pragma region Heap Interface
+	void* Allocate(size_t size);
+	void Deallocate(void* address);
+#pragma endregion
+
+#pragma region Virtual Memory Interface
+	void* AllocatePage(const uintptr_t address, const size_t count, const MemoryProtection& protection);
+#pragma endregion
 
 #pragma region ACPI
 	ACPI_STATUS AcpiOsInitialize();
@@ -96,8 +111,6 @@ public:
 #pragma endregion
 
 #pragma region Kernel Interface
-	void* MapPage(paddr_t physicalAddress);
-	void* UnmapPage(paddr_t physicalAddress);
 	void CreateThread(ThreadStart start, void* arg);
 	static void ThreadInitThunk();
 	void Sleep(nano_t value);
@@ -132,9 +145,11 @@ private:
 	PageTables* m_pageTables;
 
 	//Memory Management
+	bool m_heapInitialized;
 	PhysicalMemoryManager* m_pfnDb;
 	VirtualMemoryManager* m_virtualMemory;
 	VirtualAddressSpace* m_addressSpace;
+	KernelHeap* m_heap;
 
 	//Interrupts
 	std::map<InterruptVector, IrqHandler>* m_interruptHandlers;

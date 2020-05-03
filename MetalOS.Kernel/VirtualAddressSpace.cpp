@@ -2,6 +2,8 @@
 #include "Main.h"
 
 VirtualAddressSpace::VirtualAddressSpace(const uintptr_t start, const uintptr_t end, const bool global) :
+	m_start(start),
+	m_end(end),
 	m_global(global),
 	m_watermark(end),
 	m_nodes()

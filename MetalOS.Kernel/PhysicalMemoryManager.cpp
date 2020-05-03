@@ -44,7 +44,6 @@ PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 
 bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& state)
 {
-	Print("PhysicalMemoryManager::AllocatePage 0x%016x\n", address);
 	if (address != 0)
 	{
 		//Specific address request
@@ -58,8 +57,6 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& st
 		entry.State = PhysicalPageState::Active;
 		return true;
 	}
-
-	Print("m_zeroed 0x%016x m_free 0x%016x\n", m_zeroed, m_free);
 
 	//Choose a page
 	if (m_zeroed != nullptr)

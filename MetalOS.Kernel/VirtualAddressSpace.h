@@ -20,6 +20,16 @@ public:
 		return m_global;
 	}
 
+	uintptr_t GetStart() const
+	{
+		return m_start;
+	}
+
+	size_t GetLength() const
+	{
+		return m_end - m_start;
+	}
+
 private:
 	static const uint32_t AllocationGranularity = (PAGE_SIZE << 2);//16KB
 	
@@ -29,7 +39,10 @@ private:
 		MemoryProtection Protection;
 	};
 
+	uintptr_t m_start;
+	uintptr_t m_end;
 	bool m_global;
+
 	uintptr_t m_watermark;
 	std::map<uintptr_t, Node> m_nodes;
 };

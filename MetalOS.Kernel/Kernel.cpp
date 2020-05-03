@@ -19,6 +19,7 @@ typedef EFI_GUID GUID;
 #include "HyperVTimer.h"
 #include "HyperV.h"
 #include "KernelHeap.h"
+#include "BootHeap.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -28,32 +29,36 @@ Kernel::Kernel() :
 	m_imageSize(),
 	m_runtime(),
 
+	m_display(),
+	m_textScreen(),
+	m_printer(),
+
 	m_memoryMap(),
 	m_configTables(),
 	m_pagePool(),
 	m_pageTables(),
+
+	m_heapInitialized(),
 	m_pfnDb(),
 	m_virtualMemory(),
 	m_addressSpace(),
+	m_heap(),
 
-	m_display(),
-	m_textScreen(),
+	m_interruptHandlers(),
 
 	m_processes(),
 	m_lastId(),
 	m_threads(),
 	m_scheduler(),
+
+	m_hyperV(),
+
 	m_deviceTree(),
 
-	m_timer(),
-	m_interruptHandlers(),
-	m_printer(),
-	m_hyperV()
+	m_timer()
 {
 
 }
-
-extern KernelHeap heap;
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
@@ -120,18 +125,21 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
 	Print("  PhysicalAddressSize: 0x%16x\n", m_memoryMap->GetPhysicalAddressSize());
 
-	Print("Heap: 0x%016x\n", heap.GetAllocated());
-
 	//Test UEFI runtime access
 	EFI_TIME time = { 0 };
 	m_runtime.GetTime(&time, nullptr);
 	Print("  Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
-	//Complete initialization
+	//Initialize virtual memory
 	m_pfnDb = new PhysicalMemoryManager(*m_memoryMap);
 	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb, *m_pagePool);
 	m_addressSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
 	
+	//Initialize Heap
+	m_heap = new KernelHeap(*m_virtualMemory, *m_addressSpace);
+	m_heapInitialized = true;
+
+	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, IrqHandler>();
 	m_interruptHandlers->insert({ InterruptVector::Timer0, &Kernel::OnTimer0 });
 
@@ -224,13 +232,15 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 
 void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 {
-	m_scheduler->Enabled = false;
+	if (m_scheduler != nullptr)
+		m_scheduler->Enabled = false;
+
 	//m_timer->Disable();
 
-	m_display->ColorScreen(Red);
+	//m_display->ColorScreen(Red);
 
-	m_textScreen->ResetX();
-	m_textScreen->ResetY();
+	//m_textScreen->ResetX();
+	//m_textScreen->ResetY();
 	m_textScreen->Printf("%s\n%s\n%s", file, line, assert);
 
 	__halt();
@@ -340,7 +350,7 @@ void Kernel::CreateThread(ThreadStart start, void* arg)
 	m_threads->insert({ thread->Id, thread });
 
 	//Create thread stack, point to bottom (stack grows shallow)
-	uintptr_t stack = (uintptr_t)m_virtualMemory->Allocate(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection(true, true, false), *m_addressSpace);
+	uintptr_t stack = (uintptr_t)this->AllocatePage(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection(true, true, false));
 	stack += (KERNEL_THREAD_STACK_SIZE << PAGE_SHIFT);//Since pop reads first, subtract stack width to be on valid address
 
 	//Subtract paramater area
@@ -407,4 +417,19 @@ void Kernel::GetSystemTime(SystemTime* time)
 	time->Minute = efiTime.Minute;
 	time->Second = efiTime.Second;
 	time->Milliseconds = efiTime.Nanosecond / 1000;
+}
+
+void* Kernel::Allocate(size_t size)
+{
+	return m_heap->Allocate(size);
+}
+
+void Kernel::Deallocate(void* address)
+{
+	m_heap->Deallocate(address);
+}
+
+void* Kernel::AllocatePage(uintptr_t address, const size_t count, const MemoryProtection& protection)
+{
+	return m_virtualMemory->Allocate(address, count, protection, *m_addressSpace);
 }

@@ -160,6 +160,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AcpiOSL.cpp" />
+    <ClCompile Include="BootHeap.cpp" />
     <ClCompile Include="Colors.cpp" />
     <ClCompile Include="ConfigTables.cpp" />
     <ClCompile Include="AcpiDevice.cpp" />
@@ -196,6 +197,7 @@
     <ClCompile Include="x64.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BootHeap.h" />
     <ClInclude Include="Colors.h" />
     <ClInclude Include="ConfigTables.h" />
     <ClInclude Include="AcpiDevice.h" />

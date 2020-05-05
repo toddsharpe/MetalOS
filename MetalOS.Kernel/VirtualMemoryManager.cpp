@@ -24,6 +24,8 @@ void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, cons
 	pt->SetPool(&m_pool);
 
 	//Retrieve and map physical pages
+	//TODO: this code maps each page since it might have to zero it first
+	//Optimize this
 	for (size_t i = 0; i < count; i++)
 	{
 		PhysicalPageState state = PhysicalPageState::Zeroed;

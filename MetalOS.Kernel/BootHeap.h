@@ -9,7 +9,6 @@ public:
 
 	void* Allocate(size_t size);
 	void Deallocate(void* address);
-	size_t m_allocated;
 
 private:
 	uintptr_t m_address;

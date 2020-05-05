@@ -47,10 +47,15 @@ const Color LoadingScreen::FireColors[] =
 };
 
 LoadingScreen::LoadingScreen(Display& display) :
-	m_display(display), m_indexes(display.GetHeight(), display.GetWidth())
+	m_display(display),
+	m_indexes(display.GetHeight() / PixelSize, display.GetWidth() / PixelSize),
+	m_buffer(display.GetHeight(), display.GetWidth())
 {
-	static_assert(sizeof(LoadingScreen::FireColors) == FireColorsCount * sizeof(Color));
+	//Justify above integer divisions
+	Assert(display.GetHeight() % PixelSize == 0);
+	Assert(display.GetWidth() % PixelSize == 0);
 
+	static_assert(sizeof(LoadingScreen::FireColors) == FireColorsCount * sizeof(Color));
 }
 
 void LoadingScreen::Initialize()
@@ -58,13 +63,13 @@ void LoadingScreen::Initialize()
 	Print("LoadingScreen::Initialize\n");
 
 	//Initialize indexes to 0
-	for (uint32_t y = 0; y < m_display.GetHeight(); y++)
-		for (uint32_t x = 0; x < m_display.GetWidth(); x++)
+	for (size_t y = 0; y < m_indexes.GetHeight(); y++)
+		for (size_t x = 0; x < m_indexes.GetWidth(); x++)
 			m_indexes.Set({ x, y }, 0);
 
 	//Set bottom of indexes to highest index
-	const uint32_t bottomY = m_display.GetHeight() - 1;
-	for (uint32_t x = 0; x < m_display.GetWidth(); x++)
+	const size_t bottomY = m_indexes.GetHeight() - 1;
+	for (size_t x = 0; x < m_indexes.GetWidth(); x++)
 		m_indexes.Set({ x, bottomY }, FireColorsCount - 1);
 
 	Draw();
@@ -87,13 +92,15 @@ void LoadingScreen::Draw()
 	m_display.ColorScreen(Colors::Black);
 
 	//Populate graphics buffer based on indexes
-	for (uint32_t x = 0; x < m_display.GetWidth(); x++)
-		for (uint32_t y = 0; y < m_display.GetHeight(); y++)
+	for (size_t x = 0; x < m_display.GetWidth(); x++)
+		for (size_t y = 0; y < m_display.GetHeight(); y++)
 		{
-			const Point2D p = { x, y };
-			const uint8_t index = m_indexes.Get(p);
+			//Get index based on scaled pixel size
+			const Point2D scaled = { x / PixelSize, y / PixelSize };
+			const uint8_t index = m_indexes.Get(scaled);
 			const Color c = FireColors[index];
-			m_display.SetPixel(c, p);
+
+			m_display.SetPixel(c, { x, y });
 		}
 }
 
@@ -111,8 +118,8 @@ uint32_t LoadingScreen::ThreadLoop(void* arg)
 
 void LoadingScreen::DoFire()
 {
-	for (uint32_t x = 0; x < m_indexes.GetWidth(); x++)
-		for (uint32_t y = 1; y < m_indexes.GetHeight(); y++)
+	for (size_t x = 0; x < m_indexes.GetWidth(); x++)
+		for (size_t y = 1; y < m_indexes.GetHeight(); y++)
 			SpreadFire({ x, y });
 }
 

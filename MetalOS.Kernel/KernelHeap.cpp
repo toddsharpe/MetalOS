@@ -15,12 +15,10 @@ KernelHeap::KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace&
 	Grow(initPages);
 
 	//Initialize by creating a head free block
-	this->m_head = (PHEAP_BLOCK)m_address;
-	this->m_head->Size = m_end - m_address;
-	this->m_head->Flags = 0;
-	this->m_head->Free = true;
+	this->m_head = (HeapBlock*)m_address;
 	this->m_head->Next = nullptr;
-	this->m_head->Magic = Magic;
+	this->m_head->Prev = nullptr;
+	this->m_head->Free = true;
 }
 
 void KernelHeap::Grow(size_t pages)
@@ -32,85 +30,91 @@ void KernelHeap::Grow(size_t pages)
 }
 
 //TODO: take into account alignment
-void* KernelHeap::Allocate(size_t size)
+void* KernelHeap::Allocate(const size_t size)
 {
-	PHEAP_BLOCK pBlock = this->m_head;
-	while (!pBlock->Free || pBlock->Size < size + sizeof(HEAP_BLOCK))
+	const size_t allocationSize = HEAP_ALIGN(size);
+	HeapBlock* current = this->m_head;
+	while (!current->Free || current->GetLength() < allocationSize)
 	{
-		if (pBlock->Next == nullptr)
+		if (current->Next == nullptr)
 		{
 			//End of the list, allocate
-			const size_t pages = SIZE_TO_PAGES(size);
+			const size_t pages = SIZE_TO_PAGES(allocationSize);
 			this->Grow(pages);
 
 			//Grow can allocate, so run block pointer to the end
-			while (pBlock->Next != nullptr)
-				pBlock = pBlock->Next;
+			while (current->Next != nullptr)
+				current = current->Next;
 
 			//Assume the last block is free, if not do more work TBD
-			Assert(pBlock->Free);
-
-			pBlock->Size += (pages << PAGE_SHIFT);
+			Assert(current->Free);
 			break;
 		}
 
-		pBlock = pBlock->Next;
+		current = current->Next;
 	}
 
 	//Update block
-	pBlock->Free = false;
+	current->Free = false;
+	current->Magic = KernelHeap::Magic;
 
 	//Update statistics
-	this->m_allocated += size;
+	this->m_allocated += allocationSize;
 
-	uintptr_t address = (uintptr_t)&pBlock->Block;
-	if (pBlock->Size - (size + sizeof(HEAP_BLOCK)) < KernelHeap::MinBlockSize + sizeof(HEAP_BLOCK))
+	uintptr_t address = (uintptr_t)&current->Data;
+	if (current->GetLength() - allocationSize < KernelHeap::MinBlockSize + sizeof(HeapBlock))
 	{
 		//Not enough size to split, just return
 		return (void*)address;
 	}
 	
-	//Split the block
-	PHEAP_BLOCK newBlock = (PHEAP_BLOCK)(address + size);
-	newBlock->Size = pBlock->Size - size - sizeof(HEAP_BLOCK);
+	//Split the block by inserting after current
+	HeapBlock* newBlock = (HeapBlock*)(address + allocationSize);
+	newBlock->Next = current->Next;
+	newBlock->Prev = current;
 	newBlock->Flags = 0;
 	newBlock->Free = 1;
 	newBlock->Magic = Magic;
-	newBlock->Next = pBlock->Next;
 
 	//Update current block
-	pBlock->Size = size;
-	pBlock->Next = newBlock;
+	current->Next = newBlock;
 
 	return (void*)address;
 }
 
-void KernelHeap::Deallocate(void* address)
+void KernelHeap::Deallocate(const void* address)
 {
-	Assert((uintptr_t)address >= m_address + sizeof(HEAP_BLOCK));
+	Assert((uintptr_t)address >= m_address + sizeof(HeapBlock));
 	Assert((uintptr_t)address < m_end);
 
-	PHEAP_BLOCK pBlock = (PHEAP_BLOCK)((uintptr_t)address - sizeof(HEAP_BLOCK));
-	Assert(pBlock->Magic == Magic);
+	HeapBlock* block = (HeapBlock*)((uintptr_t)address - sizeof(HeapBlock));
+	Assert(block->Magic == Magic);
 	
-	pBlock->Free = true;
+	block->Free = true;
 
-	//TODO: check flags?
-	//TODO: condense with block before? change to double pointer blocks?
-	if (pBlock->Next->Free)
+	//Condense with previous block
+	if (block->Prev->Free)
 	{
-		//Combine this and next blocks
-		pBlock->Size += pBlock->Next->Size + sizeof(HEAP_BLOCK);
-		pBlock->Next = pBlock->Next->Next;
+		block->Prev->Next = block->Next;
+		if (block->Next != nullptr)
+			block->Next->Prev = block->Prev;
+		block = block->Prev;
+	}
+
+	//Condense with next block
+	if ((block->Next != nullptr) && (block->Next->Free))
+	{
+		block->Next->Prev = block->Prev;
+		block->Prev->Next = block->Next;
 	}
 }
 
-void KernelHeap::PrintHeap()
+void KernelHeap::PrintHeap() const
 {
-	PHEAP_BLOCK current = this->m_head;
+	HeapBlock* current = this->m_head;
 	while (current != nullptr)
 	{
-		Print("  P 0x%16x S: 0x%8x F: 0x%8x N: 0x%16x\n", current, current->Size, current->Flags, current->Next);
+		Print("  A: 0x%16x L: 0x%8x F: 0x%8x P: 0x%16x, N: 0x%016x\n", current, current->GetLength(), current->Flags, current->Prev, current->Next);
 		current = current->Next;
 	}
 }

@@ -348,3 +348,7 @@ enum InterruptSubsystemType
 #define SECOND 1000000000 //1billion nano seconds
 #define SECOND100NS (SECOND / 100) //# of 100ns segments in a second
 #define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))
+
+#define HEAP_ALIGNMENT 16 //Bytes
+#define HEAP_ALIGNMENT_MASK (HEAP_ALIGNMENT - 1)
+#define HEAP_ALIGN(x) ((x + HEAP_ALIGNMENT_MASK) & ~(HEAP_ALIGNMENT_MASK))

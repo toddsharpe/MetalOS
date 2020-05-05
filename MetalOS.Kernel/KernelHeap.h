@@ -9,10 +9,10 @@ class KernelHeap
 public:
 	KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace& addressSpace);
 
-	void* Allocate(size_t size);
-	void Deallocate(void* address);
+	void* Allocate(const size_t size);
+	void Deallocate(const void* address);
 
-	void PrintHeap();
+	void PrintHeap() const;
 	uint32_t GetAllocated() const
 	{
 		return m_allocated;
@@ -22,24 +22,36 @@ public:
 	static constexpr uint16_t Magic = 0xBEEF;
 
 private:
-	typedef struct _HEAP_BLOCK
+	void Grow(size_t pages);
+
+	//TODO: remove magic, use bit of address for free (min alloc = 2)
+#pragma pack(push, 1)
+	struct HeapBlock
 	{
-		uint32_t Size;//not including the header
+		HeapBlock* Next;
+		HeapBlock* Prev;
 		union
 		{
 			struct
 			{
 				uint16_t Free : 1;
-				uint16_t Magic;
+				uint16_t Magic;//Debug only, verify block integrity
 			};
-			uint32_t Flags;
+			uint64_t Flags;
 		};
-		_HEAP_BLOCK* Next;
-		uint8_t Block[0];
-	} HEAP_BLOCK, *PHEAP_BLOCK;
-	static_assert(sizeof(HEAP_BLOCK) == 16, "Heap block has changed");
+		uint64_t Reserved;
+		uint8_t Data[0];
 
-	void Grow(size_t pages);
+		//Doesn't include header
+		size_t GetLength()
+		{
+			if (Next == nullptr)
+				return INT64_MAX;
+			return (size_t)Next - (size_t)Data;
+		}
+	};
+#pragma pack(pop)
+	static_assert(sizeof(HeapBlock) == 32, "Heap block has changed");
 
 	VirtualMemoryManager& m_memoryManager;
 	VirtualAddressSpace& m_addressSpace;
@@ -47,6 +59,6 @@ private:
 	uint64_t m_address;
 	uint64_t m_end;
 	uint32_t m_allocated; //Total size of objects allocated, not space being taken up with padding/alignment/overhead
-	PHEAP_BLOCK m_head;
+	HeapBlock* m_head;
 };
 

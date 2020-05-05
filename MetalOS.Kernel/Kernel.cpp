@@ -228,6 +228,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	}
 
 	//TODO: stack walk
+	__halt();
 }
 
 void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
@@ -257,7 +258,8 @@ void Kernel::Printf(const char* format, ...)
 
 void Kernel::Printf(const char* format, va_list args)
 {
-	m_printer->Printf(format, args);
+	if (m_printer != nullptr)
+		m_printer->Printf(format, args);
 }
 
 void Kernel::InitializeAcpi()

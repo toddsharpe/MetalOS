@@ -20,6 +20,7 @@ typedef EFI_GUID GUID;
 #include "HyperV.h"
 #include "KernelHeap.h"
 #include "BootHeap.h"
+#include "StackWalk.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -227,6 +228,20 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 			m_textScreen->Printf("  Null pointer dereference\n", __readcr2());
 	}
 
+	CONTEXT context = { 0 };
+	context.Rip = pFrame->RIP;
+	context.Rsp = pFrame->RSP;
+	context.Rbp = pFrame->RBP;
+
+	m_heap->PrintHeap();
+
+	StackWalk sw(&context, KernelBaseAddress);
+	Print("IP: 0x%016x\n", context.Rip);
+	while (sw.HasNext())
+	{
+		sw.Next();
+		Print("IP: 0x%016x\n", context.Rip);
+	}
 	//TODO: stack walk
 	__halt();
 }

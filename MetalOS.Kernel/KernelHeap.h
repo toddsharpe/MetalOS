@@ -46,7 +46,7 @@ private:
 		size_t GetLength()
 		{
 			if (Next == nullptr)
-				return INT64_MAX;
+				return 0;
 			return (size_t)Next - (size_t)Data;
 		}
 	};

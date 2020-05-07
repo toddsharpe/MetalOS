@@ -1,5 +1,8 @@
 #pragma once
 
+//Definitions ripped from various Windows SDK headers
+#include <WindowsTypes.h>
+
 //
 // Calculate the byte offset of a field in a structure of type type.
 //
@@ -514,6 +517,20 @@ typedef IMAGE_BASE_RELOCATION* PIMAGE_BASE_RELOCATION;
 #define IMAGE_REL_BASED_MACHINE_SPECIFIC_9    9
 #define IMAGE_REL_BASED_DIR64                 10
 
+typedef enum _UNWIND_OP_CODES {
+	UWOP_PUSH_NONVOL = 0,
+	UWOP_ALLOC_LARGE,
+	UWOP_ALLOC_SMALL,
+	UWOP_SET_FPREG,
+	UWOP_SAVE_NONVOL,
+	UWOP_SAVE_NONVOL_FAR,
+	UWOP_EPILOG,
+	UWOP_SPARE_CODE,
+	UWOP_SAVE_XMM128,
+	UWOP_SAVE_XMM128_FAR,
+	UWOP_PUSH_MACHFRAME,
+} UNWIND_OP_CODES, * PUNWIND_OP_CODES;
+
 // PData
 typedef struct _IMAGE_RUNTIME_FUNCTION_ENTRY {
 	DWORD BeginAddress;
@@ -524,3 +541,46 @@ typedef struct _IMAGE_RUNTIME_FUNCTION_ENTRY {
 	};
 } _IMAGE_RUNTIME_FUNCTION_ENTRY, * _PIMAGE_RUNTIME_FUNCTION_ENTRY;
 typedef struct _IMAGE_RUNTIME_FUNCTION_ENTRY RUNTIME_FUNCTION, * PRUNTIME_FUNCTION;
+
+//WIn64Unwind.h (coreclr)
+typedef union _UNWIND_CODE {
+	struct {
+		UCHAR CodeOffset;
+		UCHAR UnwindOp : 4;
+		UCHAR OpInfo : 4;
+	};
+
+	struct {
+		UCHAR OffsetLow;
+		UCHAR UnwindOp : 4;
+		UCHAR OffsetHigh : 4;
+	} EpilogueCode;
+
+	USHORT FrameOffset;
+} UNWIND_CODE, * PUNWIND_CODE;
+
+typedef struct _UNWIND_INFO {
+	UCHAR Version : 3;
+	UCHAR Flags : 5;
+	UCHAR SizeOfProlog;
+	UCHAR CountOfUnwindCodes;
+	UCHAR FrameRegister : 4;
+	UCHAR FrameOffset : 4;
+	UNWIND_CODE UnwindCode[1];
+
+	//
+	// The unwind codes are followed by an optional DWORD aligned field that
+	// contains the exception handler address or the address of chained unwind
+	// information. If an exception handler address is specified, then it is
+	// followed by the language specified exception handler data.
+	//
+	//  union {
+	//      ULONG ExceptionHandler;
+	//      ULONG FunctionEntry;
+	//  };
+	//
+	//  ULONG ExceptionData[];
+	//
+
+} UNWIND_INFO, * PUNWIND_INFO;
+

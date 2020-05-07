@@ -35,6 +35,16 @@ public:
 		return m_width;
 	}
 
+	T* Buffer() const
+	{
+		return m_backing;
+	}
+
+	size_t Size()
+	{
+		return m_height * m_width * sizeof(T);
+	}
+
 private:
 	constexpr size_t GetIndex(Point2D p) const
 	{

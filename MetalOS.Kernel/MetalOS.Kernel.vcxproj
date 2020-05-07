@@ -88,6 +88,7 @@
       <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
       <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -145,6 +146,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -181,6 +183,7 @@
     <ClCompile Include="RtcDriver.cpp" />
     <ClCompile Include="RuntimeSupport.cpp" />
     <ClCompile Include="Scheduler.cpp" />
+    <ClCompile Include="StackWalk.cpp" />
     <ClCompile Include="StringPrinter.cpp" />
     <ClCompile Include="UartDriver.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
@@ -218,6 +221,7 @@
     <ClInclude Include="RtcDriver.h" />
     <ClInclude Include="RuntimeSupport.h" />
     <ClInclude Include="Scheduler.h" />
+    <ClInclude Include="StackWalk.h" />
     <ClInclude Include="StringPrinter.h" />
     <ClInclude Include="UartDriver.h" />
     <ClInclude Include="VirtualAddressSpace.h" />

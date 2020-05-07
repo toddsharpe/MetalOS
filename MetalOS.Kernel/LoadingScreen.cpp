@@ -88,20 +88,20 @@ void LoadingScreen::Draw()
 {
 	Print("LoadingScreen::Draw\n");
 	
-	//Clear Screen
-	m_display.ColorScreen(Colors::Black);
-
 	//Populate graphics buffer based on indexes
-	for (size_t x = 0; x < m_display.GetWidth(); x++)
-		for (size_t y = 0; y < m_display.GetHeight(); y++)
+	for (size_t x = 0; x < m_buffer.GetWidth(); x++)
+		for (size_t y = 0; y < m_buffer.GetHeight(); y++)
 		{
 			//Get index based on scaled pixel size
 			const Point2D scaled = { x / PixelSize, y / PixelSize };
 			const uint8_t index = m_indexes.Get(scaled);
 			const Color c = FireColors[index];
 
-			m_display.SetPixel(c, { x, y });
+			m_buffer.Set({ x, y }, c);
 		}
+
+	//Copy to real buffer all at once
+	memcpy((void*)m_display.Buffer(), m_buffer.Buffer(), m_buffer.Size());
 }
 
 uint32_t LoadingScreen::ThreadLoop(void* arg)
@@ -125,25 +125,28 @@ void LoadingScreen::DoFire()
 
 void LoadingScreen::SpreadFire(Point2D point)
 {
-	//Print("SpreadFire: %d x %d\n", point.X, point.Y);
 	uint8_t index = m_indexes.Get(point);
-	//Print("  1\n");
 	if (index == 0)
 	{
-		//Print("  2\n");
 		m_indexes.Set({ point.X, point.Y-- }, 0);
-		//Print("  3\n");
 	}
 	else
 	{
 		const size_t src = point.Y * m_indexes.GetWidth() + point.X;
 		const int randIndex = rand() & 3;
-		const size_t dst = src - randIndex + 1;
-		//const Point2D dstPoint = { dst % m_indexes.GetWidth() - 1, dst / m_indexes.GetWidth() };
-		const Point2D dstPoint = { point.X, point.Y - 1 };
-		//Print("  Dest: %d x %d\n", dstPoint.X, dstPoint.Y);
+
+		size_t dstX = point.X;
+		if (((randIndex & 3) == 0) && (dstX > 0))
+		{
+			dstX--;
+		}
+		else if (((randIndex & 3) == 3) && (dstX < m_indexes.GetWidth() - 1))
+		{
+			dstX++;
+		}
+
+		const Point2D dstPoint = { dstX, point.Y - 1 };
 		m_indexes.Set(dstPoint, index - (randIndex & 1));
-		//Print("  5\n");
 	}
 }
 

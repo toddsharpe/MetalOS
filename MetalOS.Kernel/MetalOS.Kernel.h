@@ -7,6 +7,7 @@
 #include <string>
 #include <list>
 #include <vector>
+#include <WindowsTypes.h>
 
 #define NO_COPY_OR_ASSIGN(X) X(const X&) = delete; X& operator = (const X&) = delete;
 #define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
@@ -168,91 +169,6 @@ typedef struct _VAD_NODE
 
 class VirtualAddressSpace;
 
-typedef struct __declspec(align(16)) {
-	uint64_t Low;
-	uint64_t High;
-} M128A, * PM128A;
-
-//TODO:
-typedef struct __declspec(align(16))
-{
-	uint16_t ControlWord;
-	uint16_t StatusWord;
-	uint8_t TagWord;
-	uint8_t Reserved1;
-	uint16_t Opcode;
-} XSAVE_FORMAT, *PXSAVE_FORMAT;
-
-typedef struct _CONTEXT
-{
-	//Segment Registers and Flags
-	uint16_t SegCs;
-	uint16_t SegDs;
-	uint16_t SegEs;
-	uint16_t SegFs;
-	uint16_t SegGs;
-	uint16_t SegSs;
-	uint64_t RFlags;
-
-	//Debug registers TODO
-	
-	//Integer registers
-	uint64_t Rax;
-	uint64_t RcX;
-	uint64_t RdX;
-	uint64_t RbX;
-	uint64_t Rsp;
-	uint64_t Rbp;
-	uint64_t Rsi;
-	uint64_t Rdi;
-	uint64_t R8;
-	uint64_t R9;
-	uint64_t R10;
-	uint64_t R11;
-	uint64_t R12;
-	uint64_t R13;
-	uint64_t R14;
-	uint64_t R15;
-
-	//Program counter
-	uint64_t Rip;
-
-	//Floating point state
-	//FXSAVE vs XSAVE?
-	union
-	{
-		XSAVE_FORMAT FltSave;
-		struct
-		{
-			M128A Header[2];
-			M128A Legacy[8];
-			M128A Xmm0;
-			M128A Xmm1;
-			M128A Xmm2;
-			M128A Xmm3;
-			M128A Xmm4;
-			M128A Xmm5;
-			M128A Xmm6;
-			M128A Xmm7;
-			M128A Xmm8;
-			M128A Xmm9;
-			M128A Xmm10;
-			M128A Xmm11;
-			M128A Xmm12;
-			M128A Xmm13;
-			M128A Xmm14;
-			M128A Xmm15;
-		};
-	};
-
-	//Vector registers
-	M128A VectorRegister[26];
-	uint64_t VectorControl;
-
-	//TODO: debug control registers
-
-} CONTEXT, *PCONTEXT;
-
 template <class T>
 class Node
 {
@@ -352,3 +268,240 @@ enum InterruptSubsystemType
 #define HEAP_ALIGNMENT 16 //Bytes
 #define HEAP_ALIGNMENT_MASK (HEAP_ALIGNMENT - 1)
 #define HEAP_ALIGN(x) ((x + HEAP_ALIGNMENT_MASK) & ~(HEAP_ALIGNMENT_MASK))
+
+#ifndef DECLSPEC_ALIGN
+#if (_MSC_VER >= 1300) && !defined(MIDL_PASS)
+#define DECLSPEC_ALIGN(x)   __declspec(align(x))
+#else
+#define DECLSPEC_ALIGN(x)
+#endif
+#endif
+
+#ifndef DECLSPEC_NOINITALL
+#if (_MSC_VER >= 1915) && !defined(MIDL_PASS)
+#define DECLSPEC_NOINITALL __declspec(no_init_all)
+#else
+#define DECLSPEC_NOINITALL
+#endif
+#endif
+
+//
+// Define 128-bit 16-byte aligned xmm register type.
+//
+
+typedef struct DECLSPEC_ALIGN(16) _M128A {
+	ULONGLONG Low;
+	LONGLONG High;
+} M128A, * PM128A;
+
+//
+// Format of data for (F)XSAVE/(F)XRSTOR instruction
+//
+
+typedef struct DECLSPEC_ALIGN(16) _XSAVE_FORMAT {
+	WORD   ControlWord;
+	WORD   StatusWord;
+	BYTE  TagWord;
+	BYTE  Reserved1;
+	WORD   ErrorOpcode;
+	DWORD ErrorOffset;
+	WORD   ErrorSelector;
+	WORD   Reserved2;
+	DWORD DataOffset;
+	WORD   DataSelector;
+	WORD   Reserved3;
+	DWORD MxCsr;
+	DWORD MxCsr_Mask;
+	M128A FloatRegisters[8];
+
+#if defined(_WIN64)
+
+	M128A XmmRegisters[16];
+	BYTE  Reserved4[96];
+
+#else
+
+	M128A XmmRegisters[8];
+	BYTE  Reserved4[224];
+
+#endif
+
+} XSAVE_FORMAT, * PXSAVE_FORMAT;
+
+// end_ntoshvp
+
+typedef XSAVE_FORMAT XMM_SAVE_AREA32, * PXMM_SAVE_AREA32;
+
+typedef struct DECLSPEC_ALIGN(16) DECLSPEC_NOINITALL _CONTEXT {
+
+	//
+	// Register parameter home addresses.
+	//
+	// N.B. These fields are for convience - they could be used to extend the
+	//      context record in the future.
+	//
+
+	DWORD64 P1Home;
+	DWORD64 P2Home;
+	DWORD64 P3Home;
+	DWORD64 P4Home;
+	DWORD64 P5Home;
+	DWORD64 P6Home;
+
+	//
+	// Control flags.
+	//
+
+	DWORD ContextFlags;
+	DWORD MxCsr;
+
+	//
+	// Segment Registers and processor flags.
+	//
+
+	WORD   SegCs;
+	WORD   SegDs;
+	WORD   SegEs;
+	WORD   SegFs;
+	WORD   SegGs;
+	WORD   SegSs;
+	DWORD EFlags;
+
+	//
+	// Debug registers
+	//
+
+	DWORD64 Dr0;
+	DWORD64 Dr1;
+	DWORD64 Dr2;
+	DWORD64 Dr3;
+	DWORD64 Dr6;
+	DWORD64 Dr7;
+
+	//
+	// Integer registers.
+	//
+
+	DWORD64 Rax;
+	DWORD64 Rcx;
+	DWORD64 Rdx;
+	DWORD64 Rbx;
+	DWORD64 Rsp;
+	DWORD64 Rbp;
+	DWORD64 Rsi;
+	DWORD64 Rdi;
+	DWORD64 R8;
+	DWORD64 R9;
+	DWORD64 R10;
+	DWORD64 R11;
+	DWORD64 R12;
+	DWORD64 R13;
+	DWORD64 R14;
+	DWORD64 R15;
+
+	//
+	// Program counter.
+	//
+
+	DWORD64 Rip;
+
+	//
+	// Floating point state.
+	//
+
+	union {
+		XMM_SAVE_AREA32 FltSave;
+		struct {
+			M128A Header[2];
+			M128A Legacy[8];
+			M128A Xmm0;
+			M128A Xmm1;
+			M128A Xmm2;
+			M128A Xmm3;
+			M128A Xmm4;
+			M128A Xmm5;
+			M128A Xmm6;
+			M128A Xmm7;
+			M128A Xmm8;
+			M128A Xmm9;
+			M128A Xmm10;
+			M128A Xmm11;
+			M128A Xmm12;
+			M128A Xmm13;
+			M128A Xmm14;
+			M128A Xmm15;
+		};
+	};
+
+	//
+	// Vector registers.
+	//
+
+	M128A VectorRegister[26];
+	DWORD64 VectorControl;
+
+	//
+	// Special debug control registers.
+	//
+
+	DWORD64 DebugControl;
+	DWORD64 LastBranchToRip;
+	DWORD64 LastBranchFromRip;
+	DWORD64 LastExceptionToRip;
+	DWORD64 LastExceptionFromRip;
+} CONTEXT, * PCONTEXT;
+
+typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
+	union {
+		PM128A FloatingContext[16];
+		struct {
+			PM128A Xmm0;
+			PM128A Xmm1;
+			PM128A Xmm2;
+			PM128A Xmm3;
+			PM128A Xmm4;
+			PM128A Xmm5;
+			PM128A Xmm6;
+			PM128A Xmm7;
+			PM128A Xmm8;
+			PM128A Xmm9;
+			PM128A Xmm10;
+			PM128A Xmm11;
+			PM128A Xmm12;
+			PM128A Xmm13;
+			PM128A Xmm14;
+			PM128A Xmm15;
+		};
+	};
+
+	union {
+		PDWORD64 IntegerContext[16];
+		struct {
+			PDWORD64 Rax;
+			PDWORD64 Rcx;
+			PDWORD64 Rdx;
+			PDWORD64 Rbx;
+			PDWORD64 Rsp;
+			PDWORD64 Rbp;
+			PDWORD64 Rsi;
+			PDWORD64 Rdi;
+			PDWORD64 R8;
+			PDWORD64 R9;
+			PDWORD64 R10;
+			PDWORD64 R11;
+			PDWORD64 R12;
+			PDWORD64 R13;
+			PDWORD64 R14;
+			PDWORD64 R15;
+		};
+	};
+
+} KNONVOLATILE_CONTEXT_POINTERS, * PKNONVOLATILE_CONTEXT_POINTERS;
+
+enum UnwindHandlerType
+{
+	UNW_FLAG_NHANDLER = 0,
+	UNW_FLAG_EHANDLER = 1,
+	UNW_FLAG_UHANDLER = 2,
+	UNW_FLAG_CHAININFO = 4
+};

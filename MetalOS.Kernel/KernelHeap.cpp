@@ -29,29 +29,32 @@ void KernelHeap::Grow(size_t pages)
 	m_end += (pages << PAGE_SHIFT);
 }
 
-//TODO: take into account alignment
 void* KernelHeap::Allocate(const size_t size)
 {
 	const size_t allocationSize = HEAP_ALIGN(size);
 	HeapBlock* current = this->m_head;
 	while (!current->Free || current->GetLength() < allocationSize)
 	{
+		//If this is our last block it needs to be extended
 		if (current->Next == nullptr)
-		{
-			//End of the list, allocate
-			const size_t pages = SIZE_TO_PAGES(allocationSize);
-			this->Grow(pages);
-
-			//Grow can allocate, so run block pointer to the end
-			while (current->Next != nullptr)
-				current = current->Next;
-
-			//Assume the last block is free, if not do more work TBD
-			Assert(current->Free);
 			break;
-		}
 
 		current = current->Next;
+	}
+
+	//Extend last block if needed
+	if (current->Next == nullptr && (((size_t)this->m_end - (size_t)current->Data) < allocationSize))
+	{
+		//End of the list, allocate
+		const size_t pages = SIZE_TO_PAGES(allocationSize);
+		this->Grow(pages);
+
+		//Grow can allocate, so run block pointer to the end
+		while (current->Next != nullptr)
+			current = current->Next;
+
+		//Assume the last block is free, if not do more work TBD
+		Assert(current->Free);
 	}
 
 	//Update block

@@ -26,6 +26,6 @@ private:
 
 	Display& m_display;
 	Matrix<uint8_t> m_indexes;
-	Matrix<uint8_t> m_buffer;
+	Matrix<Color> m_buffer;
 };
 

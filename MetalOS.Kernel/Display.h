@@ -30,6 +30,11 @@ public:
 		return m_device.VerticalResolution;
 	}
 
+	uintptr_t Buffer() const
+	{
+		return m_address;
+	}
+
 private:
 	uintptr_t m_address;
 	EFI_GRAPHICS_DEVICE m_device;

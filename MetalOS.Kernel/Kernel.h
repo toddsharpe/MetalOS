@@ -54,9 +54,6 @@ public:
 		return m_physicalAddress + rva;
 	}
 
-	uintptr_t m_pfnDbAddress;
-	size_t m_pfnDbSize;
-
 #pragma region Heap Interface
 	void* Allocate(size_t size);
 	void Deallocate(void* address);
@@ -146,6 +143,7 @@ private:
 
 	//Memory Management
 	bool m_heapInitialized;
+	paddr_t m_pfnDbAddress;
 	PhysicalMemoryManager* m_pfnDb;
 	VirtualMemoryManager* m_virtualMemory;
 	VirtualAddressSpace* m_addressSpace;

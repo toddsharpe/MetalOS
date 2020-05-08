@@ -17,6 +17,11 @@ public:
 	bool AllocatePage(paddr_t& address, PhysicalPageState& state);
 	void DeallocatePage(paddr_t address);
 
+	size_t GetSize() const
+	{
+		return sizeof(PFN_ENTRY) * m_length;
+	}
+
 private:
 	static_assert(sizeof(PFN_ENTRY) == 32, "If this number changes, change boot allotment. TODO etc");
 
@@ -26,9 +31,8 @@ private:
 	//Lists for quick access at runtime
 	PPFN_ENTRY m_zeroed;
 	PPFN_ENTRY m_free;
-	//PPFN_ENTRY m_standby;
-	//PPFN_ENTRY m_modifed;
 
+	size_t m_length;
 	MemoryMap& m_memoryMap;
 	PFN_ENTRY* m_db;
 };

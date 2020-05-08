@@ -60,8 +60,6 @@ LoadingScreen::LoadingScreen(Display& display) :
 
 void LoadingScreen::Initialize()
 {
-	Print("LoadingScreen::Initialize\n");
-
 	//Initialize indexes to 0
 	for (size_t y = 0; y < m_indexes.GetHeight(); y++)
 		for (size_t x = 0; x < m_indexes.GetWidth(); x++)
@@ -80,14 +78,11 @@ void LoadingScreen::Initialize()
 
 void LoadingScreen::Update()
 {
-	Print("LoadingScreen::Update\n");
 	DoFire();
 }
 
 void LoadingScreen::Draw()
 {
-	Print("LoadingScreen::Draw\n");
-	
 	//Populate graphics buffer based on indexes
 	for (size_t x = 0; x < m_buffer.GetWidth(); x++)
 		for (size_t y = 0; y < m_buffer.GetHeight(); y++)

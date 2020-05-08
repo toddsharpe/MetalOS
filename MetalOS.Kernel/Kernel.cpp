@@ -40,6 +40,7 @@ Kernel::Kernel() :
 	m_pageTables(),
 
 	m_heapInitialized(),
+	m_pfnDbAddress(),
 	m_pfnDb(),
 	m_virtualMemory(),
 	m_addressSpace(),
@@ -71,8 +72,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_physicalAddress = params->KernelAddress;
 	m_imageSize = params->KernelImageSize;
 	m_runtime = *params->Runtime;//UEFI has rewritten these pointers, now we copy them locally
-
-	//Initialize Heap TODO
+	m_pfnDbAddress = params->PfnDbAddress;
+	const size_t pfnDbSize = params->PfnDbSize;
 
 	//Initialize Display
 	m_display = new Display(params->Display, KernelGraphicsDeviceAddress);
@@ -119,8 +120,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Identity mappings are not possible now, lost access to params
 	//Alternatively - remove physical identity mappings from bootloader PT since entry in pt root can be cleared and subsequent pages are going to be eaten (since they are in boot memory)
 	//This requires copying at least the root
-	m_pfnDbSize = params->PfnDbSize;
-	m_pfnDbAddress = params->PfnDbAddress;
 	__writecr3(ptRoot);
 
 	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
@@ -133,9 +132,10 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Initialize virtual memory
 	m_pfnDb = new PhysicalMemoryManager(*m_memoryMap);
+	Assert(m_pfnDb->GetSize() == pfnDbSize);
 	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb, *m_pagePool);
 	m_addressSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
-	
+
 	//Initialize Heap
 	m_heap = new KernelHeap(*m_virtualMemory, *m_addressSpace);
 	m_heapInitialized = true;
@@ -196,7 +196,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Timer
 	m_scheduler->Enabled = true;
 	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(SECOND / 128, InterruptVector::Timer0);
+	m_timer->SetPeriodic(SECOND / 64, InterruptVector::Timer0);
 
 	//Done
 	Print("Kernel Initialized\n");

@@ -12,10 +12,9 @@ PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 	m_db()
 {
 	//Allocate space
-	const size_t length = memoryMap.GetPhysicalAddressSize() / PAGE_SIZE;
+	m_length = memoryMap.GetPhysicalAddressSize() / PAGE_SIZE;
 	m_db = (PFN_ENTRY*)KernelPfnDbStart;
-	Assert((kernel.m_pfnDbSize / sizeof(PFN_ENTRY)) == length);
-	memset(m_db, 0, sizeof(PFN_ENTRY) * length);
+	memset(m_db, 0, sizeof(PFN_ENTRY) * m_length);
 
 	//Populate page states
 	for (size_t i = 0; i < memoryMap.Length(); i++)

@@ -7,6 +7,7 @@
 #define File L"dump.txt"
 #define MaxFilePath 64
 
+//TODO: rewrite to dump to uart
 EFI_STATUS DumpAllProtocols(EFI_HANDLE ImageHandle)
 {
 	EFI_STATUS status;

@@ -95,9 +95,10 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Allocate space for PFN DB
 	UINTN address = GetPhysicalAddressSize(LoaderParams.MemoryMapSize, LoaderParams.MemoryMapDescriptorSize, LoaderParams.MemoryMap);
+	Print(L"Physical Address Max: 0x%016x\r\n", address);
+
 	LoaderParams.PfnDbSize = sizeof(PFN_ENTRY) * (address >> PAGE_SHIFT);
 	size_t pfnDBPages = EFI_SIZE_TO_PAGES(LoaderParams.PfnDbSize);
-	Print(L"address: 0x%016x, size 0x%016x pages 0x%016x", address, LoaderParams.PfnDbSize, pfnDBPages);
 	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, pfnDBPages, &(LoaderParams.PfnDbAddress)));
 
 	//Build path to kernel
@@ -142,6 +143,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Display graphics
 	ReturnIfNotSuccess(DisplayLoaderParams(&LoaderParams));
+	//DumpGopLocations();
 
 	//Pause here before booting kernel to inspect bootloader outputs
 	Keywait();
@@ -179,7 +181,64 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	return EFI_ABORTED;
 }
 
-const char mem_types[16][27] = {
+EFI_STATUS PrintCpuDetails()
+{
+	EFI_STATUS status;
+
+	int registers[4] = { -1 };
+	char vendor[13] = { 0 };
+	CHAR16 wideVendor[13] = { 0 };
+
+	__cpuid(registers, 0);
+	*((UINT32*)vendor) = (UINT32)registers[1];
+	*((UINT32*)(vendor + 4)) = (UINT32)registers[3];
+	*((UINT32*)(vendor + 8)) = (UINT32)registers[2];
+
+	mbstowcs(wideVendor, vendor, sizeof(wideVendor));
+
+	ReturnIfNotSuccess(Print(L"CPU vendor: %s\r\n", wideVendor));
+
+	__cpuid(registers, 0x80000001);
+	//This means its supported, may not be active
+	int x64 = (registers[3] & (1 << 29)) != 0;
+	ReturnIfNotSuccess(Print(L"  CPU x64 Mode: %d\r\n", x64));
+
+	UINT64 cr0 = __readcr0();
+	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
+	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
+
+	return status;
+}
+
+EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* pParams)
+{
+	EFI_STATUS status;
+
+	ReturnIfNotSuccess(Print(L"LoaderParams: 0x%016x, Pages: 0x%x\r\n", pParams, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS))));
+	ReturnIfNotSuccess(Print(L"  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", pParams->KernelAddress, EFI_SIZE_TO_PAGES(pParams->KernelImageSize)));
+	ReturnIfNotSuccess(Print(L"  MemoryMap-Address: 0x%016x, Pages: 0x%x\r\n", pParams->MemoryMap, EFI_SIZE_TO_PAGES(pParams->MemoryMapSize)));
+	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: 0x%016x, Pages: 0x%x\r\n", pParams->PageTablesPoolAddress, pParams->PageTablesPoolPageCount));
+	ReturnIfNotSuccess(Print(L"  PFN Database-Address: 0x%016x, Size: 0x%x\r\n", pParams->PfnDbAddress, pParams->PfnDbSize));
+	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", pParams->ConfigTables, pParams->ConfigTableSizes));
+
+	PrintGraphicsDevice(&pParams->Display);
+	return status;
+}
+
+EFI_STATUS PrintGraphicsDevice(PEFI_GRAPHICS_DEVICE pDevice)
+{
+	EFI_STATUS status;
+
+	ReturnIfNotSuccess(Print(L"Graphics:\r\n"));
+	ReturnIfNotSuccess(Print(L"  FrameBuffer-Base 0x%016x, Size: 0x%08x\r\n", pDevice->FrameBufferBase, pDevice->FrameBufferSize));
+	ReturnIfNotSuccess(Print(L"  Resulution 0x%04x (0x%04x) x 0x%04x\r\n", pDevice->HorizontalResolution, pDevice->PixelsPerScanLine, pDevice->VerticalResolution));
+
+	return status;
+}
+
+EFI_STATUS DumpMemoryMap()
+{
+	const char mem_types[16][27] = {
 	  "EfiReservedMemoryType     ",
 	  "EfiLoaderCode             ",
 	  "EfiLoaderData             ",
@@ -196,12 +255,9 @@ const char mem_types[16][27] = {
 	  "EfiPalCode                ",
 	  "EfiPersistentMemory       ",
 	  "EfiMaxMemoryType          "
-};
+	};
 
-EFI_STATUS DumpMemoryMap()
-{
-	Uart uart(ComPort::Com1);
-	uart.Print("MapSize: 0x%x, DescSize: 0x%x\n", LoaderParams.MemoryMap, LoaderParams.MemoryMapDescriptorSize);
+	UartPrint("MapSize: 0x%x, DescSize: 0x%x\n", LoaderParams.MemoryMap, LoaderParams.MemoryMapDescriptorSize);
 
 	EFI_MEMORY_DESCRIPTOR* current;
 	for (current = LoaderParams.MemoryMap;
@@ -209,26 +265,12 @@ EFI_STATUS DumpMemoryMap()
 		current = NextMemoryDescriptor(current, LoaderParams.MemoryMapDescriptorSize))
 	{
 		const bool runtime = (current->Attribute & EFI_MEMORY_RUNTIME) != 0;
-		uart.Print("P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, mem_types[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
+		UartPrint("P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, mem_types[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
 	}
 
 	return EFI_SUCCESS;
 }
 
-EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* pParams)
-{
-	EFI_STATUS status;
-	
-	ReturnIfNotSuccess(Print(L"LoaderParams: 0x%016x, Pages: 0x%x\r\n", pParams, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS))));
-	ReturnIfNotSuccess(Print(L"  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", pParams->KernelAddress, EFI_SIZE_TO_PAGES(pParams->KernelImageSize)));
-	ReturnIfNotSuccess(Print(L"  MemoryMap-Address: 0x%016x, Pages: 0x%x\r\n", pParams->MemoryMap, EFI_SIZE_TO_PAGES(pParams->MemoryMapSize)));
-	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: 0x%016x, Pages: 0x%x\r\n", pParams->PageTablesPoolAddress, pParams->PageTablesPoolPageCount));
-	ReturnIfNotSuccess(Print(L"  PFN Database-Address: 0x%016x, Size: 0x%x\r\n", pParams->PfnDbAddress, pParams->PfnDbSize));
-	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", pParams->ConfigTables, pParams->ConfigTableSizes));
-
-	PrintGraphicsDevice(&pParams->Display);
-	return status;
-}
 
 #define MAXBUFFER 255
 extern "C" void Print(const char* format, ...)
@@ -264,6 +306,16 @@ EFI_STATUS Print(const CHAR16* format, ...)
 	return EFI_SUCCESS;
 }
 
+void UartPrint(const char* format, ...)
+{
+	Uart uart(ComPort::Com1);
+
+	va_list args;
+	va_start(args, format);
+	uart.Printf(format, args);
+	va_end(args);
+}
+
 EFI_STATUS Keywait(const CHAR16* String)
 {
 	EFI_STATUS status = EFI_SUCCESS;
@@ -281,35 +333,6 @@ EFI_STATUS Keywait(const CHAR16* String)
 	ReturnIfNotSuccess(ST->ConIn->Reset(ST->ConIn, FALSE));
 
 	Print(L"\r\n");
-	return status;
-}
-
-EFI_STATUS PrintCpuDetails()
-{
-	EFI_STATUS status;
-	
-	int registers[4] = { -1 };
-	char vendor[13] = { 0 };
-	CHAR16 wideVendor[13] = { 0 };
-
-	__cpuid(registers, 0);
-	*((UINT32*)vendor) = (UINT32)registers[1];
-	*((UINT32*)(vendor + 4)) = (UINT32)registers[3];
-	*((UINT32*)(vendor + 8)) = (UINT32)registers[2];
-
-	mbstowcs(wideVendor, vendor, sizeof(wideVendor));
-
-	ReturnIfNotSuccess(Print(L"CPU vendor: %s\r\n", wideVendor));
-
-	__cpuid(registers, 0x80000001);
-	//This means its supported, may not be active
-	int x64 = (registers[3] & (1 << 29)) != 0;
-	ReturnIfNotSuccess(Print(L"  CPU x64 Mode: %d\r\n", x64));
-
-	UINT64 cr0 = __readcr0();
-	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
-	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
-
 	return status;
 }
 

@@ -10,16 +10,19 @@ Uart::Uart(ComPort port) : m_port(port)
 
 }
 
-#define MAXBUFFER 256
-void Uart::Print(const char* format, ...)
+void Uart::Printf(const char* format, ...)
 {
-	char buffer[MAXBUFFER] = { 0 };
-
 	va_list args;
 	va_start(args, format);
-	crt_vsprintf(buffer, format, args);
+	this->Printf(format, args);
 	va_end(args);
+}
 
+#define MAXBUFFER 256
+void Uart::Printf(const char* format, va_list args)
+{
+	char buffer[MAXBUFFER] = { 0 };
+	crt_vsprintf(buffer, format, args);
 	this->Write(buffer, strlen(buffer));
 }
 

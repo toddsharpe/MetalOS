@@ -15,8 +15,8 @@ class Uart
 public:
 	Uart(ComPort port);
 
-	//EFI_STATUS Print(const CHAR16* format, ...);
-	void Print(const char* format, ...);
+	void Printf(const char* format, ...);
+	void Printf(const char* format, va_list args);
 	void Write(const char* buffer, size_t length);
 
 private:

@@ -191,6 +191,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_memoryMap->DumpMemoryMap();
 	m_configTables->Dump();
 	m_deviceTree.Display();
+	m_heap->PrintHeap();
 
 	//Timer
 	m_scheduler->Enabled = true;

@@ -1,0 +1,11 @@
+GOP handle found via HandleProtocol
+  GOP reports MaxMode 1
+    *0: 1024x768 BGRReserved Pixels 1024
+Found GOP handle via LocateProtocol
+  GOP reports MaxMode 1
+    *0: 1024x768 BGRReserved Pixels 1024
+Found 2 GOP handles via LocateHandleBuffer
+  GOP reports MaxMode 1
+    *0: 1024x768 BGRReserved Pixels 1024
+  GOP reports MaxMode 1
+    *0: 1024x768 BGRReserved Pixels 1024

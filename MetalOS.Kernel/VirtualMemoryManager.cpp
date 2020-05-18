@@ -20,8 +20,8 @@ void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, cons
 	if (!addressSpace.Reserve(address, count, protection))
 		return nullptr;
 
-	PageTables* pt = new PageTables(__readcr3());
-	pt->SetPool(&m_pool);
+	PageTables pt(__readcr3());
+	pt.SetPool(&m_pool);
 
 	//Retrieve and map physical pages
 	//TODO: this code maps each page since it might have to zero it first
@@ -35,9 +35,9 @@ void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, cons
 		//Map page
 		const uintptr_t virtualAddress = address + (i << PAGE_SHIFT);
 		if (addressSpace.IsGlobal())
-			pt->MapKernelPages(virtualAddress, addr, 1);
+			pt.MapKernelPages(virtualAddress, addr, 1);
 		else
-			pt->MapUserPages(virtualAddress, addr, 1);
+			pt.MapUserPages(virtualAddress, addr, 1);
 
 		//Clear if needed
 		if (state == PhysicalPageState::Free)
@@ -45,4 +45,10 @@ void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, cons
 	}
 
 	return (void*)address;
+}
+
+paddr_t VirtualMemoryManager::ResolveAddress(void* address)
+{
+	PageTables pt(__readcr3());
+	return pt.ResolveAddress((uintptr_t)address);
 }

@@ -34,8 +34,8 @@ void Display::ColorRectangle(Color color, Rectangle* region)
 	{
 		for (uint32_t y = region->P1.Y; y < region->P2.Y; y++)
 		{
-			std::clamp(x, 0U, m_device.HorizontalResolution - 1);
-			std::clamp(y, 0U, m_device.VerticalResolution - 1);
+			x = std::clamp(x, 0U, m_device.HorizontalResolution - 1);
+			y = std::clamp(y, 0U, m_device.VerticalResolution - 1);
 			uint32_t* cell = start + ((size_t)y * m_device.PixelsPerScanLine) + x;
 			*(Color*)cell = color;//We can do this because of the static assert in metalos.h
 		}

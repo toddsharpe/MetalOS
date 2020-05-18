@@ -10,8 +10,7 @@ cpu_flags_t KSpinLock::Acquire()
 {
 	cpu_flags_t flags = x64_disable_interrupts();
 
-	static_assert(std::numeric_limits<size_t>::digits == 64);
-	while (_InterlockedCompareExchange64((volatile long long*)&m_value, Unlocked, Locked) != Unlocked)
+	while (_InterlockedCompareExchange64((volatile long long*)&m_value, Locked, Unlocked) == Locked)
 		x64_pause();
 
 	return flags;

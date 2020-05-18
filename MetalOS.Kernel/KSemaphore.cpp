@@ -1,8 +1,13 @@
 #include "KSemaphore.h"
 #include "x64_support.h"
+#include "Main.h"
 
 KSemaphore::KSemaphore(const uint32_t initial, const uint32_t maximum, const std::string& name) :
-	m_value(initial), m_limit(maximum), m_name(name)
+	KObject(),
+	m_value(initial),
+	m_limit(maximum),
+	m_spinlock(),
+	m_name(name)
 {
 
 }
@@ -28,11 +33,37 @@ bool KSemaphore::Wait(size_t count, size_t timeout)
 	return true;
 }
 
-void KSemaphore::Signal(size_t count)
+bool KSemaphore::TryWait(size_t count)
 {
 	//Acquire semaphore
 	cpu_flags_t flags = m_spinlock.Acquire();
 
+	//Decrement
+	m_value -= count;
+
+	if (m_value < 0)
+	{
+		m_spinlock.Release(flags);
+		Print("TryWait false\n");
+		return false;
+	}
+	else
+	{
+		m_spinlock.Release(flags);
+		Print("TryWait true\n");
+		return true;
+	}
+}
+
+int64_t KSemaphore::Signal(size_t count)
+{
+	//Acquire semaphore
+	cpu_flags_t flags = m_spinlock.Acquire();
+
+	size_t ret = m_value;
+
 	m_value += count;
 	m_spinlock.Release(flags);
+
+	return ret;
 }

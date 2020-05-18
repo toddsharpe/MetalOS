@@ -21,6 +21,7 @@ typedef EFI_GUID GUID;
 #include "KernelHeap.h"
 #include "BootHeap.h"
 #include "StackWalk.h"
+#include "KSemaphore.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -141,8 +142,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_heapInitialized = true;
 
 	//Interrupts
-	m_interruptHandlers = new std::map<InterruptVector, IrqHandler>();
-	m_interruptHandlers->insert({ InterruptVector::Timer0, &Kernel::OnTimer0 });
+	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();
+	m_interruptHandlers->insert({ InterruptVector::Timer0, { &Kernel::OnTimer0, this} });
 
 	//Test interrupts
 	__debugbreak();
@@ -150,13 +151,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_processes = new std::list<KERNEL_PROCESS>();
 	m_threads = new std::map<uint32_t, KernelThread*>();
 	m_scheduler = new Scheduler();
-
-	//Initialize Platform
-	m_hyperV = new HyperV();
-	Assert(m_hyperV->IsPresent());
-	Assert(m_hyperV->DirectSyntheticTimers());
-	Assert(m_hyperV->AccessPartitionReferenceCounter());
-	m_hyperV->Initialize();
 
 	//Initialize boot thread
 	KernelThread* current = new KernelThread();
@@ -171,6 +165,17 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	x64::SetKernelTEB(current->TEB);
 	x64_swapgs();
 
+	//Create idle thread
+	kernel.CreateThread(&Kernel::IdleThread, this);
+
+	//Initialize Platform
+	m_hyperV = new HyperV();
+	m_interruptHandlers->insert({ InterruptVector::HypervisorCallback, { &HyperV::OnInterrupt, m_hyperV} });
+	Assert(m_hyperV->IsPresent());
+	Assert(m_hyperV->DirectSyntheticTimers());
+	Assert(m_hyperV->AccessPartitionReferenceCounter());
+	m_hyperV->Initialize();
+
 	//Initialized IO
 	this->InitializeAcpi();
 
@@ -183,9 +188,9 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	this->m_printer = ((UartDriver*)com1->GetDriver());
 	Print("COM1 initialized\n");
 	
-	//Show loading screen
-	LoadingScreen loadingScreen(*m_display);
-	loadingScreen.Initialize();
+	//Show loading screen (works but we don't need yet)
+	//LoadingScreen loadingScreen(*m_display);
+	//loadingScreen.Initialize();
 
 	//Output full current state
 	m_memoryMap->DumpMemoryMap();
@@ -196,10 +201,13 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Timer
 	m_scheduler->Enabled = true;
 	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(SECOND / 64, InterruptVector::Timer0);
+	//m_timer->SetPeriodic(SECOND / 64, InterruptVector::Timer0);
+	m_timer->SetPeriodic(SECOND, InterruptVector::Timer0);
 
 	//Done
 	Print("Kernel Initialized\n");
+
+	m_hyperV->Connect();
 }
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
@@ -210,20 +218,21 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	const auto& it = m_interruptHandlers->find(vector);
 	if (it != m_interruptHandlers->end())
 	{
-		IrqHandler h = it->second;
-		(this->*h)(pFrame);
+		InterruptContext ctx = it->second;
+		ctx.Handler(ctx.Context);
 		return;
 	}
 	
 	m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
 	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
+	m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x,  FS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS(), x64_ReadFS());
 	switch (vector)
 	{
 	//Let debug continue (we use this to check ISRs on bootup)
-	case 3:
+	case InterruptVector::Breakpoint:
 		m_textScreen->Printf("  Debug Breakpoint Exception\n");
 		return;
-	case 14:
+	case InterruptVector::PageFault:
 		m_textScreen->Printf("  CR2: 0x%16x\n", __readcr2());
 		if (__readcr2() == 0)
 			m_textScreen->Printf("  Null pointer dereference\n", __readcr2());
@@ -345,7 +354,7 @@ void Kernel::InitializeAcpi()
 	Print("ACPI Finished\n");
 }
 
-void Kernel::OnTimer0(void* arg)
+void Kernel::OnTimer0()
 {
 	cpu_flags_t flags = x64_disable_interrupts();
 	HyperV::EOI();
@@ -366,6 +375,8 @@ void Kernel::CreateThread(ThreadStart start, void* arg)
 	thread->TEB->SelfPointer = thread->TEB;
 	thread->TEB->ThreadId = thread->Id;
 	m_threads->insert({ thread->Id, thread });
+
+	Print("Kernel::CreateThread %d\n", thread->Id);
 
 	//Create thread stack, point to bottom (stack grows shallow)
 	uintptr_t stack = (uintptr_t)this->AllocatePage(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection(true, true, false));
@@ -402,6 +413,7 @@ void Kernel::Sleep(nano_t value)
 
 ThreadEnvironmentBlock* Kernel::GetTEB()
 {
+	Assert(x64_ReadGS() != 0);
 	return (ThreadEnvironmentBlock*)__readgsqword(offsetof(ThreadEnvironmentBlock, SelfPointer));
 }
 
@@ -419,7 +431,7 @@ KernelThread* Kernel::GetCurrentThread()
 	Assert(teb);
 	KernelThread* current = kernel.GetKernelThread(teb->ThreadId);
 	Assert(current);
-	return current; 
+	return current;
 }
 
 void Kernel::GetSystemTime(SystemTime* time)
@@ -450,4 +462,62 @@ void Kernel::Deallocate(void* address)
 void* Kernel::AllocatePage(uintptr_t address, const size_t count, const MemoryProtection& protection)
 {
 	return m_virtualMemory->Allocate(address, count, protection, *m_addressSpace);
+}
+
+Handle Kernel::CreateSemaphore(const size_t initial, const size_t maximum, const std::string& name)
+{
+	KSemaphore* semaphore = new KSemaphore(initial, maximum, name);
+	return semaphore;
+}
+
+bool Kernel::ReleaseSemaphore(Handle handle, const size_t releaseCount)
+{
+	KSemaphore* semaphore = GetSemaphore(handle);
+
+	if (m_scheduler->Enabled)
+	{
+		cpu_flags_t flags = x64_disable_interrupts();
+
+		m_scheduler->SemaphoreRelease(semaphore, releaseCount);
+
+		x64_restore_flags(flags);
+	}
+	else
+	{
+		semaphore->Signal(releaseCount);
+	}
+	
+	return true;
+}
+
+bool Kernel::CloseSemaphore(Handle handle)
+{
+	KSemaphore* semaphore = GetSemaphore(handle);
+	semaphore->DecRefCount();
+
+	if (semaphore->IsClosed())
+		delete semaphore;
+
+	return true;
+}
+
+WaitStatus Kernel::WaitForSemaphore(Handle handle, size_t timeoutMs, size_t units)
+{
+	KSemaphore* semaphore = GetSemaphore(handle);
+
+	if (m_scheduler->Enabled)
+	{
+		cpu_flags_t flags = x64_disable_interrupts();
+
+		const nano100_t timeout = timeoutMs * 1000000 / 100;
+		WaitStatus status = m_scheduler->SemaphoreWait(semaphore, timeout);
+
+		x64_restore_flags(flags);
+		return status;
+	}
+	else
+	{
+		semaphore->Wait(units, timeoutMs);
+		return WaitStatus::Signaled;
+	}
 }

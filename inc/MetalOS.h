@@ -91,7 +91,16 @@ enum SystemCall : uint32_t
 #define SYSTEMCALL __declspec(dllexport) SystemCallResult
 #endif
 
-typedef uintptr_t Handle;
+enum WaitStatus
+{
+	None,
+	Signaled,
+	Timeout,
+	Abandoned,
+	//Failed conflicts with macro
+};
+
+typedef void* Handle;
 
 #define MAX_PATH 256
 

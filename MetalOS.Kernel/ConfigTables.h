@@ -29,5 +29,5 @@ private:
 	bool GetTableByGuid(const EFI_GUID* guid, void** vendorTable);
 
 	EFI_CONFIGURATION_TABLE* m_tables;
-	uint32_t m_count;
+	size_t m_count;
 };

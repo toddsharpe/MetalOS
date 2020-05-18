@@ -18,6 +18,8 @@ public:
 
 	void* Allocate(uintptr_t address, const size_t count, const MemoryProtection protection, VirtualAddressSpace& addressSpace);
 
+	paddr_t ResolveAddress(void* address);
+
 private:
 	PhysicalMemoryManager& m_physicalMemory;
 	PageTablesPool& m_pool;

@@ -86,9 +86,8 @@ BOOLEAN Kernel::AcpiOsWritable(void* Memory, ACPI_SIZE Length)
 
 ACPI_THREAD_ID Kernel::AcpiOsGetThreadId()
 {
-	//TODO:
-	//Trace();
-	return 1;
+	KernelThread* thread = this->GetCurrentThread();
+	return thread->Id;
 }
 
 ACPI_STATUS Kernel::AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Function, void* Context)
@@ -110,13 +109,16 @@ void Kernel::AcpiOsStall(UINT32 Microseconds)
 
 ACPI_STATUS Kernel::AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEMAPHORE* OutHandle)
 {
-	*OutHandle = new KSemaphore(InitialUnits, MaxUnits, "AcpiSemaphore");
+	*OutHandle = this->CreateSemaphore(InitialUnits, MaxUnits, "AcpiSemaphore");
 	return AE_OK;
 }
 
 ACPI_STATUS Kernel::AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle)
 {
-	delete Handle;
+	if (!Handle)
+		return AE_BAD_PARAMETER;
+
+	this->CloseSemaphore(Handle);
 	return AE_OK;
 }
 
@@ -128,26 +130,26 @@ void Kernel::AcpiOsVprintf(const char* Format, va_list Args)
 
 ACPI_STATUS Kernel::AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout)
 {
-	KSemaphore* pSemaphore = static_cast<KSemaphore*>(Handle);
-	if (!pSemaphore)
+	if (!Handle)
 		return AE_BAD_PARAMETER;
 
-	if (pSemaphore->Wait(Units, Timeout))
+	Assert(Units == 1);
+
+	WaitStatus status = this->WaitForSemaphore(Handle, Timeout, Units);
+	if (status == WaitStatus::Signaled)
 		return AE_OK;
-	else
-	{
-		Assert(false);
+	else if (status == WaitStatus::Timeout)
 		return AE_TIME;
-	}
 }
 
 ACPI_STATUS Kernel::AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units)
 {
-	KSemaphore* pSemaphore = static_cast<KSemaphore*>(Handle);
-	if (!pSemaphore)
+	if (!Handle)
 		return AE_BAD_PARAMETER;
-
-	pSemaphore->Signal(Units);
+	
+	if (!this->ReleaseSemaphore(Handle, Units))
+		return AE_BAD_PARAMETER;
+	
 	return AE_OK;
 }
 

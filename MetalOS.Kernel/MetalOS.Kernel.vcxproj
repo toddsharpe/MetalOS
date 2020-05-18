@@ -43,6 +43,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -50,6 +51,7 @@
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -175,6 +177,7 @@
     <ClCompile Include="Kernel.cpp" />
     <ClCompile Include="KernelAcpi.cpp" />
     <ClCompile Include="KernelDriverInterface.cpp" />
+    <ClCompile Include="KObject.cpp" />
     <ClCompile Include="KSemaphore.cpp" />
     <ClCompile Include="KSpinLock.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
@@ -197,6 +200,7 @@
     <ClCompile Include="PhysicalMemoryManager.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="VirtualMemoryManager.cpp" />
+    <ClCompile Include="VmBusDriver.cpp" />
     <ClCompile Include="x64.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -211,6 +215,7 @@
     <ClInclude Include="HyperVTimer.h" />
     <ClInclude Include="IoApicDriver.h" />
     <ClInclude Include="Kernel.h" />
+    <ClInclude Include="KObject.h" />
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />
     <ClInclude Include="LoadingScreen.h" />
@@ -235,6 +240,7 @@
     <ClInclude Include="PhysicalMemoryManager.h" />
     <ClInclude Include="System.h" />
     <ClInclude Include="VirtualMemoryManager.h" />
+    <ClInclude Include="VmBusDriver.h" />
     <ClInclude Include="x64.h" />
     <ClInclude Include="x64_interrupts.h" />
     <ClInclude Include="x64_support.h" />

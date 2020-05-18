@@ -198,6 +198,8 @@ struct KernelThread
 	uint32_t Id;
 	ThreadState State;
 	ThreadStart Start;
+	WaitStatus WaitStatus;
+
 	void* Arg;
 	//TODO: x64_CONTEXT_SIZE is const, pipe constant from masm to c
 	void* Context;//Pointer to x64 CONTEXT structure (masm)
@@ -252,6 +254,7 @@ enum InterruptVector : uint8_t
 
 	//IRQs
 	Timer0 = 0x80,
+	HypervisorCallback = 0x90,
 
 };
 
@@ -259,6 +262,13 @@ enum InterruptSubsystemType
 {
 	Native, //Platform interrupts (intel x64, etc)
 	Irq
+};
+
+typedef void (*InterruptHandler)(void* arg);
+struct InterruptContext
+{
+	InterruptHandler Handler;
+	void* Context;
 };
 
 #define SECOND 1000000000 //1billion nano seconds

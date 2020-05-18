@@ -8,6 +8,7 @@
 #include "ProcessorDriver.h"
 #include "Cpuid.h"
 #include "HyperV.h"
+#include "VmBusDriver.h"
 
 AcpiDeviceTree::AcpiDeviceTree()
 {
@@ -52,6 +53,8 @@ ACPI_STATUS AcpiDeviceTree::AddAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLeve
 	//TODO: proper pnp/driver manager?
 	if (device->GetHid() == "PNP0501")
 		device->SetDriver(new UartDriver(*device));
+	else if (device->GetHid() == "VMBUS")
+		device->SetDriver(new VmBusDriver(*device));
 	//else if (device->GetHid() == "PNP0B00")
 		//device->SetDriver(new RtcDriver(*device));
 	//else if (device->GetHid() == "PNP0003")

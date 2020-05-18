@@ -40,7 +40,7 @@ private:
 			uint64_t Flags;
 		};
 		uint64_t Reserved;
-		uint8_t Data[0];
+		uint8_t Data[];
 
 		//Doesn't include header
 		size_t GetLength()

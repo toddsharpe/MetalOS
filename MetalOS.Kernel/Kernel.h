@@ -27,6 +27,7 @@ extern "C"
 #include "KernelHeap.h"
 #include <queue>
 
+
 class Kernel
 {
 
@@ -47,11 +48,17 @@ public:
 	}
 
 	//This method only works because the loader ensures we are physically contiguous
-	uint64_t VirtualToPhysical(uint64_t virtualAddress)
+	paddr_t VirtualToPhysical(uintptr_t virtualAddress)
 	{
 		//TODO: assert
 		uint64_t rva = virtualAddress - KernelBaseAddress;
 		return m_physicalAddress + rva;
+	}
+
+	static uint32_t IdleThread(void* arg)
+	{
+		while (true)
+			__halt();
 	}
 
 #pragma region Heap Interface
@@ -117,12 +124,23 @@ public:
 	void GetSystemTime(SystemTime* time);
 #pragma endregion
 
-private:
-	typedef void (Kernel::*IrqHandler)(void* arg);
+#pragma region Semaphore Interface
+	Handle CreateSemaphore(const size_t initial, const size_t maximum, const std::string& name);
+	bool ReleaseSemaphore(Handle handle, const size_t releaseCount);
+	WaitStatus WaitForSemaphore(Handle handle, size_t timeoutMs, size_t units = 1);
+	bool CloseSemaphore(Handle handle);
+#pragma endregion
 
+private:
 	void InitializeAcpi();
 
-	void OnTimer0(void* arg);
+	static void OnTimer0(void* arg) { ((Kernel*)arg)->OnTimer0(); };
+	void OnTimer0();
+
+	KSemaphore* GetSemaphore(Handle handle)
+	{
+		return (KSemaphore*)handle;
+	}
 
 private:
 	//Save from LoaderParams
@@ -150,7 +168,7 @@ private:
 	KernelHeap* m_heap;
 
 	//Interrupts
-	std::map<InterruptVector, IrqHandler>* m_interruptHandlers;
+	std::map<InterruptVector, InterruptContext>* m_interruptHandlers;
 
 	//Process and Thread management
 	std::list<KERNEL_PROCESS>* m_processes;

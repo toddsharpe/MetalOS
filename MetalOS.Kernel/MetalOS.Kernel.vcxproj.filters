@@ -126,6 +126,12 @@
     <ClCompile Include="StackWalk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="VmBusDriver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="KObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Display.h">
@@ -240,6 +246,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="StackWalk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VmBusDriver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="KObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

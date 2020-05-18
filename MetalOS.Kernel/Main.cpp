@@ -84,7 +84,7 @@ void main(LOADER_PARAMS* loader)
 	//Initialize kernel
 	kernel.Initialize(loader);
 
-	//Idle
+	//Should never get here
 	while (true)
 		__halt();
 }

@@ -3,7 +3,7 @@
 #include "msvc.h"
 #include <string>
 #include "Driver.h"
-#include "AcpiDevice.h"
+#include "Device.h"
 #include "StringPrinter.h"
 
 //https://www.lammertbies.nl/comm/info/serial-uart
@@ -14,9 +14,13 @@
 class UartDriver : public Driver, public StringPrinter
 {
 public:
-	UartDriver(AcpiDevice& device);
+	UartDriver(Device& device);
 
-	void Write(const char* buffer, size_t length) override;
+	Result Initialize() override;
+	Result Read(const char* buffer, size_t length) override;
+	Result Write(const char* buffer, size_t length) override;
+	Result EnumerateChildren() override;
+
 	void Write(const char* string);
 
 private:

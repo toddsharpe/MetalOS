@@ -2,19 +2,36 @@
 #include "x64.h"
 #include "Main.h"
 
-UartDriver::UartDriver(AcpiDevice& device) : Driver(device)
+UartDriver::UartDriver(Device& device) : Driver(device)
 {
-	const ACPI_RESOURCE* resource = device.GetResource(ACPI_RESOURCE_TYPE_IO);
+	const ACPI_RESOURCE* resource = (ACPI_RESOURCE*)device.GetResource(ACPI_RESOURCE_TYPE_IO);
 	Assert(resource->Data.Io.AddressLength == 8);
 	m_port = resource->Data.Io.Minimum;
 }
 
-void UartDriver::Write(const char* buffer, size_t length)
+Result UartDriver::Initialize()
+{
+	return Result::ResultNotImplemented;
+}
+
+Result UartDriver::Read(const char* buffer, size_t length)
+{
+	return Result::ResultNotImplemented;
+}
+
+Result UartDriver::Write(const char* buffer, size_t length)
 {
 	for (size_t i = 0; i < length; i++)
 	{
 		Write(0, static_cast<uint8_t>(buffer[i]));
 	}
+
+	return Result::ResultSuccess;
+}
+
+Result UartDriver::EnumerateChildren()
+{
+	return Result::ResultNotImplemented;
 }
 
 void UartDriver::Write(const char* string)

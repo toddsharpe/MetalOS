@@ -22,7 +22,7 @@ void Scheduler::Schedule()
 	const uint64_t tsc = m_hyperv.ReadTsc();
 	KernelThread* current = kernel.GetCurrentThread();
 	
-	Display();
+	//Display();
 
 	//Promote off sleep queue
 	if (m_sleepQueue.size() > 0)
@@ -95,7 +95,7 @@ void Scheduler::Schedule()
 			KernelThread* next = kernel.GetKernelThread(nextId);
 			Assert(next);
 
-			Print("  Schedule: 0x%x -> 0x%x\n", current->Id, next->Id);
+			//Print("  Schedule: 0x%x -> 0x%x\n", current->Id, next->Id);
 
 			//Switch to thread
 			next->State = ThreadState::Running;
@@ -125,7 +125,7 @@ void Scheduler::Sleep(nano_t value)
 WaitStatus Scheduler::SemaphoreWait(KSemaphore* semaphore, nano100_t timeout)
 {
 	KernelThread* current = kernel.GetCurrentThread();
-	Print("Scheduler::SemaphoreWait: %s - %d\n", semaphore->GetName(), current->Id);
+	//Print("Scheduler::SemaphoreWait: %s - %d\n", semaphore->GetName(), current->Id);
 
 	//If there is no contention return immediately
 	bool result = semaphore->TryWait(1);
@@ -142,7 +142,7 @@ WaitStatus Scheduler::SemaphoreWait(KSemaphore* semaphore, nano100_t timeout)
 	current->SleepWake = tscStart + timeout;
 
 	this->Schedule();
-	Print("  Waited: %d - %d\n", current->Id, current->WaitStatus);
+	//Print("  Waited: %d - %d\n", current->Id, current->WaitStatus);
 
 	return current->WaitStatus;
 }
@@ -150,13 +150,13 @@ WaitStatus Scheduler::SemaphoreWait(KSemaphore* semaphore, nano100_t timeout)
 void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
 {
 	KernelThread* current = kernel.GetCurrentThread();
-	Print("SemaphoreRelease: %s - %d\n", semaphore->GetName(), current->Id);
+	//Print("SemaphoreRelease: %s - %d\n", semaphore->GetName(), current->Id);
 
 	int64_t previous = semaphore->Signal(count);
-	Print("  Previous: %d Now: %d\n", previous, semaphore->Value());
+	//Print("  Previous: %d Now: %d\n", previous, semaphore->Value());
 
 	const size_t scheduleCount = std::clamp(-1 * previous, 0LL, (int64_t)count);
-	Print("  scheduleCount: %d\n", scheduleCount);
+	//Print("  scheduleCount: %d\n", scheduleCount);
 
 	for (size_t i = 0; i < scheduleCount; i++)
 	{
@@ -164,7 +164,7 @@ void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
 			break;
 
 		const uint32_t id = m_semaphoreWaits[semaphore].front();
-		Print("  Id: %d\n", id);
+		//Print("  Id: %d\n", id);
 		m_semaphoreWaits[semaphore].pop_front();
 
 		KernelThread* item = kernel.GetKernelThread(id);
@@ -181,7 +181,6 @@ void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
 void Scheduler::Add(KernelThread& thread)
 {
 	KernelThread* current = kernel.GetCurrentThread();
-	Print("Scheduler::Add - Current: %d Arg: %d\n", current->Id, thread.Id);
 	DisplayThread(thread);
 	switch (thread.State)
 	{

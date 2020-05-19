@@ -170,10 +170,10 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Initialize Platform
 	m_hyperV = new HyperV();
-	m_interruptHandlers->insert({ InterruptVector::HypervisorCallback, { &HyperV::OnInterrupt, m_hyperV} });
 	Assert(m_hyperV->IsPresent());
 	Assert(m_hyperV->DirectSyntheticTimers());
 	Assert(m_hyperV->AccessPartitionReferenceCounter());
+	Assert(!m_hyperV->DeprecateAutoEOI());
 	m_hyperV->Initialize();
 
 	//Initialized IO
@@ -183,31 +183,32 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_deviceTree.Populate();
 
 	//Swap output to uart
-	AcpiDevice* com1;
+	Device* com1;
 	Assert(m_deviceTree.GetDeviceByName("COM1", &com1));
 	this->m_printer = ((UartDriver*)com1->GetDriver());
-	Print("COM1 initialized\n");
-	
+
+	//Output full current state
+	//m_memoryMap->DumpMemoryMap();
+	//m_configTables->Dump();
+	//m_deviceTree.Display();
+	//m_heap->PrintHeap();
+
+	//Scheduler (needed to load VMBus driver)
+	m_scheduler->Enabled = true;
+	m_timer = new HyperVTimer(0);
+	m_timer->SetPeriodic(SECOND / 64, InterruptVector::Timer0);
+	//m_timer->SetPeriodic(SECOND, InterruptVector::Timer0);
+
+	//Attach drivers and enumerate tree
+	m_deviceTree.EnumerateChildren();
+	m_deviceTree.Display();
+
 	//Show loading screen (works but we don't need yet)
 	//LoadingScreen loadingScreen(*m_display);
 	//loadingScreen.Initialize();
 
-	//Output full current state
-	m_memoryMap->DumpMemoryMap();
-	m_configTables->Dump();
-	m_deviceTree.Display();
-	m_heap->PrintHeap();
-
-	//Timer
-	m_scheduler->Enabled = true;
-	m_timer = new HyperVTimer(0);
-	//m_timer->SetPeriodic(SECOND / 64, InterruptVector::Timer0);
-	m_timer->SetPeriodic(SECOND, InterruptVector::Timer0);
-
 	//Done
 	Print("Kernel Initialized\n");
-
-	m_hyperV->Connect();
 }
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
@@ -242,8 +243,6 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	context.Rip = pFrame->RIP;
 	context.Rsp = pFrame->RSP;
 	context.Rbp = pFrame->RBP;
-
-	m_heap->PrintHeap();
 
 	StackWalk sw(&context, KernelBaseAddress);
 	Print("IP: 0x%016x\n", context.Rip);
@@ -375,8 +374,6 @@ void Kernel::CreateThread(ThreadStart start, void* arg)
 	thread->TEB->SelfPointer = thread->TEB;
 	thread->TEB->ThreadId = thread->Id;
 	m_threads->insert({ thread->Id, thread });
-
-	Print("Kernel::CreateThread %d\n", thread->Id);
 
 	//Create thread stack, point to bottom (stack grows shallow)
 	uintptr_t stack = (uintptr_t)this->AllocatePage(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection(true, true, false));
@@ -520,4 +517,10 @@ WaitStatus Kernel::WaitForSemaphore(Handle handle, size_t timeoutMs, size_t unit
 		semaphore->Wait(units, timeoutMs);
 		return WaitStatus::Signaled;
 	}
+}
+
+void Kernel::RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context)
+{
+	Assert(m_interruptHandlers->find(interrupt) == m_interruptHandlers->end());
+	m_interruptHandlers->insert({ interrupt, context });
 }

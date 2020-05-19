@@ -1,5 +1,6 @@
 #pragma once
 #include "Driver.h"
+#include "MetalOS.Kernel.h"
 
 //http://www.walshcomptech.com/ohlandl/config/cmos_registers.html
 //https://wiki.osdev.org/CMOS
@@ -9,15 +10,14 @@
 class RtcDriver : public Driver
 {
 public:
-	RtcDriver(AcpiDevice& device);
+	RtcDriver(Device& device);
 
 	void Enable();
 
-	//TODO: the interface to driver should have status codes and this should return not implemented
-	void Write(const char* buffer, size_t length)
-	{
-
-	}
+	Result Initialize() override;
+	Result Read(const char* buffer, size_t length) override;
+	Result Write(const char* buffer, size_t length) override;
+	Result EnumerateChildren() override;
 
 	void Display() const;
 

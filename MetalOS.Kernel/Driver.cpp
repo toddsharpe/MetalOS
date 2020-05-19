@@ -1,6 +1,6 @@
 #include "Driver.h"
 
-Driver::Driver(AcpiDevice& device) : m_device(device)
+Driver::Driver(Device& device) : m_device(device)
 {
 
 }

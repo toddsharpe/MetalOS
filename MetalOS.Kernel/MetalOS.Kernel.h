@@ -254,7 +254,7 @@ enum InterruptVector : uint8_t
 
 	//IRQs
 	Timer0 = 0x80,
-	HypervisorCallback = 0x90,
+	HypervisorVmBus = 0x90,
 
 };
 
@@ -514,4 +514,11 @@ enum UnwindHandlerType
 	UNW_FLAG_EHANDLER = 1,
 	UNW_FLAG_UHANDLER = 2,
 	UNW_FLAG_CHAININFO = 4
+};
+
+enum Result
+{
+	ResultSuccess,
+	ResultFailed,
+	ResultNotImplemented
 };

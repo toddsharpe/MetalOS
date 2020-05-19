@@ -5,11 +5,12 @@
 class ProcessorDriver : public Driver
 {
 public:
-	ProcessorDriver(AcpiDevice& device);
-	void Write(const char* buffer, size_t length)
-	{
+	ProcessorDriver(Device& device);
 
-	}
+	Result Initialize() override;
+	Result Read(const char* buffer, size_t length) override;
+	Result Write(const char* buffer, size_t length) override;
+	Result EnumerateChildren() override;
 
 	void Display();
 

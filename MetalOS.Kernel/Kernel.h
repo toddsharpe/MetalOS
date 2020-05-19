@@ -16,7 +16,7 @@ extern "C"
 #include <acpi.h>
 }
 #include <map>
-#include "AcpiDeviceTree.h"
+#include "DeviceTree.h"
 #include "UartDriver.h"
 #include "HyperVTimer.h"
 #include "HyperV.h"
@@ -41,6 +41,10 @@ public:
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
+	void PrintBytes(const char* buffer, const size_t length)
+	{
+		this->m_printer->PrintBytes(buffer, length);
+	}
 
 	bool IsHeapInitialized()
 	{
@@ -122,6 +126,8 @@ public:
 	ThreadEnvironmentBlock* GetTEB();
 	KernelThread* GetKernelThread(uint32_t threadId);
 	void GetSystemTime(SystemTime* time);
+
+	void RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
 #pragma endregion
 
 #pragma region Semaphore Interface
@@ -180,7 +186,7 @@ private:
 	HyperV* m_hyperV;
 
 	//IO
-	AcpiDeviceTree m_deviceTree;
+	DeviceTree m_deviceTree;
 
 	//TODO: should be an interface
 	HyperVTimer* m_timer;

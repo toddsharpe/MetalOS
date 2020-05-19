@@ -44,13 +44,11 @@ bool KSemaphore::TryWait(size_t count)
 	if (m_value < 0)
 	{
 		m_spinlock.Release(flags);
-		Print("TryWait false\n");
 		return false;
 	}
 	else
 	{
 		m_spinlock.Release(flags);
-		Print("TryWait true\n");
 		return true;
 	}
 }

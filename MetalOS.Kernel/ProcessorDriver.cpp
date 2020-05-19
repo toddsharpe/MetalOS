@@ -4,7 +4,7 @@
 #include <intrin.h>
 
 //TODO: if apic -> create child device and attach local apic driver to it?
-ProcessorDriver::ProcessorDriver(AcpiDevice& device) : Driver(device)
+ProcessorDriver::ProcessorDriver(Device& device) : Driver(device)
 {
 	Cpuid cpu;
 	Assert(cpu.IsIntel());
@@ -28,6 +28,26 @@ ProcessorDriver::ProcessorDriver(AcpiDevice& device) : Driver(device)
 	WriteRegister(_LAPIC_REGISTERS::LVTTimer, timer.Value);
 
 	WriteRegister(_LAPIC_REGISTERS::TimerInitialCount, 0x1000);
+}
+
+Result ProcessorDriver::Initialize()
+{
+	return Result::ResultNotImplemented;
+}
+
+Result ProcessorDriver::Read(const char* buffer, size_t length)
+{
+	return Result::ResultNotImplemented;
+}
+
+Result ProcessorDriver::Write(const char* buffer, size_t length)
+{
+	return Result::ResultNotImplemented;
+}
+
+Result ProcessorDriver::EnumerateChildren()
+{
+	return Result::ResultNotImplemented;
 }
 
 void ProcessorDriver::WriteRegister(_LAPIC_REGISTERS reg, uint32_t value)

@@ -168,10 +168,13 @@
     <ClCompile Include="Colors.cpp" />
     <ClCompile Include="ConfigTables.cpp" />
     <ClCompile Include="AcpiDevice.cpp" />
-    <ClCompile Include="AcpiDeviceTree.cpp" />
+    <ClCompile Include="DeviceTree.cpp" />
     <ClCompile Include="Cpuid.cpp" />
+    <ClCompile Include="Device.cpp" />
     <ClCompile Include="Driver.cpp" />
     <ClCompile Include="HyperV.cpp" />
+    <ClCompile Include="HyperVDevice.cpp" />
+    <ClCompile Include="HyperVKeyboardDriver.cpp" />
     <ClCompile Include="HyperVTimer.cpp" />
     <ClCompile Include="IoApicDriver.cpp" />
     <ClCompile Include="Kernel.cpp" />
@@ -208,10 +211,13 @@
     <ClInclude Include="Colors.h" />
     <ClInclude Include="ConfigTables.h" />
     <ClInclude Include="AcpiDevice.h" />
-    <ClInclude Include="AcpiDeviceTree.h" />
+    <ClInclude Include="DeviceTree.h" />
     <ClInclude Include="Cpuid.h" />
+    <ClInclude Include="Device.h" />
     <ClInclude Include="Driver.h" />
     <ClInclude Include="HyperV.h" />
+    <ClInclude Include="HyperVDevice.h" />
+    <ClInclude Include="HyperVKeyboardDriver.h" />
     <ClInclude Include="HyperVTimer.h" />
     <ClInclude Include="IoApicDriver.h" />
     <ClInclude Include="Kernel.h" />
@@ -221,6 +227,7 @@
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="MetalOS.Kernel.h" />
+    <ClInclude Include="MicrosoftHyperV.h" />
     <ClInclude Include="ProcessorDriver.h" />
     <ClInclude Include="msvc.h" />
     <ClInclude Include="RtcDriver.h" />

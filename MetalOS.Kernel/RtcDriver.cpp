@@ -3,12 +3,32 @@
 #include "Main.h"
 #include "x64_support.h"
 
-RtcDriver::RtcDriver(AcpiDevice& device) : Driver(device)
+RtcDriver::RtcDriver(Device& device) : Driver(device)
 {
-	const ACPI_RESOURCE* resource = device.GetResource(ACPI_RESOURCE_TYPE_IO);
+	const ACPI_RESOURCE* resource = (ACPI_RESOURCE*)device.GetResource(ACPI_RESOURCE_TYPE_IO);
 	Assert(resource->Data.Io.AddressLength == 2);
 	m_controlPort = resource->Data.Io.Minimum;
 	m_ioPort = m_controlPort + 1;
+}
+
+Result RtcDriver::Initialize()
+{
+	return Result::ResultNotImplemented;
+}
+
+Result RtcDriver::Read(const char* buffer, size_t length)
+{
+	return Result::ResultNotImplemented;
+}
+
+Result RtcDriver::Write(const char* buffer, size_t length)
+{
+	return Result::ResultNotImplemented;
+}
+
+Result RtcDriver::EnumerateChildren()
+{
+	return Result::ResultNotImplemented;
 }
 
 void RtcDriver::Enable()

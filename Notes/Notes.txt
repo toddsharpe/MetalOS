@@ -326,3 +326,50 @@ user:
   -map region in page tables
   -mark region as allocated
 
+   SC Key   SC Key   SC Key        SC Key        SC Key       SC Key
+            20 D     40 F6         60 Ctrl F3    80 Alt 9     A0 Alt Dn Arrow
+   01 ESC   21 F     41 F7         61 Ctrl F4    81 Alt 0     A1 Alt PgDn
+   02 1     22 G     42 F8         62 Ctrl F5    82 Alt -     A2 Alt Ins
+   03 2     23 H     43 F9         63 Ctrl F6    82 Alt =     A3 Alt Del
+   04 3     24 J     44 F10        64 Ctrl F7    84 Ctrl PgUp A4 Alt / (num)
+   05 4     25 K     45 Num Lk     65 Ctrl F8    85 F11       A5 Alt Tab
+   06 5     26 L     46 Scrl       66 Ctrl F9    86 F12       A6 Alt Enter
+                        Lk                                       (num)
+   07 6     27 ; :   47 Home       67 Ctrl F10   87 SH F11        
+   08 7     28 ' "   48 Up Arrow   68 Alt F1     88 SH F12        
+   09 8     29 ` ~   49 Pg Up      69 Alt F2     89 Ctrl F11      
+   0A 9     2A L SH  4A - (num)    6A Alt F3     8A Ctrl F12      
+   0B 0     2B \ |   4B 4 Left     6B Alt F4     8B Alt F11       
+                        Arrow
+   0C - _   2C Z     4C 5 (num)    6C Alt F5     8C Alt F12       
+   0D = +   2D X     4D 6 Rt Arrow 6D Alt F6     8C Ctrl Up       
+                                                    Arrow
+   0E BKSP  2E C     4E + (num)    6E Alt F7     8E Ctrl -        
+                                                    (num)
+   0F Tab   2F V     4F 1 End      6F Alt F8     8F Ctrl 5        
+                                                    (num)
+   10 Q     30 B     50 2 Dn Arrow 70 Alt F9     90 Ctrl +        
+                                                    (num)
+   11 W     31 N     51 3 Pg Dn    71 Alt F10    91 Ctrl Dn       
+                                                    Arrow
+   12 E     32 M     52 0 Ins      72 Ctrl PtScr 92 Ctrl Ins      
+   13 R     33 , <   53 Del .      73 Ctrl L     93 Ctrl Del      
+                                      Arrow
+   14 T     34 . >   54 SH F1      74 Ctrl R     94 Ctrl Tab      
+                                      Arrow
+   15 Y     35 / ?   55 SH F2      75 Ctrl End   95 Ctrl /        
+                                                    (num)
+   16 U     36 R SH  56 SH F3      76 Ctrl PgDn  96 Ctrl *        
+                                                    (num)
+   17 I     37 PtScr 57 SH F4      77 Ctrl Home  97 Alt Home      
+   18 O     38 Alt   58 SH F5      78 Alt 1      98 Alt Up        
+                                                    Arrow
+   19 P     39 Spc   59 SH F6      79 Alt 2      99 Alt PgUp      
+   1A [ {   3A CpsLk 5A SH F7      7A Alt 3      9A               
+   1B ] }   3B F1    5B SH F8      7B Alt 4      9B Alt Left      
+                                                    Arrow
+   1C Enter 3C F2    5C SH F9      7C Alt 5      9C               
+   1D Ctrl  3D F3    5D SH F10     7D Alt 6      9D Alt Rt        
+                                                    Arrow
+   1E A     3E F4    5E Ctrl F1    7E Alt 7      9E               
+   1F S     3F F5    5F Ctrl F2    7F Alt 8      9F Alt End       

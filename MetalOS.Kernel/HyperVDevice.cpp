@@ -2,9 +2,10 @@
 #include <crt_stdio.h>
 #include "Main.h"
 
-HyperVDevice::HyperVDevice(vmbus_channel_offer_channel& channel) :
+HyperVDevice::HyperVDevice(vmbus_channel_offer_channel& channel, uint32_t conn_id) :
 	Device(),
-	m_channel(channel)
+	m_channel(channel),
+	m_msg_conn_id(conn_id)
 {
 
 }
@@ -27,12 +28,30 @@ void HyperVDevice::Initialize()
 
 const void* HyperVDevice::GetResource(uint32_t type) const
 {
+	ResourceType t = (ResourceType)type;
+	switch (t)
+	{
+	case ResourceType::ChildRelid:
+		return &m_channel.child_relid;
+		break;
+	case ResourceType::ConnectionId:
+		return &m_msg_conn_id;
+		break;
+
+	case ResourceType::OfferChannel:
+		return &this->m_channel;
+		break;
+	}
 	return nullptr;
 }
 
 void HyperVDevice::DisplayDetails() const
 {
-
+	Print("    RelId: %d\n", m_channel.child_relid);
+	Print("    MonitorId: %d\n", m_channel.monitorid);
+	Print("    Monitored: %d\n", m_channel.monitor_allocated);
+	Print("    Connection: %d\n", m_channel.connection_id);
+	Print("    IsDedicated: %d\n", m_channel.is_dedicated_interrupt);
 }
 
 const bool HyperVDevice::GetDeviceName(const std::string& hid, std::string& name)

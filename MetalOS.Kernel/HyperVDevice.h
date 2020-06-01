@@ -1,5 +1,6 @@
 #pragma once
 
+#include "msvc.h"
 #include "MicrosoftHyperV.h"
 #include "Device.h"
 
@@ -27,21 +28,30 @@ const VmBusDevice VMBUS_DEVICE_NAMES[] =
 	{ "{276AACF4-AC15-426C-98DD-7521AD3F01FE}", "Hyper-V Remote Desktop Virtualization" },
 	{ "{F8615163-DF3E-46C5-913F-F2D2F965ED0E}", "Hyper-V Network Adapter" },
 	{ "{BA6163D9-04A1-4D29-B605-72E2FFB1DC7F}", "Hyper-V SCSI Controller" },
-	{nullptr, nullptr}
+	{ nullptr, nullptr}
 };
 
+//HyperV Channel Offer
 class HyperVDevice : public Device
 {
 public:
-	HyperVDevice(vmbus_channel_offer_channel& channel);
+	HyperVDevice(vmbus_channel_offer_channel& channel, uint32_t conn_id);
 	
 	void Initialize() override;
 	const void* GetResource(uint32_t type) const override;
 	void DisplayDetails() const override;
 
+	enum ResourceType
+	{
+		ChildRelid,
+		ConnectionId,
+		OfferChannel
+	};
+
 private:
 	static const bool GetDeviceName(const std::string& hid, std::string& name);
 
-	vmbus_channel_offer_channel& m_channel;
+	vmbus_channel_offer_channel m_channel;
+	uint32_t m_msg_conn_id;
 };
 

@@ -4,6 +4,7 @@
 #include "Device.h"
 #include "MicrosoftHyperV.h"
 #include "HyperV.h"
+#include <map>
 
 class VmBusDriver : public Driver
 {
@@ -18,7 +19,22 @@ public:
 	static void OnInterrupt(void* arg) { ((VmBusDriver*)arg)->OnInterrupt(); };
 	static uint32_t ThreadLoop(void* arg) { return ((VmBusDriver*)arg)->ThreadLoop(); };
 
+	HV_HYPERCALL_RESULT_VALUE PostMessage(const uint32_t size, const void* message, VmBusResponse& response);
+
+	void SetMonitor(uint32_t monitorId);
+
+	void SetCallback(uint32_t id, const CallContext& context);
+
 private:
+	struct BusRequest
+	{
+		uint32_t Gpadl;
+		uint32_t child_relid;
+		uint32_t openid;
+		Handle Semaphore;
+		VmBusResponse& Response;
+	};
+
 	static const uint32_t VMBUS_MESSAGE_SINT = 2;
 
 	enum VMBUS_SINT
@@ -32,6 +48,10 @@ private:
 		VMBUS_MONITOR_PORT_ID = 3,
 	};
 
+	BusRequest* FindRequest(uint32_t gpadl);
+	BusRequest* FindRequest(uint32_t child_relid, uint32_t openid);
+
+
 	void OnInterrupt();
 	uint32_t ThreadLoop();
 
@@ -43,8 +63,15 @@ private:
 	Handle m_connectSemaphore;
 	std::list<HV_MESSAGE> m_queue;
 
+	//Channel callbacks
+	std::map<uint32_t, CallContext> m_channelCallbacks;
+
 	//Connection properties
 	uint32_t m_msg_conn_id;
+	uint32_t m_nextGpadlHandle;
+
+	//Bus Requests
+	std::list<BusRequest> m_requests;
 };
 
 /*

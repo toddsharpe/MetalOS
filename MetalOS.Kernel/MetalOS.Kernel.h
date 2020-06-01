@@ -1,9 +1,9 @@
 #pragma once
 
+#include "msvc.h"
 #include <MetalOS.h>
 #include <cstdint>
 #include <time.h>
-#include "msvc.h"
 #include <string>
 #include <list>
 #include <vector>
@@ -78,7 +78,7 @@ typedef struct
 #define DEF_ISR_HANDLER(x) void ISR_HANDLER(x) ## ()
 
 #define KERNEL_STACK_SIZE (1 << 20)
-#define BOOT_HEAP_SIZE EFI_PAGE_SIZE //4KB Boot heap
+#define BOOT_HEAP_SIZE (4 * EFI_PAGE_SIZE) //4KB Boot heap
 
 #define IDT_COUNT 256
 #define IST_STACK_SIZE (1 << 12)
@@ -521,4 +521,17 @@ enum Result
 	ResultSuccess,
 	ResultFailed,
 	ResultNotImplemented
+};
+
+#define AlignSize(x,a) (((x) + ((a) - 1)) & ~((a)-1))
+struct kvec {
+	void* iov_base; /* and that should *never* hold a userland pointer */
+	size_t iov_len;
+};
+
+typedef void (*MemberFunction)(void* arg);
+struct CallContext
+{
+	MemberFunction Handler;
+	void* Context;
 };

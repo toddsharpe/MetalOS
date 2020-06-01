@@ -188,7 +188,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	this->m_printer = ((UartDriver*)com1->GetDriver());
 
 	//Output full current state
-	//m_memoryMap->DumpMemoryMap();
+	m_memoryMap->DumpMemoryMap();
 	//m_configTables->Dump();
 	//m_deviceTree.Display();
 	//m_heap->PrintHeap();
@@ -523,4 +523,21 @@ void Kernel::RegisterInterrupt(const InterruptVector interrupt, const InterruptC
 {
 	Assert(m_interruptHandlers->find(interrupt) == m_interruptHandlers->end());
 	m_interruptHandlers->insert({ interrupt, context });
+}
+
+paddr_t Kernel::AllocatePhysical(const size_t count)
+{
+	paddr_t address;
+	Assert(m_pfnDb->AllocateContiguous(address, count));
+	return address;
+}
+
+void* Kernel::VirtualMap(const void* address, const std::vector<paddr_t>& addresses, const MemoryProtection& protection)
+{
+	return m_virtualMemory->VirtualMap((uintptr_t)address, addresses, protection, *m_addressSpace);
+}
+
+Device* Kernel::GetDevice(const std::string path)
+{
+	return m_deviceTree.GetDevice(path);
 }

@@ -1,6 +1,7 @@
 #pragma once
-#include <cstdint>
 
+#include "msvc.h"
+#include <cstdint>
 #include "KSpinLock.h"
 #include "KObject.h"
 

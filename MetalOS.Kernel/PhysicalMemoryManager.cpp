@@ -8,10 +8,12 @@
 PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 	m_zeroed(),
 	m_free(),
+	m_buddyMap(memoryMap.GetPhysicalAddressSize() / (PAGE_SIZE * BuddySize)),
+	m_nextBuddy(),
 	m_memoryMap(memoryMap),
 	m_db()
 {
-	//Allocate space
+	//Connect to PFN DB reserved by Boot
 	m_length = memoryMap.GetPhysicalAddressSize() / PAGE_SIZE;
 	m_db = (PFN_ENTRY*)KernelPfnDbStart;
 	memset(m_db, 0, sizeof(PFN_ENTRY) * m_length);
@@ -28,6 +30,12 @@ PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 			const size_t base = desc->PhysicalStart >> PAGE_SHIFT;
 			m_db[base + j].State = state;
 
+			//Buddy cells can span memory types. To ensure buddy is only free if all states are free,
+			//use false for Free, and OR the results
+			const size_t buddyIndex = (base + j) / BuddySize;
+			const bool flag = state != PhysicalPageState::Free;
+			m_buddyMap.Set(buddyIndex, m_buddyMap.Get(buddyIndex) || flag);
+
 			if (state == PhysicalPageState::Free)
 			{
 				//Push on free stack
@@ -39,6 +47,10 @@ PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 			}
 		}
 	}
+
+	//Set buddy to be start of largect conventional, on BuddySize boundary
+	const size_t index = memoryMap.GetLargestConventionalAddress() >> PAGE_SHIFT;
+	m_nextBuddy = index / BuddySize + ((index % BuddySize != 0) ? 1 : 0);
 }
 
 bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& state)
@@ -54,6 +66,7 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& st
 
 		state = entry.State;
 		entry.State = PhysicalPageState::Active;
+		m_buddyMap.Set(GetBuddyIndex(address), true);
 		return true;
 	}
 
@@ -63,6 +76,7 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& st
 		address = GetPFN(m_zeroed) << PAGE_SHIFT;
 		m_zeroed = m_zeroed->Prev;
 		state = PhysicalPageState::Zeroed;
+		m_buddyMap.Set(GetBuddyIndex(address), true);
 		return true;
 	}
 	else if (m_free != nullptr)
@@ -70,6 +84,7 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& st
 		address = GetPFN(m_free) << PAGE_SHIFT;
 		m_free = m_free->Prev;
 		state = PhysicalPageState::Free;
+		m_buddyMap.Set(GetBuddyIndex(address), true);
 		return true;
 	}
 	else
@@ -77,6 +92,61 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& st
 		Assert(false);//This is where we need to free physical frames
 		return false;
 	}
+}
+
+bool PhysicalMemoryManager::AllocateContiguous(paddr_t& address, const size_t pageCount)
+{
+	Print("AllocateContiguous: 0x%x\n", pageCount);
+	const size_t size = m_buddyMap.Size();
+	const size_t count = pageCount / BuddySize + ((pageCount % BuddySize != 0) ? 1 : 0);
+	while (m_nextBuddy < size - count)
+	{
+		bool found = true;
+		for (size_t i = 0; i < count; i++)
+		{
+			if (m_buddyMap.Get(m_nextBuddy + i))
+			{
+				found = false;
+				break;
+			}
+		}
+
+		if (found)
+		{
+			address = (m_nextBuddy * BuddySize) << PAGE_SHIFT;
+
+			//Remove these pages from free lists (can't be on zero'd list yet)
+			PPFN_ENTRY entry = &m_db[address >> PAGE_SHIFT];
+			for (size_t i = 0; i < pageCount; i++)
+			{
+				if (m_free == entry)
+				{
+					//Top of list has null next pointer
+					m_free = m_free->Prev;
+				}
+				else
+				{
+					if (entry->Next != nullptr)
+						entry->Next->Prev = entry->Prev;
+
+					if (entry->Prev != nullptr)
+						entry->Prev->Next = entry->Next;
+
+					entry->Next = nullptr;
+					entry->Prev = nullptr;
+				}
+				entry++;
+			}
+
+			m_buddyMap.Set(GetBuddyIndex(address), true);
+			m_nextBuddy += count;
+			return true;
+		}
+
+		m_nextBuddy++;
+	}
+
+	return false;
 }
 
 const PhysicalPageState PhysicalMemoryManager::GetPageState(const EFI_MEMORY_DESCRIPTOR* desc)
@@ -97,5 +167,10 @@ const PhysicalPageState PhysicalMemoryManager::GetPageState(const EFI_MEMORY_DES
 paddr_t PhysicalMemoryManager::GetPFN(PPFN_ENTRY entry)
 {
 	return ((paddr_t)entry - (paddr_t)(m_db)) / sizeof(PFN_ENTRY);
+}
+
+const size_t PhysicalMemoryManager::GetBuddyIndex(paddr_t address)
+{
+	return (address >> PAGE_SHIFT) / BuddySize;
 }
 

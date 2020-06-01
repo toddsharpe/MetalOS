@@ -3,7 +3,21 @@
 #include <MetalOS.Internal.h>
 #include <WindowsTypes.h>
 
+//Sources: include\linux\hyperv.h
+
+//Linux types
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+#define __packed 
+
+
+
+static constexpr uint32_t HV_MESSAGE_SIZE = 256;
+static constexpr uint32_t HV_MESSAGE_PAYLOAD_BYTE_COUNT = 240;
 static constexpr uint32_t HV_MESSAGE_MAX_PAYLOAD_QWORD_COUNT = 30;
+static constexpr uint32_t MAX_SIZE_CHANNEL_MESSAGE = HV_MESSAGE_PAYLOAD_BYTE_COUNT;
 
 static constexpr uint32_t HV_SYNIC_SINT_COUNT = 16;
 static constexpr uint32_t HV_EVENT_FLAGS_COUNT = 256 * 8;
@@ -89,6 +103,7 @@ enum HV_STATUS : uint64_t
 	HV_STATUS_OPERATION_FAILED = 0x71,
 	HV_STATUS_NOT_ALLOWED_WITH_NESTED_VIRT_ACTIVE = 0x72
 };
+#define HV_SUCCESS(x) (x == HV_STATUS_SUCCESS)
 
 typedef uint64_t HV_PARTITION_ID;
 
@@ -307,7 +322,7 @@ struct vmbus_channel_offer_channel
 {
 	vmbus_channel_message_header header;
 	vmbus_channel_offer offer;
-	uint32_t child_relid;
+	uint32_t child_relid;//channel id
 	uint8_t monitorid;
 	/*
 	 * win7 and beyond splits this field into a bit field.
@@ -329,6 +344,128 @@ struct vmbus_channel_offer_channel
 	uint16_t reserved1 : 15;
 	uint32_t connection_id;
 };
+
+/* Open Channel parameters */
+struct vmbus_channel_open_channel
+{
+	vmbus_channel_message_header header;
+
+	/* Identifies the specific VMBus channel that is being opened. */
+	uint32_t child_relid;
+
+	/* ID making a particular open request at a channel offer unique. */
+	uint32_t openid;
+
+	/* GPADL for the channel's ring buffer. */
+	uint32_t ringbuffer_gpadlhandle;
+
+	/*
+	 * Starting with win8, this field will be used to specify
+	 * the target virtual processor on which to deliver the interrupt for
+	 * the host to guest communication.
+	 * Prior to win8, incoming channel interrupts would only
+	 * be delivered on cpu 0. Setting this value to 0 would
+	 * preserve the earlier behavior.
+	 */
+	uint32_t target_vp;
+
+	/*
+	 * The upstream ring buffer begins at offset zero in the memory
+	 * described by RingBufferGpadlHandle. The downstream ring buffer
+	 * follows it at this offset (in pages).
+	 */
+	uint32_t downstream_ringbuffer_pageoffset;
+
+	/* User-specific data to be passed along to the server endpoint. */
+	unsigned char userdata[MAX_USER_DEFINED_BYTES];
+};
+
+/* Open Channel Result parameters */
+struct vmbus_channel_open_result {
+	vmbus_channel_message_header header;
+	uint32_t child_relid;
+	uint32_t openid;
+	uint32_t status;
+};
+
+/* Close channel parameters; */
+struct vmbus_channel_close_channel {
+	struct vmbus_channel_message_header header;
+	uint32_t child_relid;
+};
+
+
+/*
+ * This structure defines a range in guest physical space that can be made to
+ * look virtually contiguous.
+ */
+#define ANYSIZE_ARRAY 1
+struct gpa_range
+{
+	uint32_t byte_count;
+	uint32_t byte_offset;
+	uint64_t pfn_array[ANYSIZE_ARRAY];
+};
+
+/* Channel Message GPADL */
+#define GPADL_TYPE_RING_BUFFER		1
+#define GPADL_TYPE_SERVER_SAVE_AREA	2
+#define GPADL_TYPE_TRANSACTION		8
+
+/*
+ * The number of PFNs in a GPADL message is defined by the number of
+ * pages that would be spanned by ByteCount and ByteOffset.  If the
+ * implied number of PFNs won't fit in this packet, there will be a
+ * follow-up packet that contains more.
+ */
+struct vmbus_channel_gpadl_header
+{
+	vmbus_channel_message_header header;
+	uint32_t child_relid;
+	uint32_t gpadl;
+	uint16_t range_buflen;
+	uint16_t rangecount;
+	gpa_range range[];
+};
+
+/* This is the followup packet that contains more PFNs. */
+struct vmbus_channel_gpadl_body
+{
+	vmbus_channel_message_header header;
+	uint32_t msgnumber;
+	uint32_t gpadl;
+	uint64_t pfn[];
+};
+
+struct vmbus_channel_gpadl_created
+{
+	vmbus_channel_message_header header;
+	uint32_t child_relid;
+	uint32_t gpadl;
+	uint32_t creation_status;
+};
+
+struct vmbus_channel_gpadl_teardown
+{
+	vmbus_channel_message_header header;
+	uint32_t child_relid;
+	uint32_t gpadl;
+};
+
+struct vmbus_channel_gpadl_torndown
+{
+	vmbus_channel_message_header header;
+	uint32_t gpadl;
+};
+
+union VmBusResponse
+{
+	//vmbus_channel_version_supported version_supported;
+	vmbus_channel_open_result open_result;
+	vmbus_channel_gpadl_torndown gpadl_torndown;
+	vmbus_channel_gpadl_created gpadl_created;
+	vmbus_channel_version_response version_response;
+};
 #pragma pack(pop)
 
 #define VERSION_WS2008  ((0 << 16) | (13))
@@ -340,3 +477,276 @@ struct vmbus_channel_offer_channel
 #define VERSION_WIN10_V5 ((5 << 16) | (0))
 #define VERSION_WIN10_V5_1 ((5 << 16) | (1))
 #define VERSION_WIN10_V5_2 ((5 << 16) | (2))
+
+
+/* Server Flags */
+#define VMBUS_CHANNEL_ENUMERATE_DEVICE_INTERFACE	1
+#define VMBUS_CHANNEL_SERVER_SUPPORTS_TRANSFER_PAGES	2
+#define VMBUS_CHANNEL_SERVER_SUPPORTS_GPADLS		4
+#define VMBUS_CHANNEL_NAMED_PIPE_MODE			0x10
+#define VMBUS_CHANNEL_LOOPBACK_OFFER			0x100
+#define VMBUS_CHANNEL_PARENT_OFFER			0x200
+#define VMBUS_CHANNEL_REQUEST_MONITORED_NOTIFICATION	0x400
+#define VMBUS_CHANNEL_TLNPI_PROVIDER_OFFER		0x2000
+
+struct vmpacket_descriptor {
+	u16 type;
+	u16 offset8;
+	u16 len8;
+	u16 flags;
+	u64 trans_id;
+} __packed;
+
+struct vmpacket_header {
+	u32 prev_pkt_start_offset;
+	struct vmpacket_descriptor descriptor;
+} __packed;
+
+struct vmtransfer_page_range {
+	u32 byte_count;
+	u32 byte_offset;
+} __packed;
+
+struct vmtransfer_page_packet_header {
+	struct vmpacket_descriptor d;
+	u16 xfer_pageset_id;
+	u8  sender_owns_set;
+	u8 reserved;
+	u32 range_cnt;
+	struct vmtransfer_page_range ranges[1];
+} __packed;
+
+struct vmgpadl_packet_header {
+	struct vmpacket_descriptor d;
+	u32 gpadl;
+	u32 reserved;
+} __packed;
+
+
+struct vmadd_remove_transfer_page_set {
+	struct vmpacket_descriptor d;
+	u32 gpadl;
+	u16 xfer_pageset_id;
+	u16 reserved;
+} __packed;
+
+/*
+ * This is the format for an Establish Gpadl packet, which contains a handle by
+ * which this GPADL will be known and a set of GPA ranges associated with it.
+ * This can be converted to a MDL by the guest OS.  If there are multiple GPA
+ * ranges, then the resulting MDL will be "chained," representing multiple VA
+ * ranges.
+ */
+struct vmestablish_gpadl {
+	struct vmpacket_descriptor d;
+	u32 gpadl;
+	u32 range_cnt;
+	struct gpa_range range[1];
+} __packed;
+
+/*
+ * This is the format for a Teardown Gpadl packet, which indicates that the
+ * GPADL handle in the Establish Gpadl packet will never be referenced again.
+ */
+struct vmteardown_gpadl {
+	struct vmpacket_descriptor d;
+	u32 gpadl;
+	u32 reserved;	/* for alignment to a 8-byte boundary */
+} __packed;
+
+/*
+ * This is the format for a GPA-Direct packet, which contains a set of GPA
+ * ranges, in addition to commands and/or data.
+ */
+struct vmdata_gpa_direct {
+	struct vmpacket_descriptor d;
+	u32 reserved;
+	u32 range_cnt;
+	struct gpa_range range[1];
+} __packed;
+
+/* This is the format for a Additional Data Packet. */
+struct vmadditional_data {
+	struct vmpacket_descriptor d;
+	u64 total_bytes;
+	u32 offset;
+	u32 byte_cnt;
+	unsigned char data[1];
+} __packed;
+
+union vmpacket_largest_possible_header {
+	struct vmpacket_descriptor simple_hdr;
+	struct vmtransfer_page_packet_header xfer_page_hdr;
+	struct vmgpadl_packet_header gpadl_hdr;
+	struct vmadd_remove_transfer_page_set add_rm_xfer_page_hdr;
+	struct vmestablish_gpadl establish_gpadl_hdr;
+	struct vmteardown_gpadl teardown_gpadl_hdr;
+	struct vmdata_gpa_direct data_gpa_direct_hdr;
+};
+
+#define VMPACKET_DATA_START_ADDRESS(__packet)	\
+	(void *)(((unsigned char *)__packet) +	\
+	 ((struct vmpacket_descriptor)__packet)->offset8 * 8)
+
+#define VMPACKET_DATA_LENGTH(__packet)		\
+	((((struct vmpacket_descriptor)__packet)->len8 -	\
+	  ((struct vmpacket_descriptor)__packet)->offset8) * 8)
+
+#define VMPACKET_TRANSFER_MODE(__packet)	\
+	(((struct IMPACT)__packet)->type)
+
+enum vmbus_packet_type {
+	VM_PKT_INVALID = 0x0,
+	VM_PKT_SYNCH = 0x1,
+	VM_PKT_ADD_XFER_PAGESET = 0x2,
+	VM_PKT_RM_XFER_PAGESET = 0x3,
+	VM_PKT_ESTABLISH_GPADL = 0x4,
+	VM_PKT_TEARDOWN_GPADL = 0x5,
+	VM_PKT_DATA_INBAND = 0x6,
+	VM_PKT_DATA_USING_XFER_PAGES = 0x7,
+	VM_PKT_DATA_USING_GPADL = 0x8,
+	VM_PKT_DATA_USING_GPA_DIRECT = 0x9,
+	VM_PKT_CANCEL_REQUEST = 0xa,
+	VM_PKT_COMP = 0xb,
+	VM_PKT_DATA_USING_ADDITIONAL_PKT = 0xc,
+	VM_PKT_ADDITIONAL_DATA = 0xd
+};
+
+#define VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED	1
+
+struct hv_ring_buffer {
+	/* Offset in bytes from the start of ring data below */
+	uint32_t write_index;
+
+	/* Offset in bytes from the start of ring data below */
+	uint32_t read_index;
+
+	uint32_t interrupt_mask;
+
+	/*
+	 * WS2012/Win8 and later versions of Hyper-V implement interrupt
+	 * driven flow management. The feature bit feat_pending_send_sz
+	 * is set by the host on the host->guest ring buffer, and by the
+	 * guest on the guest->host ring buffer.
+	 *
+	 * The meaning of the feature bit is a bit complex in that it has
+	 * semantics that apply to both ring buffers.  If the guest sets
+	 * the feature bit in the guest->host ring buffer, the guest is
+	 * telling the host that:
+	 * 1) It will set the pending_send_sz field in the guest->host ring
+	 *    buffer when it is waiting for space to become available, and
+	 * 2) It will read the pending_send_sz field in the host->guest
+	 *    ring buffer and interrupt the host when it frees enough space
+	 *
+	 * Similarly, if the host sets the feature bit in the host->guest
+	 * ring buffer, the host is telling the guest that:
+	 * 1) It will set the pending_send_sz field in the host->guest ring
+	 *    buffer when it is waiting for space to become available, and
+	 * 2) It will read the pending_send_sz field in the guest->host
+	 *    ring buffer and interrupt the guest when it frees enough space
+	 *
+	 * If either the guest or host does not set the feature bit that it
+	 * owns, that guest or host must do polling if it encounters a full
+	 * ring buffer, and not signal the other end with an interrupt.
+	 */
+	uint32_t pending_send_sz;
+	uint32_t reserved1[12];
+	union {
+		struct {
+			uint32_t feat_pending_send_sz : 1;
+		};
+		uint32_t value;
+	} feature_bits;
+
+	/* Pad it to PAGE_SIZE so that data starts on page boundary */
+	uint8_t	reserved2[4028];
+
+	/*
+	 * Ring data starts here + RingDataStartOffset
+	 * !!! DO NOT place any fields below this !!!
+	 */
+	uint8_t buffer[0];
+};
+static_assert(sizeof(hv_ring_buffer) == PAGE_SIZE, "Invalid hv_ring_buffer");
+
+
+//
+// Definitions for the monitored notification facility
+//
+
+typedef union _HV_MONITOR_TRIGGER_GROUP
+{
+	UINT64 AsUINT64;
+
+	struct
+	{
+		UINT32 Pending;
+		UINT32 Armed;
+	};
+
+} HV_MONITOR_TRIGGER_GROUP, * PHV_MONITOR_TRIGGER_GROUP;
+
+typedef struct _HV_MONITOR_PARAMETER
+{
+	HV_CONNECTION_ID    ConnectionId;
+	UINT16              FlagNumber;
+	UINT16              RsvdZ;
+} HV_MONITOR_PARAMETER, * PHV_MONITOR_PARAMETER;
+
+typedef union _HV_MONITOR_TRIGGER_STATE
+{
+	UINT32 AsUINT32;
+
+	struct
+	{
+		UINT32 GroupEnable : 4;
+		UINT32 RsvdZ : 28;
+	};
+
+} HV_MONITOR_TRIGGER_STATE, * PHV_MONITOR_TRIGGER_STATE;
+
+//
+// HV_MONITOR_PAGE Layout
+// ------------------------------------------------------
+// | 0   | TriggerState (4 bytes) | Rsvd1 (4 bytes)     |
+// | 8   | TriggerGroup[0]                              |
+// | 10  | TriggerGroup[1]                              |
+// | 18  | TriggerGroup[2]                              |
+// | 20  | TriggerGroup[3]                              |
+// | 28  | Rsvd2[0]                                     |
+// | 30  | Rsvd2[1]                                     |
+// | 38  | Rsvd2[2]                                     |
+// | 40  | NextCheckTime[0][0]    | NextCheckTime[0][1] |
+// | ...                                                |
+// | 240 | Latency[0][0..3]                             |
+// | 340 | Rsvz3[0]                                     |
+// | 440 | Parameter[0][0]                              |
+// | 448 | Parameter[0][1]                              |
+// | ...                                                |
+// | 840 | Rsvd4[0]                                     |
+// ------------------------------------------------------
+
+typedef struct _HV_MONITOR_PAGE
+{
+	HV_MONITOR_TRIGGER_STATE TriggerState;
+	UINT32                   RsvdZ1;
+
+	HV_MONITOR_TRIGGER_GROUP TriggerGroup[4];
+	UINT64                   RsvdZ2[3]; // 64
+
+	UINT16                   NextCheckTime[4][32]; // 256
+	UINT64                   RsvdZ3[32]; // 256
+
+	UINT16                   Latency[4][32]; // 256
+	UINT64                   RsvdZ4[32]; // 256
+
+	HV_MONITOR_PARAMETER     Parameter[4][32]; // 1024
+
+	UINT8                    RsvdZ5[1984];
+
+} HV_MONITOR_PAGE, * PHV_MONITOR_PAGE;
+static_assert(sizeof(HV_MONITOR_PAGE) == PAGE_SIZE, "Invalid monitor page");
+
+typedef volatile HV_MONITOR_PAGE* PVHV_MONITOR_PAGE;
+
+

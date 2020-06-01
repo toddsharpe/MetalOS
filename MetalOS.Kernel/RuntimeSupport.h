@@ -1,5 +1,6 @@
 #pragma once
 
+#include "msvc.h"
 #include <efi.h>
 #include <LoaderParams.h>
 #include <MetalOS.h>

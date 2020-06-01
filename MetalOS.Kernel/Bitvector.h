@@ -7,11 +7,11 @@ class Bitvector
 {
 public:
 	Bitvector(size_t length);
-	void Set(size_t index);
-	bool Get(size_t index) const;
-	void Clear(size_t index);
 
-	size_t Size() { return m_size; };
+	bool Get(size_t index) const;
+	void Set(size_t index, bool value);
+
+	const size_t Size() const { return m_size; };
 
 private:
 	static const uint32_t mapBits = std::numeric_limits<size_t>::digits;
@@ -20,6 +20,6 @@ private:
 	static constexpr size_t GetMapShift(size_t index);
 
 	size_t m_size;
-	std::unique_ptr<size_t[]> m_map;
+	size_t* m_map;
 };
 

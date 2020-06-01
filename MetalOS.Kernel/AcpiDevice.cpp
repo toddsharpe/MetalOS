@@ -23,6 +23,7 @@ void AcpiDevice::Initialize()
 
 	Assert(result.Pointer);
 	Path = (char*)result.Pointer;
+	std::replace(Path.begin(), Path.end(), '.', '\\');
 	delete result.Pointer;
 
 	ACPI_DEVICE_INFO* info;

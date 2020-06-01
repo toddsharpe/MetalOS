@@ -47,6 +47,32 @@ void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, cons
 	return (void*)address;
 }
 
+void* VirtualMemoryManager::VirtualMap(uintptr_t virtualAddress, const std::vector<paddr_t>& addresses, const MemoryProtection& protection, VirtualAddressSpace& addressSpace)
+{
+	Print("VirtualMap: 0x%016x, Count: 0x%x\n", addresses.front(), addresses.size());
+	Assert(addresses.size() != 0);
+
+	if (virtualAddress != 0)
+		Assert((virtualAddress & PAGE_MASK) == 0);
+
+	//Reserve region, returning false if it isn't free
+	if (!addressSpace.Reserve(virtualAddress, addresses.size(), protection))
+		return nullptr;
+
+	PageTables pt(__readcr3());
+	pt.SetPool(&m_pool);
+
+	for (size_t i = 0; i < addresses.size(); i++)
+	{
+		if (addressSpace.IsGlobal())
+			pt.MapKernelPages(virtualAddress + (i << PAGE_SHIFT), addresses[i], 1);
+		else
+			pt.MapUserPages(virtualAddress + (i << PAGE_SHIFT), addresses[i], 1);
+	}
+
+	return (void*)virtualAddress;
+}
+
 paddr_t VirtualMemoryManager::ResolveAddress(void* address)
 {
 	PageTables pt(__readcr3());

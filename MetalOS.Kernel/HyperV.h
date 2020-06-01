@@ -1,4 +1,6 @@
 #pragma once
+
+#include "msvc.h"
 #include <cstdint>
 #include "msvc.h"
 #include <string>
@@ -94,7 +96,7 @@ public:
 		__writemsr(EOM, 0);
 	}
 
-	static void ProcessInterrupts(uint32_t sint, std::list<HV_MESSAGE>& queue);
+	static void ProcessInterrupts(uint32_t sint, std::list<uint32_t>& channelIds, std::list<HV_MESSAGE>& queue);
 
 	//Code: 0x005C
 	//Params:
@@ -295,10 +297,6 @@ private:
 	};
 	//Default value: 0x10000 (masked by default)
 
-
-
-
-
 	//three types of ports
 	//message ports - HvPostMessage hypercall
 	//event ports - HvSignalEvent
@@ -489,10 +487,9 @@ private:
 
 	enum HypercallCodes
 	{
-		PostMessage = 0x005C
+		PostMessage = 0x005C,
+		SignalEvent = 0x005d,
 	};
-
-	
 
 	struct HV_POST_MESSAGE_INPUT
 	{
@@ -503,7 +500,21 @@ private:
 		uint64_t Payload[HV_MESSAGE_MAX_PAYLOAD_QWORD_COUNT];
 	};
 
+	struct HV_SIGNAL_EVENT_INPUT
+	{
+		union
+		{
+			struct
+			{
+				HV_CONNECTION_ID ConnectionId;
+				uint16_t Flag;
+				uint16_t Reserved;
+			};
+			uint64_t AsUint64;
+		};
 
+	};
+	static_assert(sizeof(HV_SIGNAL_EVENT_INPUT) == sizeof(uint64_t), "Invalid HV_SIGNAL_EVENT_INPUT");
 
 	uint32_t m_highestLeaf;
 	std::string m_vendor;

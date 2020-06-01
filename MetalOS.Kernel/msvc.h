@@ -4,6 +4,9 @@
 void __cdecl _invalid_parameter(char const*, char const*, char const*, unsigned int, int);
 #define _CRT_SECURE_INVALID_PARAMETER(expr) _invalid_parameter(#expr, __FUNCTION__, __FILE__, __LINE__, 0)
 
+void __cdecl _invoke_watson(char const*, char const*, char const*, unsigned int, int);
+__declspec(noreturn) void __stdcall _CxxThrowException(void* pExceptionObject, void* pThrowInfo);
+
 //Disable exceptions in STL
 #define _HAS_EXCEPTIONS 0
 #define _KERNEL_MODE 1

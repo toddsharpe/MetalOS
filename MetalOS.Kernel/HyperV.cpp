@@ -12,10 +12,10 @@
 
 volatile HyperV::HV_REFERENCE_TSC_PAGE HyperV::TscPage = { 0 };
 
-volatile HV_MESSAGE HyperV::SynicMessages[HV_SYNIC_SINT_COUNT];
+volatile HV_MESSAGE HyperV::SynicMessages[HV_SYNIC_SINT_COUNT] = { HvMessageTypeNone, 0 };
 volatile HV_SYNIC_EVENT_FLAGS HyperV::SynicEvents[HV_SYNIC_SINT_COUNT] = { 0 };
 volatile uint8_t HyperV::HypercallPage[PAGE_SIZE] = { 0 };
-volatile uint8_t HyperV::PostMessagePage[PAGE_SIZE];
+volatile uint8_t HyperV::PostMessagePage[PAGE_SIZE] = { 0 };
 
 HyperV::HyperV() :
 	m_highestLeaf(),
@@ -95,8 +95,8 @@ void HyperV::Initialize()
 	}
 
 	//Initialize Synic
-	HyperV::SetSynicMessagePage(kernel.VirtualToPhysical((paddr_t)SynicMessages));
 	HyperV::SetSynicEventPage(kernel.VirtualToPhysical((paddr_t)SynicEvents));
+	HyperV::SetSynicMessagePage(kernel.VirtualToPhysical((paddr_t)SynicMessages));
 
 	//Enable TSC
 	HV_REF_TSC_REG tscReg = { 0 };
@@ -142,6 +142,10 @@ HV_HYPERCALL_RESULT_VALUE HyperV::HvPostMessage(
 	PCVOID Message
 )
 {
+	Assert(PayloadSize <= HV_MESSAGE_PAYLOAD_BYTE_COUNT);
+	
+	cpu_flags_t flags = x64_disable_interrupts();
+	
 	HV_POST_MESSAGE_INPUT* input = (HV_POST_MESSAGE_INPUT*)PostMessagePage;
 	input->ConnectionId = ConnectionId;
 	input->MessageType = MessageType;
@@ -155,18 +159,57 @@ HV_HYPERCALL_RESULT_VALUE HyperV::HvPostMessage(
 
 	HV_HYPERCALL_RESULT_VALUE status = { 0 };
 	status.AsUint64 = entry(inputValue.AsUint64, kernel.VirtualToPhysical((uintptr_t)input), NULL);
+
+	x64_restore_flags(flags);
 	return status;
 }
 
-void HyperV::ProcessInterrupts(uint32_t sint, std::list<HV_MESSAGE>& queue)
+HV_HYPERCALL_RESULT_VALUE
+HyperV::HvSignalEvent(
+	__in HV_CONNECTION_ID ConnectionId,
+	__in UINT16 FlagNumber //relative to base number for port
+)
 {
 	cpu_flags_t flags = x64_disable_interrupts();
 
+	HV_SIGNAL_EVENT_INPUT* input = (HV_SIGNAL_EVENT_INPUT*)PostMessagePage;
+	input->ConnectionId.AsUint32 = ConnectionId.AsUint32;
+	input->Flag = FlagNumber;
+
+	HV_HYPERCALL_INPUT_VALUE inputValue = { 0 };
+	inputValue.CallCode = HypercallCodes::SignalEvent;
+	inputValue.Fast = true;
+
+	Hypercall entry = (Hypercall)(void*)HypercallPage;
+
+	HV_HYPERCALL_RESULT_VALUE status = { 0 };
+	status.AsUint64 = entry(inputValue.AsUint64, input->AsUint64, NULL);
+
+	x64_restore_flags(flags);
+	return status;
+}
+
+void HyperV::ProcessInterrupts(uint32_t sint, std::list<uint32_t>& channelIds, std::list<HV_MESSAGE>& queue)
+{
+	cpu_flags_t flags = x64_disable_interrupts();
 	HV_SYNIC_EVENT_FLAGS* event = (HV_SYNIC_EVENT_FLAGS*)SynicEvents + sint;
-	for (size_t i = 0; i < HV_EVENT_FLAGS_BYTE_COUNT; i++)
+
+	//Scan for bits
+	for (uint32_t i = 0; i < HV_EVENT_FLAGS_COUNT; i++)
 	{
-		if (event->Flags[i] != 0)
-			Print("Event: [%d]=%02x ", event->Flags[i], i);
+		const uint8_t index = i / 8;
+		const uint8_t flag = i % 8;
+
+		const uint8_t mask = (1 << flag);
+		if ((event->Flags[index] & mask) == 0)
+			continue;
+
+		const uint8_t cleared = event->Flags[index] & ~mask;
+
+		//Clear flag
+		_InterlockedCompareExchange((volatile long*)&event->Flags[index], cleared, event->Flags[index]);
+
+		channelIds.push_back(i);
 	}
 
 	HV_MESSAGE* message = (HV_MESSAGE*)SynicMessages + sint;
@@ -175,6 +218,7 @@ void HyperV::ProcessInterrupts(uint32_t sint, std::list<HV_MESSAGE>& queue)
 
 	if (message->Header.MessageType != HV_MESSAGE_TYPE::HvMessageTypeNone)
 	{
+		Assert((message->Header.MessageType & HV_MESSAGE_TYPE_HYPERVISOR_MASK) == 0);
 		queue.push_back(*message);
 
 		_InterlockedCompareExchange((volatile long*)& message->Header.MessageType, HvMessageTypeNone, message->Header.MessageType);
@@ -183,7 +227,6 @@ void HyperV::ProcessInterrupts(uint32_t sint, std::list<HV_MESSAGE>& queue)
 			HyperV::SignalEom();
 	}
 
-	HyperV::EOI();
 	x64_restore_flags(flags);
 }
 

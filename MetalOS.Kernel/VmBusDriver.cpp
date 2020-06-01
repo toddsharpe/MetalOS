@@ -3,16 +3,19 @@
 #include "x64_support.h"
 #include "HyperVDevice.h"
 #include <crt_stdio.h>
+#include "MicrosoftHyperV.h"
 
-volatile uint8_t VmBusDriver::MonitorPage1[PAGE_SIZE] = { 0 };
-volatile uint8_t VmBusDriver::MonitorPage2[PAGE_SIZE] = { 0 };
+volatile uint8_t VmBusDriver::MonitorPage1[PAGE_SIZE] = { 0 }; //Parent->child notifications
+volatile uint8_t VmBusDriver::MonitorPage2[PAGE_SIZE] = { 0 }; //Child->parent notifications
 
 VmBusDriver::VmBusDriver(Device& device) :
 	Driver(device),
 	m_threadSignal(),
 	m_connectSemaphore(),
 	m_queue(),
-	m_msg_conn_id()
+	m_msg_conn_id(),
+	m_nextGpadlHandle(),
+	m_requests()
 {
 
 }
@@ -23,7 +26,7 @@ Result VmBusDriver::Initialize()
 	m_threadSignal = kernel.CreateSemaphore(0, 0, "HyperVThread");
 	m_connectSemaphore = kernel.CreateSemaphore(0, 0, "HyperVConnect");
 	kernel.CreateThread(VmBusDriver::ThreadLoop, this);
-	
+
 	HyperV::SetSintVector(VMBUS_MESSAGE_SINT, InterruptVector::HypervisorVmBus);
 	kernel.RegisterInterrupt(InterruptVector::HypervisorVmBus, { &VmBusDriver::OnInterrupt, this });
 	HyperV::EnableSynic();
@@ -66,15 +69,84 @@ Result VmBusDriver::EnumerateChildren()
 	result = HyperV::HvPostMessage(connectionId, (HV_MESSAGE_TYPE)1, sizeof(vmbus_channel_message_header), &header);
 	kernel.WaitForSemaphore(m_connectSemaphore, INT64_MAX);
 
-	return Result::ResultNotImplemented;
+	return Result::ResultSuccess;
+}
+
+void VmBusDriver::SetMonitor(uint32_t monitorId)
+{
+	const uint8_t group = (uint8_t)monitorId / 32;
+	const uint8_t bit = (uint8_t)monitorId % 32;
+
+	PVHV_MONITOR_PAGE page = (PVHV_MONITOR_PAGE)MonitorPage1;
+	page->TriggerGroup[group].Pending |= (1 << bit);
+}
+
+HV_HYPERCALL_RESULT_VALUE VmBusDriver::PostMessage(const uint32_t size, const void* message, VmBusResponse& response)
+{
+	//TODO: this should probably be protected by a spinlock
+	
+	HV_CONNECTION_ID connectionId = { 0 };
+	connectionId.Id = m_msg_conn_id;
+
+	//Create wait event (currently a semaphore)
+	Handle semaphore = kernel.CreateSemaphore(0, 0, "");
+
+	vmbus_channel_message_header* hdr = (vmbus_channel_message_header*)message;
+	switch (hdr->msgtype)
+	{
+		case CHANNELMSG_GPADL_HEADER:
+		{
+			vmbus_channel_gpadl_header* gpadlHeader = (vmbus_channel_gpadl_header*)message;
+			gpadlHeader->gpadl = _InterlockedIncrement((volatile long*)&m_nextGpadlHandle);
+			m_requests.push_back({ gpadlHeader->gpadl, 0, 0, semaphore, response});
+		}
+		break;
+
+		case CHANNELMSG_OPENCHANNEL:
+		{
+			vmbus_channel_open_channel* header = (vmbus_channel_open_channel*)message;
+			m_requests.push_back({ 0, header->child_relid, header->openid, semaphore, response });
+		}
+		break;
+
+		default:
+		{
+			Assert(false);
+		}
+	}
+
+	HV_HYPERCALL_RESULT_VALUE result = HyperV::HvPostMessage(connectionId, (HV_MESSAGE_TYPE)1, size, message);
+	Assert(HV_SUCCESS(result.Status));
+
+	kernel.WaitForSemaphore(semaphore, INT64_MAX);
+	kernel.CloseSemaphore(semaphore);
+	return result;
 }
 
 void VmBusDriver::OnInterrupt()
 {
-	HyperV::ProcessInterrupts(VMBUS_MESSAGE_SINT, m_queue);
+	std::list<uint32_t> ids;
+	HyperV::ProcessInterrupts(VMBUS_MESSAGE_SINT, ids, m_queue);
+
+	//Call callbacks
+	for (uint32_t id : ids)
+	{
+		const auto& it = m_channelCallbacks.find(id);
+		if (it == m_channelCallbacks.end())
+			continue;
+
+		(*it->second.Handler)(it->second.Context);
+	}
 
 	//Start processing thread
-	kernel.ReleaseSemaphore(this->m_threadSignal, 1);
+	if (!m_queue.empty())
+		kernel.ReleaseSemaphore(this->m_threadSignal, 1);
+}
+
+void VmBusDriver::SetCallback(uint32_t id, const CallContext& context)
+{
+	Assert(m_channelCallbacks.find(id) == m_channelCallbacks.end());
+	m_channelCallbacks.insert({ id, context });
 }
 
 uint32_t VmBusDriver::ThreadLoop()
@@ -88,7 +160,9 @@ uint32_t VmBusDriver::ThreadLoop()
 		const HV_MESSAGE message = m_queue.front();
 		m_queue.pop_front();
 
+
 		vmbus_channel_message_header* header = (vmbus_channel_message_header*)message.Payload;
+
 		switch (header->msgtype)
 		{
 		case CHANNELMSG_VERSION_RESPONSE:
@@ -107,7 +181,7 @@ uint32_t VmBusDriver::ThreadLoop()
 			vmbus_channel_offer o = offer->offer;
 			Assert(o.sub_channel_index == 0);
 
-			HyperVDevice* child = new HyperVDevice(*offer);
+			HyperVDevice* child = new HyperVDevice(*offer, m_msg_conn_id);
 			child->Initialize();
 			
 			//Update path
@@ -124,11 +198,58 @@ uint32_t VmBusDriver::ThreadLoop()
 			kernel.ReleaseSemaphore(m_connectSemaphore, 1);
 		}
 		break;
+		case CHANNELMSG_GPADL_CREATED:
+		{
+			vmbus_channel_gpadl_created* created = (vmbus_channel_gpadl_created*)message.Payload;
+			BusRequest* request = FindRequest(created->gpadl);
+			//TODO: remove
+
+			//Save response to caller and signal
+			request->Response.gpadl_created = *created;
+			kernel.ReleaseSemaphore(request->Semaphore, 1);
+		}
+		break;
+		case CHANNELMSG_OPENCHANNEL_RESULT:
+		{
+			vmbus_channel_open_result* result = (vmbus_channel_open_result*)message.Payload;
+			BusRequest* request = FindRequest(result->child_relid, result->openid);
+			//TODO: remove
+
+			//Save response to caller and signal
+			request->Response.open_result = *result;
+			kernel.ReleaseSemaphore(request->Semaphore, 1);
+		}
+		break;
 		default:
 		{
 			Print("HyperV::ThreadLoop - Type: %d Header: %d\n", message.Header.MessageType, header->msgtype);
+			Assert(false);
 		}
 		break;
 		}
 	}
+}
+
+VmBusDriver::BusRequest* VmBusDriver::FindRequest(uint32_t gpadl)
+{
+	for (auto& request : m_requests)
+	{
+		if (request.Gpadl == gpadl)
+			return &request;
+	}
+
+	Assert(false);
+	return nullptr;
+}
+
+VmBusDriver::BusRequest* VmBusDriver::FindRequest(uint32_t child_relid, uint32_t openid)
+{
+	for (auto& request : m_requests)
+	{
+		if (request.child_relid == child_relid && request.openid == openid)
+			return &request;
+	}
+
+	Assert(false);
+	return nullptr;
 }

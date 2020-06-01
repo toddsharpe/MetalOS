@@ -29,11 +29,27 @@ namespace std
 	{
 		Assert(false);
 	}
+
+}
+
+extern "C" void __cdecl __CxxFrameHandler3()
+{
+	Assert(false);
+}
+
+__declspec(noreturn) void __stdcall _CxxThrowException(void* pExceptionObject, void* pThrowInfo)
+{
+	Assert(false);
+}
+
+void __cdecl _invoke_watson(char const*, char const*, char const*, unsigned int, int)
+{
+
 }
 
 void __cdecl _invalid_parameter(char const*, char const*, char const*, unsigned int, int)
 {
-
+	Assert(false);
 }
 
 extern "C" void __chkstk()

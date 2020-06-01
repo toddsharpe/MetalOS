@@ -1,5 +1,6 @@
 #pragma once
 
+#include "msvc.h"
 #include <efi.h>
 #include <LoaderParams.h>
 #include <MetalOS.h>
@@ -37,7 +38,7 @@ public:
 	void Initialize(const PLOADER_PARAMS params);
 
 	void HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame);
-	void Bugcheck(const char* file, const char* line, const char* assert);//__declspec(noreturn) ?
+	void __declspec(noreturn) Bugcheck(const char* file, const char* line, const char* assert);//__declspec(noreturn) ?
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
@@ -71,7 +72,9 @@ public:
 #pragma endregion
 
 #pragma region Virtual Memory Interface
+	paddr_t AllocatePhysical(const size_t count);
 	void* AllocatePage(const uintptr_t address, const size_t count, const MemoryProtection& protection);
+	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses, const MemoryProtection& protection);
 #pragma endregion
 
 #pragma region ACPI
@@ -128,6 +131,8 @@ public:
 	void GetSystemTime(SystemTime* time);
 
 	void RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
+
+	Device* GetDevice(const std::string path);
 #pragma endregion
 
 #pragma region Semaphore Interface

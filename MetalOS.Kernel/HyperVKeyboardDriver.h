@@ -3,9 +3,26 @@
 #include "Device.h"
 #include "Driver.h"
 #include "HyperVChannel.h"
+#include "MetalOS.h"
 
-//Scancodes to keyodes
+#include <queue>
 
+//http://www.scs.stanford.edu/10wi-cs140/pintos/specs/kbd/scancodes-1.html
+static const VirtualKey ScancodeSet1[] =
+{
+	/* 0x00 */ VK_UNMAPPED, VK_ESCAPE, '1', '2', '3', '4', '5', '6',
+	/* 0x08 */ '7', '8', '9', '0', VK_OEM_MINUS, VK_OEM_1, VK_BACK, VK_TAB,
+	/* 0x10 */ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I',
+	/* 0x18 */ 'O', 'P', VK_OEM_4, VK_OEM_6, VK_RETURN, VK_CONTROL, 'A', 'S',
+	/* 0x20 */ 'D', 'F', 'G', 'H', 'J', 'K', 'L', VK_OEM_1,
+	/* 0x28 */ VK_OEM_7, VK_OEM_3, VK_LSHIFT, VK_OEM_5, 'Z', 'X', 'C', 'V',
+	/* 0x30 */ 'B', 'N', 'M', VK_OEM_COMMA, VK_OEM_PERIOD, VK_OEM_2, VK_RSHIFT, VK_MULTIPLY,
+	/* 0x38 */ VK_MENU, VK_SPACE, VK_CAPITAL, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5,
+	/* 0x40 */ VK_F6, VK_F7, VK_F8, VK_F9, VK_F10, VK_NUMLOCK, VK_SCROLL, VK_HOME,
+	/* 0x48 */ VK_NUMPAD8, VK_NUMPAD9, VK_SUBTRACT, VK_NUMPAD4, VK_NUMPAD5, VK_NUMPAD6, VK_ADD, VK_NUMPAD1,
+	/* 0x50 */ VK_NUMPAD2, VK_NUMPAD3, VK_NUMPAD0, VK_DECIMAL, VK_UNMAPPED, VK_UNMAPPED, VK_UNMAPPED, VK_F11,
+	/* 0x58 */ VK_F12
+};
 
 class HyperVKeyboardDriver : public Driver
 {
@@ -96,11 +113,14 @@ private:
 #define XTKBD_EMUL1     0xe1
 #define XTKBD_RELEASE   0x80
 
+	VirtualKey GetKeycode(uint16_t scanCode);
 
 	void OnCallback();
 	void ProcessMessage(synth_kbd_msg_hdr* header, const uint32_t size);
 
 	synth_kbd_protocol_response m_response;
+
+	std::queue<KeyEvent> m_events;
 
 	Handle m_semaphore;
 	HyperVChannel m_channel;

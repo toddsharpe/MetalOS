@@ -180,6 +180,7 @@
     <ClCompile Include="HyperVChannel.cpp" />
     <ClCompile Include="HyperVDevice.cpp" />
     <ClCompile Include="HyperVKeyboardDriver.cpp" />
+    <ClCompile Include="HyperVMouseDriver.cpp" />
     <ClCompile Include="HyperVRingBuffer.cpp" />
     <ClCompile Include="HyperVTimer.cpp" />
     <ClCompile Include="IoApicDriver.cpp" />
@@ -225,6 +226,7 @@
     <ClInclude Include="HyperVChannel.h" />
     <ClInclude Include="HyperVDevice.h" />
     <ClInclude Include="HyperVKeyboardDriver.h" />
+    <ClInclude Include="HyperVMouseDriver.h" />
     <ClInclude Include="HyperVRingBuffer.h" />
     <ClInclude Include="HyperVTimer.h" />
     <ClInclude Include="IoApicDriver.h" />

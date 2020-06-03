@@ -535,3 +535,5 @@ struct CallContext
 	MemberFunction Handler;
 	void* Context;
 };
+
+#define COUNT_OF( arr) (sizeof(arr)/sizeof(0[arr]))

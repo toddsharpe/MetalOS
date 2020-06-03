@@ -1,3 +1,6 @@
 [submodule "acpica"]
 	path = acpica
 	url = https://github.com/toddsharpe/acpica.git
+[submodule "MetalOS.Apps.Doom"]
+	path = MetalOS.Apps.Doom
+	url = https://github.com/toddsharpe/MetalOS.Apps.Doom

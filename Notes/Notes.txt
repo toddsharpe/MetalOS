@@ -326,6 +326,10 @@ user:
   -map region in page tables
   -mark region as allocated
 
+  Scancode Set 2:
+  http://www.scs.stanford.edu/10wi-cs140/pintos/specs/kbd/scancodes-1.html
+  http://cherrytree.at/misc/vk.htm
+
    SC Key   SC Key   SC Key        SC Key        SC Key       SC Key
             20 D     40 F6         60 Ctrl F3    80 Alt 9     A0 Alt Dn Arrow
    01 ESC   21 F     41 F7         61 Ctrl F4    81 Alt 0     A1 Alt PgDn

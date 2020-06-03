@@ -5,6 +5,7 @@
 HyperVKeyboardDriver::HyperVKeyboardDriver(Device& device) :
 	Driver(device),
 	m_semaphore(),
+	m_events(),
 	m_channel(KBD_VSC_SEND_RING_BUFFER_SIZE, KBD_VSC_RECV_RING_BUFFER_SIZE, { &HyperVKeyboardDriver::Callback, this })
 {
 	m_semaphore = kernel.CreateSemaphore(0, 0, "HyperVKeyboardDriver");
@@ -100,8 +101,13 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 		Assert(size >= sizeof(synth_kbd_keystroke));
 		synth_kbd_keystroke key;
 		memcpy(&key, header, sizeof(synth_kbd_keystroke));
-		Print("Key: %d (%x) = %c Unicode: %d down: %d\n", key.make_code, key.make_code,(char)(key.make_code), key.info & IS_UNICODE, key.info & IS_BREAK);
+		//Print("Key: %d (%x) = %c Unicode: %d down: %d\n", key.make_code, key.make_code,(char)(key.make_code), key.info & IS_UNICODE, key.info & IS_BREAK);
+		VirtualKey keyCode = GetKeycode(key.make_code);
 
+		KeyEvent event = { 0 };
+		event.Key = keyCode;
+		event.Flags.Pressed = (key.make_code & IS_BREAK) != 0;
+		m_events.push(event);
 		break;
 	}
 	break;
@@ -110,4 +116,12 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 		Assert(false);
 		break;
 	}
+}
+
+VirtualKey HyperVKeyboardDriver::GetKeycode(uint16_t scanCode)
+{
+	if (scanCode >= COUNT_OF(ScancodeSet1))
+		return VK_UNMAPPED;
+
+	return ScancodeSet1[scanCode];
 }

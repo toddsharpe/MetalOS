@@ -16,7 +16,7 @@ class HyperVChannel
 public:
 	HyperVChannel(size_t sendSize, size_t receiveSize, CallContext callback);
 
-	void Initialize(vmbus_channel_offer_channel* offerChannel);
+	void Initialize(vmbus_channel_offer_channel* offerChannel, const Buffer* buffer = nullptr);
 
 	void SendPacket(void* buffer, uint32_t length, uint64_t requestId, const vmbus_packet_type type, uint32_t flags);
 

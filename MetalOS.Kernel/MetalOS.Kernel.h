@@ -536,4 +536,10 @@ struct CallContext
 	void* Context;
 };
 
+struct Buffer
+{
+	void* Data;
+	size_t Length;
+};
+
 #define COUNT_OF( arr) (sizeof(arr)/sizeof(0[arr]))

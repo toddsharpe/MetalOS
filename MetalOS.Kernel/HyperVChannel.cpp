@@ -22,8 +22,11 @@ HyperVChannel::HyperVChannel(size_t sendSize, size_t receiveSize, CallContext ca
 	m_vmbus = (VmBusDriver*)bus->GetDriver();
 }
 
-void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel)
+void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const Buffer* buffer)
 {
+	if (buffer != nullptr)
+		Assert(buffer->Length <= MAX_USER_DEFINED_BYTES);
+	
 	m_channel = offerChannel;
 	
 	//Establish GPADL for ring buffers
@@ -56,13 +59,16 @@ void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel)
 	Print("GPADL created\n");
 
 	//Open channel
-	vmbus_channel_open_channel openChannel;
-	memset(&openChannel, 0, sizeof(vmbus_channel_open_channel));
-	openChannel.header.msgtype = CHANNELMSG_OPENCHANNEL;
-	openChannel.openid = m_channel->child_relid;
-	openChannel.child_relid = m_channel->child_relid;
-	openChannel.ringbuffer_gpadlhandle = m_gpadlHandle;
-	openChannel.downstream_ringbuffer_pageoffset = m_sendCount;
+	const size_t packetSize = sizeof(vmbus_channel_open_channel) + (buffer != nullptr ? buffer->Length : 0);
+	vmbus_channel_open_channel* openChannel = (vmbus_channel_open_channel*)malloc(sizeof(packetSize));
+	memset(openChannel, 0, packetSize);
+	openChannel->header.msgtype = CHANNELMSG_OPENCHANNEL;
+	openChannel->openid = m_channel->child_relid;
+	openChannel->child_relid = m_channel->child_relid;
+	openChannel->ringbuffer_gpadlhandle = m_gpadlHandle;
+	openChannel->downstream_ringbuffer_pageoffset = m_sendCount;
+	if (buffer != nullptr)
+		memcpy(openChannel->userdata, buffer->Data, buffer->Length);
 	result = m_vmbus->PostMessage(sizeof(vmbus_channel_open_channel), &openChannel, response);
 	Print("openChannelResult: 0x%016x\n", result);
 

@@ -1,0 +1,28 @@
+linux driver probe - ran per device to init hardware, alloc resources
+
+hv_kbd_probe
+- vmbus_open
+-- vmbus_alloc_ring
+-- __vmbus_open
+--- hv_ringbuffer_init outbound
+--- hv_ringbuffer_init inbound
+--- vmbus_establish_gpadl (gpadl for ring buffer)
+---- create_gpadl_header
+---- vmbus_post_msg CHANNELMSG_GPADL_BODY
+--- struct vmbus_channel_open_channel - CHANNELMSG_OPENCHANNEL
+--- vmbus_post_msg
+
+
+vmbus_alloc_ring (state, send_size, receive_size)
+* Allocates pages
+* Stores page address, page_count, and send_offset (since region is contigious)
+
+__vmbus_open
+
+
+storvsc_on_channel_callback
+
+storvsc_connect_to_vsp
+-storvsc_channel_init
+-- storvsc_execute_vstor_op
+--- vmbus_sendpacket

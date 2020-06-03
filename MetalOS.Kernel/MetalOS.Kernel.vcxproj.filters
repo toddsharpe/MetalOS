@@ -150,6 +150,9 @@
     <ClCompile Include="HyperVMouseDriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HyperVScsiDriver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Display.h">
@@ -291,6 +294,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HyperVMouseDriver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HyperVScsiDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

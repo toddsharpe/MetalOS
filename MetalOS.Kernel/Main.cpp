@@ -71,6 +71,18 @@ void operator delete(void* p, size_t n)
 		bootHeap.Deallocate(p);
 }
 
+void* malloc(size_t size)
+{
+	Assert(kernel.IsHeapInitialized());
+	return kernel.Allocate(size);
+}
+
+void free(void* ptr)
+{
+	Assert(kernel.IsHeapInitialized());
+	return kernel.Deallocate(ptr);
+}
+
 extern "C" void syscall()
 {
 	Print("Syscall!");

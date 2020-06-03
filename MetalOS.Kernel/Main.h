@@ -19,6 +19,9 @@ void* operator new(size_t n);
 void operator delete(void* p);
 void operator delete(void* p, size_t n);
 
+void* malloc(size_t size);
+void free(void* ptr);
+
 extern "C" void Print(const char* format, ...);
 
 extern Kernel kernel;

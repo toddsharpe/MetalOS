@@ -11,6 +11,7 @@
 #include "VmBusDriver.h"
 #include "HyperVKeyboardDriver.h"
 #include "HyperVMouseDriver.h"
+#include "HyperVScsiDriver.h"
 
 DeviceTree::DeviceTree() :
 	m_root()
@@ -129,6 +130,8 @@ void DeviceTree::AttachDriver(Device& device)
 		device.SetDriver(new VmBusDriver(device));
 	else if (device.GetHid() == "{F912AD6D-2B17-48EA-BD65-F927A61C7684}")
 		device.SetDriver(new HyperVKeyboardDriver(device));
+	else if (device.GetHid() == "{BA6163D9-04A1-4D29-B605-72E2FFB1DC7F}")
+		device.SetDriver(new HyperVScsiDriver(device));
 	//else if (device.GetHid() == "{CFA8B69E-5B4A-4CC0-B98B-8BA1A1F3F95A}")
 		//device.SetDriver(new HyperVMouseDriver(device));
 	//else if (device->GetHid() == "PNP0B00")

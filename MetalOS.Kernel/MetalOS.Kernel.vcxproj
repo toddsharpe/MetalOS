@@ -182,6 +182,7 @@
     <ClCompile Include="HyperVKeyboardDriver.cpp" />
     <ClCompile Include="HyperVMouseDriver.cpp" />
     <ClCompile Include="HyperVRingBuffer.cpp" />
+    <ClCompile Include="HyperVScsiDriver.cpp" />
     <ClCompile Include="HyperVTimer.cpp" />
     <ClCompile Include="IoApicDriver.cpp" />
     <ClCompile Include="Kernel.cpp" />
@@ -228,6 +229,7 @@
     <ClInclude Include="HyperVKeyboardDriver.h" />
     <ClInclude Include="HyperVMouseDriver.h" />
     <ClInclude Include="HyperVRingBuffer.h" />
+    <ClInclude Include="HyperVScsiDriver.h" />
     <ClInclude Include="HyperVTimer.h" />
     <ClInclude Include="IoApicDriver.h" />
     <ClInclude Include="Kernel.h" />

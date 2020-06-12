@@ -78,6 +78,10 @@ typedef struct
 	//Config tables
 	EFI_CONFIGURATION_TABLE* ConfigTables;
 	UINTN ConfigTableSizes;
+
+	//PDB
+	EFI_PHYSICAL_ADDRESS PdbAddress;
+	size_t PdbSize;
 } LOADER_PARAMS, * PLOADER_PARAMS;
 
 //KernelMain

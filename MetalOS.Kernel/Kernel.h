@@ -27,6 +27,7 @@ extern "C"
 #include "Scheduler.h"
 #include "KernelHeap.h"
 #include <queue>
+#include "Pdb.h"
 
 
 class Kernel
@@ -158,6 +159,8 @@ private:
 	paddr_t m_physicalAddress;
 	size_t m_imageSize;
 	EFI_RUNTIME_SERVICES m_runtime;
+	paddr_t m_pdbAddress;
+	size_t m_pdbSize;
 
 	//Basic output drivers
 	Display* m_display;
@@ -196,5 +199,7 @@ private:
 	//TODO: should be an interface
 	HyperVTimer* m_timer;
 
+	//PDB
+	Pdb* m_pdb;
 };
 

@@ -136,6 +136,21 @@ size_t strlen(const char* str)
 	return length;
 }
 
+size_t strnlen_s(char const* _String, size_t _MaxCount)
+{
+	if (_String == NULL) {
+		return 0;
+	}
+
+	size_t count = 0;
+
+	while (*_String++ && _MaxCount--) {
+		count++;
+	}
+
+	return count;
+}
+
 char* strncpy(char* _Destination, char const* _Source, size_t _Count)
 {
 	memcpy(_Destination, _Source, _Count * sizeof(char));

@@ -19,6 +19,18 @@ PIMAGE_SECTION_HEADER RuntimeSupport::GetPESection(const std::string& name, cons
 	return nullptr;
 }
 
+PIMAGE_SECTION_HEADER RuntimeSupport::GetPESection(const uint32_t index, const uintptr_t ImageBase)
+{
+	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ImageBase;
+	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)((uint64_t)ImageBase + dosHeader->e_lfanew);
+
+	Assert(index < pNtHeader->FileHeader.NumberOfSections);
+
+	//Find section
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	return &section[index];
+}
+
 //TODO: History Table?
 PRUNTIME_FUNCTION RuntimeSupport::LookupFunctionEntry(const uint64_t ControlPC, const uintptr_t ImageBase, const void* HistoryTable)
 {

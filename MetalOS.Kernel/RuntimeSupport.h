@@ -35,6 +35,7 @@ public:
 	};
 
 	static PIMAGE_SECTION_HEADER GetPESection(const std::string& name, const uintptr_t ImageBase);
+	static PIMAGE_SECTION_HEADER GetPESection(const uint32_t index, const uintptr_t ImageBase);
 	static PRUNTIME_FUNCTION LookupFunctionEntry(const uint64_t ControlPC, const uintptr_t ImageBase, const void* HistoryTable);
 	static PUNWIND_INFO GetUnwindInfo(const uintptr_t ImageBase, const PRUNTIME_FUNCTION function);
 	static PUNWIND_INFO GetUnwindInfo(const uintptr_t address);

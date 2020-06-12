@@ -22,6 +22,7 @@ typedef EFI_GUID GUID;
 #include "BootHeap.h"
 #include "StackWalk.h"
 #include "KSemaphore.h"
+#include <string>
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -30,6 +31,8 @@ Kernel::Kernel() :
 	m_physicalAddress(),
 	m_imageSize(),
 	m_runtime(),
+	m_pdbAddress(),
+	m_pdbSize(),
 
 	m_display(),
 	m_textScreen(),
@@ -75,6 +78,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_runtime = *params->Runtime;//UEFI has rewritten these pointers, now we copy them locally
 	m_pfnDbAddress = params->PfnDbAddress;
 	const size_t pfnDbSize = params->PfnDbSize;
+	m_pdbAddress = params->PdbAddress;
+	m_pdbSize = params->PdbSize;
 
 	//Initialize Display
 	m_display = new Display(params->Display, KernelGraphicsDeviceAddress);
@@ -102,6 +107,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_pageTables->MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 	m_pageTables->MapKernelPages(KernelGraphicsDeviceAddress, params->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(params->Display.FrameBufferSize));
 	m_pageTables->MapKernelPages(KernelPfnDbStart, params->PfnDbAddress, EFI_SIZE_TO_PAGES(params->PfnDbSize));
+	m_pageTables->MapKernelPages(KernelPdbStart, params->PdbAddress, EFI_SIZE_TO_PAGES(params->PdbSize));
 
 	//Map in runtime sections
 	{
@@ -140,6 +146,9 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Initialize Heap
 	m_heap = new KernelHeap(*m_virtualMemory, *m_addressSpace);
 	m_heapInitialized = true;
+
+	//PDB
+	m_pdb = new Pdb(KernelPdbStart);
 
 	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();
@@ -239,6 +248,13 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 			m_textScreen->Printf("  Null pointer dereference\n", __readcr2());
 	}
 
+	if (m_scheduler != nullptr)
+		m_scheduler->Enabled = false;
+	if (m_timer != nullptr)
+		m_timer->Disable();
+
+	m_heap->PrintHeap();
+
 	CONTEXT context = { 0 };
 	context.Rip = pFrame->RIP;
 	context.Rsp = pFrame->RSP;
@@ -246,21 +262,63 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 
 	StackWalk sw(&context, KernelBaseAddress);
 	Print("IP: 0x%016x\n", context.Rip);
-	while (sw.HasNext())
-	{
-		sw.Next();
-		Print("IP: 0x%016x\n", context.Rip);
-	}
+	uint32_t rva = (uint32_t)context.Rip - KernelBaseAddress;
+	//m_pdb->PrintStack(rva);
+	//Print("Func: %s Line: %d\n", entry.Function.c_str(), entry.Line);
+	//while (sw.HasNext())
+	//{
+	//	sw.Next();
+	//	Print("IP: 0x%016x\n", context.Rip);
+	//	rva = (uint32_t)context.Rip - KernelBaseAddress;
+	//	m_pdb->PrintStack(rva);
+	//}
 	//TODO: stack walk
 	__halt();
 }
 
+bool inBugcheck = false;
 void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 {
+	if (inBugcheck)
+	{
+		m_textScreen->Printf("%s\n%s\n%s", file, line, assert);
+
+		while(true)
+			__halt();
+	}
+	
+	inBugcheck = true;
+	
 	if (m_scheduler != nullptr)
 		m_scheduler->Enabled = false;
 
-	//m_timer->Disable();
+	if (m_timer != nullptr)
+		m_timer->Disable();
+
+	uint8_t buffer[sizeof(x64_context)];
+	Assert(sizeof(x64_context) == x64_CONTEXT_SIZE);
+	x64_save_context(buffer);
+
+	x64_context* x64context = (x64_context*)buffer;
+
+	CONTEXT context = { 0 };
+	context.Rip = x64context->Rip;
+	context.Rsp = x64context->Rsp;
+	context.Rbp = x64context->Rbp;
+
+	StackWalk sw(&context, KernelBaseAddress);
+	uint32_t rva = (uint32_t)context.Rip - KernelBaseAddress;
+	
+	while (sw.HasNext())
+	{
+		Print("IP: 0x%016x ", context.Rip);
+		if (m_pdb != nullptr)
+			m_pdb->PrintStack((uint32_t)context.Rip - KernelBaseAddress);
+		else
+			Print("\n");
+
+		sw.Next();
+	}
 
 	//m_display->ColorScreen(Red);
 

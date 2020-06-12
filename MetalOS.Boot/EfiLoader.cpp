@@ -11,7 +11,38 @@
 EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
 EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
 
+EFI_GUID gEfiFileInfoGuid = EFI_FILE_INFO_ID;
+
 typedef void (*CrtInitializer)();
+
+EFI_STATUS EfiLoader::MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS& address, size_t& size)
+{
+	EFI_STATUS status;
+	
+	//Get file info size
+	UINTN infoSize = 0;
+	status = file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, nullptr);
+	if (status != EFI_BUFFER_TOO_SMALL)
+	{
+		ReturnIfNotSuccess(status);
+	}
+
+	//Allocate space for file info
+	EFI_FILE_INFO* fileInfo;
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, infoSize, (void**)&fileInfo));
+
+	//Get file info
+	ReturnIfNotSuccess(file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, (void*)fileInfo));
+	size = fileInfo->FileSize;
+
+	//Allocate space for file
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, EFI_SIZE_TO_PAGES(size), &address));
+
+	//Read file into memory
+	ReturnIfNotSuccess(file->Read(file, &size, (void*)address));
+
+	return EFI_SUCCESS;
+}
 
 //This method should check the memory map file and ensure nobody else has this reservation
 EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64* pImageSizeOut, UINT64* pEntryPointOut, EFI_PHYSICAL_ADDRESS* pPhysicalImageBase)

@@ -192,22 +192,6 @@ void Scheduler::Add(KernelThread& thread)
 	}
 }
 
-//TODO: somehow export struct from asm
-struct x64_context
-{
-	uint64_t R12;
-	uint64_t R13;
-	uint64_t R14;
-	uint64_t R15;
-	uint64_t Rdi;
-	uint64_t Rsi;
-	uint64_t Rbx;
-	uint64_t Rbp;
-	uint64_t Rsp;
-	uint64_t Rip;
-	uint64_t Rflags;
-};
-
 void Scheduler::DisplayThread(KernelThread& thread)
 {
 	Print("Thread %d\n  Start:0x%016x\n  Arg: 0x%016x\n",

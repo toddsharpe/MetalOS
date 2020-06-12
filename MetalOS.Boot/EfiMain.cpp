@@ -17,6 +17,7 @@
 
 #define EFI_DEBUG 1
 #define Kernel L"moskrnl.exe"
+#define KernelPDB L"moskrnl.pdb"
 #define MaxKernelPath 64
 
 EFI_SYSTEM_TABLE* ST;
@@ -116,10 +117,28 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	EFI_FILE* KernelFile = nullptr;
 	Print(L"Loading: %s\r\n", KernelPath);
 	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelFile, KernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
+	ReturnIfNotSuccess(BS->FreePool(KernelPath));
 
 	//Map kernel into memory. It will be relocated at KernelBaseAddress
 	UINT64 entryPoint;
 	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &LoaderParams.KernelImageSize, &entryPoint, &LoaderParams.KernelAddress));
+
+	//Build path to kernelpdb
+	CHAR16* KernelPdbPath;
+	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, MaxKernelPath * sizeof(CHAR16), (void**)&KernelPdbPath));
+	memset((void*)KernelPdbPath, 0, MaxKernelPath * sizeof(CHAR16));
+	GetDirectoryName(BootFilePath, KernelPdbPath);
+	wcscpy(KernelPdbPath + wcslen(KernelPdbPath), KernelPDB);
+
+	//Load pdb file
+	EFI_FILE* KernelPdbFile = nullptr;
+	Print(L"Loading: %s\r\n", KernelPdbPath);
+	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelPdbFile, KernelPdbPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
+	ReturnIfNotSuccess(BS->FreePool(KernelPdbPath));
+
+	//Map PDB into memory
+	ReturnIfNotSuccess(EfiLoader::MapFile(KernelPdbFile, LoaderParams.PdbAddress, LoaderParams.PdbSize));
+	Print(L"  Address: 0x%016x Size:0x%x\r\n", LoaderParams.PdbAddress, LoaderParams.PdbSize);
 
 	//Initialize graphics
 	ReturnIfNotSuccess(InitializeGraphics(&LoaderParams.Display));
@@ -198,11 +217,6 @@ EFI_STATUS PrintCpuDetails()
 
 	ReturnIfNotSuccess(Print(L"CPU vendor: %s\r\n", wideVendor));
 
-	__cpuid(registers, 0x80000001);
-	//This means its supported, may not be active
-	int x64 = (registers[3] & (1 << 29)) != 0;
-	ReturnIfNotSuccess(Print(L"  CPU x64 Mode: %d\r\n", x64));
-
 	UINT64 cr0 = __readcr0();
 	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
 	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
@@ -220,6 +234,7 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* pParams)
 	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: 0x%016x, Pages: 0x%x\r\n", pParams->PageTablesPoolAddress, pParams->PageTablesPoolPageCount));
 	ReturnIfNotSuccess(Print(L"  PFN Database-Address: 0x%016x, Size: 0x%x\r\n", pParams->PfnDbAddress, pParams->PfnDbSize));
 	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", pParams->ConfigTables, pParams->ConfigTableSizes));
+	ReturnIfNotSuccess(Print(L"  PDB-Address: 0x%016x, Size: 0x%x\r\n", pParams->PdbAddress, pParams->PdbSize));
 
 	PrintGraphicsDevice(&pParams->Display);
 	return status;

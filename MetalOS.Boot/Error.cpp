@@ -3,13 +3,15 @@
 #include <crt_wchar.h>
 #include "EfiMain.h"
 
-EFI_STATUS Error::DisplayError(const CHAR16* function, EFI_STATUS status)
+EFI_STATUS Error::DisplayError(const CHAR16* function, const CHAR16* file, const CHAR16* line, EFI_STATUS status)
 {
 	CHAR16 statusString[64];
 	Print(L"Error:\r\n");
 	Print(L"  %s\r\n", function);
 	StatusToString(statusString, status);
 	Print(L"  Status: %d ( %s )\r\n", status, statusString);
+	Print(L"  %s\r\n", file);
+	Print(L"  %s\r\n", line);
 	BS->Stall(1000 * 1000 * 60 * 60);
 	return EFI_ABORTED;
 }

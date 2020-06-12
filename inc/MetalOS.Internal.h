@@ -16,6 +16,7 @@
 #define KernelRuntimeStart (KernelStart + 0x400000000000)//Connected to kernel virtual address space for runtime mappings
 #define KernelRuntimeEnd (KernelStart + 0x500000000000)
 #define KernelPfnDbStart (KernelStart + 0x500000000000)//PFNDatabase
+#define KernelPdbStart (KernelStart + 0x600000000000)//PDB
 
 #define PAGE_SHIFT  12
 #define PAGE_SIZE (1 << PAGE_SHIFT)

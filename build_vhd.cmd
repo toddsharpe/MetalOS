@@ -22,6 +22,7 @@ diskpart /s %VHD_SCRIPT%
 @rem Copy files to VHD
 xcopy %BUILD_OUT%\BOOTX64.EFI X:\EFI\BOOT\
 xcopy %BUILD_OUT%\moskrnl.exe X:\EFI\BOOT\
+xcopy %BUILD_OUT%\moskrnl.pdb X:\EFI\BOOT\
 
 @(
 echo select vdisk file=%VHD%

@@ -536,6 +536,7 @@ struct CallContext
 	void* Context;
 };
 
+//TODO: delete data?
 struct Buffer
 {
 	void* Data;
@@ -543,3 +544,26 @@ struct Buffer
 };
 
 #define COUNT_OF( arr) (sizeof(arr)/sizeof(0[arr]))
+
+//To avoid heap allocations, pointers point inside pdb
+struct StackEntry
+{
+	char* Function;
+	uint32_t Line;
+};
+
+//TODO: somehow export struct from asm
+struct x64_context
+{
+	uint64_t R12;
+	uint64_t R13;
+	uint64_t R14;
+	uint64_t R15;
+	uint64_t Rdi;
+	uint64_t Rsi;
+	uint64_t Rbx;
+	uint64_t Rbp;
+	uint64_t Rsp;
+	uint64_t Rip;
+	uint64_t Rflags;
+};

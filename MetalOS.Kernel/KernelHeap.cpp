@@ -19,6 +19,7 @@ KernelHeap::KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace&
 	this->m_head->Next = nullptr;
 	this->m_head->Prev = nullptr;
 	this->m_head->Free = true;
+	this->m_head->Magic = Magic;
 }
 
 void KernelHeap::Grow(size_t pages)
@@ -35,6 +36,7 @@ void* KernelHeap::Allocate(const size_t size)
 	HeapBlock* current = this->m_head;
 	while (!current->Free || current->GetLength() < allocationSize)
 	{
+		Assert(current->Magic == Magic);
 		//If this is our last block it needs to be extended
 		if (current->Next == nullptr)
 			break;
@@ -114,6 +116,12 @@ void KernelHeap::Deallocate(const void* address)
 
 void KernelHeap::PrintHeap() const
 {
+	Print("PrintHeap\n");
+	Print("Head: 0x%016x\n", this->m_head);
+	Print("Addressead: 0x%016x\n", this->m_address);
+	Print("End: 0x%016x\n", this->m_end);
+	Print("Allocated: 0x%016x\n", this->m_allocated);
+
 	HeapBlock* current = this->m_head;
 	while (current != nullptr)
 	{

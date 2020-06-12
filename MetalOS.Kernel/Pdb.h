@@ -11,6 +11,7 @@
 // https://github.com/willglynn/pdb
 // https://llvm.org/docs/PDB/
 // https://github.com/microsoft/microsoft-pdb
+// https://github.com/moyix/pdbparse/tree/master/src - undname from wine
 class Pdb
 {
 public:

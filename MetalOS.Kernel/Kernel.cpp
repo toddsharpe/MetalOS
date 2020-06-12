@@ -326,6 +326,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	//m_textScreen->ResetY();
 	m_textScreen->Printf("%s\n%s\n%s", file, line, assert);
 
+	m_heap->PrintHeap();
 	__halt();
 }
 
@@ -504,9 +505,9 @@ void Kernel::GetSystemTime(SystemTime* time)
 	time->Milliseconds = efiTime.Nanosecond / 1000;
 }
 
-void* Kernel::Allocate(size_t size)
+void* Kernel::Allocate(const size_t size, const uintptr_t callerAddress)
 {
-	return m_heap->Allocate(size);
+	return m_heap->Allocate(size, callerAddress);
 }
 
 void Kernel::Deallocate(void* address)

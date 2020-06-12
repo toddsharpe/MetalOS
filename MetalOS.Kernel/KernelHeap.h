@@ -9,7 +9,7 @@ class KernelHeap
 public:
 	KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace& addressSpace);
 
-	void* Allocate(const size_t size);
+	void* Allocate(const size_t size, const uintptr_t callerAddress);
 	void Deallocate(const void* address);
 
 	void PrintHeap() const;
@@ -39,7 +39,7 @@ private:
 			};
 			uint64_t Flags;
 		};
-		uint64_t Reserved;
+		uintptr_t CallerAddress; //Address of caller that allocated block
 		uint8_t Data[];
 
 		//Doesn't include header

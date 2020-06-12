@@ -30,7 +30,7 @@ void KernelHeap::Grow(size_t pages)
 	m_end += (pages << PAGE_SHIFT);
 }
 
-void* KernelHeap::Allocate(const size_t size)
+void* KernelHeap::Allocate(const size_t size, const uintptr_t callerAddress)
 {
 	const size_t allocationSize = HEAP_ALIGN(size);
 	HeapBlock* current = this->m_head;
@@ -62,6 +62,7 @@ void* KernelHeap::Allocate(const size_t size)
 	//Update block
 	current->Free = false;
 	current->Magic = KernelHeap::Magic;
+	current->CallerAddress = callerAddress;
 
 	//Update statistics
 	this->m_allocated += allocationSize;
@@ -125,7 +126,7 @@ void KernelHeap::PrintHeap() const
 	HeapBlock* current = this->m_head;
 	while (current != nullptr)
 	{
-		Print("  A: 0x%16x L: 0x%8x F: 0x%8x P: 0x%16x, N: 0x%016x\n", current, current->GetLength(), current->Flags, current->Prev, current->Next);
+		Print("  L: 0x%8x F: 0x%8x P: 0x%16x, N: 0x%016x IP: 0x%16x\n", current->GetLength(), current->Flags, current->Prev, current->Next, current->CallerAddress);
 		current = current->Next;
 	}
 }

@@ -49,8 +49,9 @@ extern "C" void Print(const char* format, ...)
 
 void* operator new(size_t n)
 {
+	uintptr_t callerAddress = (uintptr_t)_ReturnAddress();
 	if (kernel.IsHeapInitialized())
-		return kernel.Allocate(n);
+		return kernel.Allocate(n, callerAddress);
 	else
 		return (void*)bootHeap.Allocate(n);
 }
@@ -73,8 +74,9 @@ void operator delete(void* p, size_t n)
 
 void* malloc(size_t size)
 {
+	uintptr_t callerAddress = (uintptr_t)_ReturnAddress();
 	Assert(kernel.IsHeapInitialized());
-	return kernel.Allocate(size);
+	return kernel.Allocate(size, callerAddress);
 }
 
 void free(void* ptr)

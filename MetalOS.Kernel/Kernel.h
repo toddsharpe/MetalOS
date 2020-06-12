@@ -68,7 +68,7 @@ public:
 	}
 
 #pragma region Heap Interface
-	void* Allocate(size_t size);
+	void* Allocate(const size_t size, const uintptr_t callerAddress);
 	void Deallocate(void* address);
 #pragma endregion
 

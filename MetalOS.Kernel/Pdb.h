@@ -8,6 +8,9 @@
 #include "MetalOS.Kernel.h"
 #include "PdbPdb.h"
 
+// https://github.com/willglynn/pdb
+// https://llvm.org/docs/PDB/
+// https://github.com/microsoft/microsoft-pdb
 class Pdb
 {
 public:

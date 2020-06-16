@@ -22,10 +22,23 @@ void StringPrinter::Printf(const char* format, va_list args)
 
 void StringPrinter::PrintBytes(const char* buffer, const size_t length)
 {
+	const uint32_t width = 16;
+	
+	//Print headers
+	this->Printf("---- ");
+	for (size_t i = 0; i < width; i++)
+	{
+		this->Printf("%02x ", (unsigned char)i);
+	}
+	this->Printf("\n");
+
 	for (size_t i = 0; i < length; i++)
 	{
-		if (i != 0 && i % 32 == 0)
+		if (i != 0 && i % width == 0)
 			this->Printf("\n");
+
+		if (i % width == 0)
+			this->Printf("%02x - ", (i / 16) << 4);
 
 		this->Printf("%02x ", (unsigned char)buffer[i]);
 	}

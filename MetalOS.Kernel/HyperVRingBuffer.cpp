@@ -34,8 +34,6 @@ HyperVRingBuffer::HyperVRingBuffer(const paddr_t address, const size_t count, Hy
 
 void HyperVRingBuffer::Write(const struct kvec* kv_list, uint32_t kv_count)
 {
-	Print("Write 0x%x\n", kv_count);
-	
 	//TODO: buffer full etc
 
 	//Copy into ring buffer
@@ -47,7 +45,6 @@ void HyperVRingBuffer::Write(const struct kvec* kv_list, uint32_t kv_count)
 	}
 
 	//Write new indexes
-	Print("Write: 0x%x Read: 0x%x\n", m_header->write_index, m_header->read_index);
 	uint64_t indexes = ((uint64_t)m_header->write_index << 32) + m_header->read_index;
 	index = this->Copy(index, &indexes, sizeof(uint64_t));
 	__faststorefence();
@@ -73,10 +70,7 @@ void HyperVRingBuffer::Write(const struct kvec* kv_list, uint32_t kv_count)
 //Copies and returns next location
 uint32_t HyperVRingBuffer::Copy(const uint32_t location, const void* buffer, const uint32_t length)
 {
-	Print("  Copy: 0x%x, 0x%016x, 0x%x\n", location, buffer, length);
-	kernel.PrintBytes((const char*)buffer, length);
 	memcpy((void*)&m_header->buffer[location], buffer, length);
-
 	return (location + length) % m_dataSize;
 }
 

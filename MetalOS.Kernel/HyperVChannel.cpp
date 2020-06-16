@@ -16,6 +16,7 @@ HyperVChannel::HyperVChannel(size_t sendSize, size_t receiveSize, CallContext ca
 	Assert((sendSize % PAGE_SIZE) == 0);
 	Assert((receiveSize % PAGE_SIZE) == 0);
 	Assert((m_address & PAGE_MASK) == 0);
+	Print("Send: 0x%x Receive: 0x%x\n", sendSize, receiveSize);
 
 	Device* bus = kernel.GetDevice("\\_SB_\\VMOD\\VMBS");
 	Assert(bus);
@@ -59,20 +60,16 @@ void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const 
 	Print("GPADL created\n");
 
 	//Open channel
-	const size_t packetSize = sizeof(vmbus_channel_open_channel) + (buffer != nullptr ? buffer->Length : 0);
-	vmbus_channel_open_channel* openChannel = (vmbus_channel_open_channel*)malloc(sizeof(packetSize));
-	memset(openChannel, 0, packetSize);
-	openChannel->header.msgtype = CHANNELMSG_OPENCHANNEL;
-	openChannel->openid = m_channel->child_relid;
-	openChannel->child_relid = m_channel->child_relid;
-	openChannel->ringbuffer_gpadlhandle = m_gpadlHandle;
-	openChannel->downstream_ringbuffer_pageoffset = m_sendCount;
+	vmbus_channel_open_channel openChannel;
+	memset(&openChannel, 0, sizeof(vmbus_channel_open_channel));
+	openChannel.header.msgtype = CHANNELMSG_OPENCHANNEL;
+	openChannel.openid = m_channel->child_relid;
+	openChannel.child_relid = m_channel->child_relid;
+	openChannel.ringbuffer_gpadlhandle = m_gpadlHandle;
+	openChannel.downstream_ringbuffer_pageoffset = m_sendCount;
 	if (buffer != nullptr)
-		memcpy(openChannel->userdata, buffer->Data, buffer->Length);
+		memcpy(openChannel.userdata, buffer->Data, buffer->Length);
 	result = m_vmbus->PostMessage(sizeof(vmbus_channel_open_channel), &openChannel, response);
-	Print("openChannelResult: 0x%016x\n", result);
-
-	Print("Status: %d\n", response.open_result.status);
 
 	m_vmbus->SetCallback(m_channel->child_relid, m_callback);
 }
@@ -117,7 +114,7 @@ void HyperVChannel::NextPacket(const uint32_t length)
 
 void HyperVChannel::SetEvent()
 {
-	Assert(!m_channel->monitor_allocated);
+	//Assert(!m_channel->monitor_allocated);
 	Assert(m_channel->is_dedicated_interrupt);
 
 	HV_CONNECTION_ID id = { 0 };

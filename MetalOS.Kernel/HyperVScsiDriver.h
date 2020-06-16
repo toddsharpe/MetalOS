@@ -23,6 +23,8 @@
   * Win10: 6.2
   */
 
+#pragma pack(push, 1)
+
 #define VMSTOR_PROTO_VERSION(MAJOR_, MINOR_)	((((MAJOR_) & 0xff) << 8) | \
 						(((MINOR_) & 0xff)))
 
@@ -176,7 +178,6 @@ struct vmscsi_request {
 	 * The following was added in win8.
 	 */
 	struct vmscsi_win8_extension win8_extension;
-
 };
 
 
@@ -283,7 +284,7 @@ struct vstor_packet {
 		 * Structure used to forward SCSI commands from the
 		 * client to the server.
 		 */
-		struct vmscsi_request vm_srb;
+		struct vmscsi_request vm_srb; //SCSI_REQUEST_BLOCK
 
 		/* Structure used to query channel properties. */
 		struct vmstorage_channel_properties storage_channel_properties;
@@ -336,7 +337,11 @@ enum storvsc_request_type {
   * This is the end of Protocol specific defines.
   */
 
-static int storvsc_ringbuffer_size = (128 * 1024);
+
+#define SCSI_VSC_SEND_RING_BUFFER_SIZE		(40 * 1024)
+#define SCSI_VSC_RECV_RING_BUFFER_SIZE		(40 * 1024)
+
+#pragma pack(pop)
 
 struct Transaction
 {
@@ -358,7 +363,7 @@ public:
 	static void Callback(void* context) { ((HyperVScsiDriver*)context)->OnCallback(); };
 
 private:
-
+	uint32_t m_sizeDelta;
 
 	void OnCallback();
 	void Execute(Transaction* transaction, bool status_check);

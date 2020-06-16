@@ -295,6 +295,8 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	if (m_timer != nullptr)
 		m_timer->Disable();
 
+	m_textScreen->Printf("%s\n%s\n%s", file, line, assert);
+
 	uint8_t buffer[sizeof(x64_context)];
 	Assert(sizeof(x64_context) == x64_CONTEXT_SIZE);
 	x64_save_context(buffer);
@@ -324,9 +326,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 
 	//m_textScreen->ResetX();
 	//m_textScreen->ResetY();
-	m_textScreen->Printf("%s\n%s\n%s", file, line, assert);
 
-	m_heap->PrintHeap();
 	__halt();
 }
 

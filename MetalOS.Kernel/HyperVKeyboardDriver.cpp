@@ -91,7 +91,7 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 	{
 		Assert(size >= sizeof(synth_kbd_protocol_response));
 		memcpy(&m_response, header, sizeof(synth_kbd_protocol_response));
-		Print("Connected: %d\n", m_response.proto_status);
+		Print("Keyboard Connected: %d\n", m_response.proto_status);
 		kernel.ReleaseSemaphore(m_semaphore, 1);
 	}
 	break;
@@ -101,8 +101,10 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 		Assert(size >= sizeof(synth_kbd_keystroke));
 		synth_kbd_keystroke key;
 		memcpy(&key, header, sizeof(synth_kbd_keystroke));
-		//Print("Key: %d (%x) = %c Unicode: %d down: %d\n", key.make_code, key.make_code,(char)(key.make_code), key.info & IS_UNICODE, key.info & IS_BREAK);
+		Assert(!(key.info & IS_UNICODE));
 		VirtualKey keyCode = GetKeycode(key.make_code);
+
+		Print("ScanCode: %d (%x), KeyCode = %c Down: %d\n", key.make_code, key.make_code, keyCode, key.info & IS_BREAK);
 
 		KeyEvent event = { 0 };
 		event.Key = keyCode;

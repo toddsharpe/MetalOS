@@ -4,8 +4,9 @@
 
 HyperVScsiDriver::HyperVScsiDriver(Device& device) :
 	Driver(device),
+	m_sizeDelta(sizeof(struct vmscsi_win8_extension)),
 	m_semaphore(),
-	m_channel(storvsc_ringbuffer_size, storvsc_ringbuffer_size, { &HyperVScsiDriver::Callback, this })
+	m_channel(SCSI_VSC_SEND_RING_BUFFER_SIZE, SCSI_VSC_RECV_RING_BUFFER_SIZE, { &HyperVScsiDriver::Callback, this })
 {
 	m_semaphore = kernel.CreateSemaphore(0, 0, "HyperVScsiDriver");
 
@@ -27,27 +28,27 @@ Result HyperVScsiDriver::Initialize()
 	{
 		memset(&transaction, 0, sizeof(Transaction));
 		transaction.Request.operation = VSTOR_OPERATION_BEGIN_INITIALIZATION;
-
 		Execute(&transaction, true);
 	}
 
-	//{
-	//	VMSTOR_PROTO_VERSION_WIN10,
-	//		POST_WIN7_STORVSC_SENSE_BUFFER_SIZE,
-	//		0
-	//},
-
+	//Query protocol
 	{
 		memset(&transaction, 0, sizeof(Transaction));
 		transaction.Request.operation = VSTOR_OPERATION_QUERY_PROTOCOL_VERSION;
 		transaction.Request.version.major_minor = VMSTOR_PROTO_VERSION_WIN10;
 		transaction.Request.version.revision = 0;
-		Execute(&transaction, false);
-
-		Assert(transaction.Response.operation == VSTOR_OPERATION_COMPLETE_IO);
+		Execute(&transaction, true);
+		m_sizeDelta = 0;
 	}
 
-	Print("completed\n");
+	//Query properties
+	{
+		memset(&transaction, 0, sizeof(Transaction));
+		transaction.Request.operation = VSTOR_OPERATION_QUERY_PROPERTIES;
+		Execute(&transaction, true);
+		Print("Max Channels 0x%x\n", transaction.Response.storage_channel_properties.max_channel_cnt);
+	}
+
 
 	return Result::ResultSuccess;
 }
@@ -80,6 +81,9 @@ void HyperVScsiDriver::OnCallback()
 		Transaction* transaction = (Transaction*)packet->trans_id;
 		void* data = (void*)((uintptr_t)packet + (packet->offset8 << 3));
 
+		Print("Rec: 0x%x Small: 0x%x Large: 0x%x\n", packet->len8 << 3, (sizeof(struct vstor_packet) - vmscsi_size_delta), sizeof(struct vstor_packet));
+		kernel.PrintBytes((char*)data, packet->len8 << 3);
+
 		//Switch on request
 		if (transaction->Request.operation == VSTOR_OPERATION_BEGIN_INITIALIZATION ||
 			transaction->Request.operation == VSTOR_OPERATION_QUERY_PROTOCOL_VERSION)
@@ -90,7 +94,32 @@ void HyperVScsiDriver::OnCallback()
 		}
 		else
 		{
-			//TODO:
+			memcpy(&transaction->Response, data, sizeof(struct vstor_packet));
+			Print("response: 0x%x\n", transaction->Response.operation);
+			Print("scsi_status 0x%x srb_status: 0x%x\n", transaction->Response.vm_srb.scsi_status, transaction->Response.vm_srb.srb_status);
+			Print("Sense length: 0x%x\n", transaction->Response.vm_srb.sense_info_length);
+			Print("Data length: 0x%x\n", transaction->Response.vm_srb.data_transfer_length);
+			switch (transaction->Response.operation)
+			{
+			case VSTOR_OPERATION_COMPLETE_IO:
+				Assert(transaction->Response.vm_srb.scsi_status == 0 && transaction->Response.vm_srb.srb_status == SRB_STATUS_SUCCESS);
+				kernel.ReleaseSemaphore(transaction->Semaphore, 1);
+				kernel.CloseSemaphore(transaction->Semaphore);
+				break;
+
+			case VSTOR_OPERATION_REMOVE_DEVICE:
+			case VSTOR_OPERATION_ENUMERATE_BUS:
+
+				break;
+
+			case VSTOR_OPERATION_FCHBA_DATA:
+
+				break;
+
+			default:
+				Assert(false);
+				break;
+			}
 		}
 
 		m_channel.NextPacket(packet->len8 << 3);
@@ -100,14 +129,18 @@ void HyperVScsiDriver::OnCallback()
 
 void HyperVScsiDriver::Execute(Transaction* transaction, bool status_check)
 {
+	Print("Execute. Delta: 0x%x\n", m_sizeDelta);
+
 	//Create semaphore
 	transaction->Semaphore = kernel.CreateSemaphore(0, 0, "HyperVScsiDriver");
 
-	this->m_channel.SendPacket(&transaction->Request, sizeof(vstor_packet), (uint64_t)transaction, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
+	transaction->Request.flags = REQUEST_COMPLETION_FLAG;
+
+	this->m_channel.SendPacket(&transaction->Request, sizeof(vstor_packet) - m_sizeDelta, (uint64_t)transaction, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 	kernel.WaitForSemaphore(transaction->Semaphore, INT64_MAX);
 
 	if (!status_check)
 		return;
 
-	Assert(transaction->Request.operation != VSTOR_OPERATION_COMPLETE_IO || transaction->Request.status != 0);
+	Assert(transaction->Response.operation == VSTOR_OPERATION_COMPLETE_IO && transaction->Response.status == 0);
 }

@@ -154,15 +154,12 @@ uint32_t VmBusDriver::ThreadLoop()
 	while (true)
 	{
 		kernel.WaitForSemaphore(m_threadSignal, INT64_MAX);
-
 		Assert(!m_queue.empty());
 
 		const HV_MESSAGE message = m_queue.front();
 		m_queue.pop_front();
 
-
 		vmbus_channel_message_header* header = (vmbus_channel_message_header*)message.Payload;
-
 		switch (header->msgtype)
 		{
 		case CHANNELMSG_VERSION_RESPONSE:

@@ -23,32 +23,37 @@ Result HyperVScsiDriver::Initialize()
 	m_channel.Initialize(offerChannel, &buffer);
 
 	Transaction transaction;
-	
+
 	//Init storage driver
-	{
-		memset(&transaction, 0, sizeof(Transaction));
-		transaction.Request.operation = VSTOR_OPERATION_BEGIN_INITIALIZATION;
-		Execute(&transaction, true);
-	}
+	memset(&transaction, 0, sizeof(Transaction));
+	transaction.Request.operation = VSTOR_OPERATION_BEGIN_INITIALIZATION;
+	Execute(&transaction, true);
 
 	//Query protocol
-	{
-		memset(&transaction, 0, sizeof(Transaction));
-		transaction.Request.operation = VSTOR_OPERATION_QUERY_PROTOCOL_VERSION;
-		transaction.Request.version.major_minor = VMSTOR_PROTO_VERSION_WIN10;
-		transaction.Request.version.revision = 0;
-		Execute(&transaction, true);
-		m_sizeDelta = 0;
-	}
+	memset(&transaction, 0, sizeof(Transaction));
+	transaction.Request.operation = VSTOR_OPERATION_QUERY_PROTOCOL_VERSION;
+	transaction.Request.version.major_minor = VMSTOR_PROTO_VERSION_WIN10;
+	transaction.Request.version.revision = 0;
+	Execute(&transaction, true);
+	m_sizeDelta = 0;
 
 	//Query properties
-	{
-		memset(&transaction, 0, sizeof(Transaction));
-		transaction.Request.operation = VSTOR_OPERATION_QUERY_PROPERTIES;
-		Execute(&transaction, true);
-		Print("Max Channels 0x%x\n", transaction.Response.storage_channel_properties.max_channel_cnt);
-	}
+	memset(&transaction, 0, sizeof(Transaction));
+	transaction.Request.operation = VSTOR_OPERATION_QUERY_PROPERTIES;
+	Execute(&transaction, true);
+	Assert(transaction.Response.storage_channel_properties.max_channel_cnt == 0);
+	Assert((transaction.Response.storage_channel_properties.flags & STORAGE_CHANNEL_SUPPORTS_MULTI_CHANNEL) == 0);
+	Print("Max bytes 0x%x\n", transaction.Response.storage_channel_properties.max_transfer_bytes);
 
+	//HBA Data
+	//	memset(&transaction, 0, sizeof(Transaction));
+	//	transaction.Request.operation = VSTOR_OPERATION_FCHBA_DATA;
+	//	Execute(&transaction, true);
+
+	//
+	memset(&transaction, 0, sizeof(Transaction));
+	transaction.Request.operation = VSTOR_OPERATION_END_INITIALIZATION;
+	Execute(&transaction, true);
 
 	return Result::ResultSuccess;
 }
@@ -65,6 +70,18 @@ Result HyperVScsiDriver::Write(const char* buffer, size_t length)
 
 Result HyperVScsiDriver::EnumerateChildren()
 {
+	for (size_t i = 0; i < STORVSC_MAX_CHANNELS; i++)
+	{
+		for (size_t j = 0; j < STORVSC_MAX_TARGETS; j++)
+		{
+			size_t lun = 0;
+
+			unsigned char scsi_cmd[STORVSC_MAX_CMD_LEN] = { 0 };
+			scsi_cmd[0] = INQUIRY;
+			scsi_cmd[4] = (unsigned char)try_inquiry_len;
+		}
+	}
+	
 	return Result::ResultNotImplemented;
 }
 
@@ -86,7 +103,10 @@ void HyperVScsiDriver::OnCallback()
 
 		//Switch on request
 		if (transaction->Request.operation == VSTOR_OPERATION_BEGIN_INITIALIZATION ||
-			transaction->Request.operation == VSTOR_OPERATION_QUERY_PROTOCOL_VERSION)
+			transaction->Request.operation == VSTOR_OPERATION_QUERY_PROTOCOL_VERSION ||
+			transaction->Request.operation == VSTOR_OPERATION_QUERY_PROPERTIES ||
+			transaction->Request.operation == VSTOR_OPERATION_FCHBA_DATA ||
+			transaction->Request.operation == VSTOR_OPERATION_END_INITIALIZATION)
 		{
 			memcpy(&transaction->Response, data, (sizeof(struct vstor_packet) - vmscsi_size_delta));
 			kernel.ReleaseSemaphore(transaction->Semaphore, 1);
@@ -95,10 +115,7 @@ void HyperVScsiDriver::OnCallback()
 		else
 		{
 			memcpy(&transaction->Response, data, sizeof(struct vstor_packet));
-			Print("response: 0x%x\n", transaction->Response.operation);
-			Print("scsi_status 0x%x srb_status: 0x%x\n", transaction->Response.vm_srb.scsi_status, transaction->Response.vm_srb.srb_status);
-			Print("Sense length: 0x%x\n", transaction->Response.vm_srb.sense_info_length);
-			Print("Data length: 0x%x\n", transaction->Response.vm_srb.data_transfer_length);
+
 			switch (transaction->Response.operation)
 			{
 			case VSTOR_OPERATION_COMPLETE_IO:

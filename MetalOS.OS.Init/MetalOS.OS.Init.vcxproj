@@ -136,6 +136,9 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MetalOS.OS.Crt\MetalOS.OS.Crt.vcxproj">
+      <Project>{8e7593c6-571c-4a66-8676-2b6b486b16a9}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MetalOS.OS.KernalApi\MetalOS.OS.KernalApi.vcxproj">
       <Project>{7b9b9c34-9380-45f3-8402-3a71fe29f897}</Project>
     </ProjectReference>

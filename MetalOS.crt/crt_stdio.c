@@ -36,6 +36,19 @@ int crt_sprintf(char* const _Buffer, char const* const _Format, ...)
 	return (retval);
 }
 
+//TODO: BufferCount is not used
+int snprintf(char* const _Buffer, size_t const _BufferCount, char const* const _Format, ...)
+{
+	int retval;
+	va_list ap;
+
+	va_start(ap, _Format);
+	retval = kvprintf(_Format, NULL, (void*)_Buffer, 10, ap);
+	_Buffer[retval] = '\0';
+	va_end(ap);
+	return (retval);
+}
+
 int crt_vsprintf(char* const _Buffer, char const* const _Format, va_list _ArgList)
 {
 	int retval;

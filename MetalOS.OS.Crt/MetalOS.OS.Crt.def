@@ -1,0 +1,15 @@
+LIBRARY
+EXPORTS
+	;stdio
+	fopen
+
+	;string
+	memcmp
+	memcpy
+	memmove
+	memset
+	strcmp
+	strlen
+	strnlen_s
+	strcpy
+	strncpy

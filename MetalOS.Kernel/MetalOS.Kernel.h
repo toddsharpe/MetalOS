@@ -177,14 +177,14 @@ class Node
 	Node* Previous;
 };
 
-typedef enum
+enum class ThreadState
 {
 	Ready,
 	Running,
 	Waiting,
 	Terminated,
 	Initialized
-} ThreadState;
+};
 
 struct ThreadEnvironmentBlock
 {
@@ -226,7 +226,7 @@ typedef struct _KERNEL_PROCESS
 
 typedef uintptr_t paddr_t;
 
-enum InterruptVector : uint8_t
+enum class InterruptVector : uint8_t
 {
 	//Externel Interrupts
 	DivideError = 0,

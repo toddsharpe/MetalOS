@@ -6,10 +6,13 @@
 #define UserStop    0x00007FFFFFFFFFFF
 #define KernelStart 0xFFFF800000000000
 
+#define RamDriveSize 0x4000000 //64MB ramdrive
+
 //16MB region unused
 #define KernelBaseAddress (KernelStart + 0x1000000)//16 MB kernel
 #define KernelPageTablesPoolAddress (KernelStart + 0x2000000)//16MB page pool (currently only 2mb is used - 512 * 4096)
 #define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
+#define KernelRamDriveAddress (KernelStart + 0x4000000)//64MB Ram Drive
 #define KernelRuntimeAddress (KernelStart + 0x100000000000)//UEFI services needed to exist in runtime
 #define KernelACPIAddress (KernelStart + 0x200000000000)//ACPI Request area. ACPI requests pages to be mapped so use this chunk
 #define KernelDriverIOAddress (KernelStart + 0x300000000000)//Driver IO space
@@ -22,9 +25,20 @@
 #define PAGE_SIZE (1 << PAGE_SHIFT)
 #define PAGE_MASK   0xFFF
 
+#define SIZE_TO_PAGES(a)  \
+    ( ((a) >> PAGE_SHIFT) + ((a) & PAGE_MASK ? 1 : 0) )
+
 #define MemoryMapReservedSize PAGE_SIZE
 
 //4mb reserved space
 #define BootloaderPagePoolCount 256
 #define ReservedPageTablePages 512
+
+enum class SystemCall
+{
+	GetSystemInfoId = 1,
+	GetProcessInfoId = 2,
+	CreateWindow = 3,
+	GetMessage = 4,
+};
 

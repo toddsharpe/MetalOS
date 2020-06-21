@@ -1,5 +1,6 @@
 #include "crt_stdlib.h"
 #include "crt_string.h"
+#include "crt_wchar.h"
 
 //https://wiki.osdev.org/Random_Number_Generator
 static unsigned long int next = 1;
@@ -24,6 +25,20 @@ size_t mbstowcs(CHAR16* _Dest, char const* _Source, size_t _MaxCount)
 	for (size_t i = 0; i < len; i++)
 	{
 		_Dest[i] = (CHAR16)_Source[i];
+	}
+
+	return len;
+}
+
+size_t wcstombs(char* _Dest, const CHAR16* _Source, size_t _MaxCount)
+{
+	const size_t len = wcslen(_Source);
+	if (_MaxCount < len)
+		return (size_t)-1;
+
+	for (size_t i = 0; i < len; i++)
+	{
+		_Dest[i] = (char)_Source[i];
 	}
 
 	return len;

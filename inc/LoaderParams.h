@@ -79,6 +79,9 @@ typedef struct
 	EFI_CONFIGURATION_TABLE* ConfigTables;
 	UINTN ConfigTableSizes;
 
+	//Ramdrive
+	EFI_PHYSICAL_ADDRESS RamDriveAddress;
+
 	//PDB
 	EFI_PHYSICAL_ADDRESS PdbAddress;
 	size_t PdbSize;

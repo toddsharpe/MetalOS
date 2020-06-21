@@ -78,7 +78,7 @@ Result HyperVScsiDriver::EnumerateChildren()
 
 			unsigned char scsi_cmd[STORVSC_MAX_CMD_LEN] = { 0 };
 			scsi_cmd[0] = INQUIRY;
-			scsi_cmd[4] = (unsigned char)try_inquiry_len;
+			//scsi_cmd[4] = (unsigned char)try_inquiry_len;
 		}
 	}
 	

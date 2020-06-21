@@ -109,7 +109,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;..\gnu-efi\inc\protocol;..\inc;%(AdditionalIncludeDirectories);..\MetalOS.lib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;..\gnu-efi\inc\protocol;..\inc;..\MetalOS.lib;..\MetalOS.crt</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -124,6 +124,8 @@
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <SupportJustMyCode>false</SupportJustMyCode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>CRT_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessToFile>false</PreprocessToFile>
     </ClCompile>
     <Link>
       <SubSystem>EFI Application</SubSystem>

@@ -61,7 +61,9 @@ Kernel::Kernel() :
 
 	m_deviceTree(),
 
-	m_timer()
+	m_timer(),
+
+	m_pdb()
 {
 
 }
@@ -205,7 +207,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Scheduler (needed to load VMBus driver)
 	m_scheduler->Enabled = true;
 	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(SECOND / 64, InterruptVector::Timer0);
+	m_timer->SetPeriodic(SECOND / 64, (uint8_t)InterruptVector::Timer0);
 	//m_timer->SetPeriodic(SECOND, InterruptVector::Timer0);
 
 	//Attach drivers and enumerate tree

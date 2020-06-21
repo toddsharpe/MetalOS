@@ -1,5 +1,9 @@
 #pragma once
-#include <cstdint>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stdint.h>
 
 //Public facing header
 
@@ -18,7 +22,7 @@ struct BGRRPixel
 		uint32_t AsUint32;
 	};
 };
-static_assert(sizeof(BGRRPixel) == sizeof(uint32_t), "Pixel greater than UINT32 in size");
+static_assert(sizeof(struct BGRRPixel) == sizeof(uint32_t), "Pixel greater than UINT32 in size");
 typedef struct BGRRPixel Color;
 
 struct Point2D
@@ -29,8 +33,8 @@ struct Point2D
 
 struct Rectangle
 {
-	Point2D P1;
-	Point2D P2;
+	struct Point2D P1;
+	struct Point2D P2;
 };
 
 struct ProcessInfo
@@ -38,7 +42,7 @@ struct ProcessInfo
 	uint32_t Id;
 };
 
-enum DayOfWeek : uint16_t
+enum DayOfWeek
 {
 	Sunday,
 	Monday,
@@ -53,7 +57,7 @@ struct SystemTime
 {
 	uint16_t Year;
 	uint16_t Month;
-	DayOfWeek DayOfTheWeek;
+	enum DayOfWeek DayOfTheWeek;
 	uint16_t Day;
 	uint16_t Hour;
 	uint16_t Minute;
@@ -70,54 +74,17 @@ enum SystemArchitecture
 struct SystemInfo
 {
 	uint32_t PageSize;
-	SystemArchitecture Architecture;
+	enum SystemArchitecture Architecture;
 };
 
-enum SystemCallResult : uint32_t
+enum SystemCallResult
 {
 	Success = 0,
 	Failed
 };
 
-enum SystemCall : uint32_t
-{
-	GetSystemInfoId = 1,
-	GetProcessInfoId = 2,
-};
-
-#if !defined(EXPORT)
-#define SYSTEMCALL __declspec(dllimport) SystemCallResult
-#else
-#define SYSTEMCALL __declspec(dllexport) SystemCallResult
-#endif
-
-enum WaitStatus
-{
-	None,
-	Signaled,
-	Timeout,
-	Abandoned,
-	//Failed conflicts with macro
-};
 
 typedef void* Handle;
-
-#define MAX_PATH 256
-
-extern "C"
-{
-	//Info
-	SYSTEMCALL GetSystemInfo(SystemInfo* info);
-	SYSTEMCALL GetProcessInfo(ProcessInfo* info);
-
-	//Semaphores
-	Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
-	SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t& previousCount);
-
-	//Virtual
-	//SYSTEMCALL void* VirtualAlloc(void* address);
-}
-
 typedef uint32_t (*ThreadStart)(void* parameter);
 
 typedef uint16_t VirtualKey;
@@ -469,15 +436,56 @@ enum MessageType
 
 struct MessageHeader
 {
-	MessageType Message;
+	enum MessageType MessageType;
+	Handle Window;
 };
 
 struct Message
 {
-	MessageHeader Header;
+	struct MessageHeader Header;
 	union
 	{
-		KeyEvent KeyEvent;
+		struct KeyEvent KeyEvent;
 	};
 };
+//static_assert(sizeof(Message) <= 32, "Invalid message size");
 
+#if !defined(EXPORT)
+#define SYSTEMCALL __declspec(dllimport) uint32_t
+#else
+#define SYSTEMCALL __declspec(dllexport) uint32_t
+#endif
+
+enum WaitStatus
+{
+	None,
+	Signaled,
+	Timeout,
+	Abandoned,
+	//Failed conflicts with macro
+};
+
+
+#define MAX_PATH 256
+
+typedef uint32_t(*MessageHandler)(void* parameter);
+
+//Info
+SYSTEMCALL GetSystemInfo(struct SystemInfo* info);
+SYSTEMCALL GetProcessInfo(struct ProcessInfo* info);
+
+//Semaphores
+//Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
+//SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t* previousCount);
+
+//Windows
+SYSTEMCALL CreateWindow(const char* name, const struct Rectangle* rectangle, Handle* handleOut);
+SYSTEMCALL WaitForMessages(const Handle handle); //Handle to filter, if null get any window belonging to the thread
+SYSTEMCALL GetMessage(struct Message* message);
+
+	//Virtual
+	//SYSTEMCALL void* VirtualAlloc(void* address);
+
+#ifdef __cplusplus
+}
+#endif

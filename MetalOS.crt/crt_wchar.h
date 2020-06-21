@@ -1,4 +1,6 @@
 #pragma once
+
+#include "MetalOS.crt.h"
 #include <stdint.h>
 #include <stdarg.h>
 

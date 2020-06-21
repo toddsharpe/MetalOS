@@ -14,6 +14,7 @@
 #include "Memory.h"
 #include <crt_stdio.h>
 #include "Uart.h"
+#include <RamDrive.h>
 
 #define EFI_DEBUG 1
 #define Kernel L"moskrnl.exe"
@@ -102,6 +103,28 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	size_t pfnDBPages = EFI_SIZE_TO_PAGES(LoaderParams.PfnDbSize);
 	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, pfnDBPages, &(LoaderParams.PfnDbAddress)));
 
+	//Allocate space for RamDrive
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, SIZE_TO_PAGES(RamDriveSize), &(LoaderParams.RamDriveAddress)));
+	RamDrive drive((void*)LoaderParams.RamDriveAddress, RamDriveSize);
+
+	//Load kernel path
+	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem = nullptr;
+	ReturnIfNotSuccess(ST->BootServices->OpenProtocol(LoadedImage->DeviceHandle, &FileSystemProtocol, (void**)&fileSystem, ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
+	EFI_FILE* CurrentDriveRoot = nullptr;
+	ReturnIfNotSuccess(fileSystem->OpenVolume(fileSystem, &CurrentDriveRoot));
+	//PrintDirectory(fileSystem, CurrentDriveRoot);
+
+	//Populate
+	PopulateDrive(drive, fileSystem, CurrentDriveRoot);
+	UartPrint("RamDrive:\n");
+	for (const RamDrive::Entry& entry : drive)
+	{
+		if (*entry.Name == '\0')
+			break;
+
+		UartPrint("  File: %s Index: %d\n", entry.Name, entry.PageNumber);
+	}
+
 	//Build path to kernel
 	CHAR16* KernelPath;
 	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, MaxKernelPath * sizeof(CHAR16), (void**)&KernelPath));
@@ -109,11 +132,6 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	GetDirectoryName(BootFilePath, KernelPath);
 	wcscpy(KernelPath + wcslen(KernelPath), Kernel);
 
-	//Load kernel path
-	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem = nullptr;
-	ReturnIfNotSuccess(ST->BootServices->OpenProtocol(LoadedImage->DeviceHandle, &FileSystemProtocol, (void**)&fileSystem, ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
-	EFI_FILE* CurrentDriveRoot = nullptr;
-	ReturnIfNotSuccess(fileSystem->OpenVolume(fileSystem, &CurrentDriveRoot));
 	EFI_FILE* KernelFile = nullptr;
 	Print(L"Loading: %s\r\n", KernelPath);
 	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelFile, KernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
@@ -215,11 +233,11 @@ EFI_STATUS PrintCpuDetails()
 
 	mbstowcs(wideVendor, vendor, sizeof(wideVendor));
 
-	ReturnIfNotSuccess(Print(L"CPU vendor: %s\r\n", wideVendor));
+	ReturnIfNotSuccess(Print(L"CPU Vendor: %s,", wideVendor));
 
 	UINT64 cr0 = __readcr0();
 	int paging = (cr0 & ((UINT32)1 << 31)) != 0;
-	ReturnIfNotSuccess(Print(L"  Paging: %d\r\n", (UINT32)paging));
+	ReturnIfNotSuccess(Print(L" Paging: %d\r\n", (UINT32)paging));
 
 	return status;
 }
@@ -234,6 +252,7 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* pParams)
 	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: 0x%016x, Pages: 0x%x\r\n", pParams->PageTablesPoolAddress, pParams->PageTablesPoolPageCount));
 	ReturnIfNotSuccess(Print(L"  PFN Database-Address: 0x%016x, Size: 0x%x\r\n", pParams->PfnDbAddress, pParams->PfnDbSize));
 	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", pParams->ConfigTables, pParams->ConfigTableSizes));
+	ReturnIfNotSuccess(Print(L"  RamDrive-Address: 0x%016x, Size: 0x%x\r\n", pParams->RamDriveAddress, RamDriveSize));
 	ReturnIfNotSuccess(Print(L"  PDB-Address: 0x%016x, Size: 0x%x\r\n", pParams->PdbAddress, pParams->PdbSize));
 
 	PrintGraphicsDevice(&pParams->Display);
@@ -286,6 +305,99 @@ EFI_STATUS DumpMemoryMap()
 	return EFI_SUCCESS;
 }
 
+EFI_STATUS PrintDirectory(EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir)
+{
+	EFI_STATUS status;
+
+	const size_t MAX_FILE_INFO_SIZE = 1024;
+	uint8_t buffer[MAX_FILE_INFO_SIZE] = { 0 };
+	EFI_FILE_INFO* fileInfo = (EFI_FILE_INFO*)buffer;
+
+	while (true)
+	{
+		UINTN size = MAX_FILE_INFO_SIZE;
+		ReturnIfNotSuccess(status = dir->Read(dir, &size, buffer));
+		if (size == 0)
+			break; //No more directories
+
+		if (wcscmp(fileInfo->FileName, L".") == 0 || wcscmp(fileInfo->FileName, L"..") == 0)
+		{
+			continue;
+		}
+
+		if (fileInfo->Attribute & EFI_FILE_DIRECTORY)
+		{
+			UartPrint(L"Dir: %s\n", fileInfo->FileName);
+
+			//recurse
+			EFI_FILE_HANDLE subDir;
+			ReturnIfNotSuccess(dir->Open(dir, &subDir, fileInfo->FileName, EFI_FILE_MODE_READ, 0));
+			subDir->SetPosition(subDir, 0);
+
+			PrintDirectory(fs, subDir);
+
+			dir->Close(subDir);
+		}
+		else
+			UartPrint(L"File: %s\n", fileInfo->FileName);
+	}
+
+	return status;
+}
+
+EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir)
+{
+	EFI_STATUS status;
+
+	const size_t MAX_FILE_INFO_SIZE = 1024;
+	uint8_t buffer[MAX_FILE_INFO_SIZE] = { 0 };
+	EFI_FILE_INFO* fileInfo = (EFI_FILE_INFO*)buffer;
+
+	dir->SetPosition(dir, 0);
+
+	while (true)
+	{
+		UINTN size = MAX_FILE_INFO_SIZE;
+		ReturnIfNotSuccess(status = dir->Read(dir, &size, buffer));
+		if (size == 0)
+			break; //No more directories
+
+		if (wcscmp(fileInfo->FileName, L".") == 0 || wcscmp(fileInfo->FileName, L"..") == 0)
+		{
+			continue;
+		}
+
+		if (fileInfo->Attribute & EFI_FILE_DIRECTORY)
+		{
+			//recurse
+			EFI_FILE_HANDLE subDir;
+			ReturnIfNotSuccess(dir->Open(dir, &subDir, fileInfo->FileName, EFI_FILE_MODE_READ, 0));
+			subDir->SetPosition(subDir, 0);
+
+			PopulateDrive(drive, fs, subDir);
+
+			dir->Close(subDir);
+		}
+		else
+		{
+			//Convert to asci
+			char buffer[32] = { 0 };
+			wcstombs(buffer, fileInfo->FileName, sizeof(buffer));
+
+			//Allocate in ram
+			void* address = drive.Allocate(buffer, fileInfo->FileSize);
+
+			//Open
+			EFI_FILE_HANDLE file;
+			ReturnIfNotSuccess(dir->Open(dir, &file, fileInfo->FileName, EFI_FILE_MODE_READ, 0));
+
+			//Copy
+			ReturnIfNotSuccess(file->Read(file, &fileInfo->FileSize, (void*)address));
+		}
+	}
+
+	return status;
+}
 
 #define MAXBUFFER 255
 extern "C" void Print(const char* format, ...)
@@ -329,6 +441,21 @@ void UartPrint(const char* format, ...)
 	va_start(args, format);
 	uart.Printf(format, args);
 	va_end(args);
+}
+
+void UartPrint(const CHAR16* format, ...)
+{
+	Uart uart(ComPort::Com1);
+
+	va_list args;
+	va_start(args, format);
+	CHAR16 wideBuffer[MAXBUFFER] = { 0 };
+	vwprintf(wideBuffer, format, args);
+	va_end(args);
+
+	char buffer[MAXBUFFER / 2] = { 0 };
+	wcstombs(buffer, wideBuffer, sizeof(buffer));
+	uart.Printf(buffer);
 }
 
 EFI_STATUS Keywait(const CHAR16* String)

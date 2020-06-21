@@ -7,8 +7,26 @@ RamDrive::RamDrive(void* address, size_t size) :
 	m_superblock((Superblock*)address),
 	m_pageWatermark(1)
 {
+
+}
+
+void RamDrive::Clear()
+{
 	//Zero out superblock
-	memset(address, 0, PAGE_SIZE);
+	memset((void*)m_address, 0, PAGE_SIZE);
+}
+
+size_t RamDrive::FileCount()
+{
+	size_t index;
+	for (index = 0; index < MAX_ENTRIES; index++)
+	{
+		//Short circuit
+		if (*m_superblock->Entries[index].Name == '\0')
+			break;
+	}
+
+	return index;
 }
 
 void* RamDrive::Allocate(const char* name, const size_t size)

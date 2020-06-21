@@ -11,12 +11,13 @@ public:
 
 	void Populate();
 	void EnumerateChildren();
+	void AddRootDevice(Device& device);
 	
 	void Display() const;
 
 	bool GetDeviceByHid(const std::string& hid, Device** device);
 	bool GetDeviceByName(const std::string& name, Device** device);
-	Device* GetDevice(const std::string path);
+	Device* GetDevice(const std::string& path);
 
 private:
 	static ACPI_STATUS AddAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue);

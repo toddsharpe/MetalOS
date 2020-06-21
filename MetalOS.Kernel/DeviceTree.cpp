@@ -12,6 +12,8 @@
 #include "HyperVKeyboardDriver.h"
 #include "HyperVMouseDriver.h"
 #include "HyperVScsiDriver.h"
+#include "RamDriveDriver.h"
+#include <crt_stdio.h>
 
 DeviceTree::DeviceTree() :
 	m_root()
@@ -55,6 +57,16 @@ void DeviceTree::EnumerateChildren()
 		for (auto& child : current->GetChildren())
 			queue.push(child);
 	}
+}
+
+void DeviceTree::AddRootDevice(Device& device)
+{
+	//Update path - TODO: make Device::AddChild that does this?
+	char buffer[64] = { 0 };
+	crt_sprintf(buffer, "%s%s", m_root->Path.c_str(), device.GetHid().c_str());
+	device.Path = buffer;
+	
+	m_root->GetChildren().push_back(&device);
 }
 
 //Rely on ACPI to discover root
@@ -132,6 +144,8 @@ void DeviceTree::AttachDriver(Device& device)
 		device.SetDriver(new HyperVKeyboardDriver(device));
 	else if (device.GetHid() == "{BA6163D9-04A1-4D29-B605-72E2FFB1DC7F}")
 		device.SetDriver(new HyperVScsiDriver(device));
+	else if (device.GetHid() == RamDriveHid)
+		device.SetDriver(new RamDriveDriver(device));
 	//else if (device.GetHid() == "{CFA8B69E-5B4A-4CC0-B98B-8BA1A1F3F95A}")
 		//device.SetDriver(new HyperVMouseDriver(device));
 	//else if (device->GetHid() == "PNP0B00")
@@ -194,7 +208,7 @@ bool DeviceTree::GetDeviceByName(const std::string& name, Device** device)
 }
 
 //This could be smarter and split the path to search. For now just DFS
-Device* DeviceTree::GetDevice(const std::string path)
+Device* DeviceTree::GetDevice(const std::string& path)
 {
 	std::stack<Device*> stack;
 	stack.push(m_root);

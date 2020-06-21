@@ -18,6 +18,8 @@ public:
 	};
 
 	RamDrive(void* address, size_t size);
+	void Clear();
+	size_t FileCount();
 
 	void* Allocate(const char* name, const size_t size);
 	void* Open(const char* name);

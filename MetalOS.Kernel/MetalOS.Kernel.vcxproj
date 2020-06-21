@@ -201,9 +201,11 @@
     <ClCompile Include="PdbPublicsStream.cpp" />
     <ClCompile Include="ProcessorDriver.cpp" />
     <ClCompile Include="msvc.cpp" />
+    <ClCompile Include="RamDriveDriver.cpp" />
     <ClCompile Include="RtcDriver.cpp" />
     <ClCompile Include="RuntimeSupport.cpp" />
     <ClCompile Include="Scheduler.cpp" />
+    <ClCompile Include="SoftwareDevice.cpp" />
     <ClCompile Include="StackWalk.cpp" />
     <ClCompile Include="StringPrinter.cpp" />
     <ClCompile Include="UartDriver.cpp" />
@@ -257,9 +259,11 @@
     <ClInclude Include="PdbPublicsStream.h" />
     <ClInclude Include="ProcessorDriver.h" />
     <ClInclude Include="msvc.h" />
+    <ClInclude Include="RamDriveDriver.h" />
     <ClInclude Include="RtcDriver.h" />
     <ClInclude Include="RuntimeSupport.h" />
     <ClInclude Include="Scheduler.h" />
+    <ClInclude Include="SoftwareDevice.h" />
     <ClInclude Include="StackWalk.h" />
     <ClInclude Include="StringPrinter.h" />
     <ClInclude Include="UartDriver.h" />

@@ -22,6 +22,8 @@ typedef EFI_GUID GUID;
 #include "BootHeap.h"
 #include "StackWalk.h"
 #include "KSemaphore.h"
+#include "RamDriveDriver.h"
+#include "SoftwareDevice.h"
 #include <string>
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
@@ -82,6 +84,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	const size_t pfnDbSize = params->PfnDbSize;
 	m_pdbAddress = params->PdbAddress;
 	m_pdbSize = params->PdbSize;
+	const paddr_t ramDriveAddress = params->RamDriveAddress;
 
 	//Initialize Display
 	m_display = new Display(params->Display, KernelGraphicsDeviceAddress);
@@ -193,6 +196,9 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Devices
 	m_deviceTree.Populate();
 
+	if (ramDriveAddress != NULL)
+		m_deviceTree.AddRootDevice(*new SoftwareDevice(RamDriveHid, (void*)ramDriveAddress));
+
 	//Swap output to uart
 	Device* com1;
 	Assert(m_deviceTree.GetDeviceByName("COM1", &com1));
@@ -255,7 +261,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	if (m_timer != nullptr)
 		m_timer->Disable();
 
-	m_heap->PrintHeap();
+	//m_heap->PrintHeap();
 
 	CONTEXT context = { 0 };
 	context.Rip = pFrame->RIP;
@@ -263,18 +269,18 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	context.Rbp = pFrame->RBP;
 
 	StackWalk sw(&context, KernelBaseAddress);
-	Print("IP: 0x%016x\n", context.Rip);
 	uint32_t rva = (uint32_t)context.Rip - KernelBaseAddress;
-	//m_pdb->PrintStack(rva);
-	//Print("Func: %s Line: %d\n", entry.Function.c_str(), entry.Line);
-	//while (sw.HasNext())
-	//{
-	//	sw.Next();
-	//	Print("IP: 0x%016x\n", context.Rip);
-	//	rva = (uint32_t)context.Rip - KernelBaseAddress;
-	//	m_pdb->PrintStack(rva);
-	//}
-	//TODO: stack walk
+
+	while (sw.HasNext())
+	{
+		Print("IP: 0x%016x ", context.Rip);
+		if (m_pdb != nullptr)
+			m_pdb->PrintStack((uint32_t)context.Rip - KernelBaseAddress);
+		else
+			Print("\n");
+
+		sw.Next();
+	}
 	__halt();
 }
 

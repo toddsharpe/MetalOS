@@ -181,7 +181,7 @@ uint32_t VmBusDriver::ThreadLoop()
 			HyperVDevice* child = new HyperVDevice(*offer, m_msg_conn_id);
 			child->Initialize();
 			
-			//Update path
+			//Update path - TODO: make Device::AddChild that does this?
 			char buffer[64] = { 0 };
 			crt_sprintf(buffer, "%s\\%s", m_device.Path.c_str(), child->GetHid().c_str());
 			child->Path = buffer;

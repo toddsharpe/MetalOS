@@ -174,6 +174,12 @@
     <ClCompile Include="PdbPublicsStream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SoftwareDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RamDriveDriver.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Display.h">
@@ -342,6 +348,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PdbPublicsStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SoftwareDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RamDriveDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

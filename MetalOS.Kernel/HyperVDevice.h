@@ -45,7 +45,7 @@ public:
 	{
 		ChildRelid,
 		ConnectionId,
-		OfferChannel
+		OfferChannel,
 	};
 
 private:

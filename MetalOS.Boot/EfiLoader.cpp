@@ -53,7 +53,7 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64* pImageSizeOut, UINT64* 
 	UINTN size = sizeof(IMAGE_DOS_HEADER);
 	IMAGE_DOS_HEADER dosHeader;
 	ReturnIfNotSuccess(pFile->Read(pFile, &size, &dosHeader));
-	ReturnIfNotSuccess(dosHeader.e_magic);
+	ReturnIfNotSuccess(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 	//NT Header
 	size = sizeof(IMAGE_NT_HEADERS64);

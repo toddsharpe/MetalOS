@@ -3,6 +3,7 @@
 //Shared header between loader and kernel
 
 //This is defined in Kernel but kernel shouldn't be shared. TODO
+#define UserStart   0x0
 #define UserStop    0x00007FFFFFFFFFFF
 #define KernelStart 0xFFFF800000000000
 

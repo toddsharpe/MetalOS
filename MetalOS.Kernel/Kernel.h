@@ -135,6 +135,11 @@ public:
 	void RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
 
 	Device* GetDevice(const std::string path);
+
+	Handle CreateFile(const char* path, GenericAccess access);
+	bool ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
+	bool SetFilePosition(Handle handle, size_t position);
+	bool CreateProcess(const char* path);
 #pragma endregion
 
 #pragma region Semaphore Interface
@@ -186,7 +191,7 @@ private:
 	std::map<InterruptVector, InterruptContext>* m_interruptHandlers;
 
 	//Process and Thread management
-	std::list<KERNEL_PROCESS>* m_processes;
+	std::list<KernelProcess>* m_processes;
 	uint32_t m_lastId;
 	std::map<uint32_t, KernelThread*>* m_threads;
 	Scheduler* m_scheduler;

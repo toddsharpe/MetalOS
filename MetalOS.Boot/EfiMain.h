@@ -17,7 +17,8 @@ EFI_STATUS DumpMemoryMap();
 EFI_STATUS PrintDirectory(EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir);
 EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir);
 
-extern "C" void Print(const char* format, ...);
+void Print(const char* format, ...);
+void Print(const char* format, va_list args);
 EFI_STATUS Print(const CHAR16* format, ...);
  void UartPrint(const char* format, ...);
  void UartPrint(const CHAR16* format, ...);

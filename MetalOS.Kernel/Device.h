@@ -5,6 +5,15 @@
 #include <list>
 #include "Driver.h"
 
+enum class DeviceType
+{
+	Unknown,
+	Keyboard,
+	Mouse,
+	Harddrive,
+	Serial
+};
+
 class Driver;
 class Device
 {
@@ -40,6 +49,7 @@ public:
 	std::string Name;
 	std::string Path;
 	std::string Description;
+	DeviceType Type;
 
 protected:
 	std::string m_hid;

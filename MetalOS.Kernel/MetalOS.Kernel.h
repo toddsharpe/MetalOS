@@ -211,7 +211,7 @@ struct KernelThread
 #define KERNEL_THREAD_STACK_SIZE 8
 
 //Handle could be smarter to have upper bits to specify type
-typedef struct _KERNEL_PROCESS
+struct KernelProcess
 {
 	uint32_t Id;
 	std::string Name;
@@ -222,7 +222,7 @@ typedef struct _KERNEL_PROCESS
 	uint64_t CR3;
 
 	VirtualAddressSpace* VirtualAddress;
-} KERNEL_PROCESS, * PKERNEL_PROCESS;
+};
 
 typedef uintptr_t paddr_t;
 
@@ -550,6 +550,14 @@ struct StackEntry
 {
 	char* Function;
 	uint32_t Line;
+};
+
+struct FileHandle
+{
+	void* Context;
+	size_t Position;
+	size_t Length;
+	GenericAccess Access;
 };
 
 //TODO: somehow export struct from asm

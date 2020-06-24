@@ -207,6 +207,28 @@ bool DeviceTree::GetDeviceByName(const std::string& name, Device** device)
 	return false;
 }
 
+Device* DeviceTree::GetDeviceByType(DeviceType type)
+{
+	std::stack<Device*> stack;
+	stack.push(m_root);
+
+	while (!stack.empty())
+	{
+		Device* current = stack.top();
+		stack.pop();
+
+		if (current->Type == type)
+		{
+			return current;
+		}
+
+		for (auto& child : current->GetChildren())
+			stack.push(child);
+	}
+
+	return nullptr;
+}
+
 //This could be smarter and split the path to search. For now just DFS
 Device* DeviceTree::GetDevice(const std::string& path)
 {
@@ -229,3 +251,4 @@ Device* DeviceTree::GetDevice(const std::string& path)
 
 	return nullptr;
 }
+

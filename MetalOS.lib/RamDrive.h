@@ -8,21 +8,23 @@
 class RamDrive
 {
 public:
-	static const size_t MAX_NAME = 28;
+	static const size_t MAX_NAME = 28 - sizeof(size_t);
 	static const size_t MAX_ENTRIES = 128;
 
 	struct Entry
 	{
 		char Name[MAX_NAME];
 		uint32_t PageNumber;
+		size_t Length;
 	};
+	static_assert(sizeof(Entry) == 32, "Invalid Entry size");
 
 	RamDrive(void* address, size_t size);
 	void Clear();
 	size_t FileCount();
 
 	void* Allocate(const char* name, const size_t size);
-	void* Open(const char* name);
+	bool Open(const char* name, void*& address, size_t& length);
 
 	Entry* begin() const { return &m_superblock->Entries[0]; }
 	Entry* end() const { return &m_superblock->Entries[MAX_ENTRIES - 1]; }

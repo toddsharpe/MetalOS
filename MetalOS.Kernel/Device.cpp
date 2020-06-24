@@ -5,6 +5,7 @@ Device::Device() :
 	Path(),
 	Name(),
 	Description(),
+	Type(DeviceType::Unknown),
 	m_hid(),
 	m_children(),
 	m_driver()

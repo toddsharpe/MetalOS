@@ -83,6 +83,11 @@ enum SystemCallResult
 	Failed
 };
 
+enum GenericAccess
+{
+	Read = (1 << 0),
+	Write = (1 << 1),
+};
 
 typedef void* Handle;
 typedef uint32_t (*ThreadStart)(void* parameter);

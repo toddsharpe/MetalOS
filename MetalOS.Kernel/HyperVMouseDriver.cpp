@@ -16,6 +16,8 @@ Result HyperVMouseDriver::Initialize()
 {
 	Print("HyperVKeyboardDriver::Initialize\n");
 
+	m_device.Type = DeviceType::Mouse;
+
 	HyperVDevice* device = (HyperVDevice*)&m_device;
 	uint32_t childRelid = *(uint32_t*)device->GetResource(HyperVDevice::ResourceType::ChildRelid);
 	uint32_t connectionId = *(uint32_t*)device->GetResource(HyperVDevice::ResourceType::ConnectionId);

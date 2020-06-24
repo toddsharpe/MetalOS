@@ -162,7 +162,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Test interrupts
 	__debugbreak();
 
-	m_processes = new std::list<KERNEL_PROCESS>();
+	m_processes = new std::list<KernelProcess>();
 	m_threads = new std::map<uint32_t, KernelThread*>();
 	m_scheduler = new Scheduler();
 
@@ -209,6 +209,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//m_configTables->Dump();
 	//m_deviceTree.Display();
 	//m_heap->PrintHeap();
+	m_pageTables->DisplayCr3();
 
 	//Scheduler (needed to load VMBus driver)
 	m_scheduler->Enabled = true;
@@ -607,4 +608,83 @@ void* Kernel::VirtualMap(const void* address, const std::vector<paddr_t>& addres
 Device* Kernel::GetDevice(const std::string path)
 {
 	return m_deviceTree.GetDevice(path);
+}
+
+Handle Kernel::CreateFile(const char* path, GenericAccess access)
+{
+	Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
+	RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
+
+	FileHandle* handle = hdd->OpenFile(path, access);
+	return handle;
+}
+
+bool Kernel::ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead)
+{
+	Assert(handle);
+	FileHandle* file = (FileHandle*)handle;
+
+	Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
+	RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
+	
+	*bytesRead = hdd->ReadFile(file, buffer, bufferSize);
+
+	return true;
+}
+
+bool Kernel::SetFilePosition(Handle handle, size_t position)
+{
+	Assert(handle);
+	
+	FileHandle* file = (FileHandle*)handle;
+	Assert(position < file->Length);
+	file->Position = position;
+
+	return true;
+}
+
+bool Kernel::CreateProcess(const char* path)
+{
+	Print("CreateProcess %s\n", path);
+	Handle file = CreateFile(path, GenericAccess::Read);
+	Assert(file);
+
+	size_t read;
+
+	//Dos header
+	IMAGE_DOS_HEADER dosHeader;
+	Assert(ReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
+	Assert(read == sizeof(IMAGE_DOS_HEADER));
+	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
+
+	//NT Header
+	IMAGE_NT_HEADERS64 peHeader;
+	Assert(SetFilePosition(file, dosHeader.e_lfanew));
+	Assert(ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
+	Assert(read == sizeof(IMAGE_NT_HEADERS64));
+
+	//Verify image
+	if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
+		peHeader.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
+		peHeader.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+	{
+		Assert(false);
+	}
+		
+	KernelProcess process = { 0 };
+	process.Name = path;
+	process.Id = ++m_lastId;
+	process.VirtualAddress = new VirtualAddressSpace(UserStart, UserStop, false);
+	
+	uint64_t root;
+	Assert(m_pagePool->AllocatePage(&root));
+
+
+	//How do we map into the new address space without modifying our own CR3? do we map into kernel, do the copy, then unmap and setup process tables?
+
+	const size_t pageCount = SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage);
+	m_virtualMemory->Allocate(peHeader.OptionalHeader.ImageBase, pageCount, MemoryProtection(true, true, true), *process.VirtualAddress);//TODO: protection
+
+
+	return false;
 }

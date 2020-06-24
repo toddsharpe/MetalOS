@@ -40,18 +40,23 @@ void* RamDrive::Allocate(const char* name, const size_t size)
 	//Add entry to superblock
 	strcpy(m_superblock->Entries[index].Name, name);
 	m_superblock->Entries[index].PageNumber = m_pageWatermark;
+	m_superblock->Entries[index].Length = size;
 
+	void* address = (void*)(m_address + (m_pageWatermark << PAGE_SHIFT));
 	m_pageWatermark += SIZE_TO_PAGES(size);
-	return (void*)(m_address + (m_pageWatermark << PAGE_SHIFT));
+	return address;
 }
 
-void* RamDrive::Open(const char* name)
+bool RamDrive::Open(const char* name, void*& address, size_t& length)
 {
 	size_t index;
 	if (!GetFileIndex(name, index))
-		return nullptr;
+		return false;
 
-	return (void*)(m_address + (m_superblock->Entries[index].PageNumber << PAGE_SHIFT));
+	Entry& entry = m_superblock->Entries[index];
+	length = entry.Length;
+	address = (void*)(m_address + (entry.PageNumber << PAGE_SHIFT));
+	return true;
 }
 
 //Returns true and index of file or false and index of next slot or -1 for full

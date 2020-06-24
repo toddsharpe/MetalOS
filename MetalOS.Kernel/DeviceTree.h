@@ -17,6 +17,7 @@ public:
 
 	bool GetDeviceByHid(const std::string& hid, Device** device);
 	bool GetDeviceByName(const std::string& name, Device** device);
+	Device* GetDeviceByType(DeviceType type);
 	Device* GetDevice(const std::string& path);
 
 private:

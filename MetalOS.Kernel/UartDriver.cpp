@@ -11,6 +11,7 @@ UartDriver::UartDriver(Device& device) : Driver(device)
 
 Result UartDriver::Initialize()
 {
+	m_device.Type = DeviceType::Serial;
 	return Result::ResultNotImplemented;
 }
 

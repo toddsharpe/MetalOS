@@ -1,7 +1,9 @@
 #pragma once
+#include <cstdarg>
 
-#ifdef DEBUG_LIB
-extern "C" void Print(const char* format, ...);
-#else
-#define Print(x)
-#endif
+void Print(const char* format, ...);
+void Print(const char* format, va_list args);
+extern bool MetalOsLibDebug;
+
+void LibPrint(const char* format, ...);
+

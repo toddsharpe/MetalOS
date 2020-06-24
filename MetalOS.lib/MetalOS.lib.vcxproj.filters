@@ -27,6 +27,9 @@
     <ClCompile Include="RamDrive.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="lib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PageTables.h">

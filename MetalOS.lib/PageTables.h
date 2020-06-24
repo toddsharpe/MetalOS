@@ -24,6 +24,7 @@ public:
 	uintptr_t ResolveAddress(uintptr_t virtualAddress);
 
 	void Display();
+	void DisplayCr3();
 
 private:
 #pragma pack(push, 1)

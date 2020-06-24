@@ -7,7 +7,7 @@
 
 static const char* RamDriveHid = "RDRV";
 
-class RamDriveDriver : public Driver
+class RamDriveDriver : public Driver, public virtual HardDriveDriver
 {
 public:
 	RamDriveDriver(Device& device);
@@ -16,6 +16,9 @@ public:
 	Result Read(const char* buffer, size_t length) override;
 	Result Write(const char* buffer, size_t length) override;
 	Result EnumerateChildren() override;
+
+	FileHandle* OpenFile(const char* path, GenericAccess access) override;
+	size_t ReadFile(FileHandle* handle, void* buffer, size_t bytesToRead) override;
 
 private:
 	RamDrive* m_ramDrive;

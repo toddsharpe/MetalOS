@@ -122,7 +122,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 		if (*entry.Name == '\0')
 			break;
 
-		UartPrint("  File: %s Index: %d\n", entry.Name, entry.PageNumber);
+		UartPrint("  File: %s PageNumber: 0x%x Length: 0x%x\n", entry.Name, entry.PageNumber, entry.Length);
 	}
 
 	//Build path to kernel
@@ -399,23 +399,24 @@ EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, E
 	return status;
 }
 
-#define MAXBUFFER 255
-extern "C" void Print(const char* format, ...)
+void Print(const char* format, ...)
 {
-	char buffer[MAXBUFFER / 2] = { 0 };
+	Uart uart(ComPort::Com1);
 
 	va_list args;
 	va_start(args, format);
-	crt_vsprintf(buffer, format, args);
+	uart.Printf(format, args);
 	va_end(args);
-
-	CHAR16 wideBuffer[MAXBUFFER] = { 0 };
-	mbstowcs(wideBuffer, buffer, sizeof(wideBuffer));
-
-	//Write
-	ST->ConOut->OutputString(ST->ConOut, wideBuffer);
 }
 
+void Print(const char* format, va_list args)
+{
+	Uart uart(ComPort::Com1);
+
+	uart.Printf(format, args);
+}
+
+#define MAXBUFFER 255
 EFI_STATUS Print(const CHAR16* format, ...)
 {
 	va_list args;

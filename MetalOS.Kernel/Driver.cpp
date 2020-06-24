@@ -1,7 +1,9 @@
 #include "Driver.h"
 
-Driver::Driver(Device& device) : m_device(device)
+Driver::Driver(Device& device) :
+	m_device(device)
 {
 
 }
+
 

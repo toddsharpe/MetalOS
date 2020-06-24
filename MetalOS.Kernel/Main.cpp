@@ -38,13 +38,18 @@ extern "C" void INTERRUPT_HANDLER(InterruptVector vector, PINTERRUPT_FRAME pFram
 	kernel.HandleInterrupt(vector, pFrame);
 }
 
-extern "C" void Print(const char* format, ...)
+void Print(const char* format, ...)
 {
 	va_list args;
 
 	va_start(args, format);
 	kernel.Printf(format, args);
 	va_end(args);
+}
+
+void Print(const char* format, va_list args)
+{
+	kernel.Printf(format, args);
 }
 
 void* operator new(size_t n)
@@ -97,6 +102,9 @@ void main(LOADER_PARAMS* loader)
 
 	//Initialize kernel
 	kernel.Initialize(loader);
+
+	//Load shell
+	kernel.CreateProcess("shell.exe");
 
 	//Should never get here
 	while (true)

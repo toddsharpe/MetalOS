@@ -456,9 +456,9 @@ struct Message
 //static_assert(sizeof(Message) <= 32, "Invalid message size");
 
 #if !defined(EXPORT)
-#define SYSTEMCALL __declspec(dllimport) uint32_t
+#define SYSTEMCALL(type) __declspec(dllimport) type
 #else
-#define SYSTEMCALL __declspec(dllexport) uint32_t
+#define SYSTEMCALL(type) __declspec(dllexport) type
 #endif
 
 enum WaitStatus
@@ -476,20 +476,27 @@ enum WaitStatus
 typedef uint32_t(*MessageHandler)(void* parameter);
 
 //Info
-SYSTEMCALL GetSystemInfo(struct SystemInfo* info);
-SYSTEMCALL GetProcessInfo(struct ProcessInfo* info);
+SYSTEMCALL(uint32_t) GetSystemInfo(struct SystemInfo* info);
+SYSTEMCALL(uint32_t) GetProcessInfo(struct ProcessInfo* info);
+SYSTEMCALL(uint32_t) ExitProcess(uint32_t exitCode);
 
 //Semaphores
 //Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
 //SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t* previousCount);
 
 //Windows
-SYSTEMCALL CreateWindow(const char* name, const struct Rectangle* rectangle, Handle* handleOut);
-SYSTEMCALL WaitForMessages(const Handle handle); //Handle to filter, if null get any window belonging to the thread
-SYSTEMCALL GetMessage(struct Message* message);
+SYSTEMCALL(uint32_t) CreateWindow(const char* name, const struct Rectangle* rectangle, Handle* handleOut);
+SYSTEMCALL(uint32_t) WaitForMessages(const Handle handle); //Handle to filter, if null get any window belonging to the thread
+SYSTEMCALL(uint32_t) GetMessage(struct Message* message);
+
+SYSTEMCALL(Handle) CreateFile(const char* path, enum GenericAccess access);
+SYSTEMCALL(uint32_t) ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
+SYSTEMCALL(uint32_t) SetFilePosition(Handle handle, size_t position);
 
 	//Virtual
 	//SYSTEMCALL void* VirtualAlloc(void* address);
+
+#define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
 
 #ifdef __cplusplus
 }

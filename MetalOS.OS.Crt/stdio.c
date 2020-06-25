@@ -1,6 +1,8 @@
 #include "stdio.h"
+#include <MetalOS.h>
 
 FILE* fopen(char const* _FileName, char const* _Mode)
 {
-	return NULL;
+	//inspect mode
+	return CreateFile(_FileName, Read);
 }

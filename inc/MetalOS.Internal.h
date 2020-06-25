@@ -38,8 +38,32 @@
 enum class SystemCall
 {
 	GetSystemInfoId = 1,
-	GetProcessInfoId = 2,
-	CreateWindow = 3,
-	GetMessage = 4,
+	GetProcessInfoId,
+	ExitProcess,
+	CreateWindow,
+	WaitForMessages,
+	GetMessage,
+	CreateFile,
+	ReadFile,
+	SetFilePosition,
+};
+
+struct ModuleNode
+{
+	char Name[32];
+	uintptr_t BaseAddress;
+	struct ModuleNode* Next;
+};
+
+struct ProcessEnvironmentBlock
+{
+	ModuleNode* Modules;
+};
+
+struct ThreadEnvironmentBlock
+{
+	ThreadEnvironmentBlock* SelfPointer;
+	uint32_t ThreadId;
+	ProcessEnvironmentBlock* PEB;
 };
 

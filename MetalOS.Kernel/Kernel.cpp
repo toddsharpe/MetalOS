@@ -24,6 +24,7 @@ typedef EFI_GUID GUID;
 #include "KSemaphore.h"
 #include "RamDriveDriver.h"
 #include "SoftwareDevice.h"
+#include "Loader.h"
 #include <string>
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
@@ -675,15 +676,81 @@ bool Kernel::CreateProcess(const char* path)
 	process.Name = path;
 	process.Id = ++m_lastId;
 	process.VirtualAddress = new VirtualAddressSpace(UserStart, UserStop, false);
-	
-	uint64_t root;
-	Assert(m_pagePool->AllocatePage(&root));
+	Assert(m_pagePool->AllocatePage(&process.CR3));
+	PageTables* pt = new PageTables(process.CR3);
+	pt->SetPool(m_pagePool);
+	pt->LoadKernelMappings(m_pageTables);
 
+	//Swap to new process address space
+	__writecr3(process.CR3);
 
-	//How do we map into the new address space without modifying our own CR3? do we map into kernel, do the copy, then unmap and setup process tables?
-
+	//Allocate pages
 	const size_t pageCount = SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage);
-	m_virtualMemory->Allocate(peHeader.OptionalHeader.ImageBase, pageCount, MemoryProtection(true, true, true), *process.VirtualAddress);//TODO: protection
+	void* address = m_virtualMemory->Allocate(peHeader.OptionalHeader.ImageBase, pageCount, MemoryProtection(true, true, true), *process.VirtualAddress);//TODO: protection
+	Assert(address);
+
+	//Read headers
+	Assert(SetFilePosition(file, 0));
+	Assert(ReadFile(file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
+	Assert(read == peHeader.OptionalHeader.SizeOfHeaders);
+
+	PIMAGE_NT_HEADERS64 pNtHeader = MakePtr(PIMAGE_NT_HEADERS64, address, dosHeader.e_lfanew);
+
+	//Write sections into memory
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
+	{
+		uintptr_t destination = (uintptr_t)address + section[i].VirtualAddress;
+
+		//If physical size is non-zero, read data to allocated address
+		DWORD rawSize = section[i].SizeOfRawData;
+		if (rawSize != 0)
+		{
+			Assert(SetFilePosition(file, section[i].PointerToRawData));
+			Assert(ReadFile(file, (void*)destination, rawSize, &read));
+			Assert(read == section[i].SizeOfRawData);
+		}
+	}
+
+	//Load KernelApi - every process gets it no matter what
+	uintptr_t imageBase;
+	DWORD imageSize;
+	if (!Loader::ReadHeaders("mosapi.dll", imageBase, imageSize))
+		return false;
+
+	{
+		const size_t pageCount = SIZE_TO_PAGES(imageSize);
+		void* address = m_virtualMemory->Allocate(imageBase, pageCount, MemoryProtection(true, true, true), *process.VirtualAddress);//TODO: protection
+		Assert(address);
+
+		Loader::LoadImage("mosapi.dll", address);
+	}
+
+	////Wire imports to just API
+	//IMAGE_DATA_DIRECTORY importDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+	//if (importDirectory.Size)
+	//{
+	//	PIMAGE_IMPORT_DESCRIPTOR importDescriptor = MakePtr(PIMAGE_IMPORT_DESCRIPTOR, address, importDirectory.VirtualAddress);
+
+	//	while (importDescriptor->Name)
+	//	{
+	//		char* module = MakePtr(char*, address, importDescriptor->Name);
+	//		if (stricmp(module, "mosapi.dll") == 0)
+	//		{
+	//			PIMAGE_THUNK_DATA pThunkData = MakePtr(PIMAGE_THUNK_DATA, address, importDescriptor->FirstThunk);
+	//			while (pThunkData->u1.AddressOfData)
+	//			{
+	//				PIMAGE_IMPORT_BY_NAME pImportByName = MakePtr(PIMAGE_IMPORT_BY_NAME, address, pThunkData->u1.AddressOfData);
+	//				uintptr_t procAddress = Loader::GetProcAddress((void*)imageBase, (char*)pImportByName->Name);
+	//				Assert(procAddress);
+
+	//				pThunkData->u1.Function = procAddress;
+	//				pThunkData++;
+	//			}
+	//		}
+	//		importDescriptor++;
+	//	}
+	//}
 
 
 	return false;

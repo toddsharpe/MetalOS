@@ -3,12 +3,17 @@ EXPORTS
 	;stdio
 	fopen
 
+	;stdlib
+	malloc
+	free
+
 	;string
 	memcmp
 	memcpy
 	memmove
 	memset
 	strcmp
+	stricmp
 	strlen
 	strnlen_s
 	strcpy

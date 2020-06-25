@@ -15,6 +15,7 @@ void* memset(void* _Dst, int _Val, size_t _Size);
 
 //String
 int strcmp(char const* _Str1, char const* _Str2);
+int stricmp(char const* _String1, char const* _String2);
 size_t strlen(char const* _Str);
 size_t strnlen_s(char const* _String, size_t _MaxCount);
 char* strcpy(char* _Destination, char const* _Source);

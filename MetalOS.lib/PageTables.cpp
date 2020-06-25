@@ -72,6 +72,22 @@ void PageTables::DisplayCr3()
 	MetalOsLibDebug = false;
 }
 
+void PageTables::LoadKernelMappings(PageTables* copyPt)
+{
+	PPML4E currentL4 = (PPML4E)m_pool->GetVirtualAddress(m_physicalAddress);
+	PPML4E copyL4 = (PPML4E)copyPt->m_pool->GetVirtualAddress(copyPt->m_physicalAddress);
+	
+	const size_t kernelCount = (1 << 8);//high bit gets extended to full 64 bit width with 4 level paging
+	const size_t count = (1 << 9);
+	for (size_t i4 = kernelCount; i4 < count; i4++)
+	{
+		if (copyL4[i4].Value == 0)
+			continue;
+
+		currentL4[i4].Value = copyL4[i4].Value;
+	}
+}
+
 bool PageTables::MapUserPages(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count)
 {
 	return MapPage(virtualAddress, physicalAddress, count, false);

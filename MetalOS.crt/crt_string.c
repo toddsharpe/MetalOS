@@ -124,6 +124,22 @@ int strcmp(const char* str1, const char* str2)
 	return memcmp(str1, str2, strlen(str1));
 }
 
+//ctype.h
+#define __ascii_toupper(c)   ( (((c) >= 'a') && ((c) <= 'z')) ? ((c) - 'a' + 'A') : (c) )
+int stricmp(char const* _String1, char const* _String2)
+{
+	int i;
+
+	if (strlen(_String1) != strlen(_String2))
+		return -1;
+
+	for (i = 0; i < strlen(_String1); i++) {
+		if (__ascii_toupper(_String1[i]) != __ascii_toupper(_String2[i]))
+			return _String1[i] - _String2[i];
+	}
+	return 0;
+}
+
 size_t strlen(const char* str)
 {
 	size_t length = 0;

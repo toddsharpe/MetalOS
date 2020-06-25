@@ -118,7 +118,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;CRT_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\MetalOS.crt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\MetalOS.crt;..\inc</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
     </ClCompile>
     <Link>
@@ -156,10 +156,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdio.h" />
+    <ClInclude Include="stdlib.h" />
     <ClInclude Include="string.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdio.c" />
+    <ClCompile Include="stdlib.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="MetalOS.OS.Crt.def" />

@@ -17,6 +17,7 @@ public:
 	//TODO: unmap
 
 	void SetPool(PageTablesPool* pool) { m_pool = pool; }
+	void LoadKernelMappings(PageTables* copyPt);
 
 	bool EnableWrite(uintptr_t virtualAddress);
 

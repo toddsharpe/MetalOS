@@ -186,12 +186,6 @@ enum class ThreadState
 	Initialized
 };
 
-struct ThreadEnvironmentBlock
-{
-	ThreadEnvironmentBlock* SelfPointer;
-	uint32_t ThreadId;
-};
-
 //Structure just for threads in the kernel
 struct KernelThread
 {

@@ -191,6 +191,7 @@
     <ClCompile Include="KObject.cpp" />
     <ClCompile Include="KSemaphore.cpp" />
     <ClCompile Include="KSpinLock.cpp" />
+    <ClCompile Include="Loader.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="MsfFile.cpp" />
     <ClCompile Include="MsfStream.cpp" />
@@ -245,6 +246,7 @@
     <ClInclude Include="KObject.h" />
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />
+    <ClInclude Include="Loader.h" />
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="MetalOS.Kernel.h" />

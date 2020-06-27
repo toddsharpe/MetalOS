@@ -163,13 +163,22 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Test interrupts
 	__debugbreak();
 
-	m_processes = new std::list<KernelProcess>();
+	m_processes = new std::list<KernelProcess*>();
 	m_threads = new std::map<uint32_t, KernelThread*>();
 	m_scheduler = new Scheduler();
+
+	KernelProcess* process = new KernelProcess();
+	memset(process, 0, sizeof(KernelProcess));
+	m_processes->push_back(process);
+	process->Id = ++m_lastId;
+	process->CR3 = ptRoot;
+	process->VirtualAddress = m_addressSpace;
+	strcpy(process->Name, "moskrnl.exe");
 
 	//Initialize boot thread
 	KernelThread* current = new KernelThread();
 	memset(current, 0, sizeof(KernelThread));
+	current->Process = process;
 	current->Id = ++m_lastId;
 	current->State = ThreadState::Running;
 	current->Context = new uint8_t[x64_CONTEXT_SIZE];
@@ -433,8 +442,13 @@ void Kernel::OnTimer0()
 
 void Kernel::CreateThread(ThreadStart start, void* arg)
 {
+	//Current thread
+	KernelThread* current = GetCurrentThread();
+	Print("CreateThread - Id: 0x%x Process: 0x%016x\n", current->Id, current->Process);
+	
 	KernelThread* thread = new KernelThread();
 	memset(thread, 0, sizeof(KernelThread));
+	thread->Process = current->Process;
 	thread->Id = ++m_lastId;
 	thread->State == ThreadState::Ready;
 	thread->Start = start;
@@ -445,7 +459,7 @@ void Kernel::CreateThread(ThreadStart start, void* arg)
 	m_threads->insert({ thread->Id, thread });
 
 	//Create thread stack, point to bottom (stack grows shallow)
-	uintptr_t stack = (uintptr_t)this->AllocatePage(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection(true, true, false));
+	uintptr_t stack = (uintptr_t)this->AllocatePage(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection::PageReadWrite);
 	stack += (KERNEL_THREAD_STACK_SIZE << PAGE_SHIFT);//Since pop reads first, subtract stack width to be on valid address
 
 	//Subtract paramater area
@@ -461,9 +475,9 @@ void Kernel::CreateThread(ThreadStart start, void* arg)
 
 void Kernel::ThreadInitThunk()
 {
-	//Print("Kernel::ThreadInitThunk\n");
+	Print("Kernel::ThreadInitThunk\n");
 	KernelThread* current = kernel.GetCurrentThread();
-	//Print("Start: 0x%016x, Arg: 0x%016x\n", current->Start, current->Arg);
+	Print("Start: 0x%016x, Arg: 0x%016x\n", current->Start, current->Arg);
 	
 	//Run thread
 	current->Start(current->Arg);
@@ -672,21 +686,23 @@ bool Kernel::CreateProcess(const char* path)
 		Assert(false);
 	}
 		
-	KernelProcess process = { 0 };
-	process.Name = path;
-	process.Id = ++m_lastId;
-	process.VirtualAddress = new VirtualAddressSpace(UserStart, UserStop, false);
-	Assert(m_pagePool->AllocatePage(&process.CR3));
-	PageTables* pt = new PageTables(process.CR3);
+	KernelProcess* process = new KernelProcess();
+	memset(process, 0, sizeof(KernelProcess));
+	strcpy(process->Name, path);
+	process->Id = ++m_lastId;
+	process->VirtualAddress = new UserAddressSpace();
+	Assert(m_pagePool->AllocatePage(&process->CR3));
+	PageTables* pt = new PageTables(process->CR3);
 	pt->SetPool(m_pagePool);
 	pt->LoadKernelMappings(m_pageTables);
 
 	//Swap to new process address space
-	__writecr3(process.CR3);
+	__writecr3(process->CR3);
+	Print("NewCr3: 0x%016x\n", process->CR3);
 
 	//Allocate pages
 	const size_t pageCount = SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage);
-	void* address = m_virtualMemory->Allocate(peHeader.OptionalHeader.ImageBase, pageCount, MemoryProtection(true, true, true), *process.VirtualAddress);//TODO: protection
+	void* address = m_virtualMemory->Allocate(peHeader.OptionalHeader.ImageBase, pageCount, MemoryProtection::PageReadWriteExecute, *process->VirtualAddress);//TODO: protection
 	Assert(address);
 
 	//Read headers
@@ -712,46 +728,38 @@ bool Kernel::CreateProcess(const char* path)
 		}
 	}
 
-	//Load KernelApi - every process gets it no matter what
-	uintptr_t imageBase;
-	DWORD imageSize;
-	if (!Loader::ReadHeaders("mosapi.dll", imageBase, imageSize))
-		return false;
+	//Create thread
+	KernelThread* thread = new KernelThread();
+	memset(thread, 0, sizeof(KernelThread));
+	thread->Process = process;
+	thread->Id = ++m_lastId;
+	thread->State == ThreadState::Ready;
+	thread->Start = (ThreadStart)peHeader.OptionalHeader.AddressOfEntryPoint;
+	thread->Arg = address;
+	thread->TEB = new ThreadEnvironmentBlock();
+	thread->TEB->SelfPointer = thread->TEB;
+	thread->TEB->ThreadId = thread->Id;
+	m_threads->insert({ thread->Id, thread });
 
-	{
-		const size_t pageCount = SIZE_TO_PAGES(imageSize);
-		void* address = m_virtualMemory->Allocate(imageBase, pageCount, MemoryProtection(true, true, true), *process.VirtualAddress);//TODO: protection
-		Assert(address);
+	//Create thread stack, point to bottom (stack grows shallow)
+	uintptr_t stack = (uintptr_t)m_virtualMemory->Allocate(0, KERNEL_THREAD_STACK_SIZE << PAGE_SHIFT, MemoryProtection::PageReadWriteExecute, *process->VirtualAddress);
+	stack += (KERNEL_THREAD_STACK_SIZE << PAGE_SHIFT);//End of stack
 
-		Loader::LoadImage("mosapi.dll", address);
-	}
+	//Subtract paramater area
+	stack -= 32;
 
-	////Wire imports to just API
-	//IMAGE_DATA_DIRECTORY importDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-	//if (importDirectory.Size)
-	//{
-	//	PIMAGE_IMPORT_DESCRIPTOR importDescriptor = MakePtr(PIMAGE_IMPORT_DESCRIPTOR, address, importDirectory.VirtualAddress);
+	//Allocate space for context
+	thread->Context = new uint8_t[x64_CONTEXT_SIZE];
+	x64_init_context(thread->Context, (void*)stack, &Kernel::ThreadInitThunk);
 
-	//	while (importDescriptor->Name)
-	//	{
-	//		char* module = MakePtr(char*, address, importDescriptor->Name);
-	//		if (stricmp(module, "mosapi.dll") == 0)
-	//		{
-	//			PIMAGE_THUNK_DATA pThunkData = MakePtr(PIMAGE_THUNK_DATA, address, importDescriptor->FirstThunk);
-	//			while (pThunkData->u1.AddressOfData)
-	//			{
-	//				PIMAGE_IMPORT_BY_NAME pImportByName = MakePtr(PIMAGE_IMPORT_BY_NAME, address, pThunkData->u1.AddressOfData);
-	//				uintptr_t procAddress = Loader::GetProcAddress((void*)imageBase, (char*)pImportByName->Name);
-	//				Assert(procAddress);
-
-	//				pThunkData->u1.Function = procAddress;
-	//				pThunkData++;
-	//			}
-	//		}
-	//		importDescriptor++;
-	//	}
-	//}
-
+	//Add to scheduler
+	m_scheduler->Add(*thread);
 
 	return false;
 }
+
+void* Kernel::VirtualAlloc(void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect)
+{
+	return nullptr;
+}
+

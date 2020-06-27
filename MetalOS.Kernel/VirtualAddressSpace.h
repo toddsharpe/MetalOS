@@ -50,6 +50,6 @@ private:
 class UserAddressSpace : public VirtualAddressSpace
 {
 public:
-	UserAddressSpace() : VirtualAddressSpace(0ULL, KernelStart, false) { }
+	UserAddressSpace() : VirtualAddressSpace(UserStart, UserStop, false) { }
 };
 

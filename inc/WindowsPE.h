@@ -11,7 +11,7 @@
 #define UFIELD_OFFSET(type, field)    ((DWORD)(LONG_PTR)&(((type *)0)->field))
 
 
-typedef unsigned long       DWORD;
+typedef unsigned long       DWORD, *PDWORD;
 typedef unsigned char       BYTE, *PBYTE;
 typedef unsigned short      WORD, *PWORD;
 typedef float               FLOAT;

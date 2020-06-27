@@ -4,10 +4,18 @@
 #include "x64_support.h"
 #include "x64_interrupts.h"
 
+//Intel SDM Vol 2B Page 4-668
+#define IA32_SYSENTER_CS 0x174
+#define IA32_SYSENTER_EIP 0x176
+#define IA32_SYSENTER_ESP 0x175
+
 void x64::SetKernelTEB(ThreadEnvironmentBlock* teb)
 {
 	__writemsr(MSR::MSR_IA32_KERNELGS_BASE, (uintptr_t)teb);
 }
+
+extern "C" void syscall();
+extern "C" UINT64 SYSCALL_STACK_STOP;
 
 void x64::Initialize()
 {
@@ -26,6 +34,12 @@ void x64::Initialize()
 
 	//Enable interrupts
 	x64_sti();
+
+	//Enable syscalls
+	__writemsr(IA32_SYSENTER_CS, codeSelector.Value);
+	__writemsr(IA32_SYSENTER_EIP, (uintptr_t)&syscall);
+	__writemsr(IA32_SYSENTER_ESP, SYSCALL_STACK_STOP);
+
 }
 
 // "Known good stacks" Intel SDM Vol 3A 6.14.5

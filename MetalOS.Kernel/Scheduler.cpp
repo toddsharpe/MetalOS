@@ -95,12 +95,19 @@ void Scheduler::Schedule()
 			KernelThread* next = kernel.GetKernelThread(nextId);
 			Assert(next);
 
-			//Print("  Schedule: 0x%x -> 0x%x\n", current->Id, next->Id);
+			Print("  Schedule: 0x%x -> 0x%x\n", current->Id, next->Id);
+			Print("Next: 0x%016x Process: %s\n", next, next->Process->Name);
+			Print("Cr3: 0x%016x Next-Cr3: 0x%016x\n", __readcr3(), next->Process->CR3);
 
 			//Switch to thread
 			next->State = ThreadState::Running;
+			if (__readcr3() != next->Process->CR3)
+				__writecr3(next->Process->CR3);
+			Print("new cr3\n");
+
 			x64::SetKernelTEB(next->TEB);
 			x64_swapgs();
+			Print("swap\n");
 			x64_load_context(next->Context);//Does not return
 		}
 	}
@@ -194,8 +201,10 @@ void Scheduler::Add(KernelThread& thread)
 
 void Scheduler::DisplayThread(KernelThread& thread)
 {
-	Print("Thread %d\n  Start:0x%016x\n  Arg: 0x%016x\n",
+	Print("Thread %d Process %d (%s)\n  Start:0x%016x\n  Arg: 0x%016x\n",
 		thread.Id,
+		thread.Process->Id,
+		thread.Process->Name,
 		thread.Start,
 		thread.Arg
 	);

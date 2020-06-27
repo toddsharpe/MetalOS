@@ -33,6 +33,8 @@ bool VirtualAddressSpace::IsFree(const uintptr_t address, const size_t count)
 
 bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, MemoryProtection protection)
 {
+	Assert(count != 0);
+	Print("Reserve: 0x%016x Size: 0x%x\n", address, count);
 	if (address != 0)
 	{
 		//If address is specified, don't round
@@ -49,7 +51,9 @@ bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, Memory
 
 		//Choose address using watermark
 		//Watermark is address that can be given out
-		m_watermark -= desired;
+		//m_watermark -= desired;
+		m_watermark -= BYTE_ALIGN(desired, AllocationGranularity);
+		Print("Watermark: 0x%016x Gran: 0x%016x\n", m_watermark, AllocationGranularity);
 		Assert(m_watermark % AllocationGranularity == 0);
 
 		while (!IsFree(m_watermark, count))

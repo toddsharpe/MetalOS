@@ -175,5 +175,5 @@ char* strcpy(char* _Destination, char const* _Source)
 char* strncpy(char* _Destination, char const* _Source, size_t _Count)
 {
 	memcpy(_Destination, _Source, _Count * sizeof(char));
-	return _Count;
+	return _Destination;
 }

@@ -24,7 +24,7 @@ KernelHeap::KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace&
 
 void KernelHeap::Grow(size_t pages)
 {
-	void* address = m_memoryManager.Allocate(m_end, pages, MemoryProtection(true, true, false), m_addressSpace);
+	void* address = m_memoryManager.Allocate(m_end, pages, MemoryProtection::PageReadWrite, m_addressSpace);
 	Assert(address);
 
 	m_end += (pages << PAGE_SHIFT);

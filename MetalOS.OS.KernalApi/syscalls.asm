@@ -19,6 +19,8 @@ x64SysCall <GetMessage>, 6
 x64SysCall <CreateFile>, 7
 x64SysCall <ReadFile>, 8
 x64SysCall <SetFilePosition>, 9
+x64SysCall <VirtualAlloc>, 10
+x64SysCall <DebugPrint>, 10
 
 end
 

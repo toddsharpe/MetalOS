@@ -24,7 +24,7 @@ HyperVRingBuffer::HyperVRingBuffer(const paddr_t address, const size_t count, Hy
 	}
 	Assert(addresses.size() == 2 * count - 1);
 
-	void* base = kernel.VirtualMap(nullptr, addresses, MemoryProtection(true, true, false));
+	void* base = kernel.VirtualMap(nullptr, addresses, MemoryProtection::PageReadWrite);
 	memset(base, 0, PAGE_SIZE * count);
 
 	Print("Virtual 0x%016x, Physical: 0x%016x, Size: 0x%x\n", base, address, m_size);

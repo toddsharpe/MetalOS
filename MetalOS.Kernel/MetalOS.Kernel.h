@@ -78,6 +78,7 @@ typedef struct
 #define DEF_ISR_HANDLER(x) void ISR_HANDLER(x) ## ()
 
 #define KERNEL_STACK_SIZE (1 << 20)
+#define SYSCALL_STACK_SIZE (1 << 12)
 #define BOOT_HEAP_SIZE (4 * EFI_PAGE_SIZE) //4KB Boot heap
 
 #define IDT_COUNT 256
@@ -95,77 +96,9 @@ typedef struct
 #define KERNEL_GLOBAL_ALIGN __declspec(align(64))
 #define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
 
-//Forward declarations of structs
-struct _KERNEL_PROCESS;
-
-enum MemoryAllocationType
-{
-	MemCommit = 1 << 0,
-	MemReserve = 1 << 1,
-	MemReset = 1 << 2,
-	MemResetUndo = 1 << 3
-};
-
-// https://docs.microsoft.com/en-us/windows/win32/memory/memory-protection-constants
-//enum MemoryProtection
-//{
-//	PageNoAccess,
-//	PageReadOnly,
-//	PageReadWrite,
-//	PageWriteCopy,
-//	PageExecute,
-//	PageExecuteRead,
-//	PageExecuteReadWrite,
-//	PageExecuteWriteCopy,
-//	PageGuard
-//};
-
 typedef size_t cpu_flags_t;
 typedef uint64_t nano_t;//Time in nanoseconds
 typedef uint64_t nano100_t;//Time in 100 nanoseconds
-
-
-struct MemoryAllocation
-{
-	uint8_t Commit : 1;
-	uint8_t Reserve : 1;
-};
-
-struct MemoryProtection
-{
-	uint8_t Read : 1;
-	uint8_t Write : 1;
-	uint8_t Execute : 1;
-	//uint8_t CopyOnWrite : 1;
-	//uint8_t Guard : 1;
-
-	MemoryProtection(bool read = false, bool write = false, bool execute = false)
-	{
-		Read = read;
-		Write = write;
-		Execute = execute;
-	}
-
-	static const uint8_t NoAccess = 0;
-};
-
-//Virtual Address Descriptor
-//Virtual Page Number
-typedef struct _VAD_NODE
-{
-	uint64_t StartPN;
-	uint64_t EndPN;
-
-	struct
-	{
-		MemoryAllocation Allocation;
-		MemoryProtection Protection;
-	} Flags;
-
-	_KERNEL_PROCESS* Process;
-	//commit - mapped, private
-	//protection - readwrite, readonly, writecopy, execute_writecopy
-} VAD_NODE, *PVAD_NODE;
 
 class VirtualAddressSpace;
 
@@ -186,6 +119,28 @@ enum class ThreadState
 	Initialized
 };
 
+struct ThreadEnvironmentBlock
+{
+	ThreadEnvironmentBlock* SelfPointer;
+	uint32_t ThreadId;
+};
+
+//Handle could be smarter to have upper bits to specify type
+#define KernelProcessNameLength 32
+struct KernelProcess
+{
+	uint32_t Id;
+	//std::string Name;
+	char Name[KernelProcessNameLength];
+	time_t CreateTime;
+	time_t ExitTime;
+
+	//TODO: something holding CR3
+	uint64_t CR3;
+
+	VirtualAddressSpace* VirtualAddress;
+};
+
 //Structure just for threads in the kernel
 struct KernelThread
 {
@@ -198,31 +153,18 @@ struct KernelThread
 	//TODO: x64_CONTEXT_SIZE is const, pipe constant from masm to c
 	void* Context;//Pointer to x64 CONTEXT structure (masm)
 	ThreadEnvironmentBlock* TEB;
+	KernelProcess* Process;
 	uint64_t Scheduler;
 	nano100_t SleepWake; //100ns
 };
 
 #define KERNEL_THREAD_STACK_SIZE 8
 
-//Handle could be smarter to have upper bits to specify type
-struct KernelProcess
-{
-	uint32_t Id;
-	std::string Name;
-	time_t CreateTime;
-	time_t ExitTime;
-
-	//TODO: something holding CR3
-	uint64_t CR3;
-
-	VirtualAddressSpace* VirtualAddress;
-};
-
 typedef uintptr_t paddr_t;
 
 enum class InterruptVector : uint8_t
 {
-	//Externel Interrupts
+	//External Interrupts
 	DivideError = 0,
 	DebugException = 1,
 	NMIInterrupt = 2,
@@ -272,6 +214,8 @@ struct InterruptContext
 #define HEAP_ALIGNMENT 16 //Bytes
 #define HEAP_ALIGNMENT_MASK (HEAP_ALIGNMENT - 1)
 #define HEAP_ALIGN(x) ((x + HEAP_ALIGNMENT_MASK) & ~(HEAP_ALIGNMENT_MASK))
+
+#define BYTE_ALIGN(x, alignment) ((x + (alignment - 1)) & ~(alignment - 1))
 
 #ifndef DECLSPEC_ALIGN
 #if (_MSC_VER >= 1300) && !defined(MIDL_PASS)

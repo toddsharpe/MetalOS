@@ -8,7 +8,7 @@ typedef unsigned short USHORT;
 typedef USHORT* PUSHORT;
 typedef unsigned char UCHAR;
 typedef UCHAR* PUCHAR;
-typedef _Null_terminated_ char* PSZ;
+typedef char* PSZ;
 #endif  /* !BASETYPES */
 
 typedef uint8_t UINT8;

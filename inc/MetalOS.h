@@ -470,6 +470,22 @@ enum WaitStatus
 	//Failed conflicts with macro
 };
 
+enum MemoryAllocationType
+{
+	Commit = 1,
+	Reserve = 2,
+	CommitReserve = Commit | Reserve,
+};
+
+enum MemoryProtection
+{
+	PageRead = 1,
+	PageWrite = 2,
+	PageExecute = 4,
+	PageReadWrite = PageRead | PageWrite,
+	PageReadExecute = PageRead | PageExecute,
+	PageReadWriteExecute = PageRead | PageWrite | PageExecute
+};
 
 #define MAX_PATH 256
 
@@ -492,6 +508,14 @@ SYSTEMCALL(uint32_t) GetMessage(struct Message* message);
 SYSTEMCALL(Handle) CreateFile(const char* path, enum GenericAccess access);
 SYSTEMCALL(uint32_t) ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
 SYSTEMCALL(uint32_t) SetFilePosition(Handle handle, size_t position);
+
+SYSTEMCALL(void*) VirtualAlloc(void* address, size_t size, enum MemoryAllocationType allocationType, enum MemoryProtection protect);
+
+SYSTEMCALL(uint32_t) DebugPrint(const char* s);
+
+//Pseudo systemcalls that are handled by user mode
+SYSTEMCALL(Handle) LoadLibrary(const char* lpLibFileName);
+SYSTEMCALL(uintptr_t) GetProcAddress(Handle hModule, const char* lpProcName);
 
 	//Virtual
 	//SYSTEMCALL void* VirtualAlloc(void* address);

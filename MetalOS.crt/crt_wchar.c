@@ -1,4 +1,5 @@
 #include "crt_wchar.h"
+#include "crt_string.h"
 
 int wcscmp(const CHAR16* str1, const CHAR16* str2)
 {

@@ -86,6 +86,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <SupportJustMyCode>false</SupportJustMyCode>
+      <PreprocessorDefinitions>EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -144,12 +145,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="KernelApi.def" />
+    <None Include="MetalOS.OS.KernelApi.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Init.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Init.h" />
+    <ClCompile Include="Loader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MetalOS.crt\MetalOS.crt.vcxproj">

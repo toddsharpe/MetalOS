@@ -74,8 +74,10 @@ public:
 
 #pragma region Virtual Memory Interface
 	paddr_t AllocatePhysical(const size_t count);
-	void* AllocatePage(const uintptr_t address, const size_t count, const MemoryProtection& protection);
-	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses, const MemoryProtection& protection);
+	void* AllocatePage(const uintptr_t address, const size_t count, const MemoryProtection& protect);
+	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses, const MemoryProtection& protect);
+
+	void* VirtualAlloc(void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect);
 #pragma endregion
 
 #pragma region ACPI
@@ -191,7 +193,7 @@ private:
 	std::map<InterruptVector, InterruptContext>* m_interruptHandlers;
 
 	//Process and Thread management
-	std::list<KernelProcess>* m_processes;
+	std::list<KernelProcess*>* m_processes;
 	uint32_t m_lastId;
 	std::map<uint32_t, KernelThread*>* m_threads;
 	Scheduler* m_scheduler;

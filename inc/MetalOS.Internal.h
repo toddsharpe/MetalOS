@@ -4,7 +4,8 @@
 
 //This is defined in Kernel but kernel shouldn't be shared. TODO
 #define UserStart   0x0
-#define UserStop    0x00007FFFFFFFFFFF
+//#define UserStop    0x00007FFFFFFFFFFF
+#define UserStop    0x0000800000000000
 #define KernelStart 0xFFFF800000000000
 
 #define RamDriveSize 0x4000000 //64MB ramdrive
@@ -48,22 +49,7 @@ enum class SystemCall
 	SetFilePosition,
 };
 
-struct ModuleNode
-{
-	char Name[32];
-	uintptr_t BaseAddress;
-	struct ModuleNode* Next;
-};
 
-struct ProcessEnvironmentBlock
-{
-	ModuleNode* Modules;
-};
 
-struct ThreadEnvironmentBlock
-{
-	ThreadEnvironmentBlock* SelfPointer;
-	uint32_t ThreadId;
-	ProcessEnvironmentBlock* PEB;
-};
+
 

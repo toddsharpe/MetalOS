@@ -4,7 +4,7 @@
 #include "x64.h"
 #include "KSemaphore.h"
 
-Scheduler::Scheduler() :
+Scheduler::Scheduler(KThread& bootThread) :
 	m_hyperv(),
 	Enabled(),
 	m_readyQueue(),
@@ -12,6 +12,39 @@ Scheduler::Scheduler() :
 	m_semaphoreTimeouts(),
 	m_semaphoreWaits()
 {
+	//Set boot thread as running
+	bootThread.m_state = ThreadState::Running;
+	
+	//Initialize context for one CPU. Big TODO for more CPUs
+	CpuContext* context = new CpuContext();
+	context->SelfPointer = context;
+	context->Thread = &bootThread;
+
+	//Write CPU state
+	x64::SetKernelCpuContext(context);
+	x64_swapgs();
+
+
+}
+
+Scheduler::CpuContext* Scheduler::GetCpuContext()
+{
+	Assert(x64_ReadGS() != 0);
+	return (CpuContext*)__readgsqword(offsetof(CpuContext, SelfPointer));
+}
+
+KThread* Scheduler::GetCurrentThread()
+{
+	CpuContext* context = GetCpuContext();
+	Assert(context);
+	return context->Thread;
+}
+
+void Scheduler::SetCurrentThread(KThread& thread)
+{
+	CpuContext* context = GetCpuContext();
+	Assert(context);
+	context->Thread = &thread;
 }
 
 void Scheduler::Schedule()
@@ -20,7 +53,7 @@ void Scheduler::Schedule()
 		return;
 
 	const uint64_t tsc = m_hyperv.ReadTsc();
-	KernelThread* current = kernel.GetCurrentThread();
+	KThread* current = GetCurrentThread();
 	
 	//Display();
 
@@ -31,12 +64,12 @@ void Scheduler::Schedule()
 		while (it != m_sleepQueue.end())
 		{
 			const uint32_t id = *it;
-			KernelThread* item = kernel.GetKernelThread(id);
+			KThread* item = kernel.GetKernelThread(id);
 			//Print("  %d = 0x%x\n", id, item->SleepWake);
-			if (item->SleepWake > 0 && item->SleepWake <= tsc)
+			if (item->m_sleepWake > 0 && item->m_sleepWake <= tsc)
 			{
-				item->State = ThreadState::Ready;
-				item->SleepWake = 0;
+				item->m_state = ThreadState::Ready;
+				item->m_sleepWake = 0;
 				m_readyQueue.push_back(id);
 				//Print("  Awake!\n");
 
@@ -56,13 +89,13 @@ void Scheduler::Schedule()
 		while (it != m_semaphoreTimeouts.end())
 		{
 			const uint32_t id = *it;
-			KernelThread* item = kernel.GetKernelThread(id);
+			KThread* item = kernel.GetKernelThread(id);
 			//Print("  %d = 0x%x\n", id, item->SleepWake);
-			if (item->SleepWake > 0 && item->SleepWake <= tsc)
+			if (item->m_sleepWake > 0 && item->m_sleepWake <= tsc)
 			{
-				item->State = ThreadState::Ready;
-				item->SleepWake = 0;
-				item->WaitStatus = WaitStatus::Timeout;
+				item->m_state = ThreadState::Ready;
+				item->m_sleepWake = 0;
+				item->m_waitStatus = WaitStatus::Timeout;
 				m_readyQueue.push_back(id);
 				//Print("  Awake!\n");
 				
@@ -80,35 +113,27 @@ void Scheduler::Schedule()
 	if (!m_readyQueue.empty())
 	{
 		//Save current context
-		if (x64_save_context(current->Context) == 0)
+		if (x64_save_context(current->m_context) == 0)
 		{
 			//Queue current thread if it was preempted
-			if (current->State == ThreadState::Running)
+			if (current->m_state == ThreadState::Running)
 			{
-				current->State = ThreadState::Ready;
-				m_readyQueue.push_back(current->Id);
+				current->m_state = ThreadState::Ready;
+				m_readyQueue.push_back(current->GetId());
 			}
 
 			//Get next thread
 			uint32_t nextId = m_readyQueue.front();
 			m_readyQueue.pop_front();
-			KernelThread* next = kernel.GetKernelThread(nextId);
+			KThread* next = kernel.GetKernelThread(nextId);
 			Assert(next);
 
-			Print("  Schedule: 0x%x -> 0x%x\n", current->Id, next->Id);
-			Print("Next: 0x%016x Process: %s\n", next, next->Process->Name);
-			Print("Cr3: 0x%016x Next-Cr3: 0x%016x\n", __readcr3(), next->Process->CR3);
+			//Print("  Schedule: 0x%x -> 0x%x\n", current->GetId(), next->GetId());
 
 			//Switch to thread
-			next->State = ThreadState::Running;
-			if (__readcr3() != next->Process->CR3)
-				__writecr3(next->Process->CR3);
-			Print("new cr3\n");
-
-			x64::SetKernelTEB(next->TEB);
-			x64_swapgs();
-			Print("swap\n");
-			x64_load_context(next->Context);//Does not return
+			next->m_state = ThreadState::Running;
+			SetCurrentThread(*next);
+			x64_load_context(next->m_context);//Does not return
 		}
 	}
 }
@@ -116,13 +141,13 @@ void Scheduler::Schedule()
 void Scheduler::Sleep(nano_t value)
 {
 	//Print("Scheduler::Sleep\n");
-	KernelThread* current = kernel.GetCurrentThread();
+	KThread* current = GetCurrentThread();
 	
 	const nano100_t value100 = value / 100;
 	const nano100_t tscStart = m_hyperv.ReadTsc();
-	current->SleepWake = tscStart + value100;
-	current->State = ThreadState::Waiting;
-	m_sleepQueue.push_back(current->Id);
+	current->m_sleepWake = tscStart + value100;
+	current->m_state = ThreadState::Waiting;
+	m_sleepQueue.push_back(current->GetId());
 
 	//Print("  Wake: 0x%016x\n", current->SleepWake);
 
@@ -131,7 +156,7 @@ void Scheduler::Sleep(nano_t value)
 
 WaitStatus Scheduler::SemaphoreWait(KSemaphore* semaphore, nano100_t timeout)
 {
-	KernelThread* current = kernel.GetCurrentThread();
+	KThread* current = GetCurrentThread();
 	//Print("Scheduler::SemaphoreWait: %s - %d\n", semaphore->GetName(), current->Id);
 
 	//If there is no contention return immediately
@@ -140,23 +165,23 @@ WaitStatus Scheduler::SemaphoreWait(KSemaphore* semaphore, nano100_t timeout)
 		return WaitStatus::Signaled;
 
 	//Add to semaphore wait queue
-	m_semaphoreWaits[semaphore].push_back(current->Id);
+	m_semaphoreWaits[semaphore].push_back(current->GetId());
 
 	//Add timeout
 	const nano100_t tscStart = m_hyperv.ReadTsc();
-	m_semaphoreTimeouts.push_back(current->Id);
-	current->State = ThreadState::Waiting;
-	current->SleepWake = tscStart + timeout;
+	m_semaphoreTimeouts.push_back(current->GetId());
+	current->m_state = ThreadState::Waiting;
+	current->m_sleepWake = tscStart + timeout;
 
 	this->Schedule();
 	//Print("  Waited: %d - %d\n", current->Id, current->WaitStatus);
 
-	return current->WaitStatus;
+	return current->m_waitStatus;
 }
 
 void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
 {
-	KernelThread* current = kernel.GetCurrentThread();
+	KThread* current = GetCurrentThread();
 	//Print("SemaphoreRelease: %s - %d\n", semaphore->GetName(), current->Id);
 
 	int64_t previous = semaphore->Signal(count);
@@ -174,10 +199,10 @@ void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
 		//Print("  Id: %d\n", id);
 		m_semaphoreWaits[semaphore].pop_front();
 
-		KernelThread* item = kernel.GetKernelThread(id);
-		item->State = ThreadState::Ready;
-		item->SleepWake = 0;
-		item->WaitStatus = WaitStatus::Signaled;
+		KThread* item = kernel.GetKernelThread(id);
+		item->m_state = ThreadState::Ready;
+		item->m_sleepWake = 0;
+		item->m_waitStatus = WaitStatus::Signaled;
 		m_readyQueue.push_back(id);
 
 		//Remove from timeout
@@ -185,32 +210,18 @@ void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
 	}
 }
 
-void Scheduler::Add(KernelThread& thread)
+void Scheduler::Add(KThread& thread)
 {
-	KernelThread* current = kernel.GetCurrentThread();
-	DisplayThread(thread);
-	switch (thread.State)
+	thread.Display();
+
+	switch (thread.m_state)
 	{
 	case ThreadState::Ready:
-		m_readyQueue.push_back(thread.Id);
+		m_readyQueue.push_back(thread.GetId());
 		break;
 	default:
 		Assert(false);
 	}
-}
-
-void Scheduler::DisplayThread(KernelThread& thread)
-{
-	Print("Thread %d Process %d (%s)\n  Start:0x%016x\n  Arg: 0x%016x\n",
-		thread.Id,
-		thread.Process->Id,
-		thread.Process->Name,
-		thread.Start,
-		thread.Arg
-	);
-	x64_context* context = (x64_context*)thread.Context;
-	Print("  Rbp: 0x%016x Rsp: 0x%016x Rip: 0x%016x RFlags:0x%08x\n",
-		context->Rbp, context->Rsp, context->Rip, (uint32_t)context->Rflags);
 }
 
 void Scheduler::Display()
@@ -231,8 +242,8 @@ void Scheduler::Display()
 		Print("  Sleep: ");
 		for (const auto& i : m_sleepQueue)
 		{
-			KernelThread* t = kernel.GetKernelThread(i);
-			Print("%x(0x%016x) ", i, t->SleepWake);
+			KThread* t = kernel.GetKernelThread(i);
+			Print("%x(0x%016x) ", i, t->m_sleepWake);
 		}
 		Print("\n");
 	}
@@ -241,8 +252,8 @@ void Scheduler::Display()
 		Print("  SemaphoreTimeouts: ");
 		for (const auto& i : m_semaphoreTimeouts)
 		{
-			KernelThread* t = kernel.GetKernelThread(i);
-			Print("%x(0x%016x) ", i, t->SleepWake);
+			KThread* t = kernel.GetKernelThread(i);
+			Print("%x(0x%016x) ", i, t->m_sleepWake);
 		}
 		Print("\n");
 	}

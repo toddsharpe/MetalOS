@@ -1,8 +1,9 @@
-LIBRARY MetalOS.OS.KernelApi
 EXPORTS
 	GetSystemInfo
 	GetProcessInfo
 	ExitProcess
+	ExitThread
+
 	CreateWindow
 	WaitForMessages
 	GetMessage

@@ -19,12 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="crt_ctype.c" />
     <ClCompile Include="crt_stdio.c" />
     <ClCompile Include="crt_stdlib.c" />
     <ClCompile Include="crt_string.c" />
     <ClCompile Include="crt_wchar.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="crt_ctype.h" />
     <ClInclude Include="crt_stdio.h" />
     <ClInclude Include="crt_stdlib.h" />
     <ClInclude Include="crt_string.h" />

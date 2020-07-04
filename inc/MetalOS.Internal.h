@@ -41,6 +41,7 @@ enum class SystemCall
 	GetSystemInfoId = 1,
 	GetProcessInfoId,
 	ExitProcess,
+	ExitThread,
 	CreateWindow,
 	WaitForMessages,
 	GetMessage,

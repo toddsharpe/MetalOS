@@ -1,15 +1,25 @@
 #include <cstdint>
 #include <WindowsPE.h>
 #include <MetalOS.h>
-
-#pragma comment(linker, "/entry:InitProcess") //I dont think this works
+#include "Runtime.h"
 
 extern "C" int main(int argc, char** argv);
+typedef int (*ProcessEntry)();
 
-extern "C" void InitProcess(uintptr_t baseAddress)
+//Just to build
+extern "C" int WinMainCRTStartup() //should be placed at entry point by msvc
 {
-	DebugPrint("InitProcess");
-	
+	return main(0, nullptr);
+}
+
+//Using load library here doesn't work, since thats an import and this is before imports are loaded. Maybe OS needs to load this library?
+
+extern "C" __declspec(dllexport) void InitProcess()
+{
+	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
+	uintptr_t baseAddress = peb->BaseAddress;
+	peb->Output("Addr: 0x%016x\n", baseAddress);
+
 	//Perform library loading
 	IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)baseAddress;
 	IMAGE_NT_HEADERS64* ntHeader = (PIMAGE_NT_HEADERS64)(baseAddress + dosHeader->e_lfanew);
@@ -36,15 +46,28 @@ extern "C" void InitProcess(uintptr_t baseAddress)
 		}
 	}
 
+	peb->Output("Imported: 0x%016x\n", baseAddress);
+
+	//TODO: TLS
+
+	//TODO: C++ statics
+
 	//Call entry
-	main(0, nullptr);
+	ProcessEntry entry = MakePtr(ProcessEntry, baseAddress, ntHeader->OptionalHeader.AddressOfEntryPoint);
+	int ret = entry();
 
 	//Kill process
 	ExitProcess(0);
 }
 
-extern "C" void InitThread(uintptr_t threadStart)
+extern "C" __declspec(dllexport) void InitThread()
 {
+	DebugPrint("InitThread");
 
+	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
+	teb->ThreadStart(teb->Arg);
+
+	//Kill thread
+	ExitThread(0);
 }
 

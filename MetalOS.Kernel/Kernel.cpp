@@ -26,6 +26,7 @@ typedef EFI_GUID GUID;
 #include "SoftwareDevice.h"
 #include "Loader.h"
 #include <string>
+#include "KThread.h"
 
 const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
 const Color Black = { 0x00, 0x00, 0x00, 0x00 };
@@ -73,7 +74,7 @@ Kernel::Kernel() :
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
-#define Assert(x) if (!(x)) { Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
+#define Assert(x) if (!(x)) { this->Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
 #define Trace() Print(__FILE__ "-" STR(__LINE__));
 void Kernel::Initialize(const PLOADER_PARAMS params)
 {
@@ -102,13 +103,10 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_configTables = new ConfigTables(params->ConfigTables, params->ConfigTableSizes);
 
 	//Initialize page table pool
-	m_pagePool = new PageTablesPool(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	PageTables::Pool = new PageTablesPool(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 
 	//Construct kernel page table
-	UINT64 ptRoot;
-	Assert(m_pagePool->AllocatePage(&ptRoot));
-	m_pageTables = new PageTables(ptRoot);
-	m_pageTables->SetPool(m_pagePool);
+	m_pageTables = new PageTables();
 	m_pageTables->MapKernelPages(KernelBaseAddress, params->KernelAddress, EFI_SIZE_TO_PAGES(params->KernelImageSize));
 	m_pageTables->MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 	m_pageTables->MapKernelPages(KernelGraphicsDeviceAddress, params->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(params->Display.FrameBufferSize));
@@ -133,10 +131,14 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Identity mappings are not possible now, lost access to params
 	//Alternatively - remove physical identity mappings from bootloader PT since entry in pt root can be cleared and subsequent pages are going to be eaten (since they are in boot memory)
 	//This requires copying at least the root
-	__writecr3(ptRoot);
+	__writecr3(m_pageTables->GetCr3());
 
 	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
 	Print("  PhysicalAddressSize: 0x%16x\n", m_memoryMap->GetPhysicalAddressSize());
+
+	//Enable WRGSBASE instruction
+	__writecr4(__readcr4() | (1 << 16));
+	Print("  CR3: 0x%16x CR4: 0x%16x\n", __readcr3(), __readcr4());
 
 	//Test UEFI runtime access
 	EFI_TIME time = { 0 };
@@ -146,7 +148,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Initialize virtual memory
 	m_pfnDb = new PhysicalMemoryManager(*m_memoryMap);
 	Assert(m_pfnDb->GetSize() == pfnDbSize);
-	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb, *m_pagePool);
+	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb);
 	m_addressSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
 
 	//Initialize Heap
@@ -163,34 +165,17 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Test interrupts
 	__debugbreak();
 
-	m_processes = new std::list<KernelProcess*>();
-	m_threads = new std::map<uint32_t, KernelThread*>();
-	m_scheduler = new Scheduler();
+	//Create boot thread
+	KThread* bootThread = new KThread(nullptr, nullptr, (void*)new uint8_t[x64_CONTEXT_SIZE]);
 
-	KernelProcess* process = new KernelProcess();
-	memset(process, 0, sizeof(KernelProcess));
-	m_processes->push_back(process);
-	process->Id = ++m_lastId;
-	process->CR3 = ptRoot;
-	process->VirtualAddress = m_addressSpace;
-	strcpy(process->Name, "moskrnl.exe");
-
-	//Initialize boot thread
-	KernelThread* current = new KernelThread();
-	memset(current, 0, sizeof(KernelThread));
-	current->Process = process;
-	current->Id = ++m_lastId;
-	current->State = ThreadState::Running;
-	current->Context = new uint8_t[x64_CONTEXT_SIZE];
-	current->TEB = new ThreadEnvironmentBlock();
-	current->TEB->SelfPointer = current->TEB;
-	current->TEB->ThreadId = current->Id;
-	m_threads->insert({ current->Id, current });
-	x64::SetKernelTEB(current->TEB);
-	x64_swapgs();
+	//Process and thread containers
+	m_processes = new std::map<uint32_t, UserProcess*>();
+	m_threads = new std::map<uint32_t, KThread*>();
+	m_threads->insert({ bootThread->GetId(), bootThread });
+	m_scheduler = new Scheduler(*bootThread);
 
 	//Create idle thread
-	kernel.CreateThread(&Kernel::IdleThread, this);
+	CreateKernelThread(&Kernel::IdleThread, this);
 
 	//Initialize Platform
 	m_hyperV = new HyperV();
@@ -279,13 +264,22 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	context.Rsp = pFrame->RSP;
 	context.Rbp = pFrame->RBP;
 
-	StackWalk sw(&context, KernelBaseAddress);
-	uint32_t rva = (uint32_t)context.Rip - KernelBaseAddress;
+	//Load kernel TEB for user thread
+	x64_swapgs();
+
+	KThread* current = m_scheduler->GetCurrentThread();
+	current->Display();
+
+	UserThread* user = m_scheduler->GetCurrentThread()->GetUserThread();
+	uintptr_t base = user == nullptr ? KernelBaseAddress : user->GetProcess().GetImageBase();
+	Print("base: 0x%016x\n", base);
+
+	StackWalk sw(&context, base);
 
 	while (sw.HasNext())
 	{
 		Print("IP: 0x%016x ", context.Rip);
-		if (m_pdb != nullptr)
+		if (m_pdb != nullptr && (context.Rip >= KernelBaseAddress))
 			m_pdb->PrintStack((uint32_t)context.Rip - KernelBaseAddress);
 		else
 			Print("\n");
@@ -440,78 +434,67 @@ void Kernel::OnTimer0()
 	x64_restore_flags(flags);
 }
 
-void Kernel::CreateThread(ThreadStart start, void* arg)
+void Kernel::CreateKernelThread(ThreadStart start, void* arg)
 {
 	//Current thread
-	KernelThread* current = GetCurrentThread();
-	Print("CreateThread - Id: 0x%x Process: 0x%016x\n", current->Id, current->Process);
+	KThread* current = m_scheduler->GetCurrentThread();
+	Print("CreateThread - Id: 0x%x\n", current->GetId());
 	
-	KernelThread* thread = new KernelThread();
-	memset(thread, 0, sizeof(KernelThread));
-	thread->Process = current->Process;
-	thread->Id = ++m_lastId;
-	thread->State == ThreadState::Ready;
-	thread->Start = start;
-	thread->Arg = arg;
-	thread->TEB = new ThreadEnvironmentBlock();
-	thread->TEB->SelfPointer = thread->TEB;
-	thread->TEB->ThreadId = thread->Id;
-	m_threads->insert({ thread->Id, thread });
-
-	//Create thread stack, point to bottom (stack grows shallow)
-	uintptr_t stack = (uintptr_t)this->AllocatePage(0, KERNEL_THREAD_STACK_SIZE, MemoryProtection::PageReadWrite);
-	stack += (KERNEL_THREAD_STACK_SIZE << PAGE_SHIFT);//Since pop reads first, subtract stack width to be on valid address
+	//Create thread stack, point to bottom (stack grows shallow on x86)
+	uintptr_t stack = (uintptr_t)this->AllocateKernelPage(0, KThread::StackPageCount, MemoryProtection::PageReadWrite);
+	stack += (KThread::StackPageCount << PAGE_SHIFT);
 
 	//Subtract paramater area
 	stack -= 32;
 
-	//Allocate space for context
-	thread->Context = new uint8_t[x64_CONTEXT_SIZE];
-	x64_init_context(thread->Context, (void*)stack, &Kernel::ThreadInitThunk);
+	//Create thread context
+	void* context = new uint8_t[x64_CONTEXT_SIZE];
+	x64_init_context(context, (void*)stack, &Kernel::KernelThreadInitThunk);
+
+	KThread* thread = new KThread(start, arg, context);
+	m_threads->insert({ thread->GetId(), thread });
 
 	//Add to scheduler
 	m_scheduler->Add(*thread);
 }
 
-void Kernel::ThreadInitThunk()
+void Kernel::KernelThreadInitThunk()
 {
-	Print("Kernel::ThreadInitThunk\n");
-	KernelThread* current = kernel.GetCurrentThread();
-	Print("Start: 0x%016x, Arg: 0x%016x\n", current->Start, current->Arg);
+	Print("Kernel::KernelThreadInitThunk\n");
+	KThread* current = kernel.m_scheduler->GetCurrentThread();
+	current->Display();
 	
 	//Run thread
-	current->Start(current->Arg);
+	//current->Run(); - leads to page fault, stack pointer was wrong but why?
+	current->m_start(current->m_arg);
+
+	Print("Kill thread: %d\n", current->GetId());
 
 	//Exit thread TODO
 	__halt();
 }
 
+void Kernel::UserThreadInitThunk()
+{
+	Print("Kernel::UserThreadInitThunk\n");
+	KThread* current = kernel.m_scheduler->GetCurrentThread();
+	current->Display();
+
+	UserThread* user = current->GetUserThread();
+	user->DisplayDetails();
+	
+	//Load user GS
+	_writegsbase_u64((uintptr_t)user->GetTEB());
+	//x64_WriteGS((uintptr_t)user->GetTEB());
+
+	x64_load_context(user->GetContext());
+
+	Print("WTF!\n");
+}
+
 void Kernel::Sleep(nano_t value)
 {
 	m_scheduler->Sleep(value);
-}
-
-ThreadEnvironmentBlock* Kernel::GetTEB()
-{
-	Assert(x64_ReadGS() != 0);
-	return (ThreadEnvironmentBlock*)__readgsqword(offsetof(ThreadEnvironmentBlock, SelfPointer));
-}
-
-KernelThread* Kernel::GetKernelThread(uint32_t threadId)
-{
-	const auto& it = m_threads->find(threadId);
-	Assert(it != m_threads->end());
-	return it->second;
-}
-
-//Uses GS register and does lookup, ensuring both exist
-KernelThread* Kernel::GetCurrentThread()
-{
-	ThreadEnvironmentBlock* teb = kernel.GetTEB();
-	Assert(teb);
-	KernelThread* current = kernel.GetKernelThread(teb->ThreadId);
-	Assert(current);
-	return current;
 }
 
 void Kernel::GetSystemTime(SystemTime* time)
@@ -539,7 +522,7 @@ void Kernel::Deallocate(void* address)
 	m_heap->Deallocate(address);
 }
 
-void* Kernel::AllocatePage(uintptr_t address, const size_t count, const MemoryProtection& protection)
+void* Kernel::AllocateKernelPage(uintptr_t address, const size_t count, const MemoryProtection& protection)
 {
 	return m_virtualMemory->Allocate(address, count, protection, *m_addressSpace);
 }
@@ -625,7 +608,7 @@ Device* Kernel::GetDevice(const std::string path)
 	return m_deviceTree.GetDevice(path);
 }
 
-Handle Kernel::CreateFile(const char* path, GenericAccess access)
+Handle Kernel::CreateFile(const std::string& path, GenericAccess access)
 {
 	Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
 	RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
@@ -658,7 +641,7 @@ bool Kernel::SetFilePosition(Handle handle, size_t position)
 	return true;
 }
 
-bool Kernel::CreateProcess(const char* path)
+bool Kernel::CreateProcess(const std::string& path)
 {
 	Print("CreateProcess %s\n", path);
 	Handle file = CreateFile(path, GenericAccess::Read);
@@ -685,25 +668,21 @@ bool Kernel::CreateProcess(const char* path)
 	{
 		Assert(false);
 	}
-		
-	KernelProcess* process = new KernelProcess();
-	memset(process, 0, sizeof(KernelProcess));
-	strcpy(process->Name, path);
-	process->Id = ++m_lastId;
-	process->VirtualAddress = new UserAddressSpace();
-	Assert(m_pagePool->AllocatePage(&process->CR3));
-	PageTables* pt = new PageTables(process->CR3);
-	pt->SetPool(m_pagePool);
-	pt->LoadKernelMappings(m_pageTables);
+	
+	//Create new process to create new address space
+	UserProcess* process = new UserProcess(path);
 
-	//Swap to new process address space
-	__writecr3(process->CR3);
-	Print("NewCr3: 0x%016x\n", process->CR3);
+	//Swap to new process address space to load file
+	//TODO: page into kernel, load, then remove and page into process so we dont switch address space
+	__writecr3(process->GetCR3());
+	Print("NewCr3: 0x%016x\n", process->GetCR3());
 
 	//Allocate pages
-	const size_t pageCount = SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage);
-	void* address = m_virtualMemory->Allocate(peHeader.OptionalHeader.ImageBase, pageCount, MemoryProtection::PageReadWriteExecute, *process->VirtualAddress);//TODO: protection
+	void* address = VirtualAlloc(*process, (void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWriteExecute);
 	Assert(address);
+
+	//Init in context of address space
+	process->Init(address);
 
 	//Read headers
 	Assert(SetFilePosition(file, 0));
@@ -728,38 +707,67 @@ bool Kernel::CreateProcess(const char* path)
 		}
 	}
 
-	//Create thread
-	KernelThread* thread = new KernelThread();
-	memset(thread, 0, sizeof(KernelThread));
-	thread->Process = process;
-	thread->Id = ++m_lastId;
-	thread->State == ThreadState::Ready;
-	thread->Start = (ThreadStart)peHeader.OptionalHeader.AddressOfEntryPoint;
-	thread->Arg = address;
-	thread->TEB = new ThreadEnvironmentBlock();
-	thread->TEB->SelfPointer = thread->TEB;
-	thread->TEB->ThreadId = thread->Id;
-	m_threads->insert({ thread->Id, thread });
+	//Save init pointers
+	process->InitProcess = (void*)Loader::GetProcAddress(address, "InitProcess");
+	process->InitThread = (void*)Loader::GetProcAddress(address, "InitThread");
+	Print("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
 
-	//Create thread stack, point to bottom (stack grows shallow)
-	uintptr_t stack = (uintptr_t)m_virtualMemory->Allocate(0, KERNEL_THREAD_STACK_SIZE << PAGE_SHIFT, MemoryProtection::PageReadWriteExecute, *process->VirtualAddress);
-	stack += (KERNEL_THREAD_STACK_SIZE << PAGE_SHIFT);//End of stack
+	//Load KernelAPI
+	Handle k = Loader::LoadLibrary(*process, "mosapi.dll");
+	Print("mosapi loaded at 0x%016x\n", k);
 
-	//Subtract paramater area
-	stack -= 32;
+	//Patch imports of process for just mosapi
+	Loader::KernelExports(address, k);
 
-	//Allocate space for context
-	thread->Context = new uint8_t[x64_CONTEXT_SIZE];
-	x64_init_context(thread->Context, (void*)stack, &Kernel::ThreadInitThunk);
+	//Create thread TODO: reserve vs commit stack size
+	CreateThread(*process, pNtHeader->OptionalHeader.SizeOfStackReserve, nullptr, nullptr);
+	return true;
+}
+
+//TODO - usermode thread init thunk (it will bring us to ring 3 using iret and start address)
+
+Handle Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg)
+{
+	//TODO: validate addresses
+	
+	//Allocate user stack
+	void* stack = VirtualAlloc(process, nullptr, stackSize, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWrite);
+	void* stackTop = MakePtr(void*, stack, PAGE_ALIGN(stackSize) - 32);//Register parameter area
+	Print("User Stack: 0x%016x->0x%016x\n", stackTop, stack);
+
+	//Create user thread
+	UserThread* userThread = new UserThread(startAddress, arg, stackTop, process);
+
+	//Create kernel thread stack, point to bottom (stack grows shallow on x86)
+	uintptr_t kStack = (uintptr_t)this->AllocateKernelPage(0, KThread::StackPageCount, MemoryProtection::PageReadWrite);
+	kStack += (KThread::StackPageCount << PAGE_SHIFT) - 32;
+	Print("Kernel Stack: 0x%016x->0x%016x\n", kStack, kStack - (KThread::StackPageCount << PAGE_SHIFT));
+
+	//Create kernel thread context
+	void* context = new uint8_t[x64_CONTEXT_SIZE];
+	x64_init_context(context, (void*)kStack, Kernel::UserThreadInitThunk);
+
+	//Create kernel thread
+	KThread* thread = new KThread(nullptr, nullptr, context, userThread);
+	m_threads->insert({ thread->GetId(), thread });
 
 	//Add to scheduler
 	m_scheduler->Add(*thread);
-
-	return false;
+	
+	return userThread;
 }
 
-void* Kernel::VirtualAlloc(void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect)
+void* Kernel::VirtualAlloc(UserProcess& process, void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect)
 {
-	return nullptr;
+	void* allocated = m_virtualMemory->Allocate((uintptr_t)address, SIZE_TO_PAGES(size), protect, process.GetAddressSpace());
+	Assert(allocated);
+	return allocated;
+}
+
+KThread* Kernel::GetKernelThread(uint32_t id)
+{
+	const auto& it = m_threads->find(id);
+	Assert(it != m_threads->end());
+	return it->second;
 }
 

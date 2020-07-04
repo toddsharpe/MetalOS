@@ -3,7 +3,6 @@
 #include "PhysicalMemoryManager.h"
 #include <MetalOS.Internal.h>
 #include <intrin.h>
-#include <PageTablesPool.h>
 #include <cstdint>
 #include "VirtualAddressSpace.h"
 
@@ -14,7 +13,7 @@
 class VirtualMemoryManager
 {
 public:
-	VirtualMemoryManager(PhysicalMemoryManager& physicalMemory, PageTablesPool& pool);
+	VirtualMemoryManager(PhysicalMemoryManager& physicalMemory);
 
 	void* Allocate(uintptr_t address, const size_t count, const MemoryProtection protection, VirtualAddressSpace& addressSpace);
 	void* VirtualMap(uintptr_t address, const std::vector<paddr_t>& addresses, const MemoryProtection& protection, VirtualAddressSpace& addressSpace);
@@ -23,6 +22,5 @@ public:
 
 private:
 	PhysicalMemoryManager& m_physicalMemory;
-	PageTablesPool& m_pool;
 };
 

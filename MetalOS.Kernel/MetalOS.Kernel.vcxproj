@@ -189,8 +189,10 @@
     <ClCompile Include="KernelAcpi.cpp" />
     <ClCompile Include="KernelDriverInterface.cpp" />
     <ClCompile Include="KObject.cpp" />
+    <ClCompile Include="UserProcess.cpp" />
     <ClCompile Include="KSemaphore.cpp" />
     <ClCompile Include="KSpinLock.cpp" />
+    <ClCompile Include="KThread.cpp" />
     <ClCompile Include="Loader.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="MsfFile.cpp" />
@@ -210,6 +212,7 @@
     <ClCompile Include="StackWalk.cpp" />
     <ClCompile Include="StringPrinter.cpp" />
     <ClCompile Include="UartDriver.cpp" />
+    <ClCompile Include="UserThread.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
     <ClCompile Include="Bitvector.cpp" />
     <ClCompile Include="Display.cpp" />
@@ -244,8 +247,10 @@
     <ClInclude Include="IoApicDriver.h" />
     <ClInclude Include="Kernel.h" />
     <ClInclude Include="KObject.h" />
+    <ClInclude Include="UserProcess.h" />
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />
+    <ClInclude Include="KThread.h" />
     <ClInclude Include="Loader.h" />
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Matrix.h" />
@@ -269,6 +274,7 @@
     <ClInclude Include="StackWalk.h" />
     <ClInclude Include="StringPrinter.h" />
     <ClInclude Include="UartDriver.h" />
+    <ClInclude Include="UserThread.h" />
     <ClInclude Include="VirtualAddressSpace.h" />
     <ClInclude Include="Bitvector.h" />
     <ClInclude Include="Display.h" />

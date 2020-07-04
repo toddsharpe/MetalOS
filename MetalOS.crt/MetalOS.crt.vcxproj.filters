@@ -27,6 +27,9 @@
     <ClCompile Include="crt_wchar.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="crt_ctype.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="crt_stdio.h">
@@ -42,6 +45,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MetalOS.crt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="crt_ctype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

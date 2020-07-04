@@ -99,6 +99,11 @@ extern "C" void syscall()
 	Print("Syscall!");
 }
 
+void __declspec(noreturn) Bugcheck(const char* file, const char* line, const char* assert)
+{
+	kernel.Bugcheck(file, line, assert);
+}
+
 void main(LOADER_PARAMS* loader)
 {
 	//Initialize platform

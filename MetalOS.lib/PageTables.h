@@ -8,15 +8,19 @@ class PageTablesPool;
 class PageTables
 {
 public:
+	static PageTablesPool* Pool;
+
+	PageTables();
 	PageTables(uintptr_t physicalAddress);
 
 	//TODO: attributes
 	bool MapUserPages(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count);
 	bool MapKernelPages(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count);
 
+	uintptr_t GetCr3() const;
+	
 	//TODO: unmap
 
-	void SetPool(PageTablesPool* pool) { m_pool = pool; }
 	void LoadKernelMappings(PageTables* copyPt);
 
 	bool EnableWrite(uintptr_t virtualAddress);
@@ -137,7 +141,6 @@ private:
 	bool MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count, bool global);
 	bool MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bool global);
 
-	PageTablesPool* m_pool;
 	uintptr_t m_physicalAddress;
 };
 

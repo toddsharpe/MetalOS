@@ -77,8 +77,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>..\acpica\source\include\platform;..\acpica\source\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;ACPI_USE_SYSTEM_CLIBRARY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SupportJustMyCode>false</SupportJustMyCode>
       <ExceptionHandling>false</ExceptionHandling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -355,6 +355,11 @@
     <ClCompile Include="..\acpica\source\components\utilities\utxferror.c" />
     <ClCompile Include="..\acpica\source\components\utilities\utxfinit.c" />
     <ClCompile Include="..\acpica\source\components\utilities\utxfmutex.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MetalOS.crt\MetalOS.crt.vcxproj">
+      <Project>{e2867f5b-2a93-4d4b-b71f-b65736436bc3}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

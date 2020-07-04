@@ -1,9 +1,8 @@
 #include "VirtualMemoryManager.h"
 #include "Main.h"
 
-VirtualMemoryManager::VirtualMemoryManager(PhysicalMemoryManager& physicalMemory, PageTablesPool& pool) :
-	m_physicalMemory(physicalMemory),
-	m_pool(pool)
+VirtualMemoryManager::VirtualMemoryManager(PhysicalMemoryManager& physicalMemory) :
+	m_physicalMemory(physicalMemory)
 {
 
 }
@@ -21,7 +20,6 @@ void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, cons
 		return nullptr;
 
 	PageTables pt(__readcr3());
-	pt.SetPool(&m_pool);
 
 	//Retrieve and map physical pages
 	//TODO: this code maps each page since it might have to zero it first
@@ -60,7 +58,6 @@ void* VirtualMemoryManager::VirtualMap(uintptr_t virtualAddress, const std::vect
 		return nullptr;
 
 	PageTables pt(__readcr3());
-	pt.SetPool(&m_pool);
 
 	for (size_t i = 0; i < addresses.size(); i++)
 	{

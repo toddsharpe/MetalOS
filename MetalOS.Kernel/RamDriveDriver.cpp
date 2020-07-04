@@ -15,6 +15,7 @@ Result RamDriveDriver::Initialize()
 	//Map space
 	paddr_t address = (paddr_t)this->m_device.GetResource((uint32_t)SoftwareDevice::ResourceType::Context);
 	void* virtualAddress = kernel.DriverMapPages(address, SIZE_TO_PAGES(RamDriveSize));
+	Print("virt: 0x%016x\n", virtualAddress);
 	m_ramDrive = new RamDrive(virtualAddress, SIZE_TO_PAGES(RamDriveSize));
 
 	m_device.Type = DeviceType::Harddrive;
@@ -44,13 +45,13 @@ Result RamDriveDriver::EnumerateChildren()
 	return Result();
 }
 
-FileHandle* RamDriveDriver::OpenFile(const char* path, GenericAccess access)
+FileHandle* RamDriveDriver::OpenFile(const std::string& path, GenericAccess access)
 {
 	Assert(access == GenericAccess::Read);
 	
 	void* address;
 	size_t length;
-	Assert(m_ramDrive->Open(path, address, length));
+	Assert(m_ramDrive->Open(path.c_str(), address, length));
 	
 	FileHandle* handle = new FileHandle();
 	handle->Context = address;

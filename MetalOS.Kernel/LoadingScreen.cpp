@@ -73,7 +73,7 @@ void LoadingScreen::Initialize()
 	Draw();
 
 	//Create thread
-	kernel.CreateThread(LoadingScreen::ThreadLoop, this);
+	kernel.CreateKernelThread(LoadingScreen::ThreadLoop, this);
 }
 
 void LoadingScreen::Update()

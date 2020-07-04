@@ -487,6 +487,33 @@ enum MemoryProtection
 	PageReadWriteExecute = PageRead | PageWrite | PageExecute
 };
 
+#define MAX_LOADED_MODULES 8
+
+struct Module
+{
+	char Name[16];
+	void* Address;
+};
+
+typedef void (*KernelDebugPrint)(const char* format, ...);
+struct ProcessEnvironmentBlock
+{
+	uint32_t ProcessId;
+	KernelDebugPrint Output;
+	uintptr_t BaseAddress;
+	struct Module LoadedModules[MAX_LOADED_MODULES];
+	size_t ModuleIndex;
+};
+
+struct ThreadEnvironmentBlock
+{
+	struct ThreadEnvironmentBlock* SelfPointer;
+	struct ProcessEnvironmentBlock* PEB;
+	ThreadStart ThreadStart;
+	void* Arg;
+	uint32_t ThreadId;
+};
+
 #define MAX_PATH 256
 
 typedef uint32_t(*MessageHandler)(void* parameter);
@@ -494,7 +521,10 @@ typedef uint32_t(*MessageHandler)(void* parameter);
 //Info
 SYSTEMCALL(uint32_t) GetSystemInfo(struct SystemInfo* info);
 SYSTEMCALL(uint32_t) GetProcessInfo(struct ProcessInfo* info);
+
+
 SYSTEMCALL(uint32_t) ExitProcess(uint32_t exitCode);
+SYSTEMCALL(uint32_t) ExitThread(uint32_t exitCode);
 
 //Semaphores
 //Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);

@@ -28,7 +28,8 @@ extern "C"
 #include "KernelHeap.h"
 #include <queue>
 #include "Pdb.h"
-
+#include "KThread.h"
+#include "UserProcess.h"
 
 class Kernel
 {
@@ -39,7 +40,7 @@ public:
 	void Initialize(const PLOADER_PARAMS params);
 
 	void HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame);
-	void __declspec(noreturn) Bugcheck(const char* file, const char* line, const char* assert);//__declspec(noreturn) ?
+	void __declspec(noreturn) Bugcheck(const char* file, const char* line, const char* assert);
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
@@ -74,10 +75,11 @@ public:
 
 #pragma region Virtual Memory Interface
 	paddr_t AllocatePhysical(const size_t count);
-	void* AllocatePage(const uintptr_t address, const size_t count, const MemoryProtection& protect);
+	void* AllocateKernelPage(const uintptr_t address, const size_t count, const MemoryProtection& protect);
 	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses, const MemoryProtection& protect);
 
-	void* VirtualAlloc(void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect);
+	//User process address space
+	void* VirtualAlloc(UserProcess& process, void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect);
 #pragma endregion
 
 #pragma region ACPI
@@ -126,22 +128,20 @@ public:
 #pragma endregion
 
 #pragma region Kernel Interface
-	void CreateThread(ThreadStart start, void* arg);
-	static void ThreadInitThunk();
+	Handle CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg);
+	static void KernelThreadInitThunk();
+	static void UserThreadInitThunk();
 	void Sleep(nano_t value);
-	KernelThread* GetCurrentThread();
-	ThreadEnvironmentBlock* GetTEB();
-	KernelThread* GetKernelThread(uint32_t threadId);
 	void GetSystemTime(SystemTime* time);
 
 	void RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
 
 	Device* GetDevice(const std::string path);
 
-	Handle CreateFile(const char* path, GenericAccess access);
+	Handle CreateFile(const std::string& path, GenericAccess access);
 	bool ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
 	bool SetFilePosition(Handle handle, size_t position);
-	bool CreateProcess(const char* path);
+	bool CreateProcess(const std::string& path);
 #pragma endregion
 
 #pragma region Semaphore Interface
@@ -150,6 +150,9 @@ public:
 	WaitStatus WaitForSemaphore(Handle handle, size_t timeoutMs, size_t units = 1);
 	bool CloseSemaphore(Handle handle);
 #pragma endregion
+
+	void CreateKernelThread(ThreadStart start, void* arg);
+	KThread* GetKernelThread(uint32_t id);
 
 private:
 	void InitializeAcpi();
@@ -193,9 +196,9 @@ private:
 	std::map<InterruptVector, InterruptContext>* m_interruptHandlers;
 
 	//Process and Thread management
-	std::list<KernelProcess*>* m_processes;
+	std::map<uint32_t, UserProcess*>* m_processes;
 	uint32_t m_lastId;
-	std::map<uint32_t, KernelThread*>* m_threads;
+	std::map<uint32_t, KThread*>* m_threads;
 	Scheduler* m_scheduler;
 	
 	//Platform

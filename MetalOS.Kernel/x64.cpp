@@ -9,9 +9,9 @@
 #define IA32_SYSENTER_EIP 0x176
 #define IA32_SYSENTER_ESP 0x175
 
-void x64::SetKernelTEB(ThreadEnvironmentBlock* teb)
+void x64::SetKernelCpuContext(void* context)
 {
-	__writemsr(MSR::MSR_IA32_KERNELGS_BASE, (uintptr_t)teb);
+	__writemsr(MSR::MSR_IA32_KERNELGS_BASE, (uintptr_t)context);
 }
 
 extern "C" void syscall();
@@ -40,6 +40,8 @@ void x64::Initialize()
 	__writemsr(IA32_SYSENTER_EIP, (uintptr_t)&syscall);
 	__writemsr(IA32_SYSENTER_ESP, SYSCALL_STACK_STOP);
 
+	//Enable syscall
+	__writemsr(0xC0000080, __readmsr(0xC0000080) | 1);
 }
 
 // "Known good stacks" Intel SDM Vol 3A 6.14.5

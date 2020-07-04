@@ -149,11 +149,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Loader.cpp" />
+    <ClCompile Include="Runtime.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MetalOS.crt\MetalOS.crt.vcxproj">
       <Project>{e2867f5b-2a93-4d4b-b71f-b65736436bc3}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Runtime.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

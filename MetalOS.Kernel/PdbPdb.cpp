@@ -11,7 +11,6 @@ PdbPdb::PdbPdb(MsfStream& stream) :
 	Assert(header.Version == PdbStreamVersion::VC70);
 
 	m_namesBuffer.Length = m_stream.Read<uint32_t>();
-	Print("0x%x\n", m_namesBuffer.Length);
 	m_namesBuffer.Data = malloc(m_namesBuffer.Length);
 	m_stream.Read((char*)m_namesBuffer.Data, m_namesBuffer.Length);
 	m_table.Load(m_stream);

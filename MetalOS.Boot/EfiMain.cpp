@@ -166,8 +166,8 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Map in Kernel Space
 	PageTablesPool pageTablesPool(bootloaderPagePoolAddress, BootloaderPagePoolCount);
+	PageTables::Pool = &pageTablesPool;
 	PageTables currentPT(__readcr3());
-	currentPT.SetPool(&pageTablesPool);
 	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, EFI_SIZE_TO_PAGES(LoaderParams.KernelImageSize));
 	currentPT.MapKernelPages(KernelPageTablesPoolAddress, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
 	currentPT.MapKernelPages(KernelGraphicsDeviceAddress, LoaderParams.Display.FrameBufferBase, EFI_SIZE_TO_PAGES(LoaderParams.Display.FrameBufferSize));

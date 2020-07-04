@@ -13,14 +13,15 @@ ENDM
 x64SysCall <GetSystemInfo>, 1
 x64SysCall <GetProcessInfo>, 2
 x64SysCall <ExitProcess>, 3
-x64SysCall <CreateWindow>, 4
-x64SysCall <WaitForMessages>, 5
-x64SysCall <GetMessage>, 6
-x64SysCall <CreateFile>, 7
-x64SysCall <ReadFile>, 8
-x64SysCall <SetFilePosition>, 9
-x64SysCall <VirtualAlloc>, 10
-x64SysCall <DebugPrint>, 10
+x64SysCall <ExitThread>, 4
+x64SysCall <CreateWindow>, 5
+x64SysCall <WaitForMessages>, 6
+x64SysCall <GetMessage>, 7
+x64SysCall <CreateFile>, 8
+x64SysCall <ReadFile>, 9
+x64SysCall <SetFilePosition>, 10
+x64SysCall <VirtualAlloc>, 11
+x64SysCall <DebugPrint>, 12
 
 end
 

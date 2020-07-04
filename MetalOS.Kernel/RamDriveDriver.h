@@ -17,7 +17,7 @@ public:
 	Result Write(const char* buffer, size_t length) override;
 	Result EnumerateChildren() override;
 
-	FileHandle* OpenFile(const char* path, GenericAccess access) override;
+	FileHandle* OpenFile(const std::string& path, GenericAccess access) override;
 	size_t ReadFile(FileHandle* handle, void* buffer, size_t bytesToRead) override;
 
 private:

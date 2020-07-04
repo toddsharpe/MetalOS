@@ -119,74 +119,33 @@ enum class ThreadState
 	Initialized
 };
 
-struct ThreadEnvironmentBlock
-{
-	ThreadEnvironmentBlock* SelfPointer;
-	uint32_t ThreadId;
-};
-
-//Handle could be smarter to have upper bits to specify type
-#define KernelProcessNameLength 32
-struct KernelProcess
-{
-	uint32_t Id;
-	//std::string Name;
-	char Name[KernelProcessNameLength];
-	time_t CreateTime;
-	time_t ExitTime;
-
-	//TODO: something holding CR3
-	uint64_t CR3;
-
-	VirtualAddressSpace* VirtualAddress;
-};
-
-//Structure just for threads in the kernel
-struct KernelThread
-{
-	uint32_t Id;
-	ThreadState State;
-	ThreadStart Start;
-	WaitStatus WaitStatus;
-
-	void* Arg;
-	//TODO: x64_CONTEXT_SIZE is const, pipe constant from masm to c
-	void* Context;//Pointer to x64 CONTEXT structure (masm)
-	ThreadEnvironmentBlock* TEB;
-	KernelProcess* Process;
-	uint64_t Scheduler;
-	nano100_t SleepWake; //100ns
-};
-
-#define KERNEL_THREAD_STACK_SIZE 8
-
 typedef uintptr_t paddr_t;
 
 enum class InterruptVector : uint8_t
 {
 	//External Interrupts
-	DivideError = 0,
-	DebugException = 1,
-	NMIInterrupt = 2,
-	Breakpoint = 3,
-	Overflow = 4,
-	BoundRangeExceeded = 5,
-	InvalidOpcode = 6,
-	DeviceNotAvailable = 7,
-	DoubleFault = 8,
-	CoprocessorSegmentOverrun = 9,
-	InvalidTSS = 10,
-	SegmentNotPresent = 11,
-	StackSegmentFault = 12,
-	GeneralProtectionFault = 13,
-	PageFault = 14,
-	Reserved = 15,
-	FPUMathFault = 16,
-	AlignmentCheck = 17,
-	MachineCheck = 18,
-	SIMDException = 19,
-	VirtualizationException = 20,
-	Last = 32,
+	DivideError = 0x0,
+	DebugException = 0x1,
+	NMIInterrupt = 0x2,
+	Breakpoint = 0x3,
+	Overflow = 0x4,
+	BoundRangeExceeded = 0x5,
+	InvalidOpcode = 0x6,
+	DeviceNotAvailable = 0x7,
+	DoubleFault = 0x8,
+	CoprocessorSegmentOverrun = 0x9,
+	InvalidTSS = 0xA,
+	SegmentNotPresent = 0xB,
+	StackSegmentFault = 0xC,
+	GeneralProtectionFault = 0xD,
+	PageFault = 0xE,
+	Reserved = 0xF,
+	FPUMathFault = 0x10,
+	AlignmentCheck = 0x11,
+	MachineCheck = 0x12,
+	SIMDException = 0x13,
+	VirtualizationException = 0x14,
+	Last = 0x20,
 
 	//IRQs
 	Timer0 = 0x80,
@@ -216,6 +175,7 @@ struct InterruptContext
 #define HEAP_ALIGN(x) ((x + HEAP_ALIGNMENT_MASK) & ~(HEAP_ALIGNMENT_MASK))
 
 #define BYTE_ALIGN(x, alignment) ((x + (alignment - 1)) & ~(alignment - 1))
+#define PAGE_ALIGN(x) BYTE_ALIGN(x, PAGE_SIZE)
 
 #ifndef DECLSPEC_ALIGN
 #if (_MSC_VER >= 1300) && !defined(MIDL_PASS)

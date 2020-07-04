@@ -1,4 +1,6 @@
 #include "Loader.h"
+
+//#include <crt_string.h>
 #include <WindowsPE.h>
 #include "Main.h"
 
@@ -35,7 +37,8 @@ bool Loader::ReadHeaders(const char* path, uintptr_t& imageBase, DWORD& imageSiz
 	return true;
 }
 
-bool Loader::LoadImage(const char* path, void* address)
+//TODO: this is very similar to KernelAPI's loader, as well as create process
+Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 {
 	Handle file = kernel.CreateFile(path, GenericAccess::Read);
 	Assert(file);
@@ -60,7 +63,11 @@ bool Loader::LoadImage(const char* path, void* address)
 		peHeader.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
 	{
 		Assert(false);
+		return nullptr;
 	}
+
+	void* address = kernel.VirtualAlloc(process, (void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWriteExecute);
+	Assert(address);
 	
 	//Read headers
 	Assert(kernel.SetFilePosition(file, 0));
@@ -89,4 +96,106 @@ bool Loader::LoadImage(const char* path, void* address)
 
 	//Imports are loaded from usermode, this is just for base kernelapi which shouldnt have any
 	Assert(pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size == 0);
+
+	//Add to process's load map
+	process.AddModule(path, address);
+
+	return address;
+}
+
+uintptr_t Loader::GetProcAddress(Handle hModule, const char* lpProcName)
+{
+	//Headers
+	PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, hModule, 0);
+	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+		return NULL;
+
+	PIMAGE_NT_HEADERS64 ntHeader = MakePtr(PIMAGE_NT_HEADERS64, hModule, dosHeader->e_lfanew);
+	if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
+		return NULL;
+
+	if (ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size == 0)
+		return NULL;
+
+	PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+	if ((directory->Size == 0) || (directory->VirtualAddress == 0))
+		return NULL;
+
+	PIMAGE_EXPORT_DIRECTORY exportDirectory = MakePtr(PIMAGE_EXPORT_DIRECTORY, hModule, directory->VirtualAddress);
+
+	PDWORD pNames = MakePtr(PDWORD, hModule, exportDirectory->AddressOfNames);
+	PWORD pOrdinals = MakePtr(PWORD, hModule, exportDirectory->AddressOfNameOrdinals);
+	PDWORD pFunctions = MakePtr(PDWORD, hModule, exportDirectory->AddressOfFunctions);
+
+	uintptr_t search = 0;
+	for (int i = 0; i < exportDirectory->NumberOfNames; i++)
+	{
+		char* name = MakePtr(char*, hModule, pNames[i]);
+		if (stricmp(lpProcName, name) == 0)
+		{
+			WORD ordinal = pOrdinals[i];
+			search = MakePtr(uintptr_t, hModule, pFunctions[ordinal]);
+		}
+	}
+
+	//Check if forwarded
+	uintptr_t base = (uintptr_t)hModule + directory->VirtualAddress;
+	if ((search >= base) && (search < (base + directory->Size)))
+	{
+		Assert(false);
+		return NULL;
+	}
+
+	//If function is forwarded, (PCHAR)search is its name
+	//DWORD base = (DWORD)hModule + directory->VirtualAddress;
+	//if ((search >= base) && (search < (base + directory->Size)))
+	//{
+	//    char* name = (char*)search;
+	//    char* copy = (char*)malloc((strlen(name) + 1) * sizeof(char));
+	//    strcpy(copy, name);
+	//    char* library = strtok(copy, ".");
+	//    char* function = strtok(NULL, ".");
+
+	//    HMODULE hLibrary = LoadLibrary(library);//Get the address
+	//    return GetExportAddress(hLibrary, function);
+	//}
+
+	return search;
+}
+
+void Loader::KernelExports(void* address, void* kernelAddress)
+{
+	uintptr_t baseAddress = (uintptr_t)address;
+
+	IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)baseAddress;
+	IMAGE_NT_HEADERS64* ntHeader = (PIMAGE_NT_HEADERS64)(baseAddress + dosHeader->e_lfanew);
+	
+	IMAGE_DATA_DIRECTORY importDirectory = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+	Print("import size: 0x%016x\n", importDirectory.Size);
+	if (importDirectory.Size)
+	{
+		PIMAGE_IMPORT_DESCRIPTOR importDescriptor = MakePtr(PIMAGE_IMPORT_DESCRIPTOR, baseAddress, importDirectory.VirtualAddress);
+
+		while (importDescriptor->Name)
+		{
+			char* module = MakePtr(char*, baseAddress, importDescriptor->Name);
+			Print("    %s\n", module);
+			if (stricmp(module, "mosapi.dll") == 0)
+			{
+				Handle hModule = kernelAddress;
+
+				PIMAGE_THUNK_DATA pThunkData = MakePtr(PIMAGE_THUNK_DATA, baseAddress, importDescriptor->FirstThunk);
+				while (pThunkData->u1.AddressOfData)
+				{
+					PIMAGE_IMPORT_BY_NAME pImportByName = MakePtr(PIMAGE_IMPORT_BY_NAME, baseAddress, pThunkData->u1.AddressOfData);
+
+					pThunkData->u1.Function = GetProcAddress(hModule, (char*)pImportByName->Name);
+					Print("Patched %s to 0x%016x\n", (char*)pImportByName->Name, pThunkData->u1.Function);
+					pThunkData++;
+
+				}
+			}
+			importDescriptor++;
+		}
+	}
 }

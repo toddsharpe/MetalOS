@@ -121,7 +121,12 @@ void* memset(void* _Dst, int _Val, size_t _Size)
 
 int strcmp(const char* str1, const char* str2)
 {
-	return memcmp(str1, str2, strlen(str1));
+	while ((*str1) && (*str1 == *str2))
+	{
+		str1++;
+		str2++;
+	}
+	return *(unsigned char*)str1 - *(unsigned char*)str2;
 }
 
 //ctype.h
@@ -138,6 +143,41 @@ int stricmp(char const* _String1, char const* _String2)
 			return _String1[i] - _String2[i];
 	}
 	return 0;
+}
+
+char* strcat(char* _Destination, char const* _Source)
+{
+	char* s = _Destination + strlen(_Destination);
+	
+	while (*_Source != '\0')
+		*s++ = *_Source++;
+	*s = '\0';
+
+	return _Destination;
+}
+
+char* strncat(char* _Destination, char const* _Source, size_t _Count)
+{
+	char* s = _Destination + strlen(_Destination);
+
+	while (*_Source != '\0' && _Count--)
+		*s++ = *_Source++;
+	*s = '\0';
+
+	return _Destination;
+}
+
+int strncmp(char const* _Str1, char const* _Str2, size_t _MaxCount)
+{
+	while ((*_Str1) && (*_Str1 == *_Str2) && _MaxCount--)
+	{
+		_Str1++;
+		_Str2++;
+	}
+	if (_MaxCount)
+		return *(unsigned char*)_Str1 - *(unsigned char*)_Str2;
+	else
+		return 0;
 }
 
 size_t strlen(const char* str)

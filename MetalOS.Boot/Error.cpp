@@ -1,7 +1,31 @@
 #include "Error.h"
 
 #include <crt_wchar.h>
+#include <crt_stdlib.h>
+
 #include "EfiMain.h"
+
+extern "C" size_t mbstowcs(CHAR16* _Dest, char const* _Source, size_t _MaxCount);
+extern "C" size_t wcstombs(char* _Dest, const CHAR16* _Source, size_t _MaxCount);
+
+#define MAXBUFFER 128
+void Bugcheck(const char* file, const char* line, const char* assert)
+{
+	CHAR16 wideFile[MAXBUFFER] = { 0 };
+	mbstowcs(wideFile, file, MAXBUFFER);
+
+	CHAR16 wideLine[MAXBUFFER] = { 0 };
+	mbstowcs(wideLine, line, MAXBUFFER);
+
+	CHAR16 wideAssert[MAXBUFFER] = { 0 };
+	mbstowcs(wideAssert, assert, MAXBUFFER);
+
+	Print(L"Error:\r\n");
+	Print(L"  %s\r\n", wideAssert);
+	Print(L"  %s\r\n", wideFile);
+	Print(L"  %s\r\n", wideLine);
+	BS->Stall(1000 * 1000 * 60 * 60);
+}
 
 EFI_STATUS Error::DisplayError(const CHAR16* function, const CHAR16* file, const CHAR16* line, EFI_STATUS status)
 {

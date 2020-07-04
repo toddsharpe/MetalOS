@@ -3,7 +3,12 @@
 
 int wcscmp(const CHAR16* str1, const CHAR16* str2)
 {
-	return memcmp(str1, str2, wcslen(str1));
+	while ((*str1) && (*str1 == *str2))
+	{
+		str1++;
+		str2++;
+	}
+	return *(uint16_t*)str1 - *(uint16_t*)str2;
 }
 
 uint32_t wcscpy(CHAR16* dest, const CHAR16* source)

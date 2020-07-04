@@ -86,8 +86,8 @@ BOOLEAN Kernel::AcpiOsWritable(void* Memory, ACPI_SIZE Length)
 
 ACPI_THREAD_ID Kernel::AcpiOsGetThreadId()
 {
-	KernelThread* thread = this->GetCurrentThread();
-	return thread->Id;
+	KThread* thread = m_scheduler->GetCurrentThread();
+	return thread->GetId();
 }
 
 ACPI_STATUS Kernel::AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Function, void* Context)

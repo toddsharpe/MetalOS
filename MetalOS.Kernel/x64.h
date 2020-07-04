@@ -15,7 +15,7 @@ public:
 	x64() = delete;
 	static void Initialize();
 
-	static void SetKernelTEB(ThreadEnvironmentBlock* teb);
+	static void SetKernelCpuContext(void* teb);
 
 private:
 	enum MSR

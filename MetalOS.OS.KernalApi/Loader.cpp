@@ -1,11 +1,19 @@
 #include <MetalOS.h>
 #include <WindowsPE.h>
 #include <crt_string.h>
+#include "Runtime.h"
 
 #define ReturnNullIfNot(x) if (!(x)) return nullptr;
 
 extern "C" Handle LoadLibrary(const char* lpLibFileName)
 {
+	//Check if module is already loaded
+	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
+	Module* module = Runtime::GetLoadedModule(lpLibFileName);
+	if (module != nullptr)
+		return module->Address;
+	
+	//Load it
 	Handle file = CreateFile(lpLibFileName, GenericAccess::Read);
 	ReturnNullIfNot(file);
 
@@ -148,9 +156,9 @@ extern "C" uintptr_t GetProcAddress(Handle hModule, const char* lpProcName)
 
 	PIMAGE_EXPORT_DIRECTORY exportDirectory = MakePtr(PIMAGE_EXPORT_DIRECTORY, hModule, directory->VirtualAddress);
 
-	char** pNames = MakePtr(char**, hModule, exportDirectory->AddressOfNames);
+	PDWORD pNames = MakePtr(PDWORD, hModule, exportDirectory->AddressOfNames);
 	PWORD pOrdinals = MakePtr(PWORD, hModule, exportDirectory->AddressOfNameOrdinals);
-	uintptr_t* pFunctions = MakePtr(uintptr_t*, hModule, exportDirectory->AddressOfFunctions);
+	PDWORD pFunctions = MakePtr(PDWORD, hModule, exportDirectory->AddressOfFunctions);
 
 	uintptr_t search = 0;
 	for (int i = 0; i < exportDirectory->NumberOfNames; i++)
@@ -159,16 +167,16 @@ extern "C" uintptr_t GetProcAddress(Handle hModule, const char* lpProcName)
 		if (stricmp(lpProcName, name) == 0)
 		{
 			WORD ordinal = pOrdinals[i];
-			search = MakePtr(DWORD, hModule, pFunctions[ordinal]);
+			search = MakePtr(uintptr_t, hModule, pFunctions[ordinal]);
 		}
 	}
 
 	//Check if forwarded
 	uintptr_t base = (uintptr_t)hModule + directory->VirtualAddress;
 	if ((search >= base) && (search < (base + directory->Size)))
+	{
 		return NULL;
-
-
+	}
 
 	//If function is forwarded, (PCHAR)search is its name
 	//DWORD base = (DWORD)hModule + directory->VirtualAddress;

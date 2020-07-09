@@ -153,7 +153,7 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 		l4[l4Index].Value = newPageAddress;
 		l4[l4Index].Present = true;
 		l4[l4Index].ReadWrite = true;
-		l4[l4Index].UserSupervisor = true;//TODO: make this false
+		l4[l4Index].UserSupervisor = !global;
 		l4[l4Index].Accessed = true;
 		//LibPrint("  0x%016x:", l4[l4Index].Value);
 	}
@@ -171,7 +171,7 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 		l3[l3Index].Value = newPageAddress;
 		l3[l3Index].Present = true;
 		l3[l3Index].ReadWrite = true;
-		l3[l3Index].UserSupervisor = true;//TODO: make this false
+		l3[l3Index].UserSupervisor = !global;
 		l3[l3Index].Accessed = true;
 		//LibPrint("  0x%016x:", l3[l3Index].Value);
 	}
@@ -187,7 +187,7 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 		l2[l2Index].Value = newPageAddress;
 		l2[l2Index].Present = true;
 		l2[l2Index].ReadWrite = true;
-		l2[l2Index].UserSupervisor = true;//TODO: make this false
+		l2[l2Index].UserSupervisor = !global;
 	}
 	PPTE l1 = (PPTE)(Pool->GetVirtualAddress(l2[l2Index].Value & ~0xFFF));
 
@@ -198,8 +198,8 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 	l1[l1Index].Value = physicalAddress;
 	l1[l1Index].Present = true;
 	l1[l1Index].ReadWrite = true;
-	l1[l1Index].UserSupervisor = true;//TODO: make this false
-	l1[l1Index].Global = true;
+	l1[l1Index].UserSupervisor = !global;//TODO: make this false
+	l1[l1Index].Global = global;
 }
 
 uintptr_t PageTables::ResolveAddress(uintptr_t virtualAddress)

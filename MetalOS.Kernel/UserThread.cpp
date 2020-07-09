@@ -13,7 +13,7 @@ UserThread::UserThread(ThreadStart startAddress, void* arg, void* stack, UserPro
 	
 	//Create user thread context
 	m_context = new uint8_t[x64_CONTEXT_SIZE];
-	x64_init_context(m_context, (void*)stack, process.ThreadCount() == 1 ? process.InitProcess : process.InitThread);
+	x64_init_context(m_context, stack, process.ThreadCount() == 1 ? process.InitProcess : process.InitThread);
 
 	//Setup args in TEB
 	m_teb = (ThreadEnvironmentBlock*)process.HeapAlloc(sizeof(ThreadEnvironmentBlock));

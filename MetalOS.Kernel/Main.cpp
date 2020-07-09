@@ -94,9 +94,9 @@ void free(void* ptr)
 	return kernel.Deallocate(ptr);
 }
 
-extern "C" void syscall()
+extern "C" uint64_t SYSTEMCALL_HANDLER(SystemcallFrame* frame)
 {
-	Print("Syscall!");
+	return kernel.Syscall(frame);
 }
 
 void __declspec(noreturn) Bugcheck(const char* file, const char* line, const char* assert)

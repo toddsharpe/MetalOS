@@ -12,6 +12,8 @@ extern "C"
 	int x64_save_context(void* context);//Returns 0
 	int x64_load_context(void* context);//Returns 1
 	void x64_init_context(void* context, void* stack, void* entry);
+
+	__declspec(noreturn) int x64_start_user_thread(void* context, void* teb);
 	
 	//Omitted from intrinsics
 	void __stdcall x64_ltr(uint16_t entry);
@@ -19,6 +21,7 @@ extern "C"
 	void __stdcall x64_sti(); //_enable?
 	void __stdcall x64_cli(); //_disable?
 	void __stdcall x64_swapgs();
+	void x64_sysret(uint64_t value);
 
 	//Segment Registers RW
 	uint16_t __stdcall x64_ReadCS();

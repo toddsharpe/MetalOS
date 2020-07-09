@@ -27,6 +27,12 @@ public:
 		return m_userThread;
 	}
 
+	void* GetStack() const
+	{
+		x64_context* ctx = (x64_context*)m_context;
+		return (void*)ctx->Rsp;
+	}
+
 	void Display();
 
 	friend class Scheduler;

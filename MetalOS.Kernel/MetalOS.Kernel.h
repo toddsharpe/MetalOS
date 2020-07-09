@@ -8,6 +8,7 @@
 #include <list>
 #include <vector>
 #include <WindowsTypes.h>
+#include "MetalOS.Internal.h"
 
 #define NO_COPY_OR_ASSIGN(X) X(const X&) = delete; X& operator = (const X&) = delete;
 #define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
@@ -48,6 +49,19 @@ typedef struct
 	uint64_t RSP;
 	uint64_t SS;
 } INTERRUPT_FRAME, * PINTERRUPT_FRAME;
+
+struct SystemcallFrame
+{
+	SystemCall SystemCall;
+	uint64_t UserIP;
+	uint64_t RFlags;
+
+	//Args - TODO: find a way for the compiler to do this for us
+	uint64_t Arg0;
+	uint64_t Arg1;
+	uint64_t Arg2;
+	uint64_t Arg3;
+};
 #pragma pack(pop)
 
 #define UINT64_MAX 0xFFFFFFFFFFFFFFFF
@@ -459,6 +473,7 @@ struct FileHandle
 };
 
 //TODO: somehow export struct from asm
+//This is just for thread init
 struct x64_context
 {
 	uint64_t R12;

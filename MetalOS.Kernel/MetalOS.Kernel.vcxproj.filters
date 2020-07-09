@@ -192,6 +192,9 @@
     <ClCompile Include="UserProcess.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="KernelSystemCalls.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Display.h">
@@ -380,6 +383,9 @@
     <ClInclude Include="UserProcess.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="x64_systemcall.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="x64_support.asm">
@@ -389,6 +395,9 @@
       <Filter>Source Files</Filter>
     </MASM>
     <MASM Include="x64_interrupts.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="x64_systemcall.asm">
       <Filter>Source Files</Filter>
     </MASM>
   </ItemGroup>

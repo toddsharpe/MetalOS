@@ -66,6 +66,26 @@ x64_load_context proc
 	jmp r9
 x64_load_context endp
 
+; int x64_start_user_thread(void* context, void* teb);
+x64_start_user_thread proc
+	; Load registers
+	mov r12, [rcx + CONTEXT._r12]
+	mov r13, [rcx + CONTEXT._r13]
+	mov r14, [rcx + CONTEXT._r14]
+	mov r15, [rcx + CONTEXT._r15]
+	mov rdi, [rcx + CONTEXT._rdi]
+	mov rsi, [rcx + CONTEXT._rsi]
+	mov rbx, [rcx + CONTEXT._rbx]
+	mov rbp, [rcx + CONTEXT._rbp]
+	mov rsp, [rcx + CONTEXT._rsp]
+	
+	; RFlags
+	mov r11, [rcx + CONTEXT._rflags]
+	mov rcx, [rcx + CONTEXT._rip]
+	wrgsbase rdx
+	sysretq
+x64_start_user_thread endp
+
 ; void* context, void* stack, void* entry
 ; RCX RDX R8
 x64_init_context proc
@@ -105,6 +125,12 @@ x64_swapgs proc
 	swapgs
 	ret
 x64_swapgs endp
+
+; x64_sysret(uint64_t value)
+x64_sysret PROC
+	mov rax, rcx
+	sysretq
+x64_sysret ENDP
 
 ; mov's into CS isn't allowed. Therefore
 ; https://stackoverflow.com/questions/34264752/change-gdt-and-update-cs-while-in-long-mode

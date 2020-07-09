@@ -2,6 +2,7 @@
 #include <WindowsPE.h>
 #include <MetalOS.h>
 #include "Runtime.h"
+#include <crt_string.h>
 
 extern "C" int main(int argc, char** argv);
 typedef int (*ProcessEntry)();
@@ -18,7 +19,6 @@ extern "C" __declspec(dllexport) void InitProcess()
 {
 	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
 	uintptr_t baseAddress = peb->BaseAddress;
-	peb->Output("Addr: 0x%016x\n", baseAddress);
 
 	//Perform library loading
 	IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)baseAddress;
@@ -33,20 +33,21 @@ extern "C" __declspec(dllexport) void InitProcess()
 		{
 			char* module = MakePtr(char*, baseAddress, importDescriptor->Name);
 			Handle hModule = LoadLibrary(module);
-
-			PIMAGE_THUNK_DATA pThunkData = MakePtr(PIMAGE_THUNK_DATA, baseAddress, importDescriptor->FirstThunk);
-			while (pThunkData->u1.AddressOfData)
+			if (stricmp(module, "mosapi.dll") != 0)
 			{
-				PIMAGE_IMPORT_BY_NAME pImportByName = MakePtr(PIMAGE_IMPORT_BY_NAME, baseAddress, pThunkData->u1.AddressOfData);
+				PIMAGE_THUNK_DATA pThunkData = MakePtr(PIMAGE_THUNK_DATA, baseAddress, importDescriptor->FirstThunk);
+				while (pThunkData->u1.AddressOfData)
+				{
+					PIMAGE_IMPORT_BY_NAME pImportByName = MakePtr(PIMAGE_IMPORT_BY_NAME, baseAddress, pThunkData->u1.AddressOfData);
 
-				pThunkData->u1.Function = GetProcAddress(hModule, (char*)pImportByName->Name);
-				pThunkData++;
+					pThunkData->u1.Function = GetProcAddress(hModule, (char*)pImportByName->Name);
+					pThunkData++;
+				}
 			}
+
 			importDescriptor++;
 		}
 	}
-
-	peb->Output("Imported: 0x%016x\n", baseAddress);
 
 	//TODO: TLS
 

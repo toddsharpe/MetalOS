@@ -36,10 +36,10 @@
 #define BootloaderPagePoolCount 256
 #define ReservedPageTablePages 512
 
-enum class SystemCall
+enum class SystemCall : uint64_t
 {
-	GetSystemInfoId = 1,
-	GetProcessInfoId,
+	GetSystemInfo = 1,
+	GetProcessInfo,
 	ExitProcess,
 	ExitThread,
 	CreateWindow,
@@ -48,6 +48,10 @@ enum class SystemCall
 	CreateFile,
 	ReadFile,
 	SetFilePosition,
+	VirtualAlloc,
+	DebugPrint,
+	LoadLibrary,
+	GetProcAddress
 };
 
 

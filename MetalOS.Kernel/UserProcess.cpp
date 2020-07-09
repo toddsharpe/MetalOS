@@ -48,11 +48,9 @@ void UserProcess::Init(void* address)
 	Assert(m_peb);
 	memset(m_peb, 0, sizeof(ProcessEnvironmentBlock));
 	m_peb->ProcessId = m_id;
-	m_peb->Output = (KernelDebugPrint)&Print;
 	m_peb->BaseAddress = (uintptr_t)address;
 	Print("m_peb: 0x%016x\n", m_peb);
 	Print(" addr: 0x%016x\n", m_peb->BaseAddress);
-	Print("  Out: 0x%016x\n", m_peb->Output);
 }
 
 void* UserProcess::HeapAlloc(size_t size)

@@ -154,6 +154,13 @@ public:
 	void CreateKernelThread(ThreadStart start, void* arg);
 	KThread* GetKernelThread(uint32_t id);
 
+#pragma region System Calls
+	uint64_t Syscall(SystemcallFrame* frame);
+
+	uint64_t GetSystemInfo(struct SystemInfo* info);
+	uint64_t DebugPrint(char* s);
+#pragma endregion
+
 private:
 	void InitializeAcpi();
 

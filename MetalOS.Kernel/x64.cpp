@@ -3,15 +3,40 @@
 #include <intrin.h>
 #include "x64_support.h"
 #include "x64_interrupts.h"
+#include "x64_systemcall.h"
+#include "Main.h"
 
-//Intel SDM Vol 2B Page 4-668
-#define IA32_SYSENTER_CS 0x174
-#define IA32_SYSENTER_EIP 0x176
-#define IA32_SYSENTER_ESP 0x175
+//INTEL SDM Vol 3A 5-22. 5.8.8
+#define IA32_STAR_MSR 0xC0000081 //IA32_STAR_REG
+#define IA32_LSTAR_MSR 0xC0000082 //Target RIP
+#define IA32_FMASK_MSR 0xC0000084 //IA32_FMASK_REG
+#define IA32_EFER_MSR 0xC0000080
+
+void x64::SetUserCpuContext(void* context)
+{
+	_writegsbase_u64((uintptr_t)context);
+}
 
 void x64::SetKernelCpuContext(void* context)
 {
 	__writemsr(MSR::MSR_IA32_KERNELGS_BASE, (uintptr_t)context);
+}
+
+void x64::SetKernelInterruptStack(void* stack)
+{
+	TSS64.RSP_0_low = QWordLow(stack);
+	TSS64.RSP_0_high = QWordHigh(stack);
+	_lgdt(&GDTR);
+}
+
+void x64::PrintGDT()
+{
+	Print("GDT[0] = 0x%016x\n", *(uint64_t*)&KernelGDT.Empty);
+	Print("GDT[1] = 0x%016x\n", *(uint64_t*)&KernelGDT.KernelCode);
+	Print("GDT[2] = 0x%016x\n", *(uint64_t*)&KernelGDT.KernelData);
+	Print("GDT[3] = 0x%016x\n", *(uint64_t*)&KernelGDT.UserCode32);
+	Print("GDT[4] = 0x%016x\n", *(uint64_t*)&KernelGDT.UserData);
+	Print("GDT[5] = 0x%016x\n", *(uint64_t*)&KernelGDT.UserCode);
 }
 
 extern "C" void syscall();
@@ -21,6 +46,11 @@ void x64::Initialize()
 {
 	//Load new segments
 	_lgdt(&GDTR);
+
+	//Syscall/Sysret requires specific orderings in GDT
+	static_assert(GDT_KERNEL_DATA == GDT_KERNEL_CODE + 1, "Invalid kernel GDTs");
+	static_assert(GDT_USER_DATA == GDT_USER_32_CODE + 1, "Invalid user data GDT");
+	static_assert(GDT_USER_CODE == GDT_USER_32_CODE + 2, "Invalid user data GDT");
 
 	//Update segment registers
 	SEGMENT_SELECTOR dataSelector(GDT_KERNEL_DATA);
@@ -36,12 +66,16 @@ void x64::Initialize()
 	x64_sti();
 
 	//Enable syscalls
-	__writemsr(IA32_SYSENTER_CS, codeSelector.Value);
-	__writemsr(IA32_SYSENTER_EIP, (uintptr_t)&syscall);
-	__writemsr(IA32_SYSENTER_ESP, SYSCALL_STACK_STOP);
+	SEGMENT_SELECTOR userCodeSelector(GDT_USER_32_CODE, UserDPL);
+	IA32_STAR_REG starReg = { 0 };
+	starReg.SyscallCS = codeSelector.Value;
+	starReg.SysretCS = userCodeSelector.Value;
+	__writemsr(IA32_STAR_MSR, starReg.AsUint64);
+	__writemsr(IA32_LSTAR_MSR, (uintptr_t)&x64_SYSTEMCALL);
+	__writemsr(IA32_FMASK_MSR, 0x200 | 0x100); //Disable interrupts and traps
 
 	//Enable syscall
-	__writemsr(0xC0000080, __readmsr(0xC0000080) | 1);
+	__writemsr(IA32_EFER_MSR, __readmsr(IA32_EFER_MSR) | 1);
 }
 
 // "Known good stacks" Intel SDM Vol 3A 6.14.5
@@ -54,7 +88,9 @@ volatile uint8_t x64::MCE_STACK[IST_STACK_SIZE] = { 0 };
 volatile x64::TASK_STATE_SEGMENT_64 x64::TSS64 =
 {
 	0, //Reserved
-	0, 0, 0, 0, 0, 0, //RSP[0,3) low/high
+	0, 0, //RSP 0 low/high
+	0, 0, //RSP 1 low/high
+	0, 0, //RSP 2 low/high
 	0, 0, //Reserved
 	QWordLow(DOUBLEFAULT_STACK + IST_STACK_SIZE), QWordHigh(DOUBLEFAULT_STACK + IST_STACK_SIZE), //IST1
 	QWordLow(NMI_Stack + IST_STACK_SIZE), QWordHigh(NMI_Stack + IST_STACK_SIZE), //IST2
@@ -67,15 +103,19 @@ volatile x64::TASK_STATE_SEGMENT_64 x64::TSS64 =
 	0 //IO Map Base
 };
 
+#define GDT_TYPE_RW 0x2
+#define GDT_TYPE_EX 0x8
+
 //1 empty, 4 GDTs, and 1 TSS
 volatile x64::KERNEL_GDTS x64::KernelGDT =
 {
 	{ 0 }, //First entry has to be empty
-	// Seg1   Base  type  S   DPL		   P   Seg2   OS      L     DB    4GB   Base
-	{ 0xFFFF, 0, 0, 0xA, true, KernelDPL, true, 0xF, false, true, false, true, 0x00 }, //64-bit code Kernel
-	{ 0xFFFF, 0, 0, 0x2, true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit data Kernel
-	{ 0xFFFF, 0, 0, 0xA, true, UserDPL,	  true, 0xF, false, true, false, true, 0x00 }, //64-bit code User
-	{ 0xFFFF, 0, 0, 0x2, true, UserDPL,	  true, 0xF, false, false, true, true, 0x00 }, //64-bit data User
+	// Seg1   Base  type						  S    DPL		   P    Seg2   OS      L     DB   4GB   Base
+	{ 0xFFFF, 0, 0, GDT_TYPE_RW | GDT_TYPE_EX,    true, KernelDPL, true, 0xF, false, true, false, true, 0x00 }, //64-bit code Kernel
+	{ 0xFFFF, 0, 0, GDT_TYPE_RW,                  true, KernelDPL, true, 0xF, false, false, true, true, 0x00 }, //64-bit data Kernel
+	{ 0xFFFF, 0, 0, GDT_TYPE_RW | GDT_TYPE_EX,    true, UserDPL,   true, 0xF, false, false, true, true, 0x00 }, //32-bit code User
+	{ 0xFFFF, 0, 0, GDT_TYPE_RW,                  true, UserDPL,   true, 0xF, false, false, true, true, 0x00 }, //64-bit data User
+	{ 0xFFFF, 0, 0, GDT_TYPE_RW | GDT_TYPE_EX,    true, UserDPL,   true, 0xF, false, true, false, true, 0x00 }, //64-bit code User
 	{
 		// Seg1				Base1			Base2							type  S    DPL  P   Seg2	OS      L   DB     4GB   Base3
 		sizeof(x64::TSS64) - 1, (uint16_t)&x64::TSS64, (uint8_t)((uint64_t)&x64::TSS64 >> 16), 0x9, false, 0, true, 0, false, false, false, true, (uint8_t)((uint64_t)&x64::TSS64 >> 24),
@@ -84,12 +124,16 @@ volatile x64::KERNEL_GDTS x64::KernelGDT =
 	}
 };
 
+//cs = starhigh + 2
+//ss = starhigh + 1
+//
+
 volatile x64::IDT_GATE x64::IDT[IDT_COUNT] =
 {
 	IDT_GATE((uint64_t)& ISR_HANDLER(0)),
 	IDT_GATE((uint64_t)& ISR_HANDLER(1)),
 	IDT_GATE((uint64_t)& ISR_HANDLER(2), IST_NMI_IDX, IDT_GATE_TYPE::InterruptGate32),
-	IDT_GATE((uint64_t)& ISR_HANDLER(3), IST_DEBUG_IDX, IDT_GATE_TYPE::InterruptGate32),
+	IDT_GATE((uint64_t)& ISR_HANDLER(3), IST_DEBUG_IDX, IDT_GATE_TYPE::InterruptGate32, UserDPL),
 	IDT_GATE((uint64_t)& ISR_HANDLER(4)),
 	IDT_GATE((uint64_t)& ISR_HANDLER(5)),
 	IDT_GATE((uint64_t)& ISR_HANDLER(6)),

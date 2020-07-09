@@ -499,7 +499,6 @@ typedef void (*KernelDebugPrint)(const char* format, ...);
 struct ProcessEnvironmentBlock
 {
 	uint32_t ProcessId;
-	KernelDebugPrint Output;
 	uintptr_t BaseAddress;
 	struct Module LoadedModules[MAX_LOADED_MODULES];
 	size_t ModuleIndex;

@@ -22,9 +22,7 @@ Scheduler::Scheduler(KThread& bootThread) :
 
 	//Write CPU state
 	x64::SetKernelCpuContext(context);
-	x64_swapgs();
-
-
+	x64::SetUserCpuContext(context);
 }
 
 Scheduler::CpuContext* Scheduler::GetCpuContext()
@@ -127,6 +125,8 @@ void Scheduler::Schedule()
 			m_readyQueue.pop_front();
 			KThread* next = kernel.GetKernelThread(nextId);
 			Assert(next);
+
+			//TODO: change cr3!!!
 
 			//Print("  Schedule: 0x%x -> 0x%x\n", current->GetId(), next->GetId());
 

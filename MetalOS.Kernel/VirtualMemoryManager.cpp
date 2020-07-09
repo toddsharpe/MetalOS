@@ -10,7 +10,7 @@ VirtualMemoryManager::VirtualMemoryManager(PhysicalMemoryManager& physicalMemory
 //TODO: round down address to nearest page or granularity boundary?
 void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, const MemoryProtection protection, VirtualAddressSpace& addressSpace)
 {
-	Print("Allocate: 0x%016x, Count: 0x%x\n");
+	Print("Allocate: 0x%016x, Count: 0x%x Global: %d\n", address, count, addressSpace.IsGlobal());
 	
 	if (address != 0)
 		Assert((address & PAGE_MASK) == 0);

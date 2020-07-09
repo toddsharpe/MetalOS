@@ -11,7 +11,9 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
 	Module* module = Runtime::GetLoadedModule(lpLibFileName);
 	if (module != nullptr)
+	{
 		return module->Address;
+	}
 	
 	//Load it
 	Handle file = CreateFile(lpLibFileName, GenericAccess::Read);

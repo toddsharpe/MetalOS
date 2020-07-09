@@ -16,6 +16,10 @@ public:
 	static void Initialize();
 
 	static void SetKernelCpuContext(void* teb);
+	static void SetUserCpuContext(void* teb);
+	static void SetKernelInterruptStack(void* stack);
+
+	static void PrintGDT();
 
 private:
 	enum MSR
@@ -28,9 +32,10 @@ private:
 #define GDT_EMPTY 0
 #define GDT_KERNEL_CODE 1
 #define GDT_KERNEL_DATA 2
-#define GDT_USER_CODE 3
+#define GDT_USER_32_CODE 3
 #define GDT_USER_DATA 4
-#define GDT_TSS_ENTRY 5
+#define GDT_USER_CODE 5
+#define GDT_TSS_ENTRY 6
 
 #define UserDPL 3
 #define KernelDPL 0
@@ -44,7 +49,7 @@ private:
 	};
 
 #pragma pack(push, 1)
-	// Intel SDM Vol 3A Figure 3-6
+	// Intel SDM Vol 3A 3.4.2 Figure 3-6
 	typedef struct _SEGMENT_SELECTOR
 	{
 		union
@@ -60,9 +65,9 @@ private:
 
 		_SEGMENT_SELECTOR() { };
 
-		_SEGMENT_SELECTOR(uint16_t index)
+		_SEGMENT_SELECTOR(uint16_t index, uint16_t level = KernelDPL)
 		{
-			PrivilegeLevel = KernelDPL;
+			PrivilegeLevel = level;
 			TableIndicator = 0;
 			Index = index;
 		}
@@ -207,6 +212,23 @@ private:
 			Offset3 = (uint32_t)(isrAddress >> 32);
 			Reserved = 0;
 		}
+
+		_IDT_GATE(uint64_t isrAddress, uint16_t stack, IDT_GATE_TYPE type, uint16_t priv)
+		{
+			Offset1 = (uint16_t)isrAddress;
+			SegmentSelector.Value = 0;
+			SegmentSelector.PrivilegeLevel = KernelDPL;
+			SegmentSelector.Index = GDT_KERNEL_CODE;
+			InterruptStackTable = stack;
+			Zeros = 0;
+			Type = type;
+			Zero = 0;
+			PrivilegeLevel = priv;
+			Present = true;
+			Offset2 = (uint16_t)(isrAddress >> 16);
+			Offset3 = (uint32_t)(isrAddress >> 32);
+			Reserved = 0;
+		}
 	} IDT_GATE, * PIDT_GATE;
 	static_assert(sizeof(IDT_GATE) == 16, "Size mismatch, only 64-bit supported.");
 
@@ -224,10 +246,38 @@ private:
 		SEGMENT_DESCRIPTOR Empty;
 		SEGMENT_DESCRIPTOR KernelCode;
 		SEGMENT_DESCRIPTOR KernelData;
-		SEGMENT_DESCRIPTOR UserCode;
+		SEGMENT_DESCRIPTOR UserCode32;
 		SEGMENT_DESCRIPTOR UserData;
+		SEGMENT_DESCRIPTOR UserCode;
 		TSS_LDT_ENTRY TssEntry;
 	} KERNEL_GDTS, * PKERNEL_GDTS;
+
+	struct IA32_FMASK_REG
+	{
+		union
+		{
+			struct
+			{
+				uint32_t EFlagsMask;
+				uint32_t Reserved;
+			};
+			uint64_t AsUint64;
+		};
+	};
+
+	struct IA32_STAR_REG
+	{
+		union
+		{
+			struct
+			{
+				uint64_t Reserved : 32;
+				uint64_t SyscallCS : 16; //Adds 8 to this value to get SyscallSS
+				uint64_t SysretCS : 16; //Adds 8 to this value to get SysretSS;
+			};
+			uint64_t AsUint64;
+		};
+	};
 #pragma pack(pop)
 
 	KERNEL_PAGE_ALIGN static volatile uint8_t DOUBLEFAULT_STACK[IST_STACK_SIZE];

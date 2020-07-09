@@ -188,6 +188,7 @@
     <ClCompile Include="Kernel.cpp" />
     <ClCompile Include="KernelAcpi.cpp" />
     <ClCompile Include="KernelDriverInterface.cpp" />
+    <ClCompile Include="KernelSystemCalls.cpp" />
     <ClCompile Include="KObject.cpp" />
     <ClCompile Include="UserProcess.cpp" />
     <ClCompile Include="KSemaphore.cpp" />
@@ -290,6 +291,7 @@
     <ClInclude Include="x64.h" />
     <ClInclude Include="x64_interrupts.h" />
     <ClInclude Include="x64_support.h" />
+    <ClInclude Include="x64_systemcall.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MetalOS.Acpi\MetalOS.Acpi.vcxproj">
@@ -303,6 +305,7 @@
     <MASM Include="x64_interrupts.asm" />
     <MASM Include="x64_main.asm" />
     <MASM Include="x64_support.asm" />
+    <MASM Include="x64_systemcall.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

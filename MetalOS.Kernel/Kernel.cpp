@@ -140,6 +140,13 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	__writecr4(__readcr4() | (1 << 16));
 	Print("  CR3: 0x%16x CR4: 0x%16x\n", __readcr3(), __readcr4());
 
+#define IA32_STAR_MSR 0xC0000081 //IA32_STAR_REG
+#define IA32_LSTAR_MSR 0xC0000082 //Target RIP
+#define IA32_FMASK_MSR 0xC0000084 //IA32_FMASK_REG
+#define IA32_EFER_MSR 0xC0000080
+	Print("  STAR: 0x%16x LSTAR: 0x%16x EFER: 0x%016x\n",
+		__readmsr(IA32_STAR_MSR), __readmsr(IA32_STAR_MSR), __readmsr(IA32_EFER_MSR));
+
 	//Test UEFI runtime access
 	EFI_TIME time = { 0 };
 	m_runtime.GetTime(&time, nullptr);
@@ -209,7 +216,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Scheduler (needed to load VMBus driver)
 	m_scheduler->Enabled = true;
 	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(SECOND / 64, (uint8_t)InterruptVector::Timer0);
+	m_timer->SetPeriodic(SECOND, (uint8_t)InterruptVector::Timer0);
 	//m_timer->SetPeriodic(SECOND, InterruptVector::Timer0);
 
 	//Attach drivers and enumerate tree
@@ -227,7 +234,15 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
 	if (vector == InterruptVector::DoubleFault)
+	{
+		m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%016x, RIP: 0x%016x, RSP: 0x%016x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
+		m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
+		m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x,  FS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS(), x64_ReadFS());
+		m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
+
+		x64::PrintGDT();
 		__halt();
+	}
 
 	const auto& it = m_interruptHandlers->find(vector);
 	if (it != m_interruptHandlers->end())
@@ -237,9 +252,10 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 		return;
 	}
 	
-	m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
+	m_textScreen->Printf("ISR: 0x%x, Code: %x, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
 	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
 	m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x,  FS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS(), x64_ReadFS());
+	m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
 	switch (vector)
 	{
 	//Let debug continue (we use this to check ISRs on bootup)
@@ -264,7 +280,6 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	context.Rsp = pFrame->RSP;
 	context.Rbp = pFrame->RBP;
 
-	//Load kernel TEB for user thread
 	x64_swapgs();
 
 	KThread* current = m_scheduler->GetCurrentThread();
@@ -327,7 +342,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	while (sw.HasNext())
 	{
 		Print("IP: 0x%016x ", context.Rip);
-		if (m_pdb != nullptr)
+		if (m_pdb != nullptr && (context.Rip >= KernelBaseAddress))
 			m_pdb->PrintStack((uint32_t)context.Rip - KernelBaseAddress);
 		else
 			Print("\n");
@@ -474,6 +489,7 @@ void Kernel::KernelThreadInitThunk()
 	__halt();
 }
 
+//this should use sysret
 void Kernel::UserThreadInitThunk()
 {
 	Print("Kernel::UserThreadInitThunk\n");
@@ -483,13 +499,16 @@ void Kernel::UserThreadInitThunk()
 	UserThread* user = current->GetUserThread();
 	user->DisplayDetails();
 	
-	//Load user GS
-	_writegsbase_u64((uintptr_t)user->GetTEB());
-	//x64_WriteGS((uintptr_t)user->GetTEB());
+#define IA32_STAR_MSR 0xC0000081 //IA32_STAR_REG
+#define IA32_LSTAR_MSR 0xC0000082 //Target RIP
+#define IA32_FMASK_MSR 0xC0000084 //IA32_FMASK_REG
+#define IA32_EFER_MSR 0xC0000080
+	Print("  STAR: 0x%16x LSTAR: 0x%16x EFER: 0x%016x\n",
+		__readmsr(IA32_STAR_MSR), __readmsr(IA32_LSTAR_MSR), __readmsr(IA32_EFER_MSR));
 
-	x64_load_context(user->GetContext());
-
-	Print("WTF!\n");
+	//Start
+	x64::SetKernelInterruptStack(current->GetStack());
+	x64_start_user_thread(user->GetContext(), user->GetTEB());
 }
 
 void Kernel::Sleep(nano_t value)
@@ -771,3 +790,38 @@ KThread* Kernel::GetKernelThread(uint32_t id)
 	return it->second;
 }
 
+uint64_t Kernel::Syscall(SystemcallFrame* frame)
+{
+	Print("Call: 0x%016x UserIP: 0x%016x\n", frame->SystemCall, frame->UserIP);
+	Print("Arg0: 0x%016x Arg1: 0x%016x Arg2: 0x%016x Arg3: 0x%016x\n", frame->Arg0, frame->Arg1, frame->Arg2, frame->Arg3);
+	
+	//Swap to kernel TEB
+	x64_swapgs();
+
+	//Show thread
+	KThread* current = m_scheduler->GetCurrentThread();
+	current->Display();
+
+	uint32_t ret = -1;
+	//Do systemcall
+	switch (frame->SystemCall)
+	{
+	case SystemCall::GetSystemInfo:
+		ret = GetSystemInfo((SystemInfo*)frame->Arg0);
+		break;
+
+	case SystemCall::DebugPrint:
+		ret = DebugPrint((char*)frame->Arg0);
+		break;
+
+	default:
+		Assert(false);
+		break;
+	}
+
+
+	//Swap back to user TEB
+	x64_swapgs();
+
+	return ret;
+}

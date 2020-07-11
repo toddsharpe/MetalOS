@@ -15,7 +15,10 @@ UserProcess::UserProcess(const std::string& name) :
 	m_addressSpace(*new UserAddressSpace()),
 	m_heap(),
 	m_peb(),
-	m_threads()
+	m_threads(),
+	InitProcess(),
+	InitThread(),
+	Delete()
 {
 	//Create new page tables, using current top level kernel mappings
 	m_pageTables = new PageTables();

@@ -7,6 +7,7 @@ void ProcessMessage(const Message& message)
 	switch (message.Header.MessageType)
 	{
 	case MessageType::MessageTypeKeyEvent:
+		DebugPrintf("Key: %c\n", message.KeyEvent.Key);
 		break;
 	}
 }
@@ -34,9 +35,10 @@ int main(int argc, char** argv)
 	GetProcessInfo(&info);
 	DebugPrintf("ProcessID: 0x%x\n", info.Id);
 
-	//Message message;
+	Message message;
+	memset(&message, 0, sizeof(Message));
 	//while (WaitForMessages(NULL))
 	//{
-	//	GetMessage(&message);
+		//GetMessage(&message);
 	//}
 }

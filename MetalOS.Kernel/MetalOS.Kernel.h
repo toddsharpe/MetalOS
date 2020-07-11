@@ -128,6 +128,7 @@ enum class ThreadState
 {
 	Ready,
 	Running,
+	Sleeping,
 	Waiting,
 	Terminated,
 	Initialized

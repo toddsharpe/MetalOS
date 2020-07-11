@@ -4,16 +4,14 @@
 
 uint32_t UserThread::LastId = 0;
 
-UserThread::UserThread(ThreadStart startAddress, void* arg, void* stack, UserProcess& process) :
+UserThread::UserThread(ThreadStart startAddress, void* arg, void* stack, void* entry, UserProcess& process) :
 	m_id(++LastId),
 	m_process(process),
 	m_teb()
 {
-	process.AddThread(*this);
-	
 	//Create user thread context
 	m_context = new uint8_t[x64_CONTEXT_SIZE];
-	x64_init_context(m_context, stack, process.ThreadCount() == 1 ? process.InitProcess : process.InitThread);
+	x64_init_context(m_context, stack, entry);
 
 	//Setup args in TEB
 	m_teb = (ThreadEnvironmentBlock*)process.HeapAlloc(sizeof(ThreadEnvironmentBlock));

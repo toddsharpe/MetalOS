@@ -57,8 +57,6 @@ Kernel::Kernel() :
 	m_interruptHandlers(),
 
 	m_processes(),
-	m_lastId(),
-	m_threads(),
 	m_scheduler(),
 
 	m_hyperV(),
@@ -177,8 +175,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Process and thread containers
 	m_processes = new std::map<uint32_t, UserProcess*>();
-	m_threads = new std::map<uint32_t, KThread*>();
-	m_threads->insert({ bootThread->GetId(), bootThread });
 	m_scheduler = new Scheduler(*bootThread);
 
 	//Create idle thread
@@ -466,11 +462,9 @@ void Kernel::CreateKernelThread(ThreadStart start, void* arg)
 	void* context = new uint8_t[x64_CONTEXT_SIZE];
 	x64_init_context(context, (void*)stack, &Kernel::KernelThreadInitThunk);
 
+	//Add kernel thread
 	KThread* thread = new KThread(start, arg, context);
-	m_threads->insert({ thread->GetId(), thread });
-
-	//Add to scheduler
-	m_scheduler->Add(*thread);
+	m_scheduler->AddReady(*thread);
 }
 
 void Kernel::KernelThreadInitThunk()
@@ -739,13 +733,13 @@ bool Kernel::CreateProcess(const std::string& path)
 	Loader::KernelExports(address, k);
 
 	//Create thread TODO: reserve vs commit stack size
-	CreateThread(*process, pNtHeader->OptionalHeader.SizeOfStackReserve, nullptr, nullptr);
+	CreateThread(*process, pNtHeader->OptionalHeader.SizeOfStackReserve, nullptr, nullptr, process->InitProcess);
 	return true;
 }
 
 //TODO - usermode thread init thunk (it will bring us to ring 3 using iret and start address)
 
-Handle Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg)
+Handle Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry)
 {
 	//TODO: validate addresses
 	
@@ -755,7 +749,7 @@ Handle Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart 
 	Print("User Stack: 0x%016x->0x%016x\n", stackTop, stack);
 
 	//Create user thread
-	UserThread* userThread = new UserThread(startAddress, arg, stackTop, process);
+	UserThread* userThread = new UserThread(startAddress, arg, stackTop, entry, process);
 
 	//Create kernel thread stack, point to bottom (stack grows shallow on x86)
 	uintptr_t kStack = (uintptr_t)this->AllocateKernelPage(0, KThread::StackPageCount, MemoryProtection::PageReadWrite);
@@ -768,10 +762,8 @@ Handle Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart 
 
 	//Create kernel thread
 	KThread* thread = new KThread(nullptr, nullptr, context, userThread);
-	m_threads->insert({ thread->GetId(), thread });
-
-	//Add to scheduler
-	m_scheduler->Add(*thread);
+	process.AddThread(*thread);
+	m_scheduler->AddReady(*thread);
 	
 	return userThread;
 }
@@ -781,13 +773,6 @@ void* Kernel::VirtualAlloc(UserProcess& process, void* address, size_t size, Mem
 	void* allocated = m_virtualMemory->Allocate((uintptr_t)address, SIZE_TO_PAGES(size), protect, process.GetAddressSpace());
 	Assert(allocated);
 	return allocated;
-}
-
-KThread* Kernel::GetKernelThread(uint32_t id)
-{
-	const auto& it = m_threads->find(id);
-	Assert(it != m_threads->end());
-	return it->second;
 }
 
 uint64_t Kernel::Syscall(SystemcallFrame* frame)
@@ -812,6 +797,10 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 
 	case SystemCall::DebugPrint:
 		ret = DebugPrint((char*)frame->Arg0);
+		break;
+
+	case SystemCall::ExitProcess:
+		ret = ExitProcess(frame->Arg0);
 		break;
 
 	default:

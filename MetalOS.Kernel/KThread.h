@@ -14,6 +14,7 @@ public:
 	static uint32_t LastId;
 
 	KThread(ThreadStart start, void* arg, void* context, UserThread* userThread = nullptr);
+	~KThread();
 
 	void Run();
 
@@ -48,6 +49,7 @@ private:
 	ThreadState m_state;
 	WaitStatus m_waitStatus;
 	nano100_t m_sleepWake;
+	void* m_event;
 
 	//TODO: x64_CONTEXT_SIZE is const, pipe constant from masm to c
 	void* m_context;//Pointer to x64 CONTEXT structure (masm)

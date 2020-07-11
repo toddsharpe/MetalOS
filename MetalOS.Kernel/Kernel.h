@@ -128,7 +128,7 @@ public:
 #pragma endregion
 
 #pragma region Kernel Interface
-	Handle CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg);
+	Handle CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
 	static void KernelThreadInitThunk();
 	static void UserThreadInitThunk();
 	void Sleep(nano_t value);
@@ -152,12 +152,12 @@ public:
 #pragma endregion
 
 	void CreateKernelThread(ThreadStart start, void* arg);
-	KThread* GetKernelThread(uint32_t id);
 
 #pragma region System Calls
 	uint64_t Syscall(SystemcallFrame* frame);
 
 	uint64_t GetSystemInfo(struct SystemInfo* info);
+	uint64_t ExitProcess(uint32_t exitCode);
 	uint64_t DebugPrint(char* s);
 #pragma endregion
 
@@ -204,8 +204,6 @@ private:
 
 	//Process and Thread management
 	std::map<uint32_t, UserProcess*>* m_processes;
-	uint32_t m_lastId;
-	std::map<uint32_t, KThread*>* m_threads;
 	Scheduler* m_scheduler;
 	
 	//Platform

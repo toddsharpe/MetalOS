@@ -14,16 +14,16 @@ public:
 	Scheduler(KThread& bootThread);
 
 	void Schedule();
-	void Add(KThread& thread);
+	KThread* GetCurrentThread() const;
+
+	void AddReady(KThread& thread);
 	void Sleep(nano_t value);
+	void KillThread();
 
 	WaitStatus SemaphoreWait(KSemaphore* semaphore, nano100_t timeout);
 	void SemaphoreRelease(KSemaphore* semaphore, size_t count);
 
-	void SetCurrentThread(KThread& thread);
-	KThread* GetCurrentThread();
-
-	void Display();
+	void Display() const;
 
 	bool Enabled;
 
@@ -34,12 +34,15 @@ private:
 		KThread* Thread;
 	};
 
-	CpuContext* GetCpuContext();
+	CpuContext* GetCpuContext() const;
+	void SetCurrentThread(KThread& thread);
+	void Remove(KThread*& thread);
+	void RemoveFromEvent(KThread*& thread);
 
 	HyperV m_hyperv; //TODO: Clock TSC interface
-	std::list<uint32_t> m_readyQueue; //make priority queue of pairs?
-	std::list<uint32_t> m_sleepQueue;
-	std::list<uint32_t> m_semaphoreTimeouts;
-	std::map<KSemaphore*, std::list<uint32_t>> m_semaphoreWaits;
+	std::list<KThread*> m_readyQueue;
+	std::list<KThread*> m_sleepQueue;
+	std::list<KThread*> m_timeouts;
+	std::map<void*, std::list<KThread*>> m_events;
 };
 

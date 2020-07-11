@@ -7,7 +7,7 @@ class UserThread
 public:
 	static uint32_t LastId;
 
-	UserThread(ThreadStart startAddress, void* arg, void* stack, UserProcess& process);
+	UserThread(ThreadStart startAddress, void* arg, void* stack, void* entry, UserProcess& process);
 
 	UserProcess& GetProcess()
 	{

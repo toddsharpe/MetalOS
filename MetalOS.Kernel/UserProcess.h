@@ -8,7 +8,7 @@
 #include "BootHeap.h"
 #include "MetalOS.h"
 
-class UserThread;
+class KThread;
 class UserProcess
 {
 public:
@@ -35,13 +35,16 @@ public:
 		return m_threads.size();
 	}
 
-	void AddThread(UserThread& thread)
+	void AddThread(KThread& thread)
 	{
 		m_threads.push_back(&thread);
 	}
 
 	void AddModule(const char* name, void* address);
 
+	bool Delete;
+
+	friend class Scheduler;
 private:
 	uintptr_t m_imageBase;
 	uint32_t m_id;
@@ -52,6 +55,6 @@ private:
 	VirtualAddressSpace& m_addressSpace;
 	BootHeap* m_heap;
 	ProcessEnvironmentBlock* m_peb;
-	std::list<UserThread*> m_threads;
+	std::list<KThread*> m_threads;
 };
 

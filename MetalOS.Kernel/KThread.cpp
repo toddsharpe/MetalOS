@@ -8,12 +8,21 @@ KThread::KThread(ThreadStart start, void* arg, void* context, UserThread* userTh
 	m_start(start),
 	m_arg(arg),
 	m_state(ThreadState::Ready),
-	m_waitStatus(),
+	m_waitStatus(WaitStatus::None),
 	m_sleepWake(),
+	m_event(),
 	m_context(context),
 	m_userThread(userThread)
 {
 
+}
+
+KThread::~KThread()
+{
+	Assert(m_context);
+	delete m_context;
+	if (m_userThread != nullptr)
+		delete m_userThread;
 }
 
 void KThread::Run()

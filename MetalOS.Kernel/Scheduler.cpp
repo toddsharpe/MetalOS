@@ -10,7 +10,8 @@ Scheduler::Scheduler(KThread& bootThread) :
 	m_readyQueue(),
 	m_sleepQueue(),
 	m_timeouts(),
-	m_events()
+	m_events(),
+	m_messageWaits()
 {
 	//Set boot thread as running
 	bootThread.m_state = ThreadState::Running;
@@ -36,6 +37,21 @@ KThread* Scheduler::GetCurrentThread() const
 	CpuContext* context = GetCpuContext();
 	Assert(context);
 	return context->Thread;
+}
+
+UserThread* Scheduler::GetCurrentUserThread() const
+{
+	KThread* current = GetCurrentThread();
+	return current->GetUserThread();
+}
+
+UserProcess& Scheduler::GetCurrentProcess() const
+{
+	KThread* current = GetCurrentThread();
+	UserThread* user = current->GetUserThread();
+	Assert(user);
+
+	return user->GetProcess();
 }
 
 void Scheduler::SetCurrentThread(KThread& thread)
@@ -92,6 +108,28 @@ void Scheduler::Schedule()
 
 				//Move from event list
 				RemoveFromEvent(item);
+			}
+			else
+			{
+				it++;
+			}
+		}
+	}
+
+	//Promote off message wait queue
+	if (!m_messageWaits.empty())
+	{
+		auto it = m_messageWaits.begin();
+		while (it != m_messageWaits.end())
+		{
+			KThread* item = *it;
+			UserThread* user = item->GetUserThread();
+			if (user->HasMessage())
+			{
+				//Move to ready queue
+				item->m_state = ThreadState::Ready;
+				m_readyQueue.push_back(item);
+				it = m_messageWaits.erase(it);
 			}
 			else
 			{
@@ -236,6 +274,32 @@ void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
 		//Remove from timeout
 		m_timeouts.remove(thread);
 	}
+}
+
+//If there is a message, return immediately
+Message* Scheduler::MessageWait()
+{
+	KThread* current = GetCurrentThread();
+	UserThread* user = current->GetUserThread();
+	Assert(user);
+
+	//If there is a message, return immediately
+	Message* msg = user->DequeueMessage();
+	if (msg)
+		return msg;
+
+	//Block
+	current->m_state = ThreadState::MessageWait;
+	m_messageWaits.push_back(current);
+
+	//Context switch
+	this->Schedule();
+
+	//Return message
+	msg = user->DequeueMessage();
+	kernel.PrintBytes((char*)msg, sizeof(Message));
+	Assert(msg);
+	return msg;
 }
 
 void Scheduler::Remove(KThread*& thread)

@@ -15,6 +15,8 @@ typedef uint16_t CHAR16;
 #define RAND_MAX 0x7fff
 int rand();
 void srand(unsigned int seed);
+int abs(int n);
+int atoi(const char* str);
 
 #ifdef __cplusplus
 }

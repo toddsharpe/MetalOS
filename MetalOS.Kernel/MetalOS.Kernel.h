@@ -130,6 +130,7 @@ enum class ThreadState
 	Running,
 	Sleeping,
 	Waiting,
+	MessageWait,
 	Terminated,
 	Initialized
 };

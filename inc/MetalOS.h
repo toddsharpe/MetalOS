@@ -530,8 +530,8 @@ SYSTEMCALL(uint32_t) ExitThread(uint32_t exitCode);
 //SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t* previousCount);
 
 //Windows
-SYSTEMCALL(uint32_t) CreateWindow(const char* name, const struct Rectangle* rectangle, Handle* handleOut);
-SYSTEMCALL(uint32_t) WaitForMessages(const Handle handle); //Handle to filter, if null get any window belonging to the thread
+SYSTEMCALL(Handle) CreateWindow(const char* name);
+SYSTEMCALL(uint32_t) GetWindowRect(const Handle handle, struct Rectangle* rect);
 SYSTEMCALL(uint32_t) GetMessage(struct Message* message);
 
 SYSTEMCALL(Handle) CreateFile(const char* path, enum GenericAccess access);

@@ -158,8 +158,17 @@ public:
 
 	uint64_t GetSystemInfo(struct SystemInfo* info);
 	uint64_t ExitProcess(uint32_t exitCode);
+
+	uint32_t CreateWindow(const char* name);
+	uint32_t GetWindowRect(Handle handle, Rectangle* rect);
+	uint32_t GetMessage(struct Message* message);
+
 	uint64_t DebugPrint(char* s);
 #pragma endregion
+
+	void PostMessage(Message* msg);
+
+	UserWindow* Window;
 
 private:
 	void InitializeAcpi();

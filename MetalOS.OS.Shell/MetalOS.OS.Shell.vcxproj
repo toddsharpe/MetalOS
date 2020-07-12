@@ -154,6 +154,9 @@
     <ProjectReference Include="..\MetalOS.OS.init\MetalOS.OS.init.vcxproj">
       <Project>{9028453c-66c6-456c-8f3e-98ed24c253c3}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\MetalOS.OS.KernalApi\MetalOS.OS.KernalApi.vcxproj">
+      <Project>{7b9b9c34-9380-45f3-8402-3a71fe29f897}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

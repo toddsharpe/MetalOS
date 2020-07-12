@@ -5,7 +5,7 @@ EXPORTS
 	ExitThread
 
 	CreateWindow
-	WaitForMessages
+	GetWindowRect
 	GetMessage
 	CreateFile
 	ReadFile

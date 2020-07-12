@@ -214,6 +214,7 @@
     <ClCompile Include="StringPrinter.cpp" />
     <ClCompile Include="UartDriver.cpp" />
     <ClCompile Include="UserThread.cpp" />
+    <ClCompile Include="UserWindow.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
     <ClCompile Include="Bitvector.cpp" />
     <ClCompile Include="Display.cpp" />
@@ -276,6 +277,7 @@
     <ClInclude Include="StringPrinter.h" />
     <ClInclude Include="UartDriver.h" />
     <ClInclude Include="UserThread.h" />
+    <ClInclude Include="UserWindow.h" />
     <ClInclude Include="VirtualAddressSpace.h" />
     <ClInclude Include="Bitvector.h" />
     <ClInclude Include="Display.h" />

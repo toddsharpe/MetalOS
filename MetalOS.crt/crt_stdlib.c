@@ -16,6 +16,21 @@ void srand(unsigned int seed)
 	next = seed;
 }
 
+int abs(int n)
+{
+	return n > 0 ? n : -n;
+}
+
+int atoi(const char* str)
+{
+	int ret = 0;
+
+	for (int i = 0; str[i] != '\0'; i++)
+		ret = ret * 10 + (str[i] - '0');
+
+	return ret;
+}
+
 size_t mbstowcs(CHAR16* _Dest, char const* _Source, size_t _MaxCount)
 {
 	const size_t len = strlen(_Source);

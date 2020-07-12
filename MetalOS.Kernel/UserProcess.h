@@ -7,6 +7,7 @@
 #include <PageTables.h>
 #include "BootHeap.h"
 #include "MetalOS.h"
+#include "UserWindow.h"
 
 class KThread;
 class UserProcess

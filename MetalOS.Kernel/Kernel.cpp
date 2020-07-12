@@ -212,8 +212,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Scheduler (needed to load VMBus driver)
 	m_scheduler->Enabled = true;
 	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(SECOND, (uint8_t)InterruptVector::Timer0);
-	//m_timer->SetPeriodic(SECOND, InterruptVector::Timer0);
+	m_timer->SetPeriodic(SECOND / 64, (uint8_t)InterruptVector::Timer0);
 
 	//Attach drivers and enumerate tree
 	m_deviceTree.EnumerateChildren();
@@ -777,15 +776,15 @@ void* Kernel::VirtualAlloc(UserProcess& process, void* address, size_t size, Mem
 
 uint64_t Kernel::Syscall(SystemcallFrame* frame)
 {
-	Print("Call: 0x%016x UserIP: 0x%016x\n", frame->SystemCall, frame->UserIP);
-	Print("Arg0: 0x%016x Arg1: 0x%016x Arg2: 0x%016x Arg3: 0x%016x\n", frame->Arg0, frame->Arg1, frame->Arg2, frame->Arg3);
+	//Print("Call: 0x%016x UserIP: 0x%016x\n", frame->SystemCall, frame->UserIP);
+	//Print("Arg0: 0x%016x Arg1: 0x%016x Arg2: 0x%016x Arg3: 0x%016x\n", frame->Arg0, frame->Arg1, frame->Arg2, frame->Arg3);
 	
 	//Swap to kernel TEB
 	x64_swapgs();
 
 	//Show thread
-	KThread* current = m_scheduler->GetCurrentThread();
-	current->Display();
+	//KThread* current = m_scheduler->GetCurrentThread();
+	//current->Display();
 
 	uint32_t ret = -1;
 	//Do systemcall
@@ -803,14 +802,36 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 		ret = ExitProcess(frame->Arg0);
 		break;
 
+	case SystemCall::CreateWindow:
+		ret = CreateWindow((char*)frame->Arg0);
+		break;
+
+	case SystemCall::GetWindowRect:
+		ret = GetWindowRect((Handle)frame->Arg0, (Rectangle*)frame->Arg1);
+		break;
+
+	case SystemCall::GetMessage:
+		ret = GetMessage((Message*)frame->Arg0);
+		break;
+
 	default:
 		Assert(false);
 		break;
 	}
 
-
 	//Swap back to user TEB
 	x64_swapgs();
 
 	return ret;
+}
+
+void Kernel::PostMessage(Message* msg)
+{
+	if (!Window)
+	{
+		Print("No window!\n");
+		return;
+	}
+
+	Window->PostMessage(msg);
 }

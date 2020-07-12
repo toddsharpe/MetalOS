@@ -36,6 +36,7 @@
 #define BootloaderPagePoolCount 256
 #define ReservedPageTablePages 512
 
+//Keep in sync with MetalOS.KernalApi syscalls.asm
 enum class SystemCall : uint64_t
 {
 	GetSystemInfo = 1,
@@ -43,7 +44,7 @@ enum class SystemCall : uint64_t
 	ExitProcess,
 	ExitThread,
 	CreateWindow,
-	WaitForMessages,
+	GetWindowRect,
 	GetMessage,
 	CreateFile,
 	ReadFile,

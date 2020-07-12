@@ -24,7 +24,20 @@ public:
 		return m_teb;
 	}
 
+	bool HasMessage()
+	{
+		return !m_messages.empty();
+	}
+
+	Message* DequeueMessage();
+
+	void EnqueueMessage(Message* message);
+
+	//Thread can have one window for now
+	UserWindow* Window;
+
 	void Display();
+	void DisplayMessages();
 	void DisplayDetails();
 
 private:
@@ -32,5 +45,6 @@ private:
 	UserProcess& m_process;
 	ThreadEnvironmentBlock* m_teb;
 	void* m_context;
+	std::list<Message*> m_messages;
 };
 

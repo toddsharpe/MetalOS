@@ -46,6 +46,8 @@ enum class SystemCall : uint64_t
 	CreateWindow,
 	GetWindowRect,
 	GetMessage,
+	PeekMessage,
+	SetScreenBuffer,
 	CreateFile,
 	ReadFile,
 	SetFilePosition,
@@ -54,8 +56,4 @@ enum class SystemCall : uint64_t
 	LoadLibrary,
 	GetProcAddress
 };
-
-
-
-
 

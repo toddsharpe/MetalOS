@@ -2,8 +2,26 @@
 #include <WindowsPE.h>
 #include <crt_string.h>
 #include "Runtime.h"
+#include <MetalOS.Internal.h>
+#include "Debug.h"
 
 #define ReturnNullIfNot(x) if (!(x)) return nullptr;
+
+PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name)
+{
+	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)imageBase;
+	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)((uint64_t)imageBase + dosHeader->e_lfanew);
+
+	//Find section
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
+	{
+		if (strcmp((char*)&section[i].Name, name) == 0)
+			return &section[i];
+	}
+
+	return nullptr;
+}
 
 extern "C" Handle LoadLibrary(const char* lpLibFileName)
 {
@@ -42,10 +60,10 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 	}
 
 	//Reserve space for image
-	void* moduleBase = VirtualAlloc((void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWriteExecute);
-	if (moduleBase == nullptr)//we cant, so get any address
+	Handle moduleBase = VirtualAlloc((void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWriteExecute);
+	if (moduleBase == nullptr)
 		moduleBase = VirtualAlloc(nullptr, peHeader.OptionalHeader.SizeOfImage, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWriteExecute);
-	ReturnNullIfNot(moduleBase == nullptr);
+	ReturnNullIfNot(moduleBase != nullptr);
 
 	//Read in headers
 	ReturnNullIfNot(SetFilePosition(file, 0));
@@ -95,45 +113,61 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 	}
 
 	//Relocations
-	IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-	if (((uintptr_t)moduleBase != pNtHeader->OptionalHeader.ImageBase) && (relocationDirectory.Size))
+	//IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
+	//if (((uintptr_t)moduleBase != pNtHeader->OptionalHeader.ImageBase) && (relocationDirectory.Size))
+	//{
+	//	PIMAGE_BASE_RELOCATION pBaseRelocation = MakePtr(PIMAGE_BASE_RELOCATION, moduleBase, relocationDirectory.VirtualAddress);
+
+	//	//Calculate relative shift
+	//	uintptr_t delta = (uintptr_t)moduleBase - (uintptr_t)pNtHeader->OptionalHeader.ImageBase;
+
+	//	DWORD bytes = 0;
+	//	while (bytes < relocationDirectory.Size)
+	//	{
+	//		PDWORD locationBase = MakePtr(PDWORD, moduleBase, pBaseRelocation->VirtualAddress);
+	//		PWORD locationData = MakePtr(PWORD, pBaseRelocation, sizeof(IMAGE_BASE_RELOCATION));
+
+	//		DWORD count = (pBaseRelocation->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+	//		for (DWORD i = 0; i < count; i++)
+	//		{
+	//			int type = (*locationData >> 12);
+	//			int value = (*locationData & 0x0FFF);
+
+	//			switch (type)
+	//			{
+	//			case IMAGE_REL_BASED_ABSOLUTE:
+	//				break;
+
+	//			case IMAGE_REL_BASED_HIGHLOW:
+	//				*MakePtr(PDWORD, locationBase, value) += delta;
+	//				break;
+	//			}
+
+	//			locationData++;
+	//		}
+
+	//		bytes += pBaseRelocation->SizeOfBlock;
+	//		pBaseRelocation = (PIMAGE_BASE_RELOCATION)locationData;
+	//	}
+	//}
+
+	//Run static initializers
+	typedef void (*CrtInitializer)();
+	PIMAGE_SECTION_HEADER crtSection = GetPESection(moduleBase, ".CRT");
+	if (crtSection != nullptr)
 	{
-		PIMAGE_BASE_RELOCATION pBaseRelocation = MakePtr(PIMAGE_BASE_RELOCATION, moduleBase, relocationDirectory.VirtualAddress);
-
-		//Calculate relative shift
-		uintptr_t delta = (uintptr_t)moduleBase - (uintptr_t)pNtHeader->OptionalHeader.ImageBase;
-
-		DWORD bytes = 0;
-		while (bytes < relocationDirectory.Size)
+		CrtInitializer* initializer = (CrtInitializer*)((uintptr_t)moduleBase + crtSection->VirtualAddress);
+		while (*initializer)
 		{
-			PDWORD locationBase = MakePtr(PDWORD, moduleBase, pBaseRelocation->VirtualAddress);
-			PWORD locationData = MakePtr(PWORD, pBaseRelocation, sizeof(IMAGE_BASE_RELOCATION));
-
-			DWORD count = (pBaseRelocation->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
-			for (DWORD i = 0; i < count; i++)
-			{
-				int type = (*locationData >> 12);
-				int value = (*locationData & 0x0FFF);
-
-				switch (type)
-				{
-				case IMAGE_REL_BASED_ABSOLUTE:
-					break;
-
-				case IMAGE_REL_BASED_HIGHLOW:
-					*MakePtr(PDWORD, locationBase, value) += delta;
-					break;
-				}
-
-				locationData++;
-			}
-
-			bytes += pBaseRelocation->SizeOfBlock;
-			pBaseRelocation = (PIMAGE_BASE_RELOCATION)locationData;
+			(*initializer)();
+			initializer++;
 		}
 	}
 
-	//TODO: create thread to execute entrypoint
+	//Execute entry point
+	//TODO: thread
+	DllMainCall main = (DllMainCall)GetProcAddress(moduleBase, DllMainName);
+	main(moduleBase, DllEntryReason::ProcessAttach);
 
 	return moduleBase;
 }

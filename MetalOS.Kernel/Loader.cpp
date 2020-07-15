@@ -6,7 +6,7 @@
 
 bool Loader::ReadHeaders(const char* path, uintptr_t& imageBase, DWORD& imageSize)
 {
-	Handle file = kernel.CreateFile(path, GenericAccess::Read);
+	FileHandle* file = kernel.CreateFile(std::string(path), GenericAccess::Read);
 	Assert(file);
 
 	size_t read;
@@ -40,7 +40,7 @@ bool Loader::ReadHeaders(const char* path, uintptr_t& imageBase, DWORD& imageSiz
 //TODO: this is very similar to KernelAPI's loader, as well as create process
 Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 {
-	Handle file = kernel.CreateFile(path, GenericAccess::Read);
+	FileHandle* file = kernel.CreateFile(std::string(path), GenericAccess::Read);
 	Assert(file);
 
 	size_t read;
@@ -180,7 +180,7 @@ void Loader::KernelExports(void* address, void* kernelAddress)
 		{
 			char* module = MakePtr(char*, baseAddress, importDescriptor->Name);
 			Print("    %s\n", module);
-			if (stricmp(module, "mosapi.dll") == 0)
+			if (stricmp(module, "mosrt.dll") == 0)
 			{
 				Handle hModule = kernelAddress;
 

@@ -18,11 +18,42 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Debug.h" />
+    <ClInclude Include="Heap.h" />
+    <ClInclude Include="MetalOS.OS.Runtime.h" />
+    <ClInclude Include="msvc.h" />
+    <ClInclude Include="Runtime.h" />
+    <ClInclude Include="stdio.h" />
+    <ClInclude Include="stdlib.h" />
+    <ClInclude Include="string.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Debug.cpp" />
+    <ClCompile Include="DllMain.cpp" />
+    <ClCompile Include="Heap.cpp" />
+    <ClCompile Include="Loader.cpp" />
+    <ClCompile Include="msvc.cpp" />
+    <ClCompile Include="Runtime.cpp" />
+    <ClCompile Include="stdio.c" />
+    <ClCompile Include="stdlib.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Runtime.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="syscalls.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MetalOS.crt\MetalOS.crt.vcxproj">
+      <Project>{e2867f5b-2a93-4d4b-b71f-b65736436bc3}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{8e7593c6-571c-4a66-8676-2b6b486b16a9}</ProjectGuid>
-    <RootNamespace>MetalOSOSCrt</RootNamespace>
+    <ProjectGuid>{174d1dbb-31e8-4d0b-abee-96949547c682}</ProjectGuid>
+    <RootNamespace>MetalOSOSRuntime</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -44,6 +75,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -54,6 +86,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -78,6 +111,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <TargetName>mosrt</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -92,7 +126,6 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ModuleDefinitionFile>MetalOS.OS.Crt</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -109,24 +142,23 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ModuleDefinitionFile>MetalOS.OS.Crt</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;CRT_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>EXPORT;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\MetalOS.crt;..\inc</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <AdditionalIncludeDirectories>..\inc;..\MetalOS.crt;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies />
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
-      <ModuleDefinitionFile>MetalOS.OS.Crt.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>Runtime.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -143,30 +175,10 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ModuleDefinitionFile>MetalOS.OS.Crt</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MetalOS.crt\MetalOS.crt.vcxproj">
-      <Project>{e2867f5b-2a93-4d4b-b71f-b65736436bc3}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\MetalOS.OS.KernalApi\MetalOS.OS.KernalApi.vcxproj">
-      <Project>{7b9b9c34-9380-45f3-8402-3a71fe29f897}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="stdio.h" />
-    <ClInclude Include="stdlib.h" />
-    <ClInclude Include="string.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="stdio.c" />
-    <ClCompile Include="stdlib.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="MetalOS.OS.Crt.def" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
 </Project>

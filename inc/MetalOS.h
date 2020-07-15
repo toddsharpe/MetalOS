@@ -533,6 +533,8 @@ SYSTEMCALL(uint32_t) ExitThread(uint32_t exitCode);
 SYSTEMCALL(Handle) CreateWindow(const char* name);
 SYSTEMCALL(uint32_t) GetWindowRect(const Handle handle, struct Rectangle* rect);
 SYSTEMCALL(uint32_t) GetMessage(struct Message* message);
+SYSTEMCALL(uint32_t) PeekMessage(struct Message* message);
+SYSTEMCALL(uint32_t) SetScreenBuffer(void* buffer);
 
 SYSTEMCALL(Handle) CreateFile(const char* path, enum GenericAccess access);
 SYSTEMCALL(uint32_t) ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
@@ -550,6 +552,19 @@ SYSTEMCALL(uintptr_t) GetProcAddress(Handle hModule, const char* lpProcName);
 	//SYSTEMCALL void* VirtualAlloc(void* address);
 
 #define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
+
+enum DllEntryReason
+{
+	ProcessAttach,
+	ProcessDetach,
+	ThreadAttach,
+	ThreadDetach
+};
+
+//True - LoadLibrary returns handle
+//False - DLL is unloaded
+typedef uint32_t (*DllMainCall)(Handle hinstDLL, enum DllEntryReason fdwReason);
+const char DllMainName[] = "DllMain";
 
 #ifdef __cplusplus
 }

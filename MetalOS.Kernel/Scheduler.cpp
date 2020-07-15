@@ -297,7 +297,6 @@ Message* Scheduler::MessageWait()
 
 	//Return message
 	msg = user->DequeueMessage();
-	kernel.PrintBytes((char*)msg, sizeof(Message));
 	Assert(msg);
 	return msg;
 }

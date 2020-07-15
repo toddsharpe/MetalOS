@@ -1,4 +1,5 @@
 EXPORTS
+	; Kernel API
 	GetSystemInfo
 	GetProcessInfo
 	ExitProcess
@@ -7,6 +8,8 @@ EXPORTS
 	CreateWindow
 	GetWindowRect
 	GetMessage
+	PeekMessage
+	SetScreenBuffer
 	CreateFile
 	ReadFile
 	SetFilePosition
@@ -18,3 +21,26 @@ EXPORTS
 	; Loader
 	LoadLibrary
 	GetProcAddress
+
+
+	; Debug
+	DebugPrintf
+
+	;stdio
+	fopen
+
+	;stdlib
+	malloc
+	free
+
+	;string
+	memcmp
+	memcpy
+	memmove
+	memset
+	strcmp
+	stricmp
+	strlen
+	strnlen_s
+	strcpy
+	strncpy

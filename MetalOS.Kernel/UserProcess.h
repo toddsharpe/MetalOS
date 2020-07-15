@@ -43,6 +43,11 @@ public:
 
 	void AddModule(const char* name, void* address);
 
+	const std::string& GetName() const
+	{
+		return m_name;
+	}
+
 	bool Delete;
 
 	friend class Scheduler;

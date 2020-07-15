@@ -138,9 +138,9 @@ public:
 
 	Device* GetDevice(const std::string path);
 
-	Handle CreateFile(const std::string& path, GenericAccess access);
-	bool ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
-	bool SetFilePosition(Handle handle, size_t position);
+	FileHandle* CreateFile(const std::string& path, GenericAccess access);
+	bool ReadFile(FileHandle* file, void* buffer, size_t bufferSize, size_t* bytesRead);
+	bool SetFilePosition(FileHandle* file, size_t position);
 	bool CreateProcess(const std::string& path);
 #pragma endregion
 
@@ -162,8 +162,17 @@ public:
 	uint32_t CreateWindow(const char* name);
 	uint32_t GetWindowRect(Handle handle, Rectangle* rect);
 	uint32_t GetMessage(struct Message* message);
+	uint32_t PeekMessage(struct Message* message);
 
 	uint64_t DebugPrint(char* s);
+
+	uint64_t SetScreenBuffer(void* buffer);
+
+	Handle CreateFile(const char* name, GenericAccess access);
+	uint32_t ReadFile(Handle* handle, void* buffer, size_t bufferSize, size_t* bytesRead);
+	uint32_t SetFilePosition(Handle* handle, size_t position);
+
+	void* VirtualAlloc(void* address, size_t size, enum MemoryAllocationType allocationType, enum MemoryProtection protect);
 #pragma endregion
 
 	void PostMessage(Message* msg);

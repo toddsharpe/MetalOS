@@ -117,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\MetalOS.OS.Crt;..\inc;..\MetalOS.crt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\MetalOS.OS.Runtime;..\inc;..\MetalOS.crt</AdditionalIncludeDirectories>
       <SupportJustMyCode>false</SupportJustMyCode>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -154,8 +154,8 @@
     <ProjectReference Include="..\MetalOS.OS.init\MetalOS.OS.init.vcxproj">
       <Project>{9028453c-66c6-456c-8f3e-98ed24c253c3}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\MetalOS.OS.KernalApi\MetalOS.OS.KernalApi.vcxproj">
-      <Project>{7b9b9c34-9380-45f3-8402-3a71fe29f897}</Project>
+    <ProjectReference Include="..\MetalOS.OS.Runtime\MetalOS.OS.Runtime.vcxproj">
+      <Project>{174d1dbb-31e8-4d0b-abee-96949547c682}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

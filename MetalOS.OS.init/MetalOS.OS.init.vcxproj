@@ -121,7 +121,7 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
-      <AdditionalIncludeDirectories>..\inc;..\MetalOS.crt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\inc;..\MetalOS.crt;..\MetalOS.OS.Runtime\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,14 +144,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MetalOS.crt\MetalOS.crt.vcxproj">
-      <Project>{e2867f5b-2a93-4d4b-b71f-b65736436bc3}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\MetalOS.OS.KernalApi\MetalOS.OS.KernalApi.vcxproj">
-      <Project>{7b9b9c34-9380-45f3-8402-3a71fe29f897}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Init.cpp" />
     <ClCompile Include="Runtime.cpp" />

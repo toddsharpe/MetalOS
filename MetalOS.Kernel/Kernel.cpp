@@ -296,7 +296,9 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 
 		sw.Next();
 	}
-	__halt();
+
+	while (true)
+		__halt();
 }
 
 bool inBugcheck = false;
@@ -620,7 +622,7 @@ Device* Kernel::GetDevice(const std::string path)
 	return m_deviceTree.GetDevice(path);
 }
 
-Handle Kernel::CreateFile(const std::string& path, GenericAccess access)
+FileHandle* Kernel::CreateFile(const std::string& path, GenericAccess access)
 {
 	Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
 	RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
@@ -629,24 +631,17 @@ Handle Kernel::CreateFile(const std::string& path, GenericAccess access)
 	return handle;
 }
 
-bool Kernel::ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead)
+bool Kernel::ReadFile(FileHandle* file, void* buffer, size_t bufferSize, size_t* bytesRead)
 {
-	Assert(handle);
-	FileHandle* file = (FileHandle*)handle;
-
 	Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
 	RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
 	
 	*bytesRead = hdd->ReadFile(file, buffer, bufferSize);
-
 	return true;
 }
 
-bool Kernel::SetFilePosition(Handle handle, size_t position)
+bool Kernel::SetFilePosition(FileHandle* file, size_t position)
 {
-	Assert(handle);
-	
-	FileHandle* file = (FileHandle*)handle;
 	Assert(position < file->Length);
 	file->Position = position;
 
@@ -656,7 +651,7 @@ bool Kernel::SetFilePosition(Handle handle, size_t position)
 bool Kernel::CreateProcess(const std::string& path)
 {
 	Print("CreateProcess %s\n", path);
-	Handle file = CreateFile(path, GenericAccess::Read);
+	FileHandle* file = CreateFile(path, GenericAccess::Read);
 	Assert(file);
 
 	size_t read;
@@ -725,11 +720,11 @@ bool Kernel::CreateProcess(const std::string& path)
 	Print("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
 
 	//Load KernelAPI
-	Handle k = Loader::LoadLibrary(*process, "mosapi.dll");
-	Print("mosapi loaded at 0x%016x\n", k);
+	Handle api = Loader::LoadLibrary(*process, "mosrt.dll");
+	Print("mosrt loaded at 0x%016x\n", api);
 
 	//Patch imports of process for just mosapi
-	Loader::KernelExports(address, k);
+	Loader::KernelExports(address, api);
 
 	//Create thread TODO: reserve vs commit stack size
 	CreateThread(*process, pNtHeader->OptionalHeader.SizeOfStackReserve, nullptr, nullptr, process->InitProcess);
@@ -777,7 +772,7 @@ void* Kernel::VirtualAlloc(UserProcess& process, void* address, size_t size, Mem
 uint64_t Kernel::Syscall(SystemcallFrame* frame)
 {
 	//Print("Call: 0x%016x UserIP: 0x%016x\n", frame->SystemCall, frame->UserIP);
-	//Print("Arg0: 0x%016x Arg1: 0x%016x Arg2: 0x%016x Arg3: 0x%016x\n", frame->Arg0, frame->Arg1, frame->Arg2, frame->Arg3);
+	//Print("  Arg0: 0x%016x Arg1: 0x%016x Arg2: 0x%016x Arg3: 0x%016x\n", frame->Arg0, frame->Arg1, frame->Arg2, frame->Arg3);
 	
 	//Swap to kernel TEB
 	x64_swapgs();
@@ -786,7 +781,7 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 	//KThread* current = m_scheduler->GetCurrentThread();
 	//current->Display();
 
-	uint32_t ret = -1;
+	uint64_t ret = -1;
 	//Do systemcall
 	switch (frame->SystemCall)
 	{
@@ -814,10 +809,32 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 		ret = GetMessage((Message*)frame->Arg0);
 		break;
 
+	case SystemCall::SetScreenBuffer:
+		ret = SetScreenBuffer((void*)frame->Arg0);
+		break;
+
+	case SystemCall::CreateFile:
+		ret = (uintptr_t)CreateFile((char*)frame->Arg0, (GenericAccess)frame->Arg1);
+		break;
+
+	case SystemCall::ReadFile:
+		ret = ReadFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
+		break;
+
+	case SystemCall::SetFilePosition:
+		ret = SetFilePosition((Handle*)frame->Arg0, (size_t)frame->Arg1);
+		break;
+
+	case SystemCall::VirtualAlloc:
+		ret = (uintptr_t)VirtualAlloc((void*)frame->Arg0, (size_t)frame->Arg1, (MemoryAllocationType)frame->Arg2, (MemoryProtection)frame->Arg3);
+		break;
+
 	default:
+		Print("SystemCall: 0x%x\n", frame->SystemCall);
 		Assert(false);
 		break;
 	}
+	//Print("Return: 0x%016x\n", ret);
 
 	//Swap back to user TEB
 	x64_swapgs();
@@ -828,10 +845,7 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 void Kernel::PostMessage(Message* msg)
 {
 	if (!Window)
-	{
-		Print("No window!\n");
 		return;
-	}
 
 	Window->PostMessage(msg);
 }

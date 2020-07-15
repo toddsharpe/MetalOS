@@ -17,7 +17,7 @@ uint64_t Kernel::GetSystemInfo(SystemInfo* info)
 uint64_t Kernel::ExitProcess(uint32_t exitCode)
 {
 	UserProcess& process = m_scheduler->GetCurrentProcess();
-	
+	Print("Process: %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
 	m_scheduler->KillThread();
 	return SystemCallResult::Success;
 }
@@ -80,5 +80,64 @@ uint32_t Kernel::GetMessage(Message* message)
 	Message* msg = m_scheduler->MessageWait(); //Can block
 	*message = *msg;
 	return SystemCallResult::Success;
+}
+
+//Doesn't block
+uint32_t Kernel::PeekMessage(Message* message)
+{
+	UserThread* user = m_scheduler->GetCurrentUserThread();
+	Assert(user);
+
+	Message* msg = user->DequeueMessage();
+	if (!msg)
+		return SystemCallResult::Failed;
+	
+	*message = *msg;
+	return SystemCallResult::Success;
+}
+
+uint64_t Kernel::SetScreenBuffer(void* buffer)
+{
+	if (!buffer)
+		return SystemCallResult::Failed;
+
+	const size_t size = (size_t)m_display->GetHeight() * m_display->GetWidth();
+	memcpy((void*)m_display->Buffer(), buffer, size);
+	return SystemCallResult::Success;
+}
+
+Handle Kernel::CreateFile(const char* name, GenericAccess access)
+{
+	if (!name)
+		return nullptr;
+
+	return this->CreateFile(std::string(name), access);
+}
+
+uint32_t Kernel::ReadFile(Handle* handle, void* buffer, size_t bufferSize, size_t* bytesRead)
+{
+	if (!handle || !buffer || !bufferSize)
+		return SystemCallResult::Failed;
+
+	FileHandle* file = (FileHandle*)handle;
+	return this->ReadFile(file, buffer, bufferSize, bytesRead);
+}
+
+uint32_t Kernel::SetFilePosition(Handle* handle, size_t position)
+{
+	if (!handle)
+		return SystemCallResult::Failed;
+
+	return this->SetFilePosition((FileHandle*)handle, position);
+}
+
+void* Kernel::VirtualAlloc(void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect)
+{
+	if (!size)
+		return nullptr;
+
+	UserProcess& process = m_scheduler->GetCurrentProcess();
+	
+	return m_virtualMemory->Allocate((uintptr_t)address, SIZE_TO_PAGES(size), protect, process.GetAddressSpace());
 }
 

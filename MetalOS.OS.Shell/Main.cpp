@@ -1,30 +1,20 @@
 #include <MetalOS.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <Debug.h>
 
-void DebugPrintf(const char* format, ...)
+void ProcessMessage(struct Message* message)
 {
-	va_list args;
-	va_start(args, format);
-
-	char buffer[255];
-	int retval = crt_vsprintf(buffer, format, args);
-	buffer[retval] = '\0';
-	va_end(args);
-
-	DebugPrint(buffer);
-}
-
-void ProcessMessage(const Message& message)
-{
-	switch (message.Header.MessageType)
+	switch (message->Header.MessageType)
 	{
-	case MessageType::MessageTypeKeyEvent:
-		DebugPrintf("Key: %c\n", message.KeyEvent.Key);
+	case MessageTypeKeyEvent:
+		if (message->KeyEvent.Key >= 'A' && message->KeyEvent.Key <= 'Z' && message->KeyEvent.Flags.Pressed)
+			DebugPrintf("Key: %c\n", message->KeyEvent.Key);
 		break;
 
 	default:
-		DebugPrintf("Event: 0x%x\n", message.Header.MessageType);
+		DebugPrintf("Event: 0x%x\n", message->Header.MessageType);
 		break;
 	}
 }
@@ -46,10 +36,15 @@ int main(int argc, char** argv)
 	DebugPrintf("Rect: (0x%x,0x%x) x (0x%x,0x%x)\n",
 		rect.P1.X, rect.P1.Y, rect.P2.X, rect.P2.Y);
 
+	const size_t width = rect.P2.X - rect.P1.X;
+	const size_t height = rect.P2.Y - rect.P1.Y;
+	Color** buffer = (Color**)malloc(sizeof(Color) * height * width);
+	//Matrix<Color> buffer(height, width);
+
 	Message message;
-	memset(&message, 0, sizeof(Message));
-	while (GetMessage(&message) == SystemCallResult::Success)
+	memset(&message, 0, sizeof(struct Message));
+	while (GetMessage(&message) == Success)
 	{
-		ProcessMessage(message);
+		ProcessMessage(&message);
 	}
 }

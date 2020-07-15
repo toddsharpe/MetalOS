@@ -28,7 +28,7 @@ Scheduler::Scheduler(KThread& bootThread) :
 
 Scheduler::CpuContext* Scheduler::GetCpuContext() const
 {
-	Assert(x64_ReadGS() != 0);
+	Assert(_readgsbase_u64() != 0);
 	return (CpuContext*)__readgsqword(offsetof(CpuContext, SelfPointer));
 }
 

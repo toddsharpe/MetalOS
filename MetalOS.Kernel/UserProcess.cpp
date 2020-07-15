@@ -76,3 +76,25 @@ ProcessEnvironmentBlock* UserProcess::GetPEB() const
 	return m_peb;
 }
 
+void UserProcess::Display() const
+{
+	Print("UserProcess::Display\n");
+	Print("    ID: %d\n", m_id);
+	Print("  Name: %s\n", m_name.c_str());
+	Print("  Base: 0x%016x\n", m_imageBase);
+	Print("    Ts: %d\n", m_threads.size());
+	Print("   PEB: 0x%016x\n", m_peb);
+}
+
+void UserProcess::DisplayDetails() const
+{
+	Assert(GetCR3() == __readcr3());
+
+	Print("DisplayPEB\n");
+	Print("    ID: %d\n", m_peb->ProcessId);
+	Print("  Base: 0x%016x\n", m_peb->BaseAddress);
+	Print("  Mods: %d\n", m_peb->ModuleIndex);
+	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
+		Print("    %s: 0x%016x\n", m_peb->LoadedModules[i].Name, m_peb->LoadedModules[i].Address);
+}
+

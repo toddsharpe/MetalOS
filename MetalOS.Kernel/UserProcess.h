@@ -43,6 +43,9 @@ public:
 
 	void AddModule(const char* name, void* address);
 
+	void Display() const;
+	void DisplayDetails() const;
+
 	const std::string& GetName() const
 	{
 		return m_name;

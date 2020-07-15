@@ -143,7 +143,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 #define IA32_FMASK_MSR 0xC0000084 //IA32_FMASK_REG
 #define IA32_EFER_MSR 0xC0000080
 	Print("  STAR: 0x%16x LSTAR: 0x%16x EFER: 0x%016x\n",
-		__readmsr(IA32_STAR_MSR), __readmsr(IA32_STAR_MSR), __readmsr(IA32_EFER_MSR));
+		__readmsr(IA32_STAR_MSR), __readmsr(IA32_LSTAR_MSR), __readmsr(IA32_EFER_MSR));
 
 	//Test UEFI runtime access
 	EFI_TIME time = { 0 };
@@ -212,7 +212,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Scheduler (needed to load VMBus driver)
 	m_scheduler->Enabled = true;
 	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(SECOND / 64, (uint8_t)InterruptVector::Timer0);
+	m_timer->SetPeriodic(SECOND / 512, (uint8_t)InterruptVector::Timer0);
 
 	//Attach drivers and enumerate tree
 	m_deviceTree.EnumerateChildren();
@@ -228,6 +228,10 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
+	//Swap to kernel thread info
+	cpu_flags_t flags = x64_disable_interrupts();
+	x64_swapgs();
+	
 	if (vector == InterruptVector::DoubleFault)
 	{
 		m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%016x, RIP: 0x%016x, RSP: 0x%016x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
@@ -244,6 +248,8 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	{
 		InterruptContext ctx = it->second;
 		ctx.Handler(ctx.Context);
+		x64_swapgs();
+		x64_restore_flags(flags);
 		return;
 	}
 	
@@ -256,6 +262,8 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	//Let debug continue (we use this to check ISRs on bootup)
 	case InterruptVector::Breakpoint:
 		m_textScreen->Printf("  Debug Breakpoint Exception\n");
+		x64_swapgs();
+		x64_restore_flags(flags);
 		return;
 	case InterruptVector::PageFault:
 		m_textScreen->Printf("  CR2: 0x%16x\n", __readcr2());
@@ -275,7 +283,6 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	context.Rsp = pFrame->RSP;
 	context.Rbp = pFrame->RBP;
 
-	x64_swapgs();
 
 	KThread* current = m_scheduler->GetCurrentThread();
 	current->Display();
@@ -304,9 +311,11 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 bool inBugcheck = false;
 void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 {
+	cpu_flags_t flags = x64_disable_interrupts();
+	
 	if (inBugcheck)
 	{
-		m_textScreen->Printf("%s\n%s\n%s", file, line, assert);
+		m_textScreen->Printf("%s\n%s\n%s\n", file, line, assert);
 
 		while(true)
 			__halt();
@@ -320,7 +329,13 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	if (m_timer != nullptr)
 		m_timer->Disable();
 
-	m_textScreen->Printf("%s\n%s\n%s", file, line, assert);
+	m_textScreen->Printf("%s\n%s\n%s\n", file, line, assert);
+
+	if (m_scheduler)
+	{
+		KThread* thread = m_scheduler->GetCurrentThread();
+		thread->Display();
+	}
 
 	uint8_t buffer[sizeof(x64_context)];
 	Assert(sizeof(x64_context) == x64_CONTEXT_SIZE);
@@ -493,6 +508,9 @@ void Kernel::UserThreadInitThunk()
 
 	UserThread* user = current->GetUserThread();
 	user->DisplayDetails();
+
+	user->GetProcess().Display();
+	user->GetProcess().DisplayDetails();
 	
 #define IA32_STAR_MSR 0xC0000081 //IA32_STAR_REG
 #define IA32_LSTAR_MSR 0xC0000082 //Target RIP

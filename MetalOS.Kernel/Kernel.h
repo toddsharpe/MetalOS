@@ -131,7 +131,7 @@ public:
 	Handle CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
 	static void KernelThreadInitThunk();
 	static void UserThreadInitThunk();
-	void Sleep(nano_t value);
+	void KernelThreadSleep(nano_t value);
 	void GetSystemTime(SystemTime* time);
 
 	void RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
@@ -152,11 +152,12 @@ public:
 #pragma endregion
 
 	void CreateKernelThread(ThreadStart start, void* arg);
-
-#pragma region System Calls
 	uint64_t Syscall(SystemcallFrame* frame);
 
+#pragma region System Calls
 	uint64_t GetSystemInfo(struct SystemInfo* info);
+
+	void Sleep(uint32_t milliseconds);
 	uint64_t ExitProcess(uint32_t exitCode);
 
 	uint32_t CreateWindow(const char* name);

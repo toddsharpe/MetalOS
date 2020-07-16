@@ -36,11 +36,6 @@ int main(int argc, char** argv)
 	DebugPrintf("Rect: (0x%x,0x%x) x (0x%x,0x%x)\n",
 		rect.P1.X, rect.P1.Y, rect.P2.X, rect.P2.Y);
 
-	const size_t width = rect.P2.X - rect.P1.X;
-	const size_t height = rect.P2.Y - rect.P1.Y;
-	Color** buffer = (Color**)malloc(sizeof(Color) * height * width);
-	//Matrix<Color> buffer(height, width);
-
 	Message message;
 	memset(&message, 0, sizeof(struct Message));
 	while (GetMessage(&message) == Success)

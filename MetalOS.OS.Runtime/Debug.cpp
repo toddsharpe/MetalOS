@@ -15,3 +15,12 @@ extern "C" void DebugPrintf(const char* format, ...)
 
 	DebugPrint(buffer);
 }
+
+extern "C" void Bugcheck(const char* file, const char* line, const char* assert)
+{
+	DebugPrintf("Usermode Bugcheck\n");
+	DebugPrintf("%s\n", file);
+	DebugPrintf("%s\n", line);
+	DebugPrintf("%s\n", assert);
+	ExitProcess(-1);
+}

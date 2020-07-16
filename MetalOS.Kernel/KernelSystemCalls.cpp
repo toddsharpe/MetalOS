@@ -14,6 +14,14 @@ uint64_t Kernel::GetSystemInfo(SystemInfo* info)
 	return SystemCallResult::Success;
 }
 
+void Kernel::Sleep(uint32_t milliseconds)
+{
+	if (!milliseconds)
+		return;
+
+	KernelThreadSleep((nano_t)milliseconds * 1000 * 1000);
+}
+
 uint64_t Kernel::ExitProcess(uint32_t exitCode)
 {
 	UserProcess& process = m_scheduler->GetCurrentProcess();
@@ -102,7 +110,12 @@ uint64_t Kernel::SetScreenBuffer(void* buffer)
 		return SystemCallResult::Failed;
 
 	const size_t size = (size_t)m_display->GetHeight() * m_display->GetWidth();
-	memcpy((void*)m_display->Buffer(), buffer, size);
+	memcpy((void*)m_display->Buffer(), buffer, sizeof(Color) * size);
+
+	EFI_TIME time = { 0 };
+	m_runtime.GetTime(&time, nullptr);
+	Print("  Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+
 	return SystemCallResult::Success;
 }
 

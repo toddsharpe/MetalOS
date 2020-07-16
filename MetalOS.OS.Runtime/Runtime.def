@@ -2,6 +2,7 @@ EXPORTS
 	; Kernel API
 	GetSystemInfo
 	GetProcessInfo
+	Sleep
 	ExitProcess
 	ExitThread
 
@@ -25,6 +26,7 @@ EXPORTS
 
 	; Debug
 	DebugPrintf
+	Bugcheck
 
 	;stdio
 	fopen
@@ -32,6 +34,9 @@ EXPORTS
 	;stdlib
 	malloc
 	free
+	rand
+	abs
+	atoi
 
 	;string
 	memcmp

@@ -524,7 +524,7 @@ void Kernel::UserThreadInitThunk()
 	x64_start_user_thread(user->GetContext(), user->GetTEB());
 }
 
-void Kernel::Sleep(nano_t value)
+void Kernel::KernelThreadSleep(nano_t value)
 {
 	m_scheduler->Sleep(value);
 }
@@ -809,6 +809,10 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 
 	case SystemCall::DebugPrint:
 		ret = DebugPrint((char*)frame->Arg0);
+		break;
+
+	case SystemCall::Sleep:
+		Sleep((uint32_t)frame->Arg0);
 		break;
 
 	case SystemCall::ExitProcess:

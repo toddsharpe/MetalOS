@@ -1,11 +1,8 @@
-#include "LoadingScreen.h"
-#include "Colors.h"
-#include "Main.h"
-#include <algorithm>
-//#include <crt_stdlib.h>
+#include "FireScreen.h"
+#include <stdlib.h>
 
 //BGR pixels
-const Color LoadingScreen::FireColors[] =
+const Color FireScreen::FireColors[] =
 {
 	{ 0x07, 0x07, 0x07, 0x00},
 	{ 0x07, 0x07, 0x1F, 0x00},
@@ -46,19 +43,17 @@ const Color LoadingScreen::FireColors[] =
 	{ 0xFF, 0xFF, 0xFF, 0x00},
 };
 
-LoadingScreen::LoadingScreen(Display& display) :
-	m_display(display),
-	m_indexes(display.GetHeight() / PixelSize, display.GetWidth() / PixelSize),
-	m_buffer(display.GetHeight(), display.GetWidth())
+FireScreen::FireScreen(size_t height, size_t width) :
+	m_indexes(height / PixelSize, width / PixelSize),
+	m_buffer(height, width)
 {
-	//Justify above integer divisions
-	Assert(display.GetHeight() % PixelSize == 0);
-	Assert(display.GetWidth() % PixelSize == 0);
+	Assert(height % PixelSize == 0);
+	Assert(width % PixelSize == 0);
 
-	static_assert(sizeof(LoadingScreen::FireColors) == FireColorsCount * sizeof(Color));
+	static_assert(sizeof(FireScreen::FireColors) == FireColorsCount * sizeof(Color), "Invalid FireColors array");
 }
 
-void LoadingScreen::Initialize()
+void FireScreen::Initialize()
 {
 	//Initialize indexes to 0
 	for (size_t y = 0; y < m_indexes.GetHeight(); y++)
@@ -69,56 +64,16 @@ void LoadingScreen::Initialize()
 	const size_t bottomY = m_indexes.GetHeight() - 1;
 	for (size_t x = 0; x < m_indexes.GetWidth(); x++)
 		m_indexes.Set({ x, bottomY }, FireColorsCount - 1);
-
-	Draw();
-
-	//Create thread
-	kernel.CreateKernelThread(LoadingScreen::ThreadLoop, this);
 }
 
-void LoadingScreen::Update()
-{
-	DoFire();
-}
-
-void LoadingScreen::Draw()
-{
-	//Populate graphics buffer based on indexes
-	for (size_t x = 0; x < m_buffer.GetWidth(); x++)
-		for (size_t y = 0; y < m_buffer.GetHeight(); y++)
-		{
-			//Get index based on scaled pixel size
-			const Point2D scaled = { x / PixelSize, y / PixelSize };
-			const uint8_t index = m_indexes.Get(scaled);
-			const Color c = FireColors[index];
-
-			m_buffer.Set({ x, y }, c);
-		}
-
-	//Copy to real buffer all at once
-	memcpy((void*)m_display.Buffer(), m_buffer.Buffer(), m_buffer.Size());
-}
-
-uint32_t LoadingScreen::ThreadLoop(void* arg)
-{
-	LoadingScreen* screen = (LoadingScreen*)arg;
-	while (true)
-	{
-		screen->Update();
-		screen->Draw();
-
-		kernel.KernelThreadSleep(SECOND / 16);
-	}
-}
-
-void LoadingScreen::DoFire()
+void FireScreen::Update()
 {
 	for (size_t x = 0; x < m_indexes.GetWidth(); x++)
 		for (size_t y = 1; y < m_indexes.GetHeight(); y++)
 			SpreadFire({ x, y });
 }
 
-void LoadingScreen::SpreadFire(Point2D point)
+void FireScreen::SpreadFire(Point2D point)
 {
 	uint8_t index = m_indexes.Get(point);
 	if (index == 0)
@@ -145,4 +100,17 @@ void LoadingScreen::SpreadFire(Point2D point)
 	}
 }
 
+void FireScreen::Draw()
+{
+	//Populate graphics buffer based on indexes
+	for (size_t x = 0; x < m_buffer.GetWidth(); x++)
+		for (size_t y = 0; y < m_buffer.GetHeight(); y++)
+		{
+			//Get index based on scaled pixel size
+			const Point2D scaled = { x / PixelSize, y / PixelSize };
+			const uint8_t index = m_indexes.Get(scaled);
+			const Color c = FireColors[index];
 
+			m_buffer.Set({ x, y }, c);
+		}
+}

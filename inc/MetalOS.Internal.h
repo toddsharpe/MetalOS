@@ -41,6 +41,7 @@ enum class SystemCall : uint64_t
 {
 	GetSystemInfo = 1,
 	GetProcessInfo,
+	Sleep,
 	ExitProcess,
 	ExitThread,
 	CreateWindow,

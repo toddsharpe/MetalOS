@@ -521,7 +521,8 @@ typedef uint32_t(*MessageHandler)(void* parameter);
 SYSTEMCALL(uint32_t) GetSystemInfo(struct SystemInfo* info);
 SYSTEMCALL(uint32_t) GetProcessInfo(struct ProcessInfo* info);
 
-
+//Process/Thread
+SYSTEMCALL(void) Sleep(uint32_t milliseconds);
 SYSTEMCALL(uint32_t) ExitProcess(uint32_t exitCode);
 SYSTEMCALL(uint32_t) ExitThread(uint32_t exitCode);
 
@@ -534,7 +535,7 @@ SYSTEMCALL(Handle) CreateWindow(const char* name);
 SYSTEMCALL(uint32_t) GetWindowRect(const Handle handle, struct Rectangle* rect);
 SYSTEMCALL(uint32_t) GetMessage(struct Message* message);
 SYSTEMCALL(uint32_t) PeekMessage(struct Message* message);
-SYSTEMCALL(uint32_t) SetScreenBuffer(void* buffer);
+SYSTEMCALL(uint32_t) SetScreenBuffer(const void* buffer);
 
 SYSTEMCALL(Handle) CreateFile(const char* path, enum GenericAccess access);
 SYSTEMCALL(uint32_t) ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);

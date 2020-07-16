@@ -113,7 +113,7 @@ void main(LOADER_PARAMS* loader)
 	kernel.Initialize(loader);
 
 	//Load shell
-	kernel.CreateProcess("shell.exe");
+	kernel.CreateProcess("fire.exe");
 
 	//Should never get here
 	while (true)

@@ -59,10 +59,13 @@
     <ClCompile Include="msvc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stdio.c">
+    <ClCompile Include="stdlib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stdlib.cpp">
+    <ClCompile Include="string.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

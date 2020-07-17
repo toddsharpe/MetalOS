@@ -29,8 +29,8 @@ extern "C" {
 #define isprint(c)  (AcpiGbl_Ctypes[(unsigned char)(c)] & (_ACPI_LO | _ACPI_UP | _ACPI_DI | _ACPI_XS | _ACPI_PU))
 #define isalpha(c)  (AcpiGbl_Ctypes[(unsigned char)(c)] & (_ACPI_LO | _ACPI_UP))
 
-	int toupper(int _C);
-	int tolower(int _C);
+	LIBRARY int toupper(int _C);
+	LIBRARY int tolower(int _C);
 
 #ifdef __cplusplus
 }

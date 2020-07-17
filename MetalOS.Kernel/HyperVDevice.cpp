@@ -13,7 +13,7 @@ HyperVDevice::HyperVDevice(vmbus_channel_offer_channel& channel, uint32_t conn_i
 void HyperVDevice::Initialize()
 {
 	char buffer[64] = { 0 };
-	crt_sprintf(buffer, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
+	sprintf(buffer, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
 		m_channel.offer.if_type.Data1,
 		m_channel.offer.if_type.Data2,
 		m_channel.offer.if_type.Data3,

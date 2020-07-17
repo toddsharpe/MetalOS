@@ -1,9 +1,6 @@
 #pragma once
 
 #include <efi.h>
-#include <efilib.h>
-
-#include "MetalOS.Internal.h"
 #include <LoaderParams.h>
 
 //Graphics

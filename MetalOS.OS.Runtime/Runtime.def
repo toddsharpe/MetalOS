@@ -13,7 +13,7 @@ EXPORTS
 	SetScreenBuffer
 	CreateFile
 	ReadFile
-	SetFilePosition
+	SetFilePointer
 
 	VirtualAlloc
 
@@ -30,6 +30,10 @@ EXPORTS
 
 	;stdio
 	fopen
+	fread
+	fclose
+	fseek
+	fprintf
 
 	;stdlib
 	malloc
@@ -45,7 +49,17 @@ EXPORTS
 	memset
 	strcmp
 	stricmp
+	strnicmp
 	strlen
 	strnlen_s
 	strcpy
 	strncpy
+	strncmp
+	strdup
+	strstr
+	strchr
+	strrchr
+
+	; ctype
+	toupper
+	tolower

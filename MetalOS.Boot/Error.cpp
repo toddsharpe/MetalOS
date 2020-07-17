@@ -1,12 +1,9 @@
 #include "Error.h"
 
+#include <efilib.h>
 #include <crt_wchar.h>
 #include <crt_stdlib.h>
-
 #include "EfiMain.h"
-
-extern "C" size_t mbstowcs(CHAR16* _Dest, char const* _Source, size_t _MaxCount);
-extern "C" size_t wcstombs(char* _Dest, const CHAR16* _Source, size_t _MaxCount);
 
 #define MAXBUFFER 128
 void Bugcheck(const char* file, const char* line, const char* assert)

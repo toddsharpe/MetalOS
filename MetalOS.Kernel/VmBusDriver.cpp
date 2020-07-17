@@ -184,7 +184,7 @@ uint32_t VmBusDriver::ThreadLoop()
 			
 			//Update path - TODO: make Device::AddChild that does this?
 			char buffer[64] = { 0 };
-			crt_sprintf(buffer, "%s\\%s", m_device.Path.c_str(), child->GetHid().c_str());
+			sprintf(buffer, "%s\\%s", m_device.Path.c_str(), child->GetHid().c_str());
 			child->Path = buffer;
 
 			m_device.GetChildren().push_back(child);

@@ -133,12 +133,19 @@ int strcmp(const char* str1, const char* str2)
 #define __ascii_toupper(c)   ( (((c) >= 'a') && ((c) <= 'z')) ? ((c) - 'a' + 'A') : (c) )
 int stricmp(char const* _String1, char const* _String2)
 {
-	int i;
-
 	if (strlen(_String1) != strlen(_String2))
 		return -1;
 
-	for (i = 0; i < strlen(_String1); i++) {
+	for (size_t i = 0; i < strlen(_String1); i++) {
+		if (__ascii_toupper(_String1[i]) != __ascii_toupper(_String2[i]))
+			return _String1[i] - _String2[i];
+	}
+	return 0;
+}
+
+int strnicmp(char const* _String1, char const* _String2, size_t _MaxCount)
+{
+	for (size_t i = 0; i < strlen(_String1) && _MaxCount > 0; i++, _MaxCount--) {
 		if (__ascii_toupper(_String1[i]) != __ascii_toupper(_String2[i]))
 			return _String1[i] - _String2[i];
 	}
@@ -216,4 +223,45 @@ char* strncpy(char* _Destination, char const* _Source, size_t _Count)
 {
 	memcpy(_Destination, _Source, _Count * sizeof(char));
 	return _Destination;
+}
+
+char* strstr(char* const _String, char const* const _SubString)
+{
+	char* s = _String;
+	size_t length = strlen(_SubString);
+	if (!length)
+	{
+		return s;
+	}
+
+	while (strlen(s) >= length)
+	{
+		if (strncmp(s, _SubString, length) == 0)
+		{
+			return (s);
+		}
+		s++;
+	}
+
+	return NULL;
+}
+
+char* strchr(char* const _String, int const _Ch)
+{
+	char* s = _String;
+	while (*s != (char)_Ch)
+		if (!*s++)
+			return 0;
+	return (char*)s;
+}
+
+char* strrchr(char* const _String, int const _Ch)
+{
+	char* s = _String;
+	char* ret = 0;
+	do {
+		if (*s == (char)_Ch)
+			ret = s;
+	} while (*s++);
+	return ret;
 }

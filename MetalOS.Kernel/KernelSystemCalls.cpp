@@ -136,12 +136,42 @@ uint32_t Kernel::ReadFile(Handle* handle, void* buffer, size_t bufferSize, size_
 	return this->ReadFile(file, buffer, bufferSize, bytesRead);
 }
 
-uint32_t Kernel::SetFilePosition(Handle* handle, size_t position)
+uint32_t Kernel::SetFilePointer(Handle* handle, __int64 position, FilePointerMove moveType)
 {
 	if (!handle)
 		return SystemCallResult::Failed;
 
-	return this->SetFilePosition((FileHandle*)handle, position);
+	FileHandle* file = (FileHandle*)handle;
+	
+	size_t newPosition;
+	switch (moveType)
+	{
+	case FilePointerMove::Begin:
+		newPosition = position;
+		break;
+
+	case FilePointerMove::Current:
+		newPosition = file->Position + position;
+		break;
+
+	case FilePointerMove::End:
+		newPosition = file->Length + position;
+		break;
+
+	default:
+		return SystemCallResult::Success;
+	}
+
+	return this->SetFilePosition(file, newPosition);
+}
+
+uint32_t Kernel::CloseFile(Handle* handle)
+{
+	if (!handle)
+		return SystemCallResult::Failed;
+
+	CloseFile((FileHandle*)handle);
+	return SystemCallResult::Success;
 }
 
 void* Kernel::VirtualAlloc(void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect)

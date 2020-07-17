@@ -88,7 +88,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <SupportJustMyCode>false</SupportJustMyCode>
       <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
-      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;CRT_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <OmitFramePointers>false</OmitFramePointers>
       <PreprocessToFile>false</PreprocessToFile>

@@ -1,8 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#define GNU_EFI_SETJMP_H
-#include <efi.h>
+#include <cstdarg>
 
 enum ComPort : uint16_t
 {

@@ -1,8 +1,5 @@
 #pragma once
-#include <cstdint>
-
-#include "PageTablesPool.h"
-
+#include <stdint.h>
 
 class PageTablesPool;
 class PageTables

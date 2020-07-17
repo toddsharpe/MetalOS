@@ -22,9 +22,10 @@ x64SysCall <PeekMessage>, 9
 x64SysCall <SetScreenBuffer>, 10
 x64SysCall <CreateFile>, 11
 x64SysCall <ReadFile>, 12
-x64SysCall <SetFilePosition>, 13
-x64SysCall <VirtualAlloc>, 14
-x64SysCall <DebugPrint>, 15
+x64SysCall <SetFilePointer>, 13
+x64SysCall <CloseFile>, 14
+x64SysCall <VirtualAlloc>, 15
+x64SysCall <DebugPrint>, 16
 
 end
 

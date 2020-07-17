@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <stdint.h>
 
 //PixelsPerScanLine could be larger than HorizonalResolution if theres padding
 typedef struct

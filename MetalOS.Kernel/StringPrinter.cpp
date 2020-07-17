@@ -14,7 +14,7 @@ void StringPrinter::Printf(const char* format, va_list args)
 {
 	char buffer[255];
 
-	int retval = crt_vsprintf(buffer, format, args);
+	int retval = vsprintf(buffer, format, args);
 	buffer[retval] = '\0';
 
 	this->Write(buffer);

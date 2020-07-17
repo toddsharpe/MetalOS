@@ -660,10 +660,16 @@ bool Kernel::ReadFile(FileHandle* file, void* buffer, size_t bufferSize, size_t*
 
 bool Kernel::SetFilePosition(FileHandle* file, size_t position)
 {
-	Assert(position < file->Length);
-	file->Position = position;
+	if (position >= file->Length)
+		return false;
 
+	file->Position = position;
 	return true;
+}
+
+void Kernel::CloseFile(FileHandle* file)
+{
+	delete file;
 }
 
 bool Kernel::CreateProcess(const std::string& path)
@@ -843,8 +849,8 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 		ret = ReadFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
 		break;
 
-	case SystemCall::SetFilePosition:
-		ret = SetFilePosition((Handle*)frame->Arg0, (size_t)frame->Arg1);
+	case SystemCall::SetFilePointer:
+		ret = SetFilePointer((Handle*)frame->Arg0, (__int64)frame->Arg1, (FilePointerMove)frame->Arg2);
 		break;
 
 	case SystemCall::VirtualAlloc:

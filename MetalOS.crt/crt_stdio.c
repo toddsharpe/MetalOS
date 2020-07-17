@@ -24,7 +24,7 @@ inline int imax(int a, int b)
 	return (a > b ? a : b);
 }
 
-int crt_sprintf(char* const _Buffer, char const* const _Format, ...)
+int sprintf(char* const _Buffer, char const* const _Format, ...)
 {
 	int retval;
 	va_list ap;
@@ -49,7 +49,7 @@ int snprintf(char* const _Buffer, size_t const _BufferCount, char const* const _
 	return (retval);
 }
 
-int crt_vsprintf(char* const _Buffer, char const* const _Format, va_list _ArgList)
+int vsprintf(char* const _Buffer, char const* const _Format, va_list _ArgList)
 {
 	int retval;
 

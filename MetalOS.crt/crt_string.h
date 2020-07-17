@@ -8,21 +8,25 @@ extern "C" {
 #endif
 
 //Memory Routines
-int memcmp(void const* _Buf1, void const* _Buf2, size_t _Size);
-void* memcpy(void* _Dst, const void* _Src, size_t _Size);
-void* memmove(void* _Dst, void const* _Src, size_t _Size);
-void* memset(void* _Dst, int _Val, size_t _Size);
+LIBRARY int memcmp(void const* _Buf1, void const* _Buf2, size_t _Size);
+LIBRARY void* memcpy(void* _Dst, const void* _Src, size_t _Size);
+LIBRARY void* memmove(void* _Dst, void const* _Src, size_t _Size);
+LIBRARY void* memset(void* _Dst, int _Val, size_t _Size);
 
 //String
-int strcmp(char const* _Str1, char const* _Str2);
-int stricmp(char const* _String1, char const* _String2);
-char* strcat(char* _Destination, char const* _Source);
-char* strncat(char* _Destination, char const* _Source, size_t _Count);
-int strncmp(char const* _Str1, char const* _Str2, size_t _MaxCount);
-size_t strlen(char const* _Str);
-size_t strnlen_s(char const* _String, size_t _MaxCount);
-char* strcpy(char* _Destination, char const* _Source);
-char* strncpy(char* _Destination, char const* _Source, size_t _Count);
+LIBRARY int strcmp(char const* _Str1, char const* _Str2);
+LIBRARY int stricmp(char const* _String1, char const* _String2);
+LIBRARY int strnicmp(char const* _String1,char const* _String2, size_t _MaxCount);
+LIBRARY char* strcat(char* _Destination, char const* _Source);
+LIBRARY char* strncat(char* _Destination, char const* _Source, size_t _Count);
+LIBRARY int strncmp(char const* _Str1, char const* _Str2, size_t _MaxCount);
+LIBRARY size_t strlen(char const* _Str);
+LIBRARY size_t strnlen_s(char const* _String, size_t _MaxCount);
+LIBRARY char* strcpy(char* _Destination, char const* _Source);
+LIBRARY char* strncpy(char* _Destination, char const* _Source, size_t _Count);
+LIBRARY char* strstr(char* const _String, char const* const _SubString);
+LIBRARY char* strchr(char* const _String, int const _Ch);
+LIBRARY char* strrchr(char* const _String, int const _Ch);
 
 #ifdef __cplusplus
 }

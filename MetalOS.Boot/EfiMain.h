@@ -1,12 +1,8 @@
 #pragma once
 
-#define GNU_EFI_SETJMP_H
 #include <efi.h>
-#include <efilib.h>
 #include <LoaderParams.h>
 #include <RamDrive.h>
-
-#include "MetalOS.Internal.h"
 
 extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable);
 
@@ -25,3 +21,5 @@ EFI_STATUS Print(const CHAR16* format, ...);
 EFI_STATUS Keywait(const CHAR16* String = nullptr);
 
 UINTN GetPhysicalAddressSize(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, EFI_MEMORY_DESCRIPTOR* MemoryMap);
+
+extern EFI_MEMORY_TYPE AllocationType;

@@ -513,6 +513,13 @@ struct ThreadEnvironmentBlock
 	uint32_t ThreadId;
 };
 
+enum FilePointerMove
+{
+	Begin,
+	Current,
+	End
+};
+
 #define MAX_PATH 256
 
 typedef uint32_t(*MessageHandler)(void* parameter);
@@ -539,7 +546,8 @@ SYSTEMCALL(uint32_t) SetScreenBuffer(const void* buffer);
 
 SYSTEMCALL(Handle) CreateFile(const char* path, enum GenericAccess access);
 SYSTEMCALL(uint32_t) ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
-SYSTEMCALL(uint32_t) SetFilePosition(Handle handle, size_t position);
+SYSTEMCALL(uint32_t) SetFilePointer(Handle handle, __int64 position, enum FilePointerMove moveType);
+SYSTEMCALL(uint32_t) CloseFile(Handle handle);
 
 SYSTEMCALL(void*) VirtualAlloc(void* address, size_t size, enum MemoryAllocationType allocationType, enum MemoryProtection protect);
 

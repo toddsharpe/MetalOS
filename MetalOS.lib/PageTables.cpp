@@ -2,6 +2,7 @@
 
 #include <MetalOS.Internal.h>
 #include "MetalOS.lib.h"
+#include "PageTablesPool.h"
 
 #define Keywait(x)
 //extern EFI_STATUS Keywait(const CHAR16* String);

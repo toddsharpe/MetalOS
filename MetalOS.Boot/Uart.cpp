@@ -1,8 +1,7 @@
 #include "Uart.h"
 
-#include <cstdarg>
-#include <crt_stdio.h>
 #include <intrin.h>
+#include <crt_stdio.h>
 #include <crt_string.h>
 
 Uart::Uart(ComPort port) : m_port(port)
@@ -22,7 +21,7 @@ void Uart::Printf(const char* format, ...)
 void Uart::Printf(const char* format, va_list args)
 {
 	char buffer[MAXBUFFER] = { 0 };
-	crt_vsprintf(buffer, format, args);
+	vsprintf(buffer, format, args);
 	this->Write(buffer, strlen(buffer));
 }
 

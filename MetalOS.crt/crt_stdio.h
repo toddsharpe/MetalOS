@@ -8,9 +8,9 @@ extern "C"
 {
 #endif
 
-	int crt_sprintf(char* const _Buffer, char const* const _Format, ...);
-	int snprintf(char* const _Buffer, size_t const _BufferCount, char const* const _Format, ...);
-	int crt_vsprintf(char* const _Buffer, char const* const _Format, va_list _ArgList); //TODO: vector includes this header and MSVC chooses it for some reason.
+LIBRARY int sprintf(char* const _Buffer, char const* const _Format, ...);
+LIBRARY int snprintf(char* const _Buffer, size_t const _BufferCount, char const* const _Format, ...);
+LIBRARY int vsprintf(char* const _Buffer, char const* const _Format, va_list _ArgList);
 
 #ifdef __cplusplus
 }

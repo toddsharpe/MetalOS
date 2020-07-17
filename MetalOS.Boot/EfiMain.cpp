@@ -1,5 +1,6 @@
 #include "EfiMain.h"
 
+#include <efilib.h>
 #include <intrin.h>
 #include <crt_string.h>
 #include <crt_wchar.h>
@@ -11,7 +12,6 @@
 #include "Device.h"
 #include "EfiLoader.h"
 #include "Error.h"
-#include "Memory.h"
 #include <crt_stdio.h>
 #include "Uart.h"
 #include <RamDrive.h>

@@ -9,14 +9,14 @@ extern "C" {
 
 typedef uint16_t CHAR16;
 
-//size_t mbstowcs(CHAR16* _Dest, char const* _Source, size_t _MaxCount);
-//size_t wcstombs(char* _Dest, const CHAR16* _Source, size_t _MaxCount);
+LIBRARY size_t mbstowcs(CHAR16* _Dest, char const* _Source, size_t _MaxCount);
+LIBRARY size_t wcstombs(char* _Dest, const CHAR16* _Source, size_t _MaxCount);
 
 #define RAND_MAX 0x7fff
-int rand();
-void srand(unsigned int seed);
-int abs(int n);
-int atoi(const char* str);
+LIBRARY int rand();
+LIBRARY void srand(unsigned int seed);
+LIBRARY int abs(int n);
+LIBRARY int atoi(const char* str);
 
 #ifdef __cplusplus
 }

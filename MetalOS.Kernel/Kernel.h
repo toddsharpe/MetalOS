@@ -141,6 +141,7 @@ public:
 	FileHandle* CreateFile(const std::string& path, GenericAccess access);
 	bool ReadFile(FileHandle* file, void* buffer, size_t bufferSize, size_t* bytesRead);
 	bool SetFilePosition(FileHandle* file, size_t position);
+	void CloseFile(FileHandle* file);
 	bool CreateProcess(const std::string& path);
 #pragma endregion
 
@@ -171,7 +172,8 @@ public:
 
 	Handle CreateFile(const char* name, GenericAccess access);
 	uint32_t ReadFile(Handle* handle, void* buffer, size_t bufferSize, size_t* bytesRead);
-	uint32_t SetFilePosition(Handle* handle, size_t position);
+	uint32_t SetFilePointer(Handle* handle, __int64 position, enum FilePointerMove moveType);
+	uint32_t CloseFile(Handle* handle);
 
 	void* VirtualAlloc(void* address, size_t size, enum MemoryAllocationType allocationType, enum MemoryProtection protect);
 #pragma endregion

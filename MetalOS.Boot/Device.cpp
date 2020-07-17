@@ -1,8 +1,8 @@
 #include "Device.h"
 
+#include <efilib.h>
 #include <crt_string.h>
 #include "MetalOS.Boot.h"
-#include "Error.h"
 #include "EfiMain.h"
 
 //TODO: move to file or link against GNU EFI lib

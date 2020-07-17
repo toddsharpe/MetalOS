@@ -1,7 +1,9 @@
 #include "System.h"
 
-#include <Path.h>
 #include <crt_string.h>
+#include <efilib.h>
+#include "Error.h"
+#include <Path.h>
 #include "MetalOS.Boot.h"
 
 #define File L"dump.txt"
@@ -86,5 +88,6 @@ EFI_STATUS DumpAllProtocols(EFI_HANDLE ImageHandle)
 	BS->FreePool(pHandleBuffer);
 
 	outputFile->Close(outputFile);
+	return EFI_SUCCESS;
 }
 

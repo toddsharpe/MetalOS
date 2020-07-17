@@ -1,5 +1,7 @@
 #include "PageTablesPool.h"
-#include "crt_string.h"
+
+#include <crt_string.h>
+#include "PageTables.h"
 
 PageTablesPool::PageTablesPool(uint64_t physicalAddress, uint32_t pageCount) : PageTablesPool(physicalAddress, physicalAddress, pageCount)
 {
@@ -19,7 +21,7 @@ uint64_t PageTablesPool::GetVirtualAddress(uint64_t physicalAddress)
 
 bool PageTablesPool::AllocatePage(uint64_t* addressOut)
 {
-	//First page is index
+	//First page is index 
 	//Simple scheme - a page of booleans
 	//Yes this should be like bitmasks or maybe ints if i used more info here (like if it was backed to disk)
 	//But to stand this up, just booleans

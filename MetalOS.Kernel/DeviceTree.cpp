@@ -63,7 +63,7 @@ void DeviceTree::AddRootDevice(Device& device)
 {
 	//Update path - TODO: make Device::AddChild that does this?
 	char buffer[64] = { 0 };
-	crt_sprintf(buffer, "%s%s", m_root->Path.c_str(), device.GetHid().c_str());
+	sprintf(buffer, "%s%s", m_root->Path.c_str(), device.GetHid().c_str());
 	device.Path = buffer;
 	
 	m_root->GetChildren().push_back(&device);

@@ -1,8 +1,5 @@
 #include "Main.h"
 
-#include "msvc.h"
-#include <efi.h>
-#include <LoaderParams.h>
 #include <crt_stdio.h>
 #include <vector>
 #include <intrin.h>

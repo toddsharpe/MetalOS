@@ -1,9 +1,7 @@
 #pragma once
 
-#include "PageTables.h"
-
+#include <stdint.h>
 #include <MetalOS.Internal.h>
-#include <cstdint>
 
 //First page will be our index
 //Gives us 1024 * 8 bits to signify pages

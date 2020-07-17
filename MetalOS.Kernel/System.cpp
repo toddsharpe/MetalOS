@@ -7,7 +7,6 @@ typedef EFI_GUID GUID;
 #include <intrin.h>
 #include <crt_string.h>
 #include "MetalOS.Kernel.h"
-#include "Memory.h"
 #include "Main.h"
 
 

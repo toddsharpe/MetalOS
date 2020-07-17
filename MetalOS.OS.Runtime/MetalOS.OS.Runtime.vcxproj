@@ -35,8 +35,9 @@
     <ClCompile Include="Loader.cpp" />
     <ClCompile Include="msvc.cpp" />
     <ClCompile Include="Runtime.cpp" />
-    <ClCompile Include="stdio.c" />
+    <ClCompile Include="stdio.cpp" />
     <ClCompile Include="stdlib.cpp" />
+    <ClCompile Include="string.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Runtime.def" />
@@ -148,7 +149,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>EXPORT;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CRT_STATIC;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -159,6 +160,8 @@
       <SubSystem>Native</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>Runtime.def</ModuleDefinitionFile>
+      <AdditionalDependencies />
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

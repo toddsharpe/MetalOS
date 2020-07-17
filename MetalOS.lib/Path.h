@@ -2,7 +2,7 @@
 
 #include "crt_string.h"
 #include "crt_wchar.h"
-#include <type_traits>
+//#include <type_traits>
 
 template<typename T>
 void GetDirectoryName(const T* source, T* destination)
@@ -20,10 +20,10 @@ void GetDirectoryName(const T* source, T* destination)
 	marker++;
 
 	//Copy to destination
-	if constexpr(std::is_same<char, T>::value)
-		strncpy(destination, source, marker);
-	else
-		wcsncpy(destination, source, marker);
+	//if constexpr(std::is_same<char, T>::value)
+	//	strncpy(destination, source, marker);
+	//else
+	//	wcsncpy(destination, source, marker);
 
 	//Add null
 	destination[marker + 1] = L'\0';

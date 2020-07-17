@@ -1,10 +1,9 @@
 #pragma once
 
 #include "msvc.h"
-#define GNU_EFI_SETJMP_H
+#include <cstdarg>
 #include <efi.h>
 #include <LoaderParams.h>
-#include <stdarg.h>
 #include "Kernel.h"
 
 #define STR_HELPER(x) #x

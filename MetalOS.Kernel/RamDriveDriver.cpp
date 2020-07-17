@@ -24,7 +24,7 @@ Result RamDriveDriver::Initialize()
 	this->m_device.Name = "RamDrive";
 
 	char buffer[64] = { 0 };
-	crt_sprintf(buffer, "Ram Drive - Files: %d", m_ramDrive->FileCount());
+	sprintf(buffer, "Ram Drive - Files: %d", m_ramDrive->FileCount());
 	this->m_device.Description = buffer;
 	
 	return Result();

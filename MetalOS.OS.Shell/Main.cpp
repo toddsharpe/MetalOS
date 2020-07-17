@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 
 	Message message;
 	memset(&message, 0, sizeof(struct Message));
-	while (GetMessage(&message) == Success)
+	while (GetMessage(&message) == SystemCallResult::Success)
 	{
 		ProcessMessage(&message);
 	}

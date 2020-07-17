@@ -47,7 +47,7 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 
 	//NT Header
 	IMAGE_NT_HEADERS64 peHeader;
-	ReturnNullIfNot(SetFilePosition(file, dosHeader.e_lfanew));
+	ReturnNullIfNot(SetFilePointer(file, dosHeader.e_lfanew, FilePointerMove::Begin));
 	ReturnNullIfNot(ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
 	ReturnNullIfNot(read == sizeof(IMAGE_NT_HEADERS64));
 
@@ -66,7 +66,7 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 	ReturnNullIfNot(moduleBase != nullptr);
 
 	//Read in headers
-	ReturnNullIfNot(SetFilePosition(file, 0));
+	ReturnNullIfNot(SetFilePointer(file, 0, FilePointerMove::Begin));
 	ReturnNullIfNot(ReadFile(file, moduleBase, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	ReturnNullIfNot(read == peHeader.OptionalHeader.SizeOfHeaders);
 
@@ -83,7 +83,7 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 		DWORD rawSize = section[i].SizeOfRawData;
 		if (rawSize != 0)
 		{
-			ReturnNullIfNot(SetFilePosition(file, section[i].PointerToRawData));
+			ReturnNullIfNot(SetFilePointer(file, section[i].PointerToRawData, FilePointerMove::Begin));
 			ReturnNullIfNot(ReadFile(file, (void*)destination, rawSize, &read));
 			ReturnNullIfNot(read == section[i].SizeOfRawData);
 		}

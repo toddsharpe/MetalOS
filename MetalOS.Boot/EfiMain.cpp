@@ -5,10 +5,10 @@
 #include <crt_string.h>
 #include <crt_wchar.h>
 #include <crt_stdlib.h>
+#include <stdlib.h>
 #include <Path.h>
 #include <PageTables.h>
 #include <PageTablesPool.h>
-#include "MetalOS.Boot.h"
 #include "Device.h"
 #include "EfiLoader.h"
 #include "Error.h"

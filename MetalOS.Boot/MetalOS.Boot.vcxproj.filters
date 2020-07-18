@@ -47,9 +47,6 @@
     <ClInclude Include="EfiLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MetalOS.Boot.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="System.h">
       <Filter>Header Files</Filter>
     </ClInclude>

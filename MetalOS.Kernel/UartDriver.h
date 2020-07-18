@@ -1,6 +1,6 @@
 #pragma once
-#include <cstdint>
 #include "msvc.h"
+#include <cstdint>
 #include <string>
 #include "Driver.h"
 #include "Device.h"

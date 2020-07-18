@@ -1,7 +1,7 @@
 #include "Cpuid.h"
+
 #include <intrin.h>
 #include <cstdint>
-#include "Main.h"
 
 #define EAX 0
 #define EBX 1

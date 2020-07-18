@@ -1,4 +1,5 @@
 #include "StringPrinter.h"
+
 #include <crt_stdio.h>
 
 void StringPrinter::Printf(const char* format, ...)

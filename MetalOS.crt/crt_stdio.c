@@ -58,6 +58,12 @@ int vsprintf(char* const _Buffer, char const* const _Format, va_list _ArgList)
 	return (retval);
 }
 
+//TODO: BufferCount is not used
+int vsnprintf(char* const _Buffer, size_t const _BufferCount, char const* const _Format, va_list _ArgList)
+{
+	return vsprintf(_Buffer, _Format, _ArgList);
+}
+
 /*
  * Put a NUL-terminated ASCII number (base <= 36) in a buffer in reverse
  * order; return an optional length and a pointer to the last character

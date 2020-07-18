@@ -3,6 +3,7 @@
 #include <efilib.h>
 #include <crt_wchar.h>
 #include <crt_stdlib.h>
+#include <stdlib.h>
 #include "EfiMain.h"
 
 #define MAXBUFFER 128

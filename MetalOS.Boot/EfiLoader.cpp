@@ -5,7 +5,7 @@
 #include <LoaderParams.h>
 #include <crt_string.h>
 #include <WindowsPE.h>
-#include "MetalOS.Boot.h"
+#include "EfiMain.h"
 #include "Error.h"
 
 EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;

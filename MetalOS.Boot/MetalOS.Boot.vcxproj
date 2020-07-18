@@ -196,7 +196,6 @@
     <ClCompile Include="Uart.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MetalOS.Boot.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="EfiLoader.h" />
     <ClInclude Include="EfiMain.h" />

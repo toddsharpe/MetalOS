@@ -11,6 +11,7 @@ extern "C"
 LIBRARY int sprintf(char* const _Buffer, char const* const _Format, ...);
 LIBRARY int snprintf(char* const _Buffer, size_t const _BufferCount, char const* const _Format, ...);
 LIBRARY int vsprintf(char* const _Buffer, char const* const _Format, va_list _ArgList);
+LIBRARY int vsnprintf(char* const _Buffer, size_t const _BufferCount, char const* const _Format, va_list _ArgList);
 
 #ifdef __cplusplus
 }

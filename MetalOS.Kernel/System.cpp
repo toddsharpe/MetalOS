@@ -6,11 +6,12 @@ typedef EFI_GUID GUID;
 #include <PlatformAcpi.h>
 #include <intrin.h>
 #include <crt_string.h>
-#include "MetalOS.Kernel.h"
 #include "Main.h"
 
 
-System::System(EFI_CONFIGURATION_TABLE* ConfigurationTables, UINTN NumConfigTables) : m_configTables(ConfigurationTables), m_configTablesCount(NumConfigTables)
+System::System(EFI_CONFIGURATION_TABLE* ConfigurationTables, UINTN NumConfigTables) :
+	m_configTables(ConfigurationTables),
+	m_configTablesCount(NumConfigTables)
 {
 }
 

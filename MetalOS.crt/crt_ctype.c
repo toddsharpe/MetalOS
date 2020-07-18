@@ -1,5 +1,25 @@
 #include "crt_ctype.h"
 
+int isdigit(int _C)
+{
+    return AcpiGbl_Ctypes[(unsigned char)(_C)] & (_ACPI_DI);
+}
+
+int isspace(int _C)
+{
+    return AcpiGbl_Ctypes[(unsigned char)(_C)] & (_ACPI_SP);
+}
+
+int isxdigit(int _C)
+{
+    return AcpiGbl_Ctypes[(unsigned char)(_C)] & (_ACPI_XD);
+}
+
+int isprint(int _C)
+{
+    return (AcpiGbl_Ctypes[(unsigned char)(_C)] & (_ACPI_LO | _ACPI_UP | _ACPI_DI | _ACPI_XS | _ACPI_PU));
+}
+
 int toupper(int _C)
 {
 	if (_C >= 'a' && _C <= 'z')

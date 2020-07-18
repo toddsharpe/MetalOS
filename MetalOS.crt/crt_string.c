@@ -225,7 +225,7 @@ char* strncpy(char* _Destination, char const* _Source, size_t _Count)
 	return _Destination;
 }
 
-char* strstr(char* const _String, char const* const _SubString)
+const char* strstr(char const* _String, char const* _SubString)
 {
 	char* s = _String;
 	size_t length = strlen(_SubString);
@@ -246,7 +246,7 @@ char* strstr(char* const _String, char const* const _SubString)
 	return NULL;
 }
 
-char* strchr(char* const _String, int const _Ch)
+const char* strchr(char* const _String, int const _Ch)
 {
 	char* s = _String;
 	while (*s != (char)_Ch)
@@ -255,7 +255,7 @@ char* strchr(char* const _String, int const _Ch)
 	return (char*)s;
 }
 
-char* strrchr(char* const _String, int const _Ch)
+const char* strrchr(char* const _String, int const _Ch)
 {
 	char* s = _String;
 	char* ret = 0;

@@ -2,9 +2,9 @@
 
 #include <crt_string.h>
 #include <efilib.h>
-#include "Error.h"
 #include <Path.h>
-#include "MetalOS.Boot.h"
+#include "Error.h"
+#include "EfiMain.h"
 
 #define File L"dump.txt"
 #define MaxFilePath 64

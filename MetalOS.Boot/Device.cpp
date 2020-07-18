@@ -2,8 +2,8 @@
 
 #include <efilib.h>
 #include <crt_string.h>
-#include "MetalOS.Boot.h"
 #include "EfiMain.h"
+#include "Error.h"
 
 //TODO: move to file or link against GNU EFI lib
 EFI_GUID gEfiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;

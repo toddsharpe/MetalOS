@@ -5,7 +5,6 @@
 #include <LoaderParams.h>
 #include <MetalOS.h>
 #include <WindowsPE.h>
-#include "msvc.h"
 #include "MetalOS.Kernel.h"
 #include "Display.h"
 #include "TextScreen.h"

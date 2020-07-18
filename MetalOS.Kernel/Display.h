@@ -1,6 +1,5 @@
 #pragma once
 
-#define GNU_EFI_SETJMP_H
 #include <efi.h>
 #include <LoaderParams.h>
 

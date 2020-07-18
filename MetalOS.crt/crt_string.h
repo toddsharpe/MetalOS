@@ -24,9 +24,9 @@ LIBRARY size_t strlen(char const* _Str);
 LIBRARY size_t strnlen_s(char const* _String, size_t _MaxCount);
 LIBRARY char* strcpy(char* _Destination, char const* _Source);
 LIBRARY char* strncpy(char* _Destination, char const* _Source, size_t _Count);
-LIBRARY char* strstr(char* const _String, char const* const _SubString);
-LIBRARY char* strchr(char* const _String, int const _Ch);
-LIBRARY char* strrchr(char* const _String, int const _Ch);
+//LIBRARY const char* strstr(char const* _String, char const* _SubString);
+//LIBRARY const char* strchr(char* const _String, int const _Ch);
+//LIBRARY const char* strrchr(char* const _String, int const _Ch);
 
 #ifdef __cplusplus
 }

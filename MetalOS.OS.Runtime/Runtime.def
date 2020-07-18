@@ -29,6 +29,10 @@ EXPORTS
 	Bugcheck
 
 	;stdio
+	sprintf
+	snprintf
+	vsprintf
+	vsnprintf
 	fopen
 	fread
 	fclose
@@ -36,6 +40,9 @@ EXPORTS
 	fprintf
 
 	;stdlib
+	exit
+	realloc
+	calloc
 	malloc
 	free
 	rand
@@ -61,5 +68,6 @@ EXPORTS
 	strrchr
 
 	; ctype
+	isspace
 	toupper
 	tolower

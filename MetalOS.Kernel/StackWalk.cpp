@@ -2,9 +2,8 @@
 #include "RuntimeSupport.h"
 #include "Main.h"
 
-StackWalk::StackWalk(PCONTEXT context, const uintptr_t imageBase, PKNONVOLATILE_CONTEXT_POINTERS contextPointers) :
+StackWalk::StackWalk(PCONTEXT context, PKNONVOLATILE_CONTEXT_POINTERS contextPointers) :
 	m_context(context),
-	m_imageBase(imageBase),
 	m_contextPointers(contextPointers)
 {
 	Assert(context->Rsp);
@@ -17,9 +16,9 @@ bool StackWalk::HasNext()
 	return m_context->Rip != NULL;
 }
 
-PCONTEXT StackWalk::Next()
+PCONTEXT StackWalk::Next(const uintptr_t imageBase)
 {
-	const PRUNTIME_FUNCTION functionEntry = RuntimeSupport::LookupFunctionEntry(m_context->Rip, m_imageBase, nullptr);
+	const PRUNTIME_FUNCTION functionEntry = RuntimeSupport::LookupFunctionEntry(m_context->Rip, imageBase, nullptr);
 	if (!functionEntry)
 	{
 		//Pop IP off the stack
@@ -28,7 +27,7 @@ PCONTEXT StackWalk::Next()
 		return m_context;
 	}
 
-	RuntimeSupport::VirtualUnwind(UNW_FLAG_NHANDLER, m_imageBase, m_context->Rip, functionEntry, m_context, m_contextPointers);
+	RuntimeSupport::VirtualUnwind(UNW_FLAG_NHANDLER, imageBase, m_context->Rip, functionEntry, m_context, m_contextPointers);
 	return m_context;
 }
 

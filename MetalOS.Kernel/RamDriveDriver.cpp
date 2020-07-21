@@ -51,7 +51,9 @@ FileHandle* RamDriveDriver::OpenFile(const std::string& path, GenericAccess acce
 	
 	void* address;
 	size_t length;
-	Assert(m_ramDrive->Open(path.c_str(), address, length));
+	bool result = m_ramDrive->Open(path.c_str(), address, length);
+	if (!result)
+		return nullptr;
 	
 	FileHandle* handle = new FileHandle();
 	handle->Context = address;

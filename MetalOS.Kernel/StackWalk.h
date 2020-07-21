@@ -9,14 +9,13 @@ class StackWalk
 {
 public:
 	//ImageBase should probably be retired once kernel knows IP->Module lookups
-	StackWalk(PCONTEXT context, const uintptr_t imageBase, PKNONVOLATILE_CONTEXT_POINTERS contextPointers = nullptr);
+	StackWalk(PCONTEXT context, PKNONVOLATILE_CONTEXT_POINTERS contextPointers = nullptr);
 
 	bool HasNext();
-	PCONTEXT Next();
+	PCONTEXT Next(const uintptr_t imageBase);
 
 private:
 	PCONTEXT m_context;
-	uintptr_t m_imageBase;
 	PKNONVOLATILE_CONTEXT_POINTERS m_contextPointers;
 };
 

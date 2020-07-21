@@ -21,6 +21,18 @@ size_t fread(void* _Buffer, size_t _ElementSize, size_t _ElementCount, FILE* _St
 	return bytes / _ElementSize;
 }
 
+LIBRARY size_t fwrite(void const* _Buffer, size_t _ElementSize, size_t _ElementCount, FILE* _Stream)
+{
+	if (!_ElementSize || !_ElementCount)
+		return 0;
+
+	size_t bytes;
+	SystemCallResult result = (SystemCallResult)WriteFile(_Stream, _Buffer, _ElementSize * _ElementCount, &bytes);
+	Assert(result == Success);
+
+	return bytes / _ElementSize;
+}
+
 int fseek(FILE* _Stream, long _Offset, int _Origin)
 {
 	enum FilePointerMove move;
@@ -42,7 +54,15 @@ int fseek(FILE* _Stream, long _Offset, int _Origin)
 		return -1;
 	}
 	
-	return SetFilePointer(_Stream, _Offset, move);
+	size_t newPos;
+
+	SystemCallResult result = (SystemCallResult)SetFilePointer(_Stream, _Offset, move, &newPos);
+	return newPos;
+}
+
+LIBRARY int ftell(FILE* _Stream)
+{
+	return fseek(_Stream, 0, SEEK_CUR);
 }
 
 int fclose(FILE* _Stream)
@@ -63,4 +83,14 @@ int fprintf(FILE* const _Stream, char const* const _Format, ...)
 
 	DebugPrint(buffer);
 	return strlen(buffer);
+}
+
+int rename(char const* _OldFileName, char const* _NewFileName)
+{
+	return MoveFile(_OldFileName, _NewFileName);
+}
+
+int remove(char const* _FileName)
+{
+	return DeleteFile(_FileName);
 }

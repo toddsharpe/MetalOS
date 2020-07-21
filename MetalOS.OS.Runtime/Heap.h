@@ -10,6 +10,8 @@ public:
 	void* Reallocate(void* address, size_t size);
 	void Deallocate(void* address);
 
+	void Print();
+
 private:
 	static const size_t MinBlockSize = 8;
 	static constexpr size_t Alignment = 16;

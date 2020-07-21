@@ -21,10 +21,15 @@ extern "C"
 
 LIBRARY FILE* fopen(char const* _FileName, char const* _Mode);
 LIBRARY size_t fread(void* _Buffer, size_t _ElementSize, size_t _ElementCount, FILE* _Stream);
+LIBRARY size_t fwrite(void const* _Buffer, size_t _ElementSize, size_t _ElementCount, FILE* _Stream);
 LIBRARY int fseek(FILE* _Stream, long _Offset, int _Origin);
+LIBRARY int ftell(FILE* _Stream);
 LIBRARY int fclose(FILE* _Stream);
 
-int LIBRARY fprintf(FILE* const _Stream, char const* const _Format, ...);
+LIBRARY int fprintf(FILE* const _Stream, char const* const _Format, ...);
+
+LIBRARY int __cdecl rename(char const* _OldFileName, char const* _NewFileName);
+LIBRARY int __cdecl remove(char const* _FileName);
 
 #ifdef __cplusplus
 }

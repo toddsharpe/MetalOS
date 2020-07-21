@@ -6,6 +6,7 @@
 #include "Debug.h"
 
 #define ReturnNullIfNot(x) if (!(x)) return nullptr;
+#define RetNullIfFailed(x) if ((x) != SystemCallResult::Success) return nullptr;
 
 PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name)
 {
@@ -47,8 +48,8 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 
 	//NT Header
 	IMAGE_NT_HEADERS64 peHeader;
-	ReturnNullIfNot(SetFilePointer(file, dosHeader.e_lfanew, FilePointerMove::Begin));
-	ReturnNullIfNot(ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
+	RetNullIfFailed(SetFilePointer(file, dosHeader.e_lfanew, FilePointerMove::Begin, nullptr));
+	RetNullIfFailed(ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
 	ReturnNullIfNot(read == sizeof(IMAGE_NT_HEADERS64));
 
 	//Verify image
@@ -66,8 +67,8 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 	ReturnNullIfNot(moduleBase != nullptr);
 
 	//Read in headers
-	ReturnNullIfNot(SetFilePointer(file, 0, FilePointerMove::Begin));
-	ReturnNullIfNot(ReadFile(file, moduleBase, peHeader.OptionalHeader.SizeOfHeaders, &read));
+	RetNullIfFailed(SetFilePointer(file, 0, FilePointerMove::Begin, nullptr));
+	RetNullIfFailed(ReadFile(file, moduleBase, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	ReturnNullIfNot(read == peHeader.OptionalHeader.SizeOfHeaders);
 
 	//Update pointer to loaded module
@@ -83,8 +84,8 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 		DWORD rawSize = section[i].SizeOfRawData;
 		if (rawSize != 0)
 		{
-			ReturnNullIfNot(SetFilePointer(file, section[i].PointerToRawData, FilePointerMove::Begin));
-			ReturnNullIfNot(ReadFile(file, (void*)destination, rawSize, &read));
+			RetNullIfFailed(SetFilePointer(file, section[i].PointerToRawData, FilePointerMove::Begin, nullptr));
+			RetNullIfFailed(ReadFile(file, (void*)destination, rawSize, &read));
 			ReturnNullIfNot(read == section[i].SizeOfRawData);
 		}
 	}

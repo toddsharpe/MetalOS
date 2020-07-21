@@ -5,6 +5,7 @@ extern "C"
 #include <MetalOS.h>
 #include <string.h>
 #include "Heap.h"
+#include "Debug.h"
 
 extern Heap CrtHeap;
 
@@ -22,10 +23,7 @@ void* calloc(size_t _Count, size_t _Size)
 
 void* realloc(void* _Block, size_t _Size)
 {
-	void* ptr = CrtHeap.Allocate(_Size);
-	memcpy(ptr, _Block, _Size);
-	free(_Block);
-	return ptr;
+	return CrtHeap.Reallocate(_Block, _Size);
 }
 
 extern "C" void* malloc(size_t _Size)

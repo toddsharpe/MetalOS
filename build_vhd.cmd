@@ -27,6 +27,11 @@ xcopy %BUILD_OUT%\shell.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\fire.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\mosrt.dll X:\EFI\BOOT\
 
+@rem Copy Doom!!!
+xcopy %BUILD_OUT%\doom.exe X:\EFI\BOOT\
+xcopy "C:\Program Files (x86)\Steam\steamapps\common\Ultimate Doom\base\DOOM.WAD" X:\EFI\BOOT\
+xcopy "C:\Program Files (x86)\Steam\steamapps\common\Ultimate Doom\base\DEFAULT.CFG" X:\EFI\BOOT\
+
 @(
 echo select vdisk file=%VHD%
 echo select partition 2

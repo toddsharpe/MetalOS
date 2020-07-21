@@ -61,6 +61,30 @@ void* UserProcess::HeapAlloc(size_t size)
 	return m_heap->Allocate(size);
 }
 
+uintptr_t UserProcess::GetModuleBase(uintptr_t ip) const
+{
+	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
+	{
+		uintptr_t address = (uintptr_t)m_peb->LoadedModules[i].Address;
+
+		if (ip < (uintptr_t)address)
+			continue;
+
+		PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, address, 0);
+		Assert(dosHeader->e_magic == IMAGE_DOS_SIGNATURE);
+
+		PIMAGE_NT_HEADERS64 ntHeader = MakePtr(PIMAGE_NT_HEADERS64, address, dosHeader->e_lfanew);
+		Assert(ntHeader->Signature == IMAGE_NT_SIGNATURE);
+
+		if ((ip >= address) && (ip < address + ntHeader->OptionalHeader.SizeOfImage))
+			return address;
+	}
+
+	Print("IP: 0x%016x\n", ip);
+	Assert(false);
+	return 0;
+}
+
 uintptr_t UserProcess::GetCR3() const
 {
 	return m_pageTables->GetCr3();

@@ -155,26 +155,31 @@ public:
 	uint64_t Syscall(SystemcallFrame* frame);
 
 #pragma region System Calls
-	uint64_t GetSystemInfo(struct SystemInfo* info);
+	SystemCallResult GetSystemInfo(struct SystemInfo* info);
+	size_t GetTickCount();
 
 	void Sleep(uint32_t milliseconds);
-	uint64_t ExitProcess(uint32_t exitCode);
+	SystemCallResult ExitProcess(uint32_t exitCode);
+	SystemCallResult ExitThread(uint32_t exitCode);
 
-	uint32_t CreateWindow(const char* name);
-	uint32_t GetWindowRect(Handle handle, Rectangle* rect);
-	uint32_t GetMessage(struct Message* message);
-	uint32_t PeekMessage(struct Message* message);
-
-	uint64_t DebugPrint(char* s);
-
-	uint64_t SetScreenBuffer(void* buffer);
+	SystemCallResult CreateWindow(const char* name);
+	SystemCallResult GetWindowRect(Handle handle, Rectangle* rect);
+	SystemCallResult GetMessage(struct Message* message);
+	SystemCallResult PeekMessage(struct Message* message);
+	SystemCallResult SetScreenBuffer(void* buffer);
 
 	Handle CreateFile(const char* name, GenericAccess access);
-	uint32_t ReadFile(Handle* handle, void* buffer, size_t bufferSize, size_t* bytesRead);
-	uint32_t SetFilePointer(Handle* handle, __int64 position, enum FilePointerMove moveType);
-	uint32_t CloseFile(Handle* handle);
+	SystemCallResult ReadFile(Handle* handle, void* buffer, size_t bufferSize, size_t* bytesRead);
+	SystemCallResult WriteFile(Handle hFile, const void* lpBuffer, size_t bufferSize, size_t* bytesWritten);
+	SystemCallResult SetFilePointer(Handle* handle, __int64 position, enum FilePointerMove moveType, size_t* newPosition);
+	SystemCallResult CloseFile(Handle* handle);
+	size_t MoveFile(const char* existingFileName, const char* newFileName);
+	SystemCallResult DeleteFile(const char* fileName);
+	SystemCallResult CreateDirectory(const char* path);
 
 	void* VirtualAlloc(void* address, size_t size, enum MemoryAllocationType allocationType, enum MemoryProtection protect);
+
+	SystemCallResult DebugPrint(char* s);
 #pragma endregion
 
 	void PostMessage(Message* msg);

@@ -2,6 +2,8 @@ EXPORTS
 	; Kernel API
 	GetSystemInfo
 	GetProcessInfo
+	GetTickCount
+
 	Sleep
 	ExitProcess
 	ExitThread
@@ -11,9 +13,15 @@ EXPORTS
 	GetMessage
 	PeekMessage
 	SetScreenBuffer
+
 	CreateFile
 	ReadFile
+	WriteFile
 	SetFilePointer
+	CloseFile
+	MoveFile
+	DeleteFile
+	CreateDirectory
 
 	VirtualAlloc
 
@@ -22,7 +30,6 @@ EXPORTS
 	; Loader
 	LoadLibrary
 	GetProcAddress
-
 
 	; Debug
 	DebugPrintf
@@ -35,9 +42,13 @@ EXPORTS
 	vsnprintf
 	fopen
 	fread
+	fwrite
 	fclose
 	fseek
+	ftell
 	fprintf
+	rename
+	remove
 
 	;stdlib
 	exit

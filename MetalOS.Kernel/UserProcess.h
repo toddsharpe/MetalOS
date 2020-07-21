@@ -22,6 +22,8 @@ public:
 	{
 		return m_imageBase;
 	}
+	uintptr_t GetModuleBase(uintptr_t ip) const;
+
 	uintptr_t GetCR3() const;
 	VirtualAddressSpace& GetAddressSpace();
 	ProcessEnvironmentBlock* GetPEB() const;

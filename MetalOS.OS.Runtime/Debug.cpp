@@ -8,7 +8,7 @@ extern "C" void DebugPrintf(const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	char buffer[255];
+	char buffer[512];
 	int retval = vsprintf(buffer, format, args);
 	buffer[retval] = '\0';
 	va_end(args);

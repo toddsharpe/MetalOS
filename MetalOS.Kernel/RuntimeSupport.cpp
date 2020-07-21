@@ -64,16 +64,17 @@ void RuntimeSupport::VirtualUnwind(UnwindHandlerType HandlerType, uintptr_t Imag
 	PUNWIND_INFO unwindInfo = GetUnwindInfo(ImageBase, FunctionEntry);
 	Assert(unwindInfo->Version == 1);
 	Assert(unwindInfo->Flags == UnwindHandlerType::UNW_FLAG_NHANDLER);
+	//Print("Unknown FrameRegister: 0x%x\n", unwindInfo->FrameRegister);
 	Assert(unwindInfo->FrameRegister == x64_NV_REG_NUM::Rbp);
 
-	const uintptr_t functionOffset = ContextRecord->Rip - (FunctionEntry->BeginAddress + ImageBase);
-	Assert(functionOffset > unwindInfo->SizeOfProlog);
+	const uintptr_t PrologOffset = ContextRecord->Rip - (FunctionEntry->BeginAddress + ImageBase);
+	Assert(PrologOffset > unwindInfo->SizeOfProlog);
 
 	//TODO: detect epilog based on bytes in list: https://docs.microsoft.com/en-us/windows/win32/api/winnt/nf-winnt-rtlvirtualunwind
-	uintptr_t establisherFrame = (&ContextRecord->Rax)[unwindInfo->FrameRegister];
-	establisherFrame -= (uintptr_t)unwindInfo->FrameOffset * 16;
+	uintptr_t EstablisherFrame = (&ContextRecord->Rax)[unwindInfo->FrameRegister];
+	EstablisherFrame -= (uintptr_t)unwindInfo->FrameOffset * 16;
 
-	UnwindPrologue(ImageBase, ContextRecord->Rip, establisherFrame, FunctionEntry, ContextRecord, ContextPointers);
+	UnwindPrologue(ImageBase, ContextRecord->Rip, EstablisherFrame, FunctionEntry, ContextRecord, ContextPointers);
 }
 
 static ULONG64 MemoryRead64(PULONG64 addr)

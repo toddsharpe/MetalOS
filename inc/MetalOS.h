@@ -525,13 +525,14 @@ enum FilePointerMove
 typedef uint32_t(*MessageHandler)(void* parameter);
 
 //Info
-SYSTEMCALL(uint32_t) GetSystemInfo(struct SystemInfo* info);
-SYSTEMCALL(uint32_t) GetProcessInfo(struct ProcessInfo* info);
+SYSTEMCALL(size_t) GetSystemInfo(struct SystemInfo* info);
+SYSTEMCALL(size_t) GetProcessInfo(struct ProcessInfo* info);
+SYSTEMCALL(size_t) GetTickCount();
 
 //Process/Thread
 SYSTEMCALL(void) Sleep(uint32_t milliseconds);
-SYSTEMCALL(uint32_t) ExitProcess(uint32_t exitCode);
-SYSTEMCALL(uint32_t) ExitThread(uint32_t exitCode);
+SYSTEMCALL(size_t) ExitProcess(uint32_t exitCode);
+SYSTEMCALL(size_t) ExitThread(uint32_t exitCode);
 
 //Semaphores
 //Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
@@ -539,19 +540,23 @@ SYSTEMCALL(uint32_t) ExitThread(uint32_t exitCode);
 
 //Windows
 SYSTEMCALL(Handle) CreateWindow(const char* name);
-SYSTEMCALL(uint32_t) GetWindowRect(const Handle handle, struct Rectangle* rect);
-SYSTEMCALL(uint32_t) GetMessage(struct Message* message);
-SYSTEMCALL(uint32_t) PeekMessage(struct Message* message);
-SYSTEMCALL(uint32_t) SetScreenBuffer(const void* buffer);
+SYSTEMCALL(size_t) GetWindowRect(const Handle handle, struct Rectangle* rect);
+SYSTEMCALL(size_t) GetMessage(struct Message* message);
+SYSTEMCALL(size_t) PeekMessage(struct Message* message);
+SYSTEMCALL(size_t) SetScreenBuffer(const void* buffer);
 
 SYSTEMCALL(Handle) CreateFile(const char* path, enum GenericAccess access);
-SYSTEMCALL(uint32_t) ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
-SYSTEMCALL(uint32_t) SetFilePointer(Handle handle, __int64 position, enum FilePointerMove moveType);
-SYSTEMCALL(uint32_t) CloseFile(Handle handle);
+SYSTEMCALL(size_t) ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
+SYSTEMCALL(size_t) WriteFile(Handle hFile, const void* lpBuffer, size_t bufferSize, size_t* bytesWritten);
+SYSTEMCALL(size_t) SetFilePointer(Handle handle, __int64 position, enum FilePointerMove moveType, size_t* newPosition);
+SYSTEMCALL(size_t) CloseFile(Handle handle);
+SYSTEMCALL(size_t) MoveFile(const char* existingFileName, const char* newFileName);
+SYSTEMCALL(size_t) DeleteFile(const char* fileName);
+SYSTEMCALL(size_t) CreateDirectory(const char* path);
 
 SYSTEMCALL(void*) VirtualAlloc(void* address, size_t size, enum MemoryAllocationType allocationType, enum MemoryProtection protect);
 
-SYSTEMCALL(uint32_t) DebugPrint(const char* s);
+SYSTEMCALL(size_t) DebugPrint(const char* s);
 
 //Pseudo systemcalls that are handled by user mode
 SYSTEMCALL(Handle) LoadLibrary(const char* lpLibFileName);

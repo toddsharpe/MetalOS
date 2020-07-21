@@ -8,7 +8,10 @@ template<class T>
 class Matrix
 {
 public:
-	Matrix(size_t M, size_t N) : m_height(M), m_width(N), m_backing(new T[N * M * sizeof(T)])
+	Matrix(size_t M, size_t N) :
+		m_height(M),
+		m_width(N),
+		m_backing((T*)VirtualAlloc(nullptr, N * M * sizeof(T), MemoryAllocationType::Commit, MemoryProtection::PageReadWrite))
 	{
 		Assert(m_backing);
 	}

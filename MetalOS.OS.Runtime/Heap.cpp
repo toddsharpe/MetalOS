@@ -1,6 +1,9 @@
 #include "Heap.h"
 #include <MetalOS.h>
 #include "Debug.h"
+#include <algorithm>
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
 
 void Heap::Initialize(size_t size)
 {
@@ -17,10 +20,8 @@ void Heap::Initialize(size_t size)
 void* Heap::Allocate(const size_t size)
 {
 	const size_t alignSize = HeapAlign(size);
-	DebugPrintf("Alloc 0x%016x Size: 0x%016x\n", alignSize, m_size);
 
 	HeapBlock* current = this->m_head;
-	DebugPrintf("Head: 0x%016x, Size: 0x%016x\n", current, alignSize);
 	while (!current->Free || current->GetSize() < alignSize)
 	{
 		if (current->Next == nullptr)
@@ -28,8 +29,6 @@ void* Heap::Allocate(const size_t size)
 
 		current = current->Next;
 	}
-
-	DebugPrintf("Current: 0x%016x\n", current);
 
 	//Update block
 	current->Free = false;
@@ -54,7 +53,33 @@ void* Heap::Allocate(const size_t size)
 	return (void*)address;
 }
 
+void* Heap::Reallocate(void* address, size_t size)
+{
+	uintptr_t blockAddress = (uintptr_t)address - sizeof(HeapBlock);
+	HeapBlock* current = (HeapBlock*)blockAddress;
+	
+	void* ptr = this->Allocate(size);
+	if (address != nullptr)
+	{
+		const size_t copySize = MIN(size, current->Size);
+		memcpy(ptr, address, copySize);
+		this->Deallocate(address);
+	}
+	
+	return ptr;
+}
+
 void Heap::Deallocate(void* address)
 {
 
+}
+
+void Heap::Print()
+{
+	HeapBlock* current = m_head;
+	while (current != nullptr)
+	{
+		DebugPrintf("D: 0x%016x S: 0x%x F: %d N: 0x%016x\n", current->Data, current->Size, current->Free, current->Next);
+		current = current->Next;
+	}
 }

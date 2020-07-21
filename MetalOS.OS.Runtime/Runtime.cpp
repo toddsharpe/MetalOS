@@ -27,7 +27,7 @@ Module* Runtime::GetLoadedModule(const char* name)
 	return nullptr;
 }
 
-extern "C" uint32_t GetProcessInfo(ProcessInfo * info)
+extern "C" size_t GetProcessInfo(ProcessInfo * info)
 {
 	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
 	info->Id = peb->ProcessId;

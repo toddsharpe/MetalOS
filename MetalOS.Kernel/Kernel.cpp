@@ -138,6 +138,57 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	__writecr4(__readcr4() | (1 << 16));
 	Print("  CR3: 0x%16x CR4: 0x%16x\n", __readcr3(), __readcr4());
 
+	//Check if SSE
+	int r[4];
+	__cpuid(r, 0x1);
+	Assert(r[3] & (1 << 25));//sse
+
+	__writecr0(__readcr0() & ~(1 << 2));//!Emulated
+	__writecr0(__readcr0() | (1 << 1));
+	__writecr4(__readcr4() | (1 << 9));//OSFXSR 
+	__writecr4(__readcr4() | (1 << 10));//OSXMMEXCPT 
+
+	//Check if OSXsave is enabled
+	if (!(r[2] & (1 << 27)))
+	{
+		//osxsave not enabled, set it
+
+		//Have to have xave
+		Assert(r[3] & (1 << 26));//xsave
+
+		//Enable osxsave
+		__writecr4(__readcr4() | (1 << 18));//OSXSAVE
+		Assert(__readcr4() & (1 << 18));//Check osxsave enabled
+	}
+
+	//Check if AVX is supported
+	if (r[2] & (1 << 28));
+	{
+		//Enable avx
+		_xsetbv(0, _xgetbv(0) | 0x7);
+
+		Print("Enabled AVX\n");
+	}
+
+	if (r[2] & (1 << 20))
+		Print("SSE 4.2\n");
+	if (r[2] & (1 << 19))
+		Print("SSE 4.1\n");
+	if (r[2] & (1 << 9))
+		Print("SSSE 3\n");
+	if (r[2] & (1 << 0))
+		Print("SSE 3\n");
+	if (r[3] & (1 << 26))
+		Print("SSE 2\n");
+
+	//Check AVX512
+	__cpuidex(r, 0x7, 0);
+	Print("EBX: 0x%08x\n", r[1]);
+	if (r[1] & (1 << 16))
+		Print("AVX 512\n");
+
+
+
 #define IA32_STAR_MSR 0xC0000081 //IA32_STAR_REG
 #define IA32_LSTAR_MSR 0xC0000082 //Target RIP
 #define IA32_FMASK_MSR 0xC0000084 //IA32_FMASK_REG
@@ -212,7 +263,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Scheduler (needed to load VMBus driver)
 	m_scheduler->Enabled = true;
 	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(SECOND / 512, (uint8_t)InterruptVector::Timer0);
+	m_timer->SetPeriodic(SECOND / 128, (uint8_t)InterruptVector::Timer0);
 
 	//Attach drivers and enumerate tree
 	m_deviceTree.EnumerateChildren();
@@ -288,20 +339,18 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	current->Display();
 
 	UserThread* user = m_scheduler->GetCurrentThread()->GetUserThread();
-	uintptr_t base = user == nullptr ? KernelBaseAddress : user->GetProcess().GetImageBase();
-	Print("base: 0x%016x\n", base);
 
-	StackWalk sw(&context, base);
-
+	StackWalk sw(&context);
 	while (sw.HasNext())
 	{
-		Print("IP: 0x%016x ", context.Rip);
+		uintptr_t base = user == nullptr ? KernelBaseAddress : user->GetProcess().GetModuleBase(context.Rip);
+		Print("IP: 0x%016x Base: 0x%016x", context.Rip, base);
 		if (m_pdb != nullptr && (context.Rip >= KernelBaseAddress))
 			m_pdb->PrintStack((uint32_t)context.Rip - KernelBaseAddress);
 		else
 			Print("\n");
 
-		sw.Next();
+		sw.Next(base);
 	}
 
 	while (true)
@@ -348,7 +397,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	context.Rsp = x64context->Rsp;
 	context.Rbp = x64context->Rbp;
 
-	StackWalk sw(&context, KernelBaseAddress);
+	StackWalk sw(&context);
 	uint32_t rva = (uint32_t)context.Rip - KernelBaseAddress;
 	
 	while (sw.HasNext())
@@ -359,7 +408,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 		else
 			Print("\n");
 
-		sw.Next();
+		sw.Next(KernelBaseAddress);
 	}
 
 	//m_display->ColorScreen(Red);
@@ -714,6 +763,7 @@ bool Kernel::CreateProcess(const std::string& path)
 
 	//Init in context of address space
 	process->Init(address);
+	process->AddModule(path.c_str(), address);
 
 	//Read headers
 	Assert(SetFilePosition(file, 0));
@@ -793,6 +843,7 @@ void* Kernel::VirtualAlloc(UserProcess& process, void* address, size_t size, Mem
 	return allocated;
 }
 
+static_assert(sizeof(size_t) == sizeof(uint64_t), "Not x64");
 uint64_t Kernel::Syscall(SystemcallFrame* frame)
 {
 	//Print("Call: 0x%016x UserIP: 0x%016x\n", frame->SystemCall, frame->UserIP);
@@ -813,8 +864,8 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 		ret = GetSystemInfo((SystemInfo*)frame->Arg0);
 		break;
 
-	case SystemCall::DebugPrint:
-		ret = DebugPrint((char*)frame->Arg0);
+	case SystemCall::GetTickCount:
+		ret = GetTickCount();
 		break;
 
 	case SystemCall::Sleep:
@@ -824,6 +875,8 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 	case SystemCall::ExitProcess:
 		ret = ExitProcess(frame->Arg0);
 		break;
+
+	//Create Thread
 
 	case SystemCall::CreateWindow:
 		ret = CreateWindow((char*)frame->Arg0);
@@ -835,6 +888,10 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 
 	case SystemCall::GetMessage:
 		ret = GetMessage((Message*)frame->Arg0);
+		break;
+
+	case SystemCall::PeekMessage:
+		ret = PeekMessage((Message*)frame->Arg0);
 		break;
 
 	case SystemCall::SetScreenBuffer:
@@ -849,12 +906,36 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 		ret = ReadFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
 		break;
 
+	case SystemCall::WriteFile:
+		ret = WriteFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
+		break;
+
 	case SystemCall::SetFilePointer:
-		ret = SetFilePointer((Handle*)frame->Arg0, (__int64)frame->Arg1, (FilePointerMove)frame->Arg2);
+		ret = SetFilePointer((Handle*)frame->Arg0, (__int64)frame->Arg1, (FilePointerMove)frame->Arg2, (size_t*)frame->Arg3);
+		break;
+
+	case SystemCall::CloseFile:
+		ret = CloseFile((Handle*)frame->Arg0);
+		break;
+
+	case SystemCall::MoveFile:
+		ret = MoveFile((char*)frame->Arg0, (char*)frame->Arg0);
+		break;
+
+	case SystemCall::DeleteFile:
+		ret = DeleteFile((char*)frame->Arg0);
+		break;
+
+	case SystemCall::CreateDirectory:
+		ret = CreateDirectory((char*)frame->Arg0);
 		break;
 
 	case SystemCall::VirtualAlloc:
 		ret = (uintptr_t)VirtualAlloc((void*)frame->Arg0, (size_t)frame->Arg1, (MemoryAllocationType)frame->Arg2, (MemoryProtection)frame->Arg3);
+		break;
+
+	case SystemCall::DebugPrint:
+		ret = DebugPrint((char*)frame->Arg0);
 		break;
 
 	default:

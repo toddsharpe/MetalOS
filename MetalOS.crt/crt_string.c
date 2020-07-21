@@ -100,19 +100,10 @@ void* memmove(void* _Dst, void const* _Src, size_t _Size)
 
 void* memset(void* _Dst, int _Val, size_t _Size)
 {
-	const uint8_t value_8 = (uint8_t)_Val;
-	uintptr_t* dest_64 = (uintptr_t*)_Dst;
-
-	for (size_t i = 0; i < _Size / sizeof(uintptr_t); i++)
+	uint8_t* dest_8 = (uint8_t*)_Dst;
+	for (size_t i = 0; i < _Size; i++)
 	{
-		*dest_64 = value_8;
-		dest_64++;
-	}
-
-	uint8_t* dest_8 = (uint8_t*)dest_64;
-	for (size_t i = 0; i < _Size % sizeof(uintptr_t); i++)
-	{
-		*dest_8 = value_8;
+		*dest_8 = (uint8_t)_Val;
 		dest_8++;
 	}
 

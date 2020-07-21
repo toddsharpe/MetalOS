@@ -11,21 +11,34 @@ ENDM
 
 ; This needs to be kept consistent with SystemCall in MetalOS.Internal.h. Figure out how
 x64SysCall <GetSystemInfo>, 1
-; GetProcessInfo (usermode)
-x64SysCall <Sleep>, 3
-x64SysCall <ExitProcess>, 4
-x64SysCall <ExitThread>, 5
-x64SysCall <CreateWindow>, 6
-x64SysCall <GetWindowRect>, 7
-x64SysCall <GetMessage>, 8
-x64SysCall <PeekMessage>, 9
-x64SysCall <SetScreenBuffer>, 10
-x64SysCall <CreateFile>, 11
-x64SysCall <ReadFile>, 12
-x64SysCall <SetFilePointer>, 13
-x64SysCall <CloseFile>, 14
-x64SysCall <VirtualAlloc>, 15
-x64SysCall <DebugPrint>, 16
+; GetProcessInfo (usermode), 2
+x64SysCall <GetTickCount>, 3
 
+x64SysCall <Sleep>, 4
+x64SysCall <ExitProcess>, 5
+x64SysCall <ExitThread>, 6
+
+x64SysCall <CreateWindow>, 7
+x64SysCall <GetWindowRect>, 8
+x64SysCall <GetMessage>, 9
+x64SysCall <PeekMessage>, 10
+x64SysCall <SetScreenBuffer>, 11
+
+x64SysCall <CreateFile>, 12
+x64SysCall <ReadFile>, 13
+x64SysCall <WriteFile>, 14
+x64SysCall <SetFilePointer>, 15
+x64SysCall <CloseFile>, 16
+x64SysCall <MoveFile>, 17
+x64SysCall <DeleteFile>, 18
+x64SysCall <CreateDirectory>, 19
+
+x64SysCall <VirtualAlloc>, 20
+
+x64SysCall <DebugPrint>, 21
+
+; LoadLibrary (usermode), 22
+; GetProcAddress (usermode), 23
 end
+
 

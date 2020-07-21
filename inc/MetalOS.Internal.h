@@ -37,24 +37,35 @@
 #define ReservedPageTablePages 512
 
 //Keep in sync with MetalOS.KernalApi syscalls.asm
-enum class SystemCall : uint64_t
+enum class SystemCall : size_t
 {
 	GetSystemInfo = 1,
 	GetProcessInfo,
+	GetTickCount,
+
 	Sleep,
 	ExitProcess,
 	ExitThread,
+
 	CreateWindow,
 	GetWindowRect,
 	GetMessage,
 	PeekMessage,
 	SetScreenBuffer,
+
 	CreateFile,
 	ReadFile,
+	WriteFile,
 	SetFilePointer,
 	CloseFile,
+	MoveFile,
+	DeleteFile,
+	CreateDirectory,
+
 	VirtualAlloc,
+
 	DebugPrint,
+
 	LoadLibrary,
 	GetProcAddress
 };

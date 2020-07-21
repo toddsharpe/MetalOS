@@ -174,10 +174,6 @@ SystemCallResult Kernel::SetScreenBuffer(void* buffer)
 	//Printf("D: 0x%016x, S: 0x%016x\n", (void*)m_display->Buffer(), buffer);
 	memcpy((void*)m_display->Buffer(), buffer, sizeof(Color) * size);
 
-	EFI_TIME time = { 0 };
-	m_runtime.GetTime(&time, nullptr);
-	Print("  Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
-
 	return SystemCallResult::Success;
 }
 

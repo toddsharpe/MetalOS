@@ -16,7 +16,7 @@ MetalOS is homebrew operating system for x86-64. It is 64-bit only and has only 
 * Support for bios
 
 ## Architecture
-MetalOS is a monolithic kernel that uses a custom UEFI bootloader:
+MetalOS is a monolithic kernel that uses a custom UEFI bootloader:  
 ![Architecture](_Documents/Architecture.png)
 
 ### Kernel
@@ -26,7 +26,7 @@ Todo
 Todo
 
 ## Usermode Interface
-Usermode interface is provided by MetalOS.h and a single runtime dll.
+Usermode interface is provided by MetalOS.h and a single runtime dll.  
 ![DoomArchitecture](_Documents/DoomArchitecture.png)
 
 ### Features

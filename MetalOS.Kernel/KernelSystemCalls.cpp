@@ -105,66 +105,6 @@ SystemCallResult Kernel::PeekMessage(Message* message)
 	return SystemCallResult::Success;
 }
 
-void memcpy_sse(void* dest, const void* src, size_t count)
-{
-	__m128i* srcPtr = (__m128i*)src;
-	__m128i* destPtr = (__m128i*)dest;
-
-	unsigned int index = 0;
-	while (count) {
-
-		__m128i x = _mm_loadu_si128(&srcPtr[index]);
-		_mm_stream_si128(&destPtr[index], x);
-
-		count -= 16;
-		index++;
-	}
-}
-
-void* memcpy_512bit_as(void* dest, const void* src, size_t len)
-{
-	const __m512i* s = (__m512i*)src;
-	__m512i* d = (__m512i*)dest;
-
-	while (len--)
-	{
-		_mm512_stream_si512(d++, _mm512_stream_load_si512(s++));
-	}
-	_mm_sfence();
-
-	return dest;
-}
-
-// 256 bytes
-void* memcpy_128bit_256B_as(void* dest, const void* src, size_t len)
-{
-	__m128i* s = (__m128i*)src;
-	__m128i* d = (__m128i*)dest;
-
-	while (len--)
-	{
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 1
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 2
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 3
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 4
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 5
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 6
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 7
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 8
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 9
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 10
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 11
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 12
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 13
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 14
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 15
-		_mm_stream_si128(d++, _mm_stream_load_si128(s++)); // 16
-	}
-	_mm_sfence();
-
-	return dest;
-}
-
 SystemCallResult Kernel::SetScreenBuffer(void* buffer)
 {
 	if (!buffer)

@@ -31,6 +31,6 @@
 ## Screenshots
 
 ## Doom
-![Doom](screenshots/Doom2.png)
+![Doom](Screenshots/Doom2.png)
 
-![Doom](screenshots/Doom3.png)
+![Doom](Screenshots/Doom3.png)

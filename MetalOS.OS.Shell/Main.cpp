@@ -9,8 +9,10 @@ void ProcessMessage(struct Message* message)
 	switch (message->Header.MessageType)
 	{
 	case MessageTypeKeyEvent:
-		if (message->KeyEvent.Key >= 'A' && message->KeyEvent.Key <= 'Z' && message->KeyEvent.Flags.Pressed)
-			DebugPrintf("Key: %c\n", message->KeyEvent.Key);
+		if (message->KeyEvent.Key >= 'A' && message->KeyEvent.Key <= 'Z')
+			DebugPrintf("Key: %c - %d\n", message->KeyEvent.Key, message->KeyEvent.Flags.Pressed);
+		else
+			DebugPrintf("Key: 0x%x - %d\n", message->KeyEvent.Key, message->KeyEvent.Flags.Pressed);
 		break;
 
 	default:

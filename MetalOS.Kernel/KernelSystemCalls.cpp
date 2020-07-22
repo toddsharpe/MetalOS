@@ -18,7 +18,7 @@ SystemCallResult Kernel::GetSystemInfo(SystemInfo* info)
 size_t Kernel::GetTickCount()
 {
 	const nano100_t tsc = m_hyperV->ReadTsc();
-	return tsc * (100 / 1000000);
+	return (tsc * 100) / 1000000;
 }
 
 void Kernel::Sleep(uint32_t milliseconds)

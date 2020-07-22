@@ -106,13 +106,11 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 		Assert(!(key.info & IS_UNICODE));
 		VirtualKey keyCode = GetKeycode(key.make_code);
 
-		//Print("ScanCode: %d (%x), KeyCode = %c Down: %d\n", key.make_code, key.make_code, keyCode, key.info & IS_BREAK);
-
 		Message* msg = new Message();
 		memset(msg, 0, sizeof(Message));
 		msg->Header.MessageType = MessageType::MessageTypeKeyEvent;
 		msg->KeyEvent.Key = keyCode;
-		msg->KeyEvent.Flags.Pressed = (key.info & IS_BREAK) != 0;
+		msg->KeyEvent.Flags.Pressed = (key.info & IS_BREAK) == 0;
 		kernel.PostMessage(msg);
 		//m_events.push(event);
 		break;

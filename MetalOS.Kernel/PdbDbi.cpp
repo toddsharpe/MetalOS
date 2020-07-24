@@ -19,61 +19,6 @@ PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file) :
 	Assert(strcmp((char*)m_kernelText->Name, ".text") == 0);
 
 	m_publics.Load(m_file.GetStream(m_header.SymRecordStreamIndex));
-
-	//Output modules
-	//while (m_stream.Position() != (sizeof(DbiStreamHeader) + header.ModInfoSize))
-	//{
-
-	//	ModInfo info;
-	//	Assert(m_stream.Read(&info));
-
-	//	//Read strings
-	//	std::string moduleName;
-	//	Assert(m_stream.ReadString(moduleName));
-	//	Print("Mod: %s\n", moduleName.c_str());
-
-	//	//ObjName
-	//	std::string objName;
-	//	Assert(m_stream.ReadString(objName));
-	//	//Print("Obj: %s\n", objName.c_str());
-
-	//	//Fix alignment
-	//	m_stream.SkipAlign<uint32_t>();
-	//}
-
-	//Advance to Section Map Substream
-	//Print("0x%016x\n", m_stream.Position());
-	//m_stream.Advance(m_header.ModInfoSize);
-	//Print("0x%016x\n", m_stream.Position());
-
-	////Section contributions
-	//{
-	//	SectionContrSubstreamVersion version;
-	//	Assert(m_stream.Read(&version));
-	//	Assert(version == SectionContrSubstreamVersion::V2);
-
-	//	const uint32_t endPosition = sizeof(DbiStreamHeader) + m_header.ModInfoSize + m_header.SectionContributionSize;
-	//	while (m_stream.Position() != endPosition)
-	//	{
-	//		SectionContribEntry2 entry;
-	//		Assert(m_stream.Read<SectionContribEntry2>(&entry));
-	//		Print("Mod: 0x%x, Address: %04x:%08x, Size: 0x%x\n", entry.SC.ModuleIndex, entry.SC.Section, entry.SC.Offset, entry.SC.Size);
-	//	}
-	//}
-
-	//m_stream.Advance(m_header.SectionContributionSize);
-	//Print("0x%016x\n", m_stream.Position());
-
-	//{
-	//	SectionMapHeader header;
-	//	Assert(m_stream.Read(&header));
-	//}
-
-	//const uint32_t endPosition = sizeof(DbiStreamHeader) + m_header.ModInfoSize + m_header.SectionContributionSize + m_header.SectionMapSize;
-	//while (m_stream.Position() != endPosition)
-	//{
-
-	//}
 }
 
 #define MAXPATH 255

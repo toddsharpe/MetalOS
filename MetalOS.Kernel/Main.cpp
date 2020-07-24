@@ -109,12 +109,13 @@ void main(LOADER_PARAMS* loader)
 	//Initialize kernel
 	kernel.Initialize(loader);
 
-	//Load shell
+	//Load process
 	//kernel.CreateProcess("fire.exe");
 	kernel.CreateProcess("doom.exe");
 	//kernel.CreateProcess("shell.exe");
 
-	//Should never get here
-	while (true)
-		__halt();
+	//Exit init thread
+	kernel.ExitKernelThread();
+
+	Assert(false);
 }

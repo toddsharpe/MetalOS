@@ -187,15 +187,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	if (r[1] & (1 << 16))
 		Print("AVX 512\n");
 
-
-
-#define IA32_STAR_MSR 0xC0000081 //IA32_STAR_REG
-#define IA32_LSTAR_MSR 0xC0000082 //Target RIP
-#define IA32_FMASK_MSR 0xC0000084 //IA32_FMASK_REG
-#define IA32_EFER_MSR 0xC0000080
-	Print("  STAR: 0x%16x LSTAR: 0x%16x EFER: 0x%016x\n",
-		__readmsr(IA32_STAR_MSR), __readmsr(IA32_LSTAR_MSR), __readmsr(IA32_EFER_MSR));
-
 	//Test UEFI runtime access
 	EFI_TIME time = { 0 };
 	m_runtime.GetTime(&time, nullptr);
@@ -287,7 +278,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	{
 		m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%016x, RIP: 0x%016x, RSP: 0x%016x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
 		m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
-		m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x,  FS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS(), x64_ReadFS());
+		m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS());
 		m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
 
 		x64::PrintGDT();
@@ -306,7 +297,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	
 	m_textScreen->Printf("ISR: 0x%x, Code: %x, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
 	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
-	m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x,  FS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS(), x64_ReadFS());
+	m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS());
 	m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
 	switch (vector)
 	{
@@ -532,6 +523,13 @@ void Kernel::CreateKernelThread(ThreadStart start, void* arg)
 	m_scheduler->AddReady(*thread);
 }
 
+void Kernel::ExitKernelThread()
+{
+	Print("Kernel::ExitKernelThread\n");
+
+	m_scheduler->KillThread();
+}
+
 void Kernel::KernelThreadInitThunk()
 {
 	Print("Kernel::KernelThreadInitThunk\n");
@@ -548,7 +546,6 @@ void Kernel::KernelThreadInitThunk()
 	__halt();
 }
 
-//this should use sysret
 void Kernel::UserThreadInitThunk()
 {
 	Print("Kernel::UserThreadInitThunk\n");
@@ -561,13 +558,6 @@ void Kernel::UserThreadInitThunk()
 	user->GetProcess().Display();
 	user->GetProcess().DisplayDetails();
 	
-#define IA32_STAR_MSR 0xC0000081 //IA32_STAR_REG
-#define IA32_LSTAR_MSR 0xC0000082 //Target RIP
-#define IA32_FMASK_MSR 0xC0000084 //IA32_FMASK_REG
-#define IA32_EFER_MSR 0xC0000080
-	Print("  STAR: 0x%16x LSTAR: 0x%16x EFER: 0x%016x\n",
-		__readmsr(IA32_STAR_MSR), __readmsr(IA32_LSTAR_MSR), __readmsr(IA32_EFER_MSR));
-
 	//Start
 	x64::SetKernelInterruptStack(current->GetStack());
 	x64_start_user_thread(user->GetContext(), user->GetTEB());
@@ -850,6 +840,7 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 	//Print("  Arg0: 0x%016x Arg1: 0x%016x Arg2: 0x%016x Arg3: 0x%016x\n", frame->Arg0, frame->Arg1, frame->Arg2, frame->Arg3);
 	
 	//Swap to kernel TEB
+	//TODO: use constructor/destructor to do this swap?
 	x64_swapgs();
 
 	//Show thread
@@ -861,7 +852,7 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 	switch (frame->SystemCall)
 	{
 	case SystemCall::GetSystemInfo:
-		ret = GetSystemInfo((SystemInfo*)frame->Arg0);
+		ret = (uint64_t)GetSystemInfo((SystemInfo*)frame->Arg0);
 		break;
 
 	case SystemCall::GetTickCount:
@@ -873,29 +864,31 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 		break;
 
 	case SystemCall::ExitProcess:
-		ret = ExitProcess(frame->Arg0);
+		ret = (uint64_t)ExitProcess(frame->Arg0);
 		break;
 
-	//Create Thread
+	case SystemCall::ExitThread:
+		ret = (uint64_t)ExitThread(frame->Arg0);
+		break;
 
 	case SystemCall::CreateWindow:
-		ret = CreateWindow((char*)frame->Arg0);
+		ret = (uint64_t)CreateWindow((char*)frame->Arg0);
 		break;
 
 	case SystemCall::GetWindowRect:
-		ret = GetWindowRect((Handle)frame->Arg0, (Rectangle*)frame->Arg1);
+		ret = (uint64_t)GetWindowRect((Handle)frame->Arg0, (Rectangle*)frame->Arg1);
 		break;
 
 	case SystemCall::GetMessage:
-		ret = GetMessage((Message*)frame->Arg0);
+		ret = (uint64_t)GetMessage((Message*)frame->Arg0);
 		break;
 
 	case SystemCall::PeekMessage:
-		ret = PeekMessage((Message*)frame->Arg0);
+		ret = (uint64_t)PeekMessage((Message*)frame->Arg0);
 		break;
 
 	case SystemCall::SetScreenBuffer:
-		ret = SetScreenBuffer((void*)frame->Arg0);
+		ret = (uint64_t)SetScreenBuffer((void*)frame->Arg0);
 		break;
 
 	case SystemCall::CreateFile:
@@ -903,31 +896,31 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 		break;
 
 	case SystemCall::ReadFile:
-		ret = ReadFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
+		ret = (uint64_t)ReadFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
 		break;
 
 	case SystemCall::WriteFile:
-		ret = WriteFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
+		ret = (uint64_t)WriteFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
 		break;
 
 	case SystemCall::SetFilePointer:
-		ret = SetFilePointer((Handle*)frame->Arg0, (__int64)frame->Arg1, (FilePointerMove)frame->Arg2, (size_t*)frame->Arg3);
+		ret = (uint64_t)SetFilePointer((Handle*)frame->Arg0, (__int64)frame->Arg1, (FilePointerMove)frame->Arg2, (size_t*)frame->Arg3);
 		break;
 
 	case SystemCall::CloseFile:
-		ret = CloseFile((Handle*)frame->Arg0);
+		ret = (uint64_t)CloseFile((Handle*)frame->Arg0);
 		break;
 
 	case SystemCall::MoveFile:
-		ret = MoveFile((char*)frame->Arg0, (char*)frame->Arg0);
+		ret = (uint64_t)MoveFile((char*)frame->Arg0, (char*)frame->Arg0);
 		break;
 
 	case SystemCall::DeleteFile:
-		ret = DeleteFile((char*)frame->Arg0);
+		ret = (uint64_t)DeleteFile((char*)frame->Arg0);
 		break;
 
 	case SystemCall::CreateDirectory:
-		ret = CreateDirectory((char*)frame->Arg0);
+		ret = (uint64_t)CreateDirectory((char*)frame->Arg0);
 		break;
 
 	case SystemCall::VirtualAlloc:
@@ -935,7 +928,7 @@ uint64_t Kernel::Syscall(SystemcallFrame* frame)
 		break;
 
 	case SystemCall::DebugPrint:
-		ret = DebugPrint((char*)frame->Arg0);
+		ret = (uint64_t)DebugPrint((char*)frame->Arg0);
 		break;
 
 	default:

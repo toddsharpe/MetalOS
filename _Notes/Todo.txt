@@ -1,0 +1,7 @@
+﻿Todo List
+* Fork orignal doom source code and port to MetalOS
+  * Use CPP for port entry points
+* Convert MetalOS header to c++
+* extract x64 functionality out to library
+* Kernel DPCs
+* Windowing system

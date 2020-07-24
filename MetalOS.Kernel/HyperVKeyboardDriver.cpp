@@ -4,8 +4,8 @@
 
 HyperVKeyboardDriver::HyperVKeyboardDriver(Device& device) :
 	Driver(device),
+	m_response(),
 	m_semaphore(),
-	m_events(),
 	m_channel(KBD_VSC_SEND_RING_BUFFER_SIZE, KBD_VSC_RECV_RING_BUFFER_SIZE, { &HyperVKeyboardDriver::Callback, this })
 {
 	m_semaphore = kernel.CreateSemaphore(0, 0, "HyperVKeyboardDriver");
@@ -108,11 +108,10 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 
 		Message* msg = new Message();
 		memset(msg, 0, sizeof(Message));
-		msg->Header.MessageType = MessageType::MessageTypeKeyEvent;
+		msg->Header.MessageType = MessageType::KeyEvent;
 		msg->KeyEvent.Key = keyCode;
 		msg->KeyEvent.Flags.Pressed = (key.info & IS_BREAK) == 0;
 		kernel.PostMessage(msg);
-		//m_events.push(event);
 		break;
 	}
 	break;

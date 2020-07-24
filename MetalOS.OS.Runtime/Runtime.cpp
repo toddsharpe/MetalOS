@@ -27,9 +27,9 @@ Module* Runtime::GetLoadedModule(const char* name)
 	return nullptr;
 }
 
-extern "C" size_t GetProcessInfo(ProcessInfo * info)
+extern "C" SystemCallResult GetProcessInfo(ProcessInfo& info)
 {
 	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
-	info->Id = peb->ProcessId;
+	info.Id = peb->ProcessId;
 	return SystemCallResult::Success;
 }

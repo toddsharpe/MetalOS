@@ -120,8 +120,6 @@ private:
 
 	synth_kbd_protocol_response m_response;
 
-	std::queue<KeyEvent> m_events;
-
 	Handle m_semaphore;
 	HyperVChannel m_channel;
 };

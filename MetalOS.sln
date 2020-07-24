@@ -5,17 +5,6 @@ VisualStudioVersion = 16.0.29209.62
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Boot", "MetalOS.Boot\MetalOS.Boot.vcxproj", "{745B6D06-6798-48B2-AE5B-18F08BBB944A}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Notes", "Notes", "{0FD0A580-6FE6-450C-A93C-F4D016722AC8}"
-	ProjectSection(SolutionItems) = preProject
-		Notes\ACPI_6_3_May16.pdf = Notes\ACPI_6_3_May16.pdf
-		Notes\DSP0134_2.7.1.pdf = Notes\DSP0134_2.7.1.pdf
-		Notes\Intel x64 IA-32 SDM.pdf = Notes\Intel x64 IA-32 SDM.pdf
-		Notes\Notes.txt = Notes\Notes.txt
-		Notes\SMBios.pdf = Notes\SMBios.pdf
-		Notes\UEFI-Plugfest-WindowsBootEnvironment.pdf = Notes\UEFI-Plugfest-WindowsBootEnvironment.pdf
-		Notes\UEFI_Spec_2_8_final.pdf = Notes\UEFI_Spec_2_8_final.pdf
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Boot.Test", "MetalOS.Boot.Test\MetalOS.Boot.Test.vcxproj", "{99FB6E14-76C6-4189-9D4C-4D170525C2F7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gnu-efi.x86_64", "gnu-efi.x86_64\gnu-efi.x86_64.vcxproj", "{C2BA850E-D2BF-4B96-9964-D3133D705208}"
@@ -65,6 +54,25 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.OS.Fire", "MetalOS.OS.Fire\MetalOS.OS.Fire.vcxproj", "{96AD4DD7-2C99-4ADD-A882-96956FA6A6D1}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test.MetalOS.crt", "Test.MetalOS.crt\Test.MetalOS.crt.vcxproj", "{27B3DF4E-45B2-4FF1-B64B-E59E091FFF51}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Notes", "_Notes", "{22092C59-35ED-4A79-9A3D-11E8E2DEDD13}"
+	ProjectSection(SolutionItems) = preProject
+		_Notes\ACPI_6_3_May16.pdf = _Notes\ACPI_6_3_May16.pdf
+		_Notes\ACPICA - OSDev Wiki.pdf = _Notes\ACPICA - OSDev Wiki.pdf
+		_Notes\acpica-reference_18.pdf = _Notes\acpica-reference_18.pdf
+		_Notes\AML - OSDev Wiki.pdf = _Notes\AML - OSDev Wiki.pdf
+		_Notes\DSP0134_2.7.1.pdf = _Notes\DSP0134_2.7.1.pdf
+		_Notes\hid1_11.pdf = _Notes\hid1_11.pdf
+		_Notes\Intel x64 IA-32 SDM.pdf = _Notes\Intel x64 IA-32 SDM.pdf
+		_Notes\linux_trace = _Notes\linux_trace
+		_Notes\Notes.txt = _Notes\Notes.txt
+		_Notes\pcifw_r3_0_updated.pdf = _Notes\pcifw_r3_0_updated.pdf
+		_Notes\SMBios.pdf = _Notes\SMBios.pdf
+		_Notes\SYSENTER - OSDev Wiki.pdf = _Notes\SYSENTER - OSDev Wiki.pdf
+		_Notes\Todo.txt = _Notes\Todo.txt
+		_Notes\UEFI-Plugfest-WindowsBootEnvironment.pdf = _Notes\UEFI-Plugfest-WindowsBootEnvironment.pdf
+		_Notes\UEFI_Spec_2_8_final.pdf = _Notes\UEFI_Spec_2_8_final.pdf
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

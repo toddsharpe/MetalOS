@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 	Handle h = CreateWindow("Fire");
 
 	Rectangle rect = { 0 };
-	GetWindowRect(h, &rect);
+	GetWindowRect(h, rect);
 	DebugPrintf("Rect: (0x%x,0x%x) x (0x%x,0x%x)\n",
 		rect.P1.X, rect.P1.Y, rect.P2.X, rect.P2.Y);
 

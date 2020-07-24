@@ -6,11 +6,7 @@
 #include "x64_systemcall.h"
 #include "Main.h"
 
-//INTEL SDM Vol 3A 5-22. 5.8.8
-#define IA32_STAR_MSR 0xC0000081 //IA32_STAR_REG
-#define IA32_LSTAR_MSR 0xC0000082 //Target RIP
-#define IA32_FMASK_MSR 0xC0000084 //IA32_FMASK_REG
-#define IA32_EFER_MSR 0xC0000080
+
 
 void x64::SetUserCpuContext(void* context)
 {
@@ -19,7 +15,7 @@ void x64::SetUserCpuContext(void* context)
 
 void x64::SetKernelCpuContext(void* context)
 {
-	__writemsr(MSR::MSR_IA32_KERNELGS_BASE, (uintptr_t)context);
+	__writemsr(static_cast<uint32_t>(MSR::IA32_KERNELGS_BASE), (uintptr_t)context);
 }
 
 void x64::SetKernelInterruptStack(void* stack)
@@ -47,16 +43,12 @@ void x64::Initialize()
 	//Load new segments
 	_lgdt(&GDTR);
 
-	//Syscall/Sysret requires specific orderings in GDT
-	static_assert(GDT_KERNEL_DATA == GDT_KERNEL_CODE + 1, "Invalid kernel GDTs");
-	static_assert(GDT_USER_DATA == GDT_USER_32_CODE + 1, "Invalid user data GDT");
-	static_assert(GDT_USER_CODE == GDT_USER_32_CODE + 2, "Invalid user data GDT");
-
 	//Update segment registers
-	SEGMENT_SELECTOR dataSelector(GDT_KERNEL_DATA);
-	SEGMENT_SELECTOR codeSelector(GDT_KERNEL_CODE);
+	SEGMENT_SELECTOR dataSelector(static_cast<uint16_t>(GDT::KernelData));
+	SEGMENT_SELECTOR codeSelector(static_cast<uint16_t>(GDT::KernelCode));
 	x64_update_segments(dataSelector.Value, codeSelector.Value);
-	SEGMENT_SELECTOR tssSelector(GDT_TSS_ENTRY);
+
+	SEGMENT_SELECTOR tssSelector(static_cast<uint16_t>(GDT::TssEntry));
 	x64_ltr(tssSelector.Value);
 
 	//Load interrupt handlers
@@ -66,16 +58,17 @@ void x64::Initialize()
 	x64_sti();
 
 	//Enable syscalls
-	SEGMENT_SELECTOR userCodeSelector(GDT_USER_32_CODE, UserDPL);
+	SEGMENT_SELECTOR userCodeSelector(static_cast<uint16_t>(GDT::User32Code), UserDPL);
 	IA32_STAR_REG starReg = { 0 };
 	starReg.SyscallCS = codeSelector.Value;
 	starReg.SysretCS = userCodeSelector.Value;
-	__writemsr(IA32_STAR_MSR, starReg.AsUint64);
-	__writemsr(IA32_LSTAR_MSR, (uintptr_t)&x64_SYSTEMCALL);
-	__writemsr(IA32_FMASK_MSR, 0x200 | 0x100); //Disable interrupts and traps
-
+	__writemsr(static_cast<uint32_t>(MSR::IA32_STAR), starReg.AsUint64);
+	__writemsr(static_cast<uint32_t>(MSR::IA32_LSTAR), (uintptr_t)&x64_SYSTEMCALL);
+	__writemsr(static_cast<uint32_t>(MSR::IA32_FMASK), 0x200 | 0x100); //Disable interrupts and traps
+	
 	//Enable syscall
-	__writemsr(IA32_EFER_MSR, __readmsr(IA32_EFER_MSR) | 1);
+	const size_t value = __readmsr(static_cast<uint32_t>(MSR::IA32_EFER));
+	__writemsr(static_cast<uint32_t>(MSR::IA32_EFER), value | 1);
 }
 
 // "Known good stacks" Intel SDM Vol 3A 6.14.5

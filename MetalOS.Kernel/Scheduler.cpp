@@ -213,7 +213,11 @@ void Scheduler::KillThread()
 		{
 			for (auto& t : process.m_threads)
 			{
+				if (t->GetId() == current->GetId())
+					continue;
+				
 				Remove(t);
+				delete t->GetUserThread();
 				delete t;
 			}
 		}

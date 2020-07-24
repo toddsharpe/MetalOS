@@ -1,11 +1,13 @@
 #pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-#include <stdint.h>
+/******************************/
+/*MetalOS Public Facing Header*/
+/******************************/
 
-//Public facing header
+//System Call interface is kept as C-compatible despite this header not being C-friendly
+//This is to allow potential C# interop to be clean
+
+#include <cstdint>
 
 //PixelBlueGreenRedReserved8BitPerColor
 struct BGRRPixel
@@ -42,7 +44,7 @@ struct ProcessInfo
 	uint32_t Id;
 };
 
-enum DayOfWeek
+enum class DayOfWeek
 {
 	Sunday,
 	Monday,
@@ -57,7 +59,7 @@ struct SystemTime
 {
 	uint16_t Year;
 	uint16_t Month;
-	enum DayOfWeek DayOfTheWeek;
+	DayOfWeek DayOfTheWeek;
 	uint16_t Day;
 	uint16_t Hour;
 	uint16_t Minute;
@@ -65,7 +67,7 @@ struct SystemTime
 	uint16_t Milliseconds;
 };
 
-enum SystemArchitecture
+enum class SystemArchitecture
 {
 	Unknown = 0,
 	x64 = 1
@@ -74,16 +76,10 @@ enum SystemArchitecture
 struct SystemInfo
 {
 	uint32_t PageSize;
-	enum SystemArchitecture Architecture;
+	SystemArchitecture Architecture;
 };
 
-enum SystemCallResult
-{
-	Success = 0,
-	Failed
-};
-
-enum GenericAccess
+enum class GenericAccess
 {
 	Read = (1 << 0),
 	Write = (1 << 1),
@@ -434,34 +430,33 @@ struct KeyEvent
 	} Flags;
 };
 
-enum MessageType
+enum class MessageType
 {
-	MessageTypeKeyEvent
+	KeyEvent
 };
 
 struct MessageHeader
 {
-	enum MessageType MessageType;
+	MessageType MessageType;
 	Handle Window;
 };
 
 struct Message
 {
-	struct MessageHeader Header;
+	MessageHeader Header;
 	union
 	{
-		struct KeyEvent KeyEvent;
+		KeyEvent KeyEvent;
 	};
 };
-//static_assert(sizeof(Message) <= 32, "Invalid message size");
 
 #if !defined(EXPORT)
-#define SYSTEMCALL(type) __declspec(dllimport) type
+#define SYSTEMCALL(type) extern "C" __declspec(dllimport) type
 #else
-#define SYSTEMCALL(type) __declspec(dllexport) type
+#define SYSTEMCALL(type) extern "C" __declspec(dllexport) type
 #endif
 
-enum WaitStatus
+enum class WaitStatus
 {
 	None,
 	Signaled,
@@ -470,14 +465,14 @@ enum WaitStatus
 	//Failed conflicts with macro
 };
 
-enum MemoryAllocationType
+enum class MemoryAllocationType
 {
 	Commit = 1,
 	Reserve = 2,
 	CommitReserve = Commit | Reserve,
 };
 
-enum MemoryProtection
+enum class MemoryProtection
 {
 	PageRead = 1,
 	PageWrite = 2,
@@ -500,39 +495,41 @@ struct ProcessEnvironmentBlock
 {
 	uint32_t ProcessId;
 	uintptr_t BaseAddress;
-	struct Module LoadedModules[MAX_LOADED_MODULES];
+	Module LoadedModules[MAX_LOADED_MODULES];
 	size_t ModuleIndex;
 };
 
 struct ThreadEnvironmentBlock
 {
-	struct ThreadEnvironmentBlock* SelfPointer;
-	struct ProcessEnvironmentBlock* PEB;
+	ThreadEnvironmentBlock* SelfPointer;
+	ProcessEnvironmentBlock* PEB;
 	ThreadStart ThreadStart;
 	void* Arg;
 	uint32_t ThreadId;
 };
 
-enum FilePointerMove
+enum class FilePointerMove
 {
 	Begin,
 	Current,
 	End
 };
 
-#define MAX_PATH 256
-
-typedef uint32_t(*MessageHandler)(void* parameter);
+enum class SystemCallResult
+{
+	Success = 0,
+	Failed
+};
 
 //Info
-SYSTEMCALL(size_t) GetSystemInfo(struct SystemInfo* info);
-SYSTEMCALL(size_t) GetProcessInfo(struct ProcessInfo* info);
+SYSTEMCALL(SystemCallResult) GetSystemInfo(SystemInfo& info);
+SYSTEMCALL(SystemCallResult) GetProcessInfo(ProcessInfo& info); //Handled in usermode
 SYSTEMCALL(size_t) GetTickCount();
 
 //Process/Thread
-SYSTEMCALL(void) Sleep(uint32_t milliseconds);
-SYSTEMCALL(size_t) ExitProcess(uint32_t exitCode);
-SYSTEMCALL(size_t) ExitThread(uint32_t exitCode);
+SYSTEMCALL(void) Sleep(const uint32_t milliseconds);
+SYSTEMCALL(SystemCallResult) ExitProcess(const uint32_t exitCode);
+SYSTEMCALL(SystemCallResult) ExitThread(const uint32_t exitCode);
 
 //Semaphores
 //Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
@@ -540,34 +537,31 @@ SYSTEMCALL(size_t) ExitThread(uint32_t exitCode);
 
 //Windows
 SYSTEMCALL(Handle) CreateWindow(const char* name);
-SYSTEMCALL(size_t) GetWindowRect(const Handle handle, struct Rectangle* rect);
-SYSTEMCALL(size_t) GetMessage(struct Message* message);
-SYSTEMCALL(size_t) PeekMessage(struct Message* message);
-SYSTEMCALL(size_t) SetScreenBuffer(const void* buffer);
+SYSTEMCALL(SystemCallResult) GetWindowRect(const Handle handle, Rectangle& rect);
+SYSTEMCALL(SystemCallResult) GetMessage(Message& message);
+SYSTEMCALL(SystemCallResult) PeekMessage(Message& message);
+SYSTEMCALL(SystemCallResult) SetScreenBuffer(const void* buffer);
 
-SYSTEMCALL(Handle) CreateFile(const char* path, enum GenericAccess access);
-SYSTEMCALL(size_t) ReadFile(Handle handle, void* buffer, size_t bufferSize, size_t* bytesRead);
-SYSTEMCALL(size_t) WriteFile(Handle hFile, const void* lpBuffer, size_t bufferSize, size_t* bytesWritten);
-SYSTEMCALL(size_t) SetFilePointer(Handle handle, __int64 position, enum FilePointerMove moveType, size_t* newPosition);
-SYSTEMCALL(size_t) CloseFile(Handle handle);
-SYSTEMCALL(size_t) MoveFile(const char* existingFileName, const char* newFileName);
-SYSTEMCALL(size_t) DeleteFile(const char* fileName);
-SYSTEMCALL(size_t) CreateDirectory(const char* path);
+SYSTEMCALL(Handle) CreateFile(const char* path, const GenericAccess access);
+SYSTEMCALL(SystemCallResult) ReadFile(const Handle handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
+SYSTEMCALL(SystemCallResult) WriteFile(const Handle handle, const void* buffer, const size_t bufferSize, size_t* bytesWritten);
+SYSTEMCALL(SystemCallResult) SetFilePointer(const Handle handle, const __int64 position, const FilePointerMove moveType, size_t* newPosition);
+SYSTEMCALL(SystemCallResult) CloseFile(const Handle handle);
+SYSTEMCALL(SystemCallResult) MoveFile(const char* existingFileName, const char* newFileName);
+SYSTEMCALL(SystemCallResult) DeleteFile(const char* fileName);
+SYSTEMCALL(SystemCallResult) CreateDirectory(const char* path);
 
-SYSTEMCALL(void*) VirtualAlloc(void* address, size_t size, enum MemoryAllocationType allocationType, enum MemoryProtection protect);
+SYSTEMCALL(void*) VirtualAlloc(const void* address, const size_t size, const MemoryAllocationType allocationType, const MemoryProtection protect);
 
-SYSTEMCALL(size_t) DebugPrint(const char* s);
+SYSTEMCALL(SystemCallResult) DebugPrint(const char* s);
 
 //Pseudo systemcalls that are handled by user mode
 SYSTEMCALL(Handle) LoadLibrary(const char* lpLibFileName);
 SYSTEMCALL(uintptr_t) GetProcAddress(Handle hModule, const char* lpProcName);
 
-	//Virtual
-	//SYSTEMCALL void* VirtualAlloc(void* address);
-
 #define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
 
-enum DllEntryReason
+enum class DllEntryReason
 {
 	ProcessAttach,
 	ProcessDetach,
@@ -579,7 +573,3 @@ enum DllEntryReason
 //False - DLL is unloaded
 typedef uint32_t (*DllMainCall)(Handle hinstDLL, enum DllEntryReason fdwReason);
 const char DllMainName[] = "DllMain";
-
-#ifdef __cplusplus
-}
-#endif

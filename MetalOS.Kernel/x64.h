@@ -22,23 +22,40 @@ public:
 	static void PrintGDT();
 
 private:
-	enum MSR
+	enum class MSR : uint32_t
 	{
-		MSR_IA32_FS_BASE = 0xC0000100,
-		MSR_IA32_GS_BASE = 0xC0000101,
-		MSR_IA32_KERNELGS_BASE = 0xC0000102
+		IA32_FS_BASE = 0xC0000100,
+		IA32_GS_BASE = 0xC0000101,
+		IA32_KERNELGS_BASE = 0xC0000102,
+
+		//INTEL SDM Vol 3A 5-22. 5.8.8
+		IA32_STAR = 0xC0000081, //IA32_STAR_REG
+		IA32_LSTAR = 0xC0000082, //Target RIP
+		IA32_FMASK = 0xC0000084, //IA32_FMASK_REG
+		IA32_EFER = 0xC0000080,
 	};
 
-#define GDT_EMPTY 0
-#define GDT_KERNEL_CODE 1
-#define GDT_KERNEL_DATA 2
-#define GDT_USER_32_CODE 3
-#define GDT_USER_DATA 4
-#define GDT_USER_CODE 5
-#define GDT_TSS_ENTRY 6
+	enum class GDT : uint16_t
+	{
+		Empty,
+		KernelCode,
+		KernelData,
+		User32Code,
+		UserData,
+		UserCode,
+		TssEntry,
+	};
+
+	//Syscall/Sysret requires specific orderings in GDT
+	static_assert(
+		(uint32_t)GDT::KernelData == (uint32_t)GDT::KernelCode + 1 &&
+		(uint32_t)GDT::UserData == (uint32_t)GDT::User32Code + 1 &&
+		(uint32_t)GDT::UserCode == (uint32_t)GDT::User32Code + 2,
+		"Invalid kernel GDTs");
 
 #define UserDPL 3
 #define KernelDPL 0
+
 	enum IDT_GATE_TYPE
 	{
 		TaskGate32 = 0x5,
@@ -50,7 +67,7 @@ private:
 
 #pragma pack(push, 1)
 	// Intel SDM Vol 3A 3.4.2 Figure 3-6
-	typedef struct _SEGMENT_SELECTOR
+	struct SEGMENT_SELECTOR
 	{
 		union
 		{
@@ -63,19 +80,19 @@ private:
 			uint16_t Value;
 		};
 
-		_SEGMENT_SELECTOR() { };
+		SEGMENT_SELECTOR() { };
 
-		_SEGMENT_SELECTOR(uint16_t index, uint16_t level = KernelDPL)
+		SEGMENT_SELECTOR(uint16_t index, uint16_t level = KernelDPL)
 		{
 			PrivilegeLevel = level;
 			TableIndicator = 0;
 			Index = index;
 		}
-	} SEGMENT_SELECTOR, * PSEGME;
+	};
 	static_assert(sizeof(SEGMENT_SELECTOR) == sizeof(uint16_t), "Size mismatch, only 64-bit supported.");
 
 	// Intel SDM Vol 3A Figure 3-8
-	typedef struct _SEGMENT_DESCRIPTOR
+	struct SEGMENT_DESCRIPTOR
 	{
 		union
 		{
@@ -97,11 +114,11 @@ private:
 			};
 			uint64_t Value;
 		};
-	} SEGMENT_DESCRIPTOR, * PSEGMENT_DESCRIPTOR;
+	};
 	static_assert(sizeof(SEGMENT_DESCRIPTOR) == sizeof(uintptr_t), "Size mismatch, only 64-bit supported.");
 
 	// Intel SDM Vol 3A Figure 7-4
-	typedef struct _TSS_LDT_ENTRY
+	struct TSS_LDT_ENTRY
 	{
 		uint16_t SegmentLimit1;
 		uint16_t BaseAddress1;
@@ -124,11 +141,11 @@ private:
 		uint32_t Reserved1 : 8;
 		uint32_t Zeros : 4;
 		uint32_t Reserved2 : 20;
-	} TSS_LDT_ENTRY, * PTSS_LDT_ENTRY;
+	};
 	static_assert(sizeof(TSS_LDT_ENTRY) == 16, "Size mismatch, only 64-bit supported.");
 
 	// Intel SDM Vol 3A Figure 7-11
-	typedef struct _TASK_STATE_SEGMENT_64
+	struct TASK_STATE_SEGMENT_64
 	{
 		uint32_t Reserved_0;
 		//RSP for privilege levels 0-2
@@ -159,11 +176,11 @@ private:
 		uint32_t Reserved_4;
 		uint16_t Reserved_5;
 		uint16_t IO_Map_Base;
-	} TASK_STATE_SEGMENT_64, * PTASK_STATE_SEGMENT_64;
+	};
 	static_assert(sizeof(TASK_STATE_SEGMENT_64) == 104, "Size mismatch, only 64-bit supported.");
 
 	// Intel SDM Vol 3A Figure 6-7
-	typedef struct _IDT_GATE
+	struct IDT_GATE
 	{
 		uint16_t Offset1;
 		SEGMENT_SELECTOR SegmentSelector;
@@ -177,14 +194,14 @@ private:
 		uint32_t Offset3;
 		uint32_t Reserved;
 
-		_IDT_GATE() {}
+		IDT_GATE() {}
 
-		_IDT_GATE(uint64_t isrAddress)
+		IDT_GATE(uint64_t isrAddress)
 		{
 			Offset1 = (uint16_t)isrAddress;
 			SegmentSelector.Value = 0;
 			SegmentSelector.PrivilegeLevel = KernelDPL;
-			SegmentSelector.Index = GDT_KERNEL_CODE;
+			SegmentSelector.Index = static_cast<uint16_t>(GDT::KernelCode);
 			InterruptStackTable = 0;
 			Zeros = 0;
 			Type = IDT_GATE_TYPE::InterruptGate32;
@@ -196,12 +213,12 @@ private:
 			Reserved = 0;
 		}
 
-		_IDT_GATE(uint64_t isrAddress, uint16_t stack, IDT_GATE_TYPE type)
+		IDT_GATE(uint64_t isrAddress, uint16_t stack, IDT_GATE_TYPE type)
 		{
 			Offset1 = (uint16_t)isrAddress;
 			SegmentSelector.Value = 0;
 			SegmentSelector.PrivilegeLevel = KernelDPL;
-			SegmentSelector.Index = GDT_KERNEL_CODE;
+			SegmentSelector.Index = static_cast<uint16_t>(GDT::KernelCode);
 			InterruptStackTable = stack;
 			Zeros = 0;
 			Type = type;
@@ -213,12 +230,12 @@ private:
 			Reserved = 0;
 		}
 
-		_IDT_GATE(uint64_t isrAddress, uint16_t stack, IDT_GATE_TYPE type, uint16_t priv)
+		IDT_GATE(uint64_t isrAddress, uint16_t stack, IDT_GATE_TYPE type, uint16_t priv)
 		{
 			Offset1 = (uint16_t)isrAddress;
 			SegmentSelector.Value = 0;
 			SegmentSelector.PrivilegeLevel = KernelDPL;
-			SegmentSelector.Index = GDT_KERNEL_CODE;
+			SegmentSelector.Index = static_cast<uint16_t>(GDT::KernelCode);
 			InterruptStackTable = stack;
 			Zeros = 0;
 			Type = type;
@@ -229,19 +246,19 @@ private:
 			Offset3 = (uint32_t)(isrAddress >> 32);
 			Reserved = 0;
 		}
-	} IDT_GATE, * PIDT_GATE;
+	};
 	static_assert(sizeof(IDT_GATE) == 16, "Size mismatch, only 64-bit supported.");
 
 	// Intel SDM Vol 3A Figure 3-11
-	typedef struct _DESCRIPTOR_TABLE
+	struct DESCRIPTOR_TABLE
 	{
 		uint16_t Limit;
 		uint64_t BaseAddress;
-	} DESCRIPTOR_TABLE, * PDESCRIPTOR_TABLE;
+	};
 	static_assert(sizeof(DESCRIPTOR_TABLE) == 10, "Size mismatch, only 64-bit supported.");
 
 	//Modern kernel has 5 GDTs (first has to be empty, plus 2x user and 2x kernel), plus the last entry is actually a TSS entry, mandatory.
-	typedef struct _KERNEL_GDTS
+	struct KERNEL_GDTS
 	{
 		SEGMENT_DESCRIPTOR Empty;
 		SEGMENT_DESCRIPTOR KernelCode;
@@ -250,7 +267,7 @@ private:
 		SEGMENT_DESCRIPTOR UserData;
 		SEGMENT_DESCRIPTOR UserCode;
 		TSS_LDT_ENTRY TssEntry;
-	} KERNEL_GDTS, * PKERNEL_GDTS;
+	};
 
 	struct IA32_FMASK_REG
 	{

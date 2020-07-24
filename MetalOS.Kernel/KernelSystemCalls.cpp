@@ -21,7 +21,7 @@ size_t Kernel::GetTickCount()
 	return (tsc * 100) / 1000000;
 }
 
-void Kernel::Sleep(uint32_t milliseconds)
+void Kernel::Sleep(const uint32_t milliseconds)
 {
 	if (!milliseconds)
 		return;
@@ -29,10 +29,19 @@ void Kernel::Sleep(uint32_t milliseconds)
 	KernelThreadSleep((nano_t)milliseconds * 1000 * 1000);
 }
 
-SystemCallResult Kernel::ExitProcess(uint32_t exitCode)
+SystemCallResult Kernel::ExitProcess(const uint32_t exitCode)
 {
 	UserProcess& process = m_scheduler->GetCurrentProcess();
+	process.Delete = true;
 	Print("Process: %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
+	m_scheduler->KillThread();
+	return SystemCallResult::Success;
+}
+
+SystemCallResult Kernel::ExitThread(const uint32_t exitCode)
+{
+	UserProcess& process = m_scheduler->GetCurrentProcess();
+	Print("Thread of %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
 	m_scheduler->KillThread();
 	return SystemCallResult::Success;
 }
@@ -61,7 +70,7 @@ SystemCallResult Kernel::CreateWindow(const char* name)
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::GetWindowRect(Handle handle, Rectangle* rect)
+SystemCallResult Kernel::GetWindowRect(const Handle handle, Rectangle* rect)
 {
 	if (!rect)
 		return SystemCallResult::Failed;
@@ -110,6 +119,13 @@ SystemCallResult Kernel::SetScreenBuffer(void* buffer)
 	if (!buffer)
 		return SystemCallResult::Failed;
 
+	//Display time
+	/*
+	EFI_TIME time = { 0 };
+	m_runtime.GetTime(&time, nullptr);
+	Print("  Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+	*/
+
 	const size_t size = (size_t)m_display->GetHeight() * m_display->GetWidth();
 	//Printf("D: 0x%016x, S: 0x%016x\n", (void*)m_display->Buffer(), buffer);
 	memcpy((void*)m_display->Buffer(), buffer, sizeof(Color) * size);
@@ -117,7 +133,7 @@ SystemCallResult Kernel::SetScreenBuffer(void* buffer)
 	return SystemCallResult::Success;
 }
 
-Handle Kernel::CreateFile(const char* name, GenericAccess access)
+Handle Kernel::CreateFile(const char* name, const GenericAccess access)
 {
 	if (!name)
 		return nullptr;
@@ -127,7 +143,7 @@ Handle Kernel::CreateFile(const char* name, GenericAccess access)
 	return this->CreateFile(std::string(name), access);
 }
 
-SystemCallResult Kernel::ReadFile(Handle* handle, void* buffer, size_t bufferSize, size_t* bytesRead)
+SystemCallResult Kernel::ReadFile(const Handle handle, void* buffer, const size_t bufferSize, size_t* bytesRead)
 {
 	if (!handle || !buffer || !bufferSize)
 		return SystemCallResult::Failed;
@@ -138,14 +154,14 @@ SystemCallResult Kernel::ReadFile(Handle* handle, void* buffer, size_t bufferSiz
 	return result ? SystemCallResult::Success : SystemCallResult::Failed;
 }
 
-SystemCallResult Kernel::WriteFile(Handle hFile, const void* lpBuffer, size_t bufferSize, size_t* bytesWritten)
+SystemCallResult Kernel::WriteFile(const Handle handle, const void* lpBuffer, size_t bufferSize, size_t* bytesWritten)
 {
 	//Not implemented
 	Assert(false);
 	SystemCallResult::Failed;
 }
 
-SystemCallResult Kernel::SetFilePointer(Handle* handle, __int64 position, FilePointerMove moveType, size_t* newPosition)
+SystemCallResult Kernel::SetFilePointer(const Handle handle, const __int64 position, const FilePointerMove moveType, size_t* newPosition)
 {
 	if (!handle)
 		return SystemCallResult::Failed;
@@ -182,7 +198,7 @@ SystemCallResult Kernel::SetFilePointer(Handle* handle, __int64 position, FilePo
 	return SystemCallResult::Failed;
 }
 
-SystemCallResult Kernel::CloseFile(Handle* handle)
+SystemCallResult Kernel::CloseFile(const Handle handle)
 {
 	if (!handle)
 		return SystemCallResult::Failed;
@@ -191,7 +207,7 @@ SystemCallResult Kernel::CloseFile(Handle* handle)
 	return SystemCallResult::Success;
 }
 
-size_t Kernel::MoveFile(const char* existingFileName, const char* newFileName)
+SystemCallResult Kernel::MoveFile(const char* existingFileName, const char* newFileName)
 {
 	Assert(false);
 	SystemCallResult::Failed;
@@ -209,7 +225,7 @@ SystemCallResult Kernel::CreateDirectory(const char* path)
 	SystemCallResult::Failed;
 }
 
-void* Kernel::VirtualAlloc(void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect)
+void* Kernel::VirtualAlloc(const void* address, const size_t size, const MemoryAllocationType allocationType, const MemoryProtection protect)
 {
 	if (!size)
 		return nullptr;

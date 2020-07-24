@@ -34,6 +34,7 @@ See also: [Loader Params](inc/LoaderParams.h)
 TODO
 
 Quick Notes:
+* UEFI Runtime is mapped into Kernel addressspace, allowing runtime services to be called
 * Each process has at least one thread
 * Each user thread also contains a kernel thread for when executing Kernel code (interrupt handler, systemcall)
 

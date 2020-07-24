@@ -103,14 +103,17 @@ void FireScreen::SpreadFire(Point2D point)
 void FireScreen::Draw()
 {
 	//Populate graphics buffer based on indexes
-	for (size_t x = 0; x < m_buffer.GetWidth(); x++)
-		for (size_t y = 0; y < m_buffer.GetHeight(); y++)
+	for (size_t x = 0; x < m_indexes.GetWidth(); x++)
+		for (size_t y = 0; y < m_indexes.GetHeight(); y++)
 		{
-			//Get index based on scaled pixel size
-			const Point2D scaled = { x / PixelSize, y / PixelSize };
-			const uint8_t index = m_indexes.Get(scaled);
+			const uint8_t index = m_indexes.Get({ x, y });
 			const Color c = FireColors[index];
 
-			m_buffer.Set({ x, y }, c);
+			//Set region scaled up
+			for (size_t i = 0; i < PixelSize; i++)
+				for (size_t j = 0; j < PixelSize; j++)
+				{
+					m_buffer.Set({ x * PixelSize + i, y * PixelSize + j }, c);
+				}
 		}
 }

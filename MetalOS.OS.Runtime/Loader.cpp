@@ -42,7 +42,7 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 
 	//Dos header
 	IMAGE_DOS_HEADER dosHeader;
-	ReturnNullIfNot(ReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
+	RetNullIfFailed(ReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
 	ReturnNullIfNot(read == sizeof(IMAGE_DOS_HEADER));
 	ReturnNullIfNot(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 

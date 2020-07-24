@@ -105,12 +105,6 @@ x64_ltr proc
 	ret
 x64_ltr endp
 
-x64_rflags proc
-	pushfq
-	pop rax
-	ret
-x64_rflags endp
-
 x64_sti proc
 	sti
 	ret
@@ -125,12 +119,6 @@ x64_swapgs proc
 	swapgs
 	ret
 x64_swapgs endp
-
-; x64_sysret(uint64_t value)
-x64_sysret PROC
-	mov rax, rcx
-	sysretq
-x64_sysret ENDP
 
 ; mov's into CS isn't allowed. Therefore
 ; https://stackoverflow.com/questions/34264752/change-gdt-and-update-cs-while-in-long-mode
@@ -161,39 +149,6 @@ x64_ReadCS PROC
 	ret
 x64_ReadCS ENDP
 
-; DS RW
-x64_ReadDS PROC
-	mov ax, ds
-	ret
-x64_ReadDS ENDP
-
-x64_WriteDS PROC
-	mov ds, cx
-	ret
-x64_WriteDS ENDP
-
-; ES RW
-x64_ReadES PROC
-	mov ax, es
-	ret
-x64_ReadES ENDP
-
-x64_WriteES PROC
-	mov es, cx
-	ret
-x64_WriteES ENDP
-
-; FS RW
-x64_ReadFS PROC
-	mov ax, fs
-	ret
-x64_ReadFS ENDP
-
-x64_WriteFS PROC
-	mov fs, cx
-	ret
-x64_WriteFS ENDP
-
 ; GS RW
 x64_ReadGS PROC
 	mov ax, gs
@@ -210,40 +165,6 @@ x64_ReadSS PROC
 	mov ax, ss
 	ret
 x64_ReadSS ENDP
-
-x64_WriteSS PROC
-	mov ss, cx
-	ret
-x64_WriteSS ENDP
-
-x64_GPR_RW MACRO name
-x64_Read&name& PROC
-	mov rax, name
-	ret
-x64_Read&name& ENDP
-
-x64_Write&name& PROC
-	mov name, rcx
-	ret
-x64_Write&name& ENDP
-ENDM
-
-x64_GPR_RW <Rax>
-x64_GPR_RW <Rcx>
-x64_GPR_RW <Rdx>
-x64_GPR_RW <Rbx>
-x64_GPR_RW <Rsi>
-x64_GPR_RW <Rdi>
-x64_GPR_RW <Rsp>
-x64_GPR_RW <Rbp>
-x64_GPR_RW <R8>
-x64_GPR_RW <R9>
-x64_GPR_RW <R10>
-x64_GPR_RW <R11>
-x64_GPR_RW <R12>
-x64_GPR_RW <R13>
-x64_GPR_RW <R14>
-x64_GPR_RW <R15>
 
 x64_disable_interrupts PROC
 	pushfq

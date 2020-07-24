@@ -6,7 +6,7 @@
 FILE* fopen(char const* _FileName, char const* _Mode)
 {
 	//inspect mode
-	return CreateFile(_FileName, Read);
+	return CreateFile(_FileName, GenericAccess::Read);
 }
 
 size_t fread(void* _Buffer, size_t _ElementSize, size_t _ElementCount, FILE* _Stream)
@@ -16,7 +16,7 @@ size_t fread(void* _Buffer, size_t _ElementSize, size_t _ElementCount, FILE* _St
 	
 	size_t bytes;
 	SystemCallResult result = (SystemCallResult)ReadFile(_Stream, _Buffer, _ElementSize * _ElementCount, &bytes);
-	Assert(result == Success);
+	Assert(result == SystemCallResult::Success);
 
 	return bytes / _ElementSize;
 }
@@ -28,7 +28,7 @@ LIBRARY size_t fwrite(void const* _Buffer, size_t _ElementSize, size_t _ElementC
 
 	size_t bytes;
 	SystemCallResult result = (SystemCallResult)WriteFile(_Stream, _Buffer, _ElementSize * _ElementCount, &bytes);
-	Assert(result == Success);
+	Assert(result == SystemCallResult::Success);
 
 	return bytes / _ElementSize;
 }
@@ -39,15 +39,15 @@ int fseek(FILE* _Stream, long _Offset, int _Origin)
 	switch (_Origin)
 	{
 	case SEEK_SET:
-		move = Begin;
+		move = FilePointerMove::Begin;
 		break;
 
 	case SEEK_CUR:
-		move = Current;
+		move = FilePointerMove::Current;
 		break;
 
 	case SEEK_END:
-		move = End;
+		move = FilePointerMove::End;
 		break;
 
 	default:
@@ -67,7 +67,7 @@ LIBRARY int ftell(FILE* _Stream)
 
 int fclose(FILE* _Stream)
 {
-	return CloseFile(_Stream);
+	return static_cast<int>(CloseFile(_Stream));
 }
 
 //TODO: make this real, it just prints to debug stream
@@ -87,10 +87,10 @@ int fprintf(FILE* const _Stream, char const* const _Format, ...)
 
 int rename(char const* _OldFileName, char const* _NewFileName)
 {
-	return MoveFile(_OldFileName, _NewFileName);
+	return static_cast<int>(MoveFile(_OldFileName, _NewFileName));
 }
 
 int remove(char const* _FileName)
 {
-	return DeleteFile(_FileName);
+	return static_cast<int>(DeleteFile(_FileName));
 }

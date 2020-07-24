@@ -152,32 +152,33 @@ public:
 #pragma endregion
 
 	void CreateKernelThread(ThreadStart start, void* arg);
+	void ExitKernelThread();
 	uint64_t Syscall(SystemcallFrame* frame);
 
 #pragma region System Calls
-	SystemCallResult GetSystemInfo(struct SystemInfo* info);
+	SystemCallResult GetSystemInfo(SystemInfo* info);
 	size_t GetTickCount();
 
-	void Sleep(uint32_t milliseconds);
-	SystemCallResult ExitProcess(uint32_t exitCode);
-	SystemCallResult ExitThread(uint32_t exitCode);
+	void Sleep(const uint32_t milliseconds);
+	SystemCallResult ExitProcess(const uint32_t exitCode);
+	SystemCallResult ExitThread(const uint32_t exitCode);
 
 	SystemCallResult CreateWindow(const char* name);
-	SystemCallResult GetWindowRect(Handle handle, Rectangle* rect);
-	SystemCallResult GetMessage(struct Message* message);
-	SystemCallResult PeekMessage(struct Message* message);
+	SystemCallResult GetWindowRect(const Handle handle, Rectangle* rect);
+	SystemCallResult GetMessage(Message* message);
+	SystemCallResult PeekMessage(Message* message);
 	SystemCallResult SetScreenBuffer(void* buffer);
 
-	Handle CreateFile(const char* name, GenericAccess access);
-	SystemCallResult ReadFile(Handle* handle, void* buffer, size_t bufferSize, size_t* bytesRead);
-	SystemCallResult WriteFile(Handle hFile, const void* lpBuffer, size_t bufferSize, size_t* bytesWritten);
-	SystemCallResult SetFilePointer(Handle* handle, __int64 position, enum FilePointerMove moveType, size_t* newPosition);
-	SystemCallResult CloseFile(Handle* handle);
-	size_t MoveFile(const char* existingFileName, const char* newFileName);
+	Handle CreateFile(const char* name, const GenericAccess access);
+	SystemCallResult ReadFile(const Handle handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
+	SystemCallResult WriteFile(const Handle handle, const void* lpBuffer, const size_t bufferSize, size_t* bytesWritten);
+	SystemCallResult SetFilePointer(const Handle handle, const __int64 position, const FilePointerMove moveType, size_t* newPosition);
+	SystemCallResult CloseFile(const Handle handle);
+	SystemCallResult MoveFile(const char* existingFileName, const char* newFileName);
 	SystemCallResult DeleteFile(const char* fileName);
 	SystemCallResult CreateDirectory(const char* path);
 
-	void* VirtualAlloc(void* address, size_t size, enum MemoryAllocationType allocationType, enum MemoryProtection protect);
+	void* VirtualAlloc(const void* address, const size_t size, const MemoryAllocationType allocationType, const MemoryProtection protect);
 
 	SystemCallResult DebugPrint(char* s);
 #pragma endregion

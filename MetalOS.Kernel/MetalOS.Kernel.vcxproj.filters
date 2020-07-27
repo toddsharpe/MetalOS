@@ -81,16 +81,7 @@
     <ClCompile Include="LoadingScreen.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Colors.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RtcDriver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="msvc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ProcessorDriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Cpuid.cpp">
@@ -103,9 +94,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="HyperV.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="IoApicDriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PhysicalMemoryManager.cpp">
@@ -269,16 +257,7 @@
     <ClInclude Include="LoadingScreen.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Colors.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RtcDriver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="msvc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ProcessorDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Cpuid.h">
@@ -288,9 +267,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HyperV.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IoApicDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PhysicalMemoryManager.h">
@@ -390,6 +366,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="UserWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="x64_KThreadGate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

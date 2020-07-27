@@ -53,22 +53,22 @@ Result HyperVMouseDriver::Initialize()
 	this->m_channel.SendPacket(&ack, sizeof(struct pipe_prt_msg) - sizeof(unsigned char) + sizeof(struct synthhid_device_info_ack),
 		(unsigned long)&ack, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 
-	return Result::ResultSuccess;
+	return Result::Success;
 }
 
 Result HyperVMouseDriver::Read(const char* buffer, size_t length)
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result HyperVMouseDriver::Write(const char* buffer, size_t length)
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result HyperVMouseDriver::EnumerateChildren()
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 void HyperVMouseDriver::OnCallback()

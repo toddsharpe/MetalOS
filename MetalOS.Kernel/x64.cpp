@@ -35,9 +35,6 @@ void x64::PrintGDT()
 	Print("GDT[5] = 0x%016x\n", *(uint64_t*)&KernelGDT.UserCode);
 }
 
-extern "C" void syscall();
-extern "C" UINT64 SYSCALL_STACK_STOP;
-
 void x64::Initialize()
 {
 	//Load new segments
@@ -72,10 +69,10 @@ void x64::Initialize()
 }
 
 // "Known good stacks" Intel SDM Vol 3A 6.14.5
-volatile uint8_t x64::DOUBLEFAULT_STACK[IST_STACK_SIZE] = { 0 };
-volatile uint8_t x64::NMI_Stack[IST_STACK_SIZE] = { 0 };
-volatile uint8_t x64::DEBUG_STACK[IST_STACK_SIZE] = { 0 };
-volatile uint8_t x64::MCE_STACK[IST_STACK_SIZE] = { 0 };
+volatile uint8_t x64::DOUBLEFAULT_STACK[IstStackSize] = { 0 };
+volatile uint8_t x64::NMI_Stack[IstStackSize] = { 0 };
+volatile uint8_t x64::DEBUG_STACK[IstStackSize] = { 0 };
+volatile uint8_t x64::MCE_STACK[IstStackSize] = { 0 };
 
 //Kernel Structures
 volatile x64::TASK_STATE_SEGMENT_64 x64::TSS64 =
@@ -85,10 +82,10 @@ volatile x64::TASK_STATE_SEGMENT_64 x64::TSS64 =
 	0, 0, //RSP 1 low/high
 	0, 0, //RSP 2 low/high
 	0, 0, //Reserved
-	QWordLow(DOUBLEFAULT_STACK + IST_STACK_SIZE), QWordHigh(DOUBLEFAULT_STACK + IST_STACK_SIZE), //IST1
-	QWordLow(NMI_Stack + IST_STACK_SIZE), QWordHigh(NMI_Stack + IST_STACK_SIZE), //IST2
-	QWordLow(DEBUG_STACK + IST_STACK_SIZE), QWordHigh(DEBUG_STACK + IST_STACK_SIZE), //IST3
-	QWordLow(MCE_STACK + IST_STACK_SIZE), QWordHigh(MCE_STACK + IST_STACK_SIZE), //IST4
+	QWordLow(DOUBLEFAULT_STACK + IstStackSize), QWordHigh(DOUBLEFAULT_STACK + IstStackSize), //IST1
+	QWordLow(NMI_Stack + IstStackSize), QWordHigh(NMI_Stack + IstStackSize), //IST2
+	QWordLow(DEBUG_STACK + IstStackSize), QWordHigh(DEBUG_STACK + IstStackSize), //IST3
+	QWordLow(MCE_STACK + IstStackSize), QWordHigh(MCE_STACK + IstStackSize), //IST4
 	0, 0, //IST5
 	0, 0, //IST6
 	0, 0, //IST7
@@ -121,7 +118,7 @@ volatile x64::KERNEL_GDTS x64::KernelGDT =
 //ss = starhigh + 1
 //
 
-volatile x64::IDT_GATE x64::IDT[IDT_COUNT] =
+volatile x64::IDT_GATE x64::IDT[IdtCount] =
 {
 	IDT_GATE((uint64_t)& ISR_HANDLER(0)),
 	IDT_GATE((uint64_t)& ISR_HANDLER(1)),

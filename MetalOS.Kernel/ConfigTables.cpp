@@ -2,22 +2,15 @@
 #include "Main.h"
 
 ConfigTables::ConfigTables(EFI_CONFIGURATION_TABLE* ConfigurationTables, UINTN NumConfigTables) :
-	m_tables(new EFI_CONFIGURATION_TABLE[NumConfigTables]), m_count(NumConfigTables)
+	m_tables(new EFI_CONFIGURATION_TABLE[NumConfigTables]),
+	m_count(NumConfigTables)
 {
 	Assert(m_tables != nullptr);
 
 	memcpy(m_tables, ConfigurationTables, NumConfigTables * sizeof(EFI_CONFIGURATION_TABLE));
 }
 
-//void ConfigTables::UpdateTableAddresses(const MemoryMap& memoryMap)
-//{
-//	for (UINT32 i = 0; i < m_count; i++)
-//	{
-//		m_tables[i].VendorTable = (void*)memoryMap.GetVirtualAddress((UINTN)m_tables[i].VendorTable);
-//	}
-//}
-
-void* ConfigTables::GetAcpiTable()
+void* ConfigTables::GetAcpiTable() const
 {
 	void* table = nullptr;
 	EFI_GUID guid = ACPI_20_TABLE_GUID;
@@ -26,7 +19,7 @@ void* ConfigTables::GetAcpiTable()
 	return table;
 }
 
-bool ConfigTables::GetTableByGuid(const EFI_GUID* guid, void** vendorTable)
+bool ConfigTables::GetTableByGuid(const EFI_GUID* guid, void** vendorTable) const
 {
 	for (UINT32 i = 0; i < m_count; i++)
 	{
@@ -40,7 +33,7 @@ bool ConfigTables::GetTableByGuid(const EFI_GUID* guid, void** vendorTable)
 	return false;
 }
 
-void ConfigTables::Dump()
+void ConfigTables::Dump() const
 {
 	for (UINT32 i = 0; i < m_count; i++)
 	{

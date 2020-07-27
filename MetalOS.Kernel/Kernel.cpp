@@ -14,8 +14,6 @@ typedef EFI_GUID GUID;
 #include "UartDriver.h"
 #include "RuntimeSupport.h"
 #include "LoadingScreen.h"
-#include "RtcDriver.h"
-#include "ProcessorDriver.h"
 #include "HyperVTimer.h"
 #include "HyperV.h"
 #include "KernelHeap.h"
@@ -27,9 +25,7 @@ typedef EFI_GUID GUID;
 #include "Loader.h"
 #include <string>
 #include "KThread.h"
-
-const Color Red = { 0x00, 0x00, 0xFF, 0x00 };
-const Color Black = { 0x00, 0x00, 0x00, 0x00 };
+#include "x64_KThreadGate.h"
 
 Kernel::Kernel() :
 	m_physicalAddress(),
@@ -88,7 +84,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Initialize Display
 	m_display = new Display(params->Display, KernelGraphicsDeviceAddress);
-	m_display->ColorScreen(Black);
+	m_display->ColorScreen(Colors::Black);
 	m_textScreen = new TextScreen(*m_display);
 	m_printer = m_textScreen;
 
@@ -97,7 +93,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_memoryMap->ReclaimBootPages();
 	m_memoryMap->MergeConventionalPages();
 
-	//UEFI configuration tables
+	//UEFI configuration tables (saves them to boot heap)
 	m_configTables = new ConfigTables(params->ConfigTables, params->ConfigTableSizes);
 
 	//Initialize page table pool
@@ -272,7 +268,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
 	//Swap to kernel thread info
 	cpu_flags_t flags = x64_disable_interrupts();
-	x64_swapgs();
+	x64_KThreadGate gate;
 	
 	if (vector == InterruptVector::DoubleFault)
 	{
@@ -290,7 +286,6 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	{
 		InterruptContext ctx = it->second;
 		ctx.Handler(ctx.Context);
-		x64_swapgs();
 		x64_restore_flags(flags);
 		return;
 	}
@@ -304,7 +299,6 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	//Let debug continue (we use this to check ISRs on bootup)
 	case InterruptVector::Breakpoint:
 		m_textScreen->Printf("  Debug Breakpoint Exception\n");
-		x64_swapgs();
 		x64_restore_flags(flags);
 		return;
 	case InterruptVector::PageFault:
@@ -494,11 +488,8 @@ void Kernel::InitializeAcpi()
 
 void Kernel::OnTimer0()
 {
-	cpu_flags_t flags = x64_disable_interrupts();
-	HyperV::EOI();
-
 	m_scheduler->Schedule();
-	x64_restore_flags(flags);
+	HyperV::EOI();
 }
 
 void Kernel::CreateKernelThread(ThreadStart start, void* arg)
@@ -833,115 +824,76 @@ void* Kernel::VirtualAlloc(UserProcess& process, void* address, size_t size, Mem
 	return allocated;
 }
 
-static_assert(sizeof(size_t) == sizeof(uint64_t), "Not x64");
-uint64_t Kernel::Syscall(SystemcallFrame* frame)
+uint64_t Kernel::Syscall(SystemCallFrame* frame)
 {
-	//Print("Call: 0x%016x UserIP: 0x%016x\n", frame->SystemCall, frame->UserIP);
-	//Print("  Arg0: 0x%016x Arg1: 0x%016x Arg2: 0x%016x Arg3: 0x%016x\n", frame->Arg0, frame->Arg1, frame->Arg2, frame->Arg3);
-	
-	//Swap to kernel TEB
-	//TODO: use constructor/destructor to do this swap?
-	x64_swapgs();
-
-	//Show thread
-	//KThread* current = m_scheduler->GetCurrentThread();
-	//current->Display();
-
-	uint64_t ret = -1;
-	//Do systemcall
 	switch (frame->SystemCall)
 	{
 	case SystemCall::GetSystemInfo:
-		ret = (uint64_t)GetSystemInfo((SystemInfo*)frame->Arg0);
-		break;
+		return (uint64_t)GetSystemInfo((SystemInfo*)frame->Arg0);
 
 	case SystemCall::GetTickCount:
-		ret = GetTickCount();
-		break;
+		return GetTickCount();
 
 	case SystemCall::Sleep:
 		Sleep((uint32_t)frame->Arg0);
-		break;
+		return 0;
 
 	case SystemCall::ExitProcess:
-		ret = (uint64_t)ExitProcess(frame->Arg0);
-		break;
+		return (uint64_t)ExitProcess(frame->Arg0);
 
 	case SystemCall::ExitThread:
-		ret = (uint64_t)ExitThread(frame->Arg0);
-		break;
+		return (uint64_t)ExitThread(frame->Arg0);
 
 	case SystemCall::CreateWindow:
-		ret = (uint64_t)CreateWindow((char*)frame->Arg0);
-		break;
+		return (uint64_t)CreateWindow((char*)frame->Arg0);
 
 	case SystemCall::GetWindowRect:
-		ret = (uint64_t)GetWindowRect((Handle)frame->Arg0, (Rectangle*)frame->Arg1);
-		break;
+		return (uint64_t)GetWindowRect((Handle)frame->Arg0, (Rectangle*)frame->Arg1);
 
 	case SystemCall::GetMessage:
-		ret = (uint64_t)GetMessage((Message*)frame->Arg0);
-		break;
+		return (uint64_t)GetMessage((Message*)frame->Arg0);
 
 	case SystemCall::PeekMessage:
-		ret = (uint64_t)PeekMessage((Message*)frame->Arg0);
-		break;
+		return (uint64_t)PeekMessage((Message*)frame->Arg0);
 
 	case SystemCall::SetScreenBuffer:
-		ret = (uint64_t)SetScreenBuffer((void*)frame->Arg0);
-		break;
+		return (uint64_t)SetScreenBuffer((void*)frame->Arg0);
 
 	case SystemCall::CreateFile:
-		ret = (uintptr_t)CreateFile((char*)frame->Arg0, (GenericAccess)frame->Arg1);
-		break;
+		return (uintptr_t)CreateFile((char*)frame->Arg0, (GenericAccess)frame->Arg1);
 
 	case SystemCall::ReadFile:
-		ret = (uint64_t)ReadFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
-		break;
+		return (uint64_t)ReadFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
 
 	case SystemCall::WriteFile:
-		ret = (uint64_t)WriteFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
-		break;
+		return (uint64_t)WriteFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
 
 	case SystemCall::SetFilePointer:
-		ret = (uint64_t)SetFilePointer((Handle*)frame->Arg0, (__int64)frame->Arg1, (FilePointerMove)frame->Arg2, (size_t*)frame->Arg3);
-		break;
+		return (uint64_t)SetFilePointer((Handle*)frame->Arg0, (__int64)frame->Arg1, (FilePointerMove)frame->Arg2, (size_t*)frame->Arg3);
 
 	case SystemCall::CloseFile:
-		ret = (uint64_t)CloseFile((Handle*)frame->Arg0);
-		break;
+		return (uint64_t)CloseFile((Handle*)frame->Arg0);
 
 	case SystemCall::MoveFile:
-		ret = (uint64_t)MoveFile((char*)frame->Arg0, (char*)frame->Arg0);
-		break;
+		return (uint64_t)MoveFile((char*)frame->Arg0, (char*)frame->Arg0);
 
 	case SystemCall::DeleteFile:
-		ret = (uint64_t)DeleteFile((char*)frame->Arg0);
-		break;
+		return (uint64_t)DeleteFile((char*)frame->Arg0);
 
 	case SystemCall::CreateDirectory:
-		ret = (uint64_t)CreateDirectory((char*)frame->Arg0);
-		break;
+		return (uint64_t)CreateDirectory((char*)frame->Arg0);
 
 	case SystemCall::VirtualAlloc:
-		ret = (uintptr_t)VirtualAlloc((void*)frame->Arg0, (size_t)frame->Arg1, (MemoryAllocationType)frame->Arg2, (MemoryProtection)frame->Arg3);
-		break;
+		return (uintptr_t)VirtualAlloc((void*)frame->Arg0, (size_t)frame->Arg1, (MemoryAllocationType)frame->Arg2, (MemoryProtection)frame->Arg3);
 
 	case SystemCall::DebugPrint:
-		ret = (uint64_t)DebugPrint((char*)frame->Arg0);
-		break;
+		return (uint64_t)DebugPrint((char*)frame->Arg0);
 
 	default:
 		Print("SystemCall: 0x%x\n", frame->SystemCall);
 		Assert(false);
-		break;
+		return -1;
 	}
-	//Print("Return: 0x%016x\n", ret);
-
-	//Swap back to user TEB
-	x64_swapgs();
-
-	return ret;
 }
 
 void Kernel::PostMessage(Message* msg)

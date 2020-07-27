@@ -20,11 +20,6 @@ public:
 	const void* GetResource(uint32_t type) const override;
 	void DisplayDetails() const override;
 
-	const ACPI_HANDLE GetHandle() const
-	{
-		return m_acpiObject;
-	}
-
 private:
 	static ACPI_STATUS AttachResource(ACPI_RESOURCE* Resource, void* Context);
 	static ACPI_STATUS DisplayResource(const ACPI_RESOURCE& Resource);

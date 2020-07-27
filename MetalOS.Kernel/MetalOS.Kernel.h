@@ -50,7 +50,7 @@ typedef struct
 	uint64_t SS;
 } INTERRUPT_FRAME, * PINTERRUPT_FRAME;
 
-struct SystemcallFrame
+struct SystemCallFrame
 {
 	SystemCall SystemCall;
 	uint64_t UserIP;
@@ -91,21 +91,8 @@ struct SystemcallFrame
 #define ISR_HANDLER(x) x64_interrupt_handler_ ## x
 #define DEF_ISR_HANDLER(x) void ISR_HANDLER(x) ## ()
 
-#define KERNEL_STACK_SIZE (1 << 20)
-#define SYSCALL_STACK_SIZE (1 << 12)
-#define BOOT_HEAP_SIZE (4 * EFI_PAGE_SIZE) //4KB Boot heap
-
-#define IDT_COUNT 256
-#define IST_STACK_SIZE (1 << 12)
-#define IST_DOUBLEFAULT_IDX 1
-#define IST_NMI_IDX 2
-#define IST_DEBUG_IDX 3
-#define IST_MCE_IDX 4
-
 #define QWordHigh(x) (((uint64_t)x) >> 32)
 #define QWordLow(x) ((uint32_t)((uint64_t)x))
-
-#define PLACEHOLDER 0
 
 #define KERNEL_GLOBAL_ALIGN __declspec(align(64))
 #define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
@@ -113,16 +100,6 @@ struct SystemcallFrame
 typedef size_t cpu_flags_t;
 typedef uint64_t nano_t;//Time in nanoseconds
 typedef uint64_t nano100_t;//Time in 100 nanoseconds
-
-class VirtualAddressSpace;
-
-template <class T>
-class Node
-{
-	T Data;
-	Node* Next;
-	Node* Previous;
-};
 
 enum class ThreadState
 {
@@ -167,12 +144,6 @@ enum class InterruptVector : uint8_t
 	Timer0 = 0x80,
 	HypervisorVmBus = 0x90,
 
-};
-
-enum InterruptSubsystemType
-{
-	Native, //Platform interrupts (intel x64, etc)
-	Irq
 };
 
 typedef void (*InterruptHandler)(void* arg);
@@ -430,11 +401,11 @@ enum UnwindHandlerType
 	UNW_FLAG_CHAININFO = 4
 };
 
-enum Result
+enum class Result
 {
-	ResultSuccess,
-	ResultFailed,
-	ResultNotImplemented
+	Success,
+	Failed,
+	NotImplemented
 };
 
 #define AlignSize(x,a) (((x) + ((a) - 1)) & ~((a)-1))

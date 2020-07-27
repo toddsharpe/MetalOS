@@ -3,9 +3,6 @@
 #include "MetalOS.Kernel.h"
 #include "UserThread.h"
 
-/// <summary>
-/// Kernel thread implementation.
-/// </summary>
 class KThread
 {
 public:

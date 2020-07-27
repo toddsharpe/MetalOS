@@ -22,6 +22,13 @@ public:
 	static void PrintGDT();
 
 private:
+	static constexpr size_t IdtCount = 256;
+	static constexpr size_t IstStackSize = (1 << 12);//4k Stack
+#define IST_DOUBLEFAULT_IDX 1
+#define IST_NMI_IDX 2
+#define IST_DEBUG_IDX 3
+#define IST_MCE_IDX 4
+
 	enum class MSR : uint32_t
 	{
 		IA32_FS_BASE = 0xC0000100,
@@ -297,14 +304,14 @@ private:
 	};
 #pragma pack(pop)
 
-	KERNEL_PAGE_ALIGN static volatile uint8_t DOUBLEFAULT_STACK[IST_STACK_SIZE];
-	KERNEL_PAGE_ALIGN static volatile uint8_t NMI_Stack[IST_STACK_SIZE];
-	KERNEL_PAGE_ALIGN static volatile uint8_t DEBUG_STACK[IST_STACK_SIZE];
-	KERNEL_PAGE_ALIGN static volatile uint8_t MCE_STACK[IST_STACK_SIZE];
+	KERNEL_PAGE_ALIGN static volatile uint8_t DOUBLEFAULT_STACK[];
+	KERNEL_PAGE_ALIGN static volatile uint8_t NMI_Stack[];
+	KERNEL_PAGE_ALIGN static volatile uint8_t DEBUG_STACK[];
+	KERNEL_PAGE_ALIGN static volatile uint8_t MCE_STACK[];
 
 	KERNEL_GLOBAL_ALIGN static volatile TASK_STATE_SEGMENT_64 TSS64;
 	KERNEL_GLOBAL_ALIGN static volatile KERNEL_GDTS KernelGDT;
-	KERNEL_GLOBAL_ALIGN static volatile IDT_GATE IDT[IDT_COUNT];
+	KERNEL_GLOBAL_ALIGN static volatile IDT_GATE IDT[IdtCount];
 
 	//Aligned on word boundary so address load is on correct boundary
 	__declspec(align(2)) static DESCRIPTOR_TABLE GDTR;

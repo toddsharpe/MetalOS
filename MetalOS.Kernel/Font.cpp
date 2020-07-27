@@ -2,7 +2,7 @@
 
 #include "Main.h"
 
-const char* Font::GetCharacterMap(char c)
+const char* Font::GetCharacterMap(char c) const
 {
 	Assert(c <= 0x7F);
 	

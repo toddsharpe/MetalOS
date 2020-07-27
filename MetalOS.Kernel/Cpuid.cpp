@@ -17,8 +17,7 @@ Cpuid::Cpuid()
 
 	//CPUID 0
 	__cpuid(registers, 0);
-
-	m_highestFunction = (uint32_t)registers[EAX];
+	uint32_t highestFunction = (uint32_t)registers[EAX];
 
 	char vendor[13] = { 0 };
 	*((uint32_t*)vendor) = (uint32_t)registers[EBX];
@@ -31,9 +30,4 @@ Cpuid::Cpuid()
 	//CPUID 1
 	__cpuid(registers, 1);
 	m_func1Ecx = (uint32_t)registers[ECX];
-	m_func1Edx = (uint32_t)registers[EDX];
-
-	//CPUID Extended Functions
-	__cpuid(registers, 0x80000000);
-	m_highestExtendedFunction = (uint32_t)registers[EAX];
 }

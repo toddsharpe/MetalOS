@@ -32,12 +32,8 @@ ENDM
 .code
 
 x64_SYSTEMCALL PROC
-	; Push context
-	push RSP
-
-	; Push frame
-	PROLOG
-	PUSH_SYSTEMCALL_FRAME
+	swapgs ; Swap to KThread
+	PUSH_SYSTEMCALL_FRAME ; Push frame
 	
 	; Save pointer for arg
 	mov rcx, rsp
@@ -48,10 +44,7 @@ x64_SYSTEMCALL PROC
 
 	; Restore frame
 	POP_SYSTEMCALL_FRAME
-	EPILOG
-
-	; Restore context
-	pop RSP
+	swapgs ; Swap back to UserThread
 	sysretq
 x64_SYSTEMCALL ENDP
 

@@ -24,13 +24,11 @@ const char mem_types[16][27] = {
 	  "EfiMaxMemoryType          "
 };
 
-#define PrevMemoryDescriptor(Ptr,Size)  ((EFI_MEMORY_DESCRIPTOR *) (((UINT8 *) Ptr) - Size))
 #define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
 class MemoryMap
 {
 public:
-	//Allocate the current size of the map plus space for more entries
-	static const size_t BufferCount = 3;
+
 
 	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap);
 
@@ -62,6 +60,9 @@ public:
 	}
 
 private:
+	//Allocate the current size of the map plus space for more entries
+	static const size_t BufferCount = 3;
+
 	EFI_MEMORY_DESCRIPTOR* ResolveAddress(EFI_PHYSICAL_ADDRESS address);
 
 	const char(*MemTypes)[16][27] = &mem_types;

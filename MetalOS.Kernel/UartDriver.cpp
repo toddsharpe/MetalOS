@@ -12,12 +12,12 @@ UartDriver::UartDriver(Device& device) : Driver(device)
 Result UartDriver::Initialize()
 {
 	m_device.Type = DeviceType::Serial;
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result UartDriver::Read(const char* buffer, size_t length)
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result UartDriver::Write(const char* buffer, size_t length)
@@ -27,12 +27,12 @@ Result UartDriver::Write(const char* buffer, size_t length)
 		Write(0, static_cast<uint8_t>(buffer[i]));
 	}
 
-	return Result::ResultSuccess;
+	return Result::Success;
 }
 
 Result UartDriver::EnumerateChildren()
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 void UartDriver::Write(const char* string)

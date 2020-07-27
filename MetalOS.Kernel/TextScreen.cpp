@@ -74,7 +74,7 @@ void TextScreen::ResetX()
 
 void TextScreen::AdvanceY()
 {
-	m_position.Y = (m_position.Y += PositionToPixelScale);
+	m_position.Y = (m_position.Y += PixelScale);
 }
 
 void TextScreen::ResetY()
@@ -84,7 +84,7 @@ void TextScreen::ResetY()
 
 void TextScreen::AdvanceX()
 {
-	m_position.X = (m_position.X += PositionToPixelScale);
+	m_position.X = (m_position.X += PixelScale);
 }
 
 

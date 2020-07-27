@@ -153,7 +153,7 @@ public:
 
 	void CreateKernelThread(ThreadStart start, void* arg);
 	void ExitKernelThread();
-	uint64_t Syscall(SystemcallFrame* frame);
+	uint64_t Syscall(SystemCallFrame* frame);
 
 #pragma region System Calls
 	SystemCallResult GetSystemInfo(SystemInfo* info);

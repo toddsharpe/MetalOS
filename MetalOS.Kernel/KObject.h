@@ -9,7 +9,7 @@ public:
 	void IncRefCount();
 	void DecRefCount();
 
-	bool IsClosed();
+	bool IsClosed() const;
 
 private:
 	size_t m_refCount;

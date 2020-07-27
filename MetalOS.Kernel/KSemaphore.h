@@ -14,7 +14,7 @@ public:
 	bool TryWait(size_t count);
 	int64_t Signal(size_t count);
 
-	size_t Value()
+	size_t GetValue() const
 	{
 		return m_value;
 	}

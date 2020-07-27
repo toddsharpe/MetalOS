@@ -15,6 +15,8 @@ public:
 	void ResetY();
 
 private:
+	static constexpr size_t PixelScale = 10;
+
 	void WriteCharacter(char c);
 	void AdvanceX();
 	void AdvanceY();

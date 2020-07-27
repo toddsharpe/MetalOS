@@ -19,7 +19,7 @@ void KObject::DecRefCount()
 	m_spinLock.Release(flags);
 }
 
-bool KObject::IsClosed()
+bool KObject::IsClosed() const
 {
 	return m_refCount == 0;
 }

@@ -32,17 +32,17 @@ Result VmBusDriver::Initialize()
 	kernel.RegisterInterrupt(InterruptVector::HypervisorVmBus, { &VmBusDriver::OnInterrupt, this });
 	HyperV::EnableSynic();
 	
-	return Result::ResultSuccess;
+	return Result::Success;
 }
 
 Result VmBusDriver::Read(const char* buffer, size_t length)
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result VmBusDriver::Write(const char* buffer, size_t length)
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result VmBusDriver::EnumerateChildren()
@@ -70,7 +70,7 @@ Result VmBusDriver::EnumerateChildren()
 	result = HyperV::HvPostMessage(connectionId, (HV_MESSAGE_TYPE)1, sizeof(vmbus_channel_message_header), &header);
 	kernel.WaitForSemaphore(m_connectSemaphore, INT64_MAX);
 
-	return Result::ResultSuccess;
+	return Result::Success;
 }
 
 void VmBusDriver::SetMonitor(uint32_t monitorId)

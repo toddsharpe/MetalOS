@@ -1,38 +1,22 @@
 #include "Main.h"
 
-#include <crt_stdio.h>
-#include <vector>
-#include <intrin.h>
-#include "MetalOS.Kernel.h"
-#include "MetalOS.h"
-#include "System.h"
-#include "MemoryMap.h"
-#include "PageTables.h"
-#include "PageTablesPool.h"
 #include "x64.h"
-#include "KernelHeap.h"
-#include "Bitvector.h"
-extern "C"
-{
-#include <acpi.h>
-}
-#include "x64_support.h"
+#include "Kernel.h"
 #include "BootHeap.h"
 
-//The one and only
+//The one and only, statically allocated
 Kernel kernel;
 
-//Kernel Stack - set by x64_main
-KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[KERNEL_STACK_SIZE] = { 0 };
-extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[KERNEL_STACK_SIZE];
-
-//Syscall stack
-KERNEL_PAGE_ALIGN volatile UINT8 SYSCALL_STACK[SYSCALL_STACK_SIZE] = { 0 };
-extern "C" UINT64 SYSCALL_STACK_STOP = (UINT64)&SYSCALL_STACK[SYSCALL_STACK_SIZE];
+//Init Stack - set by x64_main
+//TODO: reclaim
+static constexpr size_t InitStackSize = (1 << 12); //12kb Init Stack
+KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[InitStackSize] = { 0 };
+extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[InitStackSize];
 
 //Boot Heap
-KERNEL_PAGE_ALIGN static volatile UINT8 BOOT_HEAP[BOOT_HEAP_SIZE] = { 0 };
-KERNEL_GLOBAL_ALIGN BootHeap bootHeap((void*)BOOT_HEAP, BOOT_HEAP_SIZE);
+static constexpr size_t BootHeapSize = (4 * PAGE_SIZE); //16kb Boot Heap
+KERNEL_PAGE_ALIGN static volatile UINT8 BOOT_HEAP[BootHeapSize] = { 0 };
+KERNEL_GLOBAL_ALIGN BootHeap bootHeap((void*)BOOT_HEAP, BootHeapSize);
 
 extern "C" void INTERRUPT_HANDLER(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
@@ -91,7 +75,7 @@ void free(void* ptr)
 	return kernel.Deallocate(ptr);
 }
 
-extern "C" uint64_t SYSTEMCALL_HANDLER(SystemcallFrame* frame)
+extern "C" uint64_t SYSTEMCALL_HANDLER(SystemCallFrame* frame)
 {
 	return kernel.Syscall(frame);
 }

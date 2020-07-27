@@ -34,22 +34,22 @@ Result HyperVKeyboardDriver::Initialize()
 	kernel.WaitForSemaphore(m_semaphore, INT64_MAX);
 	Assert(m_response.proto_status & PROTOCOL_ACCEPTED);
 
-	return Result::ResultSuccess;
+	return Result::Success;
 }
 
 Result HyperVKeyboardDriver::Read(const char* buffer, size_t length)
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result HyperVKeyboardDriver::Write(const char* buffer, size_t length)
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result HyperVKeyboardDriver::EnumerateChildren()
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 void HyperVKeyboardDriver::OnCallback()

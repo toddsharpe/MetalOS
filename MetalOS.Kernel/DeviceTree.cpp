@@ -4,8 +4,6 @@
 #include "msvc.h"
 #include <map>
 #include <stack>
-#include "RtcDriver.h"
-#include "ProcessorDriver.h"
 #include "Cpuid.h"
 #include "HyperV.h"
 #include "VmBusDriver.h"
@@ -148,12 +146,6 @@ void DeviceTree::AttachDriver(Device& device)
 		device.SetDriver(new RamDriveDriver(device));
 	//else if (device.GetHid() == "{CFA8B69E-5B4A-4CC0-B98B-8BA1A1F3F95A}")
 		//device.SetDriver(new HyperVMouseDriver(device));
-	//else if (device->GetHid() == "PNP0B00")
-		//device->SetDriver(new RtcDriver(*device));
-	//else if (device->GetHid() == "PNP0003")
-		//device->SetDriver(new IoApicDriver(*device));
-	//else if (device->GetHid() == "ACPI0007")
-		//device->SetDriver(new ProcessorDriver(*device));
 }
 
 void DeviceTree::Display() const

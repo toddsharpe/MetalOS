@@ -55,17 +55,17 @@ Result HyperVScsiDriver::Initialize()
 	transaction.Request.operation = VSTOR_OPERATION_END_INITIALIZATION;
 	Execute(&transaction, true);
 
-	return Result::ResultSuccess;
+	return Result::Success;
 }
 
 Result HyperVScsiDriver::Read(const char* buffer, size_t length)
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result HyperVScsiDriver::Write(const char* buffer, size_t length)
 {
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 Result HyperVScsiDriver::EnumerateChildren()
@@ -82,7 +82,7 @@ Result HyperVScsiDriver::EnumerateChildren()
 		}
 	}
 	
-	return Result::ResultNotImplemented;
+	return Result::NotImplemented;
 }
 
 void HyperVScsiDriver::OnCallback()

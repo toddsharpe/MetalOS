@@ -5,3 +5,6 @@
 * extract x64 functionality out to library
 * Kernel DPCs
 * Windowing system
+* UserThread shouldn't use a full context structure
+* Remove .init and just inject a dll with entries
+* Move loader entirely userside?

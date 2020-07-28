@@ -27,7 +27,7 @@ KThread::~KThread()
 
 void KThread::Run()
 {
-	m_start(m_context);
+	m_start(m_arg);
 }
 
 void KThread::Display()

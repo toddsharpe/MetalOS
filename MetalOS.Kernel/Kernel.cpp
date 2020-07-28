@@ -528,12 +528,11 @@ void Kernel::KernelThreadInitThunk()
 	current->Display();
 	
 	//Run thread
-	//current->Run(); - leads to page fault, stack pointer was wrong but why?
-	current->m_start(current->m_arg);
-
+	current->Run();
 	Print("Kill thread: %d\n", current->GetId());
 
 	//Exit thread TODO
+	kernel.ExitKernelThread();
 	__halt();
 }
 

@@ -30,9 +30,6 @@
     <ClCompile Include="MemoryMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="x64.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="KernelHeap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -203,15 +200,6 @@
     <ClInclude Include="MemoryMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="x64_support.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="x64_interrupts.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="x64.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="KernelHeap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -362,28 +350,8 @@
     <ClInclude Include="UserProcess.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="x64_systemcall.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="UserWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="x64_KThreadGate.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <MASM Include="x64_support.asm">
-      <Filter>Source Files</Filter>
-    </MASM>
-    <MASM Include="x64_main.asm">
-      <Filter>Source Files</Filter>
-    </MASM>
-    <MASM Include="x64_interrupts.asm">
-      <Filter>Source Files</Filter>
-    </MASM>
-    <MASM Include="x64_systemcall.asm">
-      <Filter>Source Files</Filter>
-    </MASM>
   </ItemGroup>
 </Project>

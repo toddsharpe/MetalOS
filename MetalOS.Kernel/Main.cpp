@@ -1,6 +1,5 @@
 #include "Main.h"
 
-#include "x64.h"
 #include "Kernel.h"
 #include "BootHeap.h"
 
@@ -87,9 +86,6 @@ void __declspec(noreturn) Bugcheck(const char* file, const char* line, const cha
 
 void main(LOADER_PARAMS* loader)
 {
-	//Initialize platform
-	x64::Initialize();
-
 	//Initialize kernel
 	kernel.Initialize(loader);
 

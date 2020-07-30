@@ -15,6 +15,8 @@ public:
 	bool IsFree(const uintptr_t address, const size_t count);
 	bool Reserve(uintptr_t& address, const size_t count, MemoryProtection protection);
 
+	bool IsValidPointer(const void* p);
+
 	bool IsGlobal()
 	{
 		return m_global;

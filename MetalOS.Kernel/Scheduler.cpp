@@ -1,8 +1,8 @@
 #include "Scheduler.h"
+
 #include "Main.h"
-#include "x64_support.h"
-#include "x64.h"
 #include "KSemaphore.h"
+#include <MetalOS.Arch.h>
 
 Scheduler::Scheduler(KThread& bootThread) :
 	Enabled(),
@@ -22,8 +22,8 @@ Scheduler::Scheduler(KThread& bootThread) :
 	context->Thread = &bootThread;
 
 	//Write CPU state
-	x64::SetKernelCpuContext(context);
-	x64::SetUserCpuContext(context);
+	ArchSetUserCpuContext(context);
+	//ArchSetKernelCpuContext(context);
 }
 
 Scheduler::CpuContext* Scheduler::GetCpuContext() const
@@ -141,7 +141,7 @@ void Scheduler::Schedule()
 	if (!m_readyQueue.empty())
 	{
 		//Save current context
-		if (x64_save_context(current->m_context) == 0)
+		if (ArchSaveContext(current->m_context) == 0)
 		{
 			//Queue current thread if it was preempted
 			if (current->m_state == ThreadState::Running)
@@ -165,14 +165,14 @@ void Scheduler::Schedule()
 			if (userThread != nullptr)
 			{
 				const uintptr_t cr3 = userThread->GetProcess().GetCR3();
-				if (__readcr3() != cr3)
-					__writecr3(cr3);
+				ArchSetPagingRoot(cr3);
 			}
 
 			//Switch to thread
 			next->m_state = ThreadState::Running;
 			SetCurrentThread(*next);
-			x64_load_context(next->m_context);
+			ArchSetInterruptStack(next->GetStackPointer());
+			ArchLoadContext(next->m_context);
 		}
 	}
 }

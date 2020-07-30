@@ -26,7 +26,7 @@ void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, cons
 	//Optimize this
 	for (size_t i = 0; i < count; i++)
 	{
-		PhysicalPageState state = PhysicalPageState::Zeroed;
+		PageState state = PageState::Zeroed;
 		paddr_t addr = 0;
 		Assert(m_physicalMemory.AllocatePage(addr, state));
 
@@ -38,7 +38,7 @@ void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, cons
 			pt.MapUserPages(virtualAddress, addr, 1);
 
 		//Clear if needed
-		if (state == PhysicalPageState::Free)
+		if (state == PageState::Free)
 			memset((void*)virtualAddress, 0, PAGE_SIZE);
 	}
 

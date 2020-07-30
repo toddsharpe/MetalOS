@@ -3,7 +3,7 @@
 #include "Cpuid.h"
 #include "Main.h"
 #include <intrin.h>
-#include "x64_support.h"
+#include <MetalOS.Arch.h>
 
 #define EAX 0
 #define EBX 1
@@ -144,7 +144,7 @@ HV_HYPERCALL_RESULT_VALUE HyperV::HvPostMessage(
 {
 	Assert(PayloadSize <= HV_MESSAGE_PAYLOAD_BYTE_COUNT);
 	
-	cpu_flags_t flags = x64_disable_interrupts();
+	cpu_flags_t flags = ArchDisableInterrupts();
 	
 	HV_POST_MESSAGE_INPUT* input = (HV_POST_MESSAGE_INPUT*)PostMessagePage;
 	input->ConnectionId = ConnectionId;
@@ -160,7 +160,7 @@ HV_HYPERCALL_RESULT_VALUE HyperV::HvPostMessage(
 	HV_HYPERCALL_RESULT_VALUE status = { 0 };
 	status.AsUint64 = entry(inputValue.AsUint64, kernel.VirtualToPhysical((uintptr_t)input), NULL);
 
-	x64_restore_flags(flags);
+	ArchRestoreFlags(flags);
 	return status;
 }
 
@@ -170,7 +170,7 @@ HyperV::HvSignalEvent(
 	__in UINT16 FlagNumber //relative to base number for port
 )
 {
-	cpu_flags_t flags = x64_disable_interrupts();
+	cpu_flags_t flags = ArchDisableInterrupts();
 
 	HV_SIGNAL_EVENT_INPUT* input = (HV_SIGNAL_EVENT_INPUT*)PostMessagePage;
 	input->ConnectionId.AsUint32 = ConnectionId.AsUint32;
@@ -185,13 +185,13 @@ HyperV::HvSignalEvent(
 	HV_HYPERCALL_RESULT_VALUE status = { 0 };
 	status.AsUint64 = entry(inputValue.AsUint64, input->AsUint64, NULL);
 
-	x64_restore_flags(flags);
+	ArchRestoreFlags(flags);
 	return status;
 }
 
 void HyperV::ProcessInterrupts(uint32_t sint, std::list<uint32_t>& channelIds, std::list<HV_MESSAGE>& queue)
 {
-	cpu_flags_t flags = x64_disable_interrupts();
+	cpu_flags_t flags = ArchDisableInterrupts();
 	HV_SYNIC_EVENT_FLAGS* event = (HV_SYNIC_EVENT_FLAGS*)SynicEvents + sint;
 
 	//Scan for bits
@@ -227,7 +227,7 @@ void HyperV::ProcessInterrupts(uint32_t sint, std::list<uint32_t>& channelIds, s
 			HyperV::SignalEom();
 	}
 
-	x64_restore_flags(flags);
+	ArchRestoreFlags(flags);
 }
 
 

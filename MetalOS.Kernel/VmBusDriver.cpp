@@ -1,6 +1,5 @@
 #include "VmBusDriver.h"
 #include "Main.h"
-#include "x64_support.h"
 #include "HyperVDevice.h"
 #include <crt_stdio.h>
 #include "MicrosoftHyperV.h"

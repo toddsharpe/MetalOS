@@ -1,4 +1,7 @@
-EXTERN SYSTEMCALL_HANDLER: proc
+INCLUDE MetalOS.Kernel.s
+INCLUDE x64.s
+
+.CODE
 
 PROLOG MACRO
 	push rbp
@@ -29,8 +32,6 @@ POP_SYSTEMCALL_FRAME MACRO
 	pop R9
 ENDM
 
-.code
-
 x64_SYSTEMCALL PROC
 	swapgs ; Swap to KThread
 	PUSH_SYSTEMCALL_FRAME ; Push frame
@@ -38,9 +39,9 @@ x64_SYSTEMCALL PROC
 	; Save pointer for arg
 	mov rcx, rsp
 
-	sub rsp, 20h; Reserve 32bytes for register parameter area
+	sub rsp, StackReserve; Reserve 32bytes for register parameter area
 	call SYSTEMCALL_HANDLER; Call OS handler
-	add rsp, 20h; Reclaim register parameter area
+	add rsp, StackReserve; Reclaim register parameter area
 
 	; Restore frame
 	POP_SYSTEMCALL_FRAME

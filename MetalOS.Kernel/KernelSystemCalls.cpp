@@ -2,11 +2,83 @@
 #include "Main.h"
 #include "UserWindow.h"
 
-//TODO: kernel method to validate user pointer
+//TODO: Method to check handles
+
+uint64_t Kernel::Syscall(SystemCallFrame* frame)
+{
+	switch (frame->SystemCall)
+	{
+	case SystemCall::GetSystemInfo:
+		return (uint64_t)GetSystemInfo((SystemInfo*)frame->Arg0);
+
+	case SystemCall::GetTickCount:
+		return GetTickCount();
+
+	case SystemCall::Sleep:
+		Sleep((uint32_t)frame->Arg0);
+		return 0;
+
+	case SystemCall::ExitProcess:
+		return (uint64_t)ExitProcess(frame->Arg0);
+
+	case SystemCall::ExitThread:
+		return (uint64_t)ExitThread(frame->Arg0);
+
+	case SystemCall::CreateWindow:
+		return (uint64_t)CreateWindow((char*)frame->Arg0);
+
+	case SystemCall::GetWindowRect:
+		return (uint64_t)GetWindowRect((Handle)frame->Arg0, (Rectangle*)frame->Arg1);
+
+	case SystemCall::GetMessage:
+		return (uint64_t)GetMessage((Message*)frame->Arg0);
+
+	case SystemCall::PeekMessage:
+		return (uint64_t)PeekMessage((Message*)frame->Arg0);
+
+	case SystemCall::SetScreenBuffer:
+		return (uint64_t)SetScreenBuffer((void*)frame->Arg0);
+
+	case SystemCall::CreateFile:
+		return (uintptr_t)CreateFile((char*)frame->Arg0, (GenericAccess)frame->Arg1);
+
+	case SystemCall::ReadFile:
+		return (uint64_t)ReadFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
+
+	case SystemCall::WriteFile:
+		return (uint64_t)WriteFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
+
+	case SystemCall::SetFilePointer:
+		return (uint64_t)SetFilePointer((Handle*)frame->Arg0, (__int64)frame->Arg1, (FilePointerMove)frame->Arg2, (size_t*)frame->Arg3);
+
+	case SystemCall::CloseFile:
+		return (uint64_t)CloseFile((Handle*)frame->Arg0);
+
+	case SystemCall::MoveFile:
+		return (uint64_t)MoveFile((char*)frame->Arg0, (char*)frame->Arg0);
+
+	case SystemCall::DeleteFile:
+		return (uint64_t)DeleteFile((char*)frame->Arg0);
+
+	case SystemCall::CreateDirectory:
+		return (uint64_t)CreateDirectory((char*)frame->Arg0);
+
+	case SystemCall::VirtualAlloc:
+		return (uintptr_t)VirtualAlloc((void*)frame->Arg0, (size_t)frame->Arg1, (MemoryAllocationType)frame->Arg2, (MemoryProtection)frame->Arg3);
+
+	case SystemCall::DebugPrint:
+		return (uint64_t)DebugPrint((char*)frame->Arg0);
+
+	default:
+		Print("SystemCall: 0x%x\n", frame->SystemCall);
+		Assert(false);
+		return -1;
+	}
+}
 
 SystemCallResult Kernel::GetSystemInfo(SystemInfo* info)
 {
-	if (!info)
+	if (!IsValidUserPointer(info))
 		return SystemCallResult::Failed;
 	
 	info->PageSize = PAGE_SIZE;
@@ -48,7 +120,7 @@ SystemCallResult Kernel::ExitThread(const uint32_t exitCode)
 
 SystemCallResult Kernel::CreateWindow(const char* name)
 {
-	if (!name)
+	if (!IsValidUserPointer(name))
 		return SystemCallResult::Failed;
 
 	//One window at at time
@@ -72,7 +144,7 @@ SystemCallResult Kernel::CreateWindow(const char* name)
 
 SystemCallResult Kernel::GetWindowRect(const Handle handle, Rectangle* rect)
 {
-	if (!rect)
+	if (!IsValidUserPointer(rect))
 		return SystemCallResult::Failed;
 
 	UserThread* user = m_scheduler->GetCurrentUserThread();
@@ -88,7 +160,7 @@ SystemCallResult Kernel::GetWindowRect(const Handle handle, Rectangle* rect)
 //Blocks until message and returns it
 SystemCallResult Kernel::GetMessage(Message* message)
 {
-	if (!message)
+	if (!IsValidUserPointer(message))
 		return SystemCallResult::Failed;
 
 	UserThread* user = m_scheduler->GetCurrentUserThread();
@@ -103,20 +175,23 @@ SystemCallResult Kernel::GetMessage(Message* message)
 //Doesn't block
 SystemCallResult Kernel::PeekMessage(Message* message)
 {
+	if (!IsValidUserPointer(message))
+		return SystemCallResult::Failed;
+	
 	UserThread* user = m_scheduler->GetCurrentUserThread();
 	Assert(user);
 
 	Message* msg = user->DequeueMessage();
 	if (!msg)
 		return SystemCallResult::Failed;
-	
+
 	*message = *msg;
 	return SystemCallResult::Success;
 }
 
 SystemCallResult Kernel::SetScreenBuffer(void* buffer)
 {
-	if (!buffer)
+	if (!IsValidUserPointer(buffer))
 		return SystemCallResult::Failed;
 
 	//Display time
@@ -135,7 +210,7 @@ SystemCallResult Kernel::SetScreenBuffer(void* buffer)
 
 Handle Kernel::CreateFile(const char* name, const GenericAccess access)
 {
-	if (!name)
+	if (!IsValidUserPointer(name))
 		return nullptr;
 
 	Print("CreateFile: %s Access: %d\n", name, access);
@@ -145,7 +220,10 @@ Handle Kernel::CreateFile(const char* name, const GenericAccess access)
 
 SystemCallResult Kernel::ReadFile(const Handle handle, void* buffer, const size_t bufferSize, size_t* bytesRead)
 {
-	if (!handle || !buffer || !bufferSize)
+	if (!handle)
+		return SystemCallResult::Failed;
+
+	if (!IsValidUserPointer(buffer) || !bufferSize)
 		return SystemCallResult::Failed;
 
 	FileHandle* file = (FileHandle*)handle;

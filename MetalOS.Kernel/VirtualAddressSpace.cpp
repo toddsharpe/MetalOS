@@ -70,3 +70,10 @@ bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, Memory
 
 	return true;
 }
+
+//Check to see if pointer is in a valid region
+bool VirtualAddressSpace::IsValidPointer(const void* p)
+{
+	const uintptr_t page = (uintptr_t)p & ~PAGE_MASK;
+	return !IsFree(page, 1);
+}

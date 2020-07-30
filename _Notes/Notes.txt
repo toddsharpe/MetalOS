@@ -377,3 +377,12 @@ user:
                                                     Arrow
    1E A     3E F4    5E Ctrl F1    7E Alt 7      9E               
    1F S     3F F5    5F Ctrl F2    7F Alt 8      9F Alt End       
+
+MSVC Notes:
+
+If _DEBUG not defined
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+if _DEBUG defined
+   /FAILIFMISMATCH:RuntimeLibrary=MTd_StaticDebug
+

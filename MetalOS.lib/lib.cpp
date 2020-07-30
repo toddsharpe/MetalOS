@@ -1,3 +1,4 @@
+#include "msvc.h"
 #include "MetalOS.lib.h"
 
 bool MetalOsLibDebug = false;

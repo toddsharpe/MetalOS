@@ -36,6 +36,14 @@
 #define BootloaderPagePoolCount 256
 #define ReservedPageTablePages 512
 
+#define KERNEL_GLOBAL_ALIGN __declspec(align(64))
+#define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
+
+#define QWordHigh(x) (((uint64_t)x) >> 32)
+#define QWordLow(x) ((uint32_t)((uint64_t)x))
+
+typedef size_t cpu_flags_t;
+
 //Keep in sync with MetalOS.KernalApi syscalls.asm
 enum class SystemCall : size_t
 {

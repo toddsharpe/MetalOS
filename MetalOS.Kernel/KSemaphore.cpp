@@ -1,6 +1,6 @@
 #include "KSemaphore.h"
-#include "x64_support.h"
 #include "Main.h"
+#include <MetalOS.Arch.h>
 
 KSemaphore::KSemaphore(const uint32_t initial, const uint32_t maximum, const std::string& name) :
 	KObject(),
@@ -21,7 +21,7 @@ bool KSemaphore::Wait(size_t count, size_t timeout)
 	while (!loop)
 	{
 		m_spinlock.Release(flags);
-		x64_pause();
+		ArchPause();
 		flags = m_spinlock.Acquire();
 
 		loop = m_value >= count;

@@ -97,7 +97,7 @@ struct SystemCallFrame
 #define KERNEL_GLOBAL_ALIGN __declspec(align(64))
 #define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
 
-typedef size_t cpu_flags_t;
+
 typedef uint64_t nano_t;//Time in nanoseconds
 typedef uint64_t nano100_t;//Time in 100 nanoseconds
 

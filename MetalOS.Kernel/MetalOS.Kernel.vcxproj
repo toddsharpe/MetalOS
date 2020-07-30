@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
@@ -25,19 +17,6 @@
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -59,12 +38,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -74,12 +47,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>moskrnl</TargetName>
+    <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2\MdePkg\Include;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;..\tianocore-edk2\MdePkg\Include\IndustryStandard;..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
@@ -98,7 +72,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>false</FixedBaseAddress>
       <BaseAddress>0xFFFF800001000000</BaseAddress>
-      <EntryPointSymbol>x64_main</EntryPointSymbol>
+      <EntryPointSymbol>ArchMain</EntryPointSymbol>
       <LinkErrorReporting>PromptImmediately</LinkErrorReporting>
       <EnableUAC>true</EnableUAC>
       <DataExecutionPrevention>false</DataExecutionPrevention>
@@ -108,32 +82,6 @@
       </AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <ConformanceMode>true</ConformanceMode>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -224,7 +172,6 @@
     <ClCompile Include="System.cpp" />
     <ClCompile Include="VirtualMemoryManager.cpp" />
     <ClCompile Include="VmBusDriver.cpp" />
-    <ClCompile Include="x64.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BootHeap.h" />
@@ -244,7 +191,6 @@
     <ClInclude Include="HyperVTimer.h" />
     <ClInclude Include="Kernel.h" />
     <ClInclude Include="KObject.h" />
-    <ClInclude Include="x64_KThreadGate.h" />
     <ClInclude Include="UserProcess.h" />
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />
@@ -284,10 +230,6 @@
     <ClInclude Include="System.h" />
     <ClInclude Include="VirtualMemoryManager.h" />
     <ClInclude Include="VmBusDriver.h" />
-    <ClInclude Include="x64.h" />
-    <ClInclude Include="x64_interrupts.h" />
-    <ClInclude Include="x64_support.h" />
-    <ClInclude Include="x64_systemcall.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MetalOS.Acpi\MetalOS.Acpi.vcxproj">
@@ -296,15 +238,12 @@
     <ProjectReference Include="..\MetalOS.crt\MetalOS.crt.vcxproj">
       <Project>{e2867f5b-2a93-4d4b-b71f-b65736436bc3}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">
-      <Project>{53afb5f2-11ec-448c-bfb6-2d4d9f5eabad}</Project>
+    <ProjectReference Include="..\MetalOS.Kernel.x64\MetalOS.Kernel.x64.vcxproj">
+      <Project>{b240a22c-2efc-487b-936f-b516812f1751}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <MASM Include="x64_interrupts.asm" />
-    <MASM Include="x64_main.asm" />
-    <MASM Include="x64_support.asm" />
-    <MASM Include="x64_systemcall.asm" />
+    <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">
+      <Project>{e8d87899-feb9-411c-aefd-4581d7302bc2}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

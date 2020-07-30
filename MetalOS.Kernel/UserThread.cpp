@@ -1,28 +1,42 @@
 #include "UserThread.h"
-#include "x64_support.h"
+
+#include <MetalOS.Arch.h>
 #include "Main.h"
 
 uint32_t UserThread::LastId = 0;
 
-UserThread::UserThread(ThreadStart startAddress, void* arg, void* stack, void* entry, UserProcess& process) :
+UserThread::UserThread(ThreadStart startAddress, void* arg, void* entry, size_t stackSize, UserProcess& process) :
 	Window(),
 	m_id(++LastId),
 	m_process(process),
 	m_teb(),
+	m_stackAllocation(),
+	m_context(),
 	m_messages()
 {
+	//Allocate user stack
+	m_stackAllocation = kernel.VirtualAlloc(process, nullptr, stackSize, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWrite);
+	void* stackPointer = (void*)((uintptr_t)m_stackAllocation + PAGE_ALIGN(stackSize) - ArchStackReserve());
+	
 	//Create user thread context
-	m_context = new uint8_t[x64_CONTEXT_SIZE];
-	x64_init_context(m_context, stack, entry);
+	const size_t size = ArchContextSize();
+	m_context = new uint8_t[size];
+	memset(m_context, 0, size);
+	ArchInitContext(m_context, entry, stackPointer);
 
 	//Setup args in TEB
 	m_teb = (ThreadEnvironmentBlock*)process.HeapAlloc(sizeof(ThreadEnvironmentBlock));
-	Assert(m_teb);
+	memset(m_teb, 0, sizeof(ThreadEnvironmentBlock));
 	m_teb->SelfPointer = m_teb;
 	m_teb->ThreadStart = startAddress;
 	m_teb->Arg = arg;
 	m_teb->PEB = process.GetPEB();
 	m_teb->ThreadId = this->m_id;
+}
+
+void UserThread::Run()
+{
+	ArchUserThreadStart(m_context, m_teb);
 }
 
 Message* UserThread::DequeueMessage()

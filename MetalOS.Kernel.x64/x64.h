@@ -1,20 +1,15 @@
 #pragma once
 
-#include "MetalOS.Kernel.h"
-
-//Helpers
-extern "C"
-{
-	uint32_t x64_read_port(uint32_t port, uint8_t width);
-	void x64_write_port(uint32_t port, uint32_t value, uint8_t width);
-}
+#include "msvc.h"
+#include <MetalOS.Internal.h>
+#include <cstdint>
 
 class x64
 {
 public:
 	x64() = delete;
-	static void Initialize();
 
+	static void Initialize();
 	static void SetKernelCpuContext(void* teb);
 	static void SetUserCpuContext(void* teb);
 	static void SetKernelInterruptStack(void* stack);
@@ -22,6 +17,7 @@ public:
 	static void PrintGDT();
 
 private:
+#define InterruptHandler(x) x64_interrupt_handler_ ## x
 	static constexpr size_t IdtCount = 256;
 	static constexpr size_t IstStackSize = (1 << 12);//4k Stack
 #define IST_DOUBLEFAULT_IDX 1

@@ -10,10 +10,12 @@ public:
 	
 	static uint32_t LastId;
 
-	KThread(ThreadStart start, void* arg, void* context, UserThread* userThread = nullptr);
+	KThread(ThreadStart start, void* arg, UserThread* userThread = nullptr);
 	~KThread();
 
 	void Run();
+
+	void InitContext(void* entry, void* stack);
 
 	uint32_t GetId() const
 	{
@@ -48,8 +50,7 @@ private:
 	nano100_t m_sleepWake;
 	void* m_event;
 
-	//TODO: x64_CONTEXT_SIZE is const, pipe constant from masm to c
-	void* m_context;//Pointer to x64 CONTEXT structure (masm)
+	void* m_context;
 	UserThread* m_userThread;
 };
 

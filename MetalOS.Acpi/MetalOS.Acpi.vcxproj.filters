@@ -368,9 +368,6 @@
     <ClCompile Include="..\acpica\source\components\resources\rscreate.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\acpica\source\components\resources\rsdump.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\acpica\source\components\resources\rsdumpinfo.c">
       <Filter>Source Files</Filter>
     </ClCompile>

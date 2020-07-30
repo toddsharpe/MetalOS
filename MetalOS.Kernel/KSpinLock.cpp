@@ -1,5 +1,5 @@
 #include "KSpinLock.h"
-#include "x64_support.h"
+#include <MetalOS.Arch.h>
 
 KSpinLock::KSpinLock() : m_value(Unlocked)
 {
@@ -8,10 +8,10 @@ KSpinLock::KSpinLock() : m_value(Unlocked)
 
 cpu_flags_t KSpinLock::Acquire()
 {
-	cpu_flags_t flags = x64_disable_interrupts();
+	cpu_flags_t flags = ArchDisableInterrupts();
 
 	while (_InterlockedCompareExchange64((volatile long long*)&m_value, Locked, Unlocked) == Locked)
-		x64_pause();
+		ArchPause();
 
 	return flags;
 }
@@ -19,5 +19,5 @@ cpu_flags_t KSpinLock::Acquire()
 void KSpinLock::Release(cpu_flags_t flags)
 {
 	m_value = Unlocked;
-	x64_restore_flags(flags);
+	ArchRestoreFlags(flags);
 }

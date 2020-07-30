@@ -5,8 +5,6 @@ typedef EFI_GUID GUID;
 #include <PlatformAcpi.h>
 #include <intrin.h>
 #include <cstdarg>
-#include "x64.h"
-#include "x64_support.h"
 #include "System.h"
 #include "Main.h"
 #include <functional>
@@ -25,7 +23,7 @@ typedef EFI_GUID GUID;
 #include "Loader.h"
 #include <string>
 #include "KThread.h"
-#include "x64_KThreadGate.h"
+#include <MetalOS.Arch.h>
 
 Kernel::Kernel() :
 	m_physicalAddress(),
@@ -72,6 +70,8 @@ Kernel::Kernel() :
 #define Trace() Print(__FILE__ "-" STR(__LINE__));
 void Kernel::Initialize(const PLOADER_PARAMS params)
 {
+	ArchInitialize();
+	
 	//Save Loader Params
 	m_physicalAddress = params->KernelAddress;
 	m_imageSize = params->KernelImageSize;
@@ -209,7 +209,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	__debugbreak();
 
 	//Create boot thread
-	KThread* bootThread = new KThread(nullptr, nullptr, (void*)new uint8_t[x64_CONTEXT_SIZE]);
+	KThread* bootThread = new KThread(nullptr, nullptr);
 
 	//Process and thread containers
 	m_processes = new std::map<uint32_t, UserProcess*>();
@@ -266,40 +266,34 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
-	//Swap to kernel thread info
-	cpu_flags_t flags = x64_disable_interrupts();
-	x64_KThreadGate gate;
-	
-	if (vector == InterruptVector::DoubleFault)
-	{
-		m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%016x, RIP: 0x%016x, RSP: 0x%016x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
-		m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
-		m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS());
-		m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
+	//if (vector == InterruptVector::DoubleFault)
+	//{
+	//	m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%016x, RIP: 0x%016x, RSP: 0x%016x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
+	//	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
+	//	m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS());
+	//	m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
 
-		x64::PrintGDT();
-		__halt();
-	}
+	//	x64::PrintGDT();
+	//	__halt();
+	//}
 
 	const auto& it = m_interruptHandlers->find(vector);
 	if (it != m_interruptHandlers->end())
 	{
 		InterruptContext ctx = it->second;
 		ctx.Handler(ctx.Context);
-		x64_restore_flags(flags);
 		return;
 	}
 	
 	m_textScreen->Printf("ISR: 0x%x, Code: %x, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
 	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
-	m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS());
-	m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
+	//m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS());
+	//m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
 	switch (vector)
 	{
 	//Let debug continue (we use this to check ISRs on bootup)
 	case InterruptVector::Breakpoint:
 		m_textScreen->Printf("  Debug Breakpoint Exception\n");
-		x64_restore_flags(flags);
 		return;
 	case InterruptVector::PageFault:
 		m_textScreen->Printf("  CR2: 0x%16x\n", __readcr2());
@@ -345,7 +339,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 bool inBugcheck = false;
 void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 {
-	cpu_flags_t flags = x64_disable_interrupts();
+	cpu_flags_t flags = ArchDisableInterrupts();
 	
 	if (inBugcheck)
 	{
@@ -371,9 +365,11 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 		thread->Display();
 	}
 
+	//TODO: have arch library do this
+
 	uint8_t buffer[sizeof(x64_context)];
-	Assert(sizeof(x64_context) == x64_CONTEXT_SIZE);
-	x64_save_context(buffer);
+	//Assert(sizeof(x64_context) == x64_CONTEXT_SIZE);
+	ArchSaveContext(buffer);
 
 	x64_context* x64context = (x64_context*)buffer;
 
@@ -505,12 +501,9 @@ void Kernel::CreateKernelThread(ThreadStart start, void* arg)
 	//Subtract paramater area
 	stack -= 32;
 
-	//Create thread context
-	void* context = new uint8_t[x64_CONTEXT_SIZE];
-	x64_init_context(context, (void*)stack, &Kernel::KernelThreadInitThunk);
-
 	//Add kernel thread
-	KThread* thread = new KThread(start, arg, context);
+	KThread* thread = new KThread(start, arg);
+	thread->InitContext(&Kernel::KernelThreadInitThunk, (void*)stack);
 	m_scheduler->AddReady(*thread);
 }
 
@@ -547,10 +540,7 @@ void Kernel::UserThreadInitThunk()
 
 	user->GetProcess().Display();
 	user->GetProcess().DisplayDetails();
-	
-	//Start
-	x64::SetKernelInterruptStack(current->GetStack());
-	x64_start_user_thread(user->GetContext(), user->GetTEB());
+	user->Run();
 }
 
 void Kernel::KernelThreadSleep(nano_t value)
@@ -600,11 +590,11 @@ bool Kernel::ReleaseSemaphore(Handle handle, const size_t releaseCount)
 
 	if (m_scheduler->Enabled)
 	{
-		cpu_flags_t flags = x64_disable_interrupts();
+		cpu_flags_t flags = ArchDisableInterrupts();
 
 		m_scheduler->SemaphoreRelease(semaphore, releaseCount);
 
-		x64_restore_flags(flags);
+		ArchRestoreFlags(flags);
 	}
 	else
 	{
@@ -631,12 +621,12 @@ WaitStatus Kernel::WaitForSemaphore(Handle handle, size_t timeoutMs, size_t unit
 
 	if (m_scheduler->Enabled)
 	{
-		cpu_flags_t flags = x64_disable_interrupts();
+		cpu_flags_t flags = ArchDisableInterrupts();
 
 		const nano100_t timeout = timeoutMs * 1000000 / 100;
 		WaitStatus status = m_scheduler->SemaphoreWait(semaphore, timeout);
 
-		x64_restore_flags(flags);
+		ArchRestoreFlags(flags);
 		return status;
 	}
 	else
@@ -804,12 +794,9 @@ Handle Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart 
 	kStack += (KThread::StackPageCount << PAGE_SHIFT) - 32;
 	Print("Kernel Stack: 0x%016x->0x%016x\n", kStack, kStack - (KThread::StackPageCount << PAGE_SHIFT));
 
-	//Create kernel thread context
-	void* context = new uint8_t[x64_CONTEXT_SIZE];
-	x64_init_context(context, (void*)kStack, Kernel::UserThreadInitThunk);
-
 	//Create kernel thread
-	KThread* thread = new KThread(nullptr, nullptr, context, userThread);
+	KThread* thread = new KThread(nullptr, nullptr, userThread);
+	thread->InitContext(&Kernel::UserThreadInitThunk, (void*)kStack);
 	process.AddThread(*thread);
 	m_scheduler->AddReady(*thread);
 	

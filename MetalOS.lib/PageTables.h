@@ -1,4 +1,6 @@
 #pragma once
+
+#include "msvc.h"
 #include <stdint.h>
 
 class PageTablesPool;

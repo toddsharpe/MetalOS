@@ -1,6 +1,6 @@
 #include "UartDriver.h"
-#include "x64.h"
 #include "Main.h"
+#include <MetalOS.Arch.h>
 
 UartDriver::UartDriver(Device& device) : Driver(device)
 {
@@ -42,12 +42,12 @@ void UartDriver::Write(const char* string)
 
 uint8_t UartDriver::Read(uint8_t offset)
 {
-	return x64_read_port(m_port + offset, std::numeric_limits<uint8_t>::digits);
+	return ArchReadPort(m_port + offset, std::numeric_limits<uint8_t>::digits);
 }
 
 void UartDriver::Write(uint8_t offset, uint8_t value)
 {
-	x64_write_port(m_port + offset, value, std::numeric_limits<uint8_t>::digits);
+	ArchWritePort(m_port + offset, value, std::numeric_limits<uint8_t>::digits);
 }
 
 //Returns 0 on hyper-v?

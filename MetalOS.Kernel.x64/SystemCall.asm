@@ -1,4 +1,7 @@
-EXTERN SYSTEMCALL_HANDLER: proc
+INCLUDE MetalOS.Kernel.s
+INCLUDE x64.s
+
+.CODE
 
 PROLOG MACRO
 	push rbp
@@ -28,8 +31,6 @@ POP_SYSTEMCALL_FRAME MACRO
 	pop R8
 	pop R9
 ENDM
-
-.code
 
 x64_SYSTEMCALL PROC
 	swapgs ; Swap to KThread

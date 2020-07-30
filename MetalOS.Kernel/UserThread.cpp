@@ -1,5 +1,6 @@
 #include "UserThread.h"
-#include "x64_support.h"
+
+#include <MetalOS.Arch.h>
 #include "Main.h"
 
 uint32_t UserThread::LastId = 0;
@@ -9,11 +10,13 @@ UserThread::UserThread(ThreadStart startAddress, void* arg, void* stack, void* e
 	m_id(++LastId),
 	m_process(process),
 	m_teb(),
+	m_stack(stack),
 	m_messages()
 {
 	//Create user thread context
-	m_context = new uint8_t[x64_CONTEXT_SIZE];
-	x64_init_context(m_context, stack, entry);
+	const size_t size = ArchContextSize();
+	m_context = new uint8_t[size];
+	ArchInitContext(m_context, entry, stack);
 
 	//Setup args in TEB
 	m_teb = (ThreadEnvironmentBlock*)process.HeapAlloc(sizeof(ThreadEnvironmentBlock));
@@ -23,6 +26,12 @@ UserThread::UserThread(ThreadStart startAddress, void* arg, void* stack, void* e
 	m_teb->Arg = arg;
 	m_teb->PEB = process.GetPEB();
 	m_teb->ThreadId = this->m_id;
+}
+
+void UserThread::Run()
+{
+	ArchSetInterruptStack(m_stack);
+	ArchUserThreadStart(m_context, m_stack, m_teb);
 }
 
 Message* UserThread::DequeueMessage()

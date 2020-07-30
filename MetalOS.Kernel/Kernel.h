@@ -128,8 +128,8 @@ public:
 
 #pragma region Kernel Interface
 	Handle CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
-	static void KernelThreadInitThunk();
-	static void UserThreadInitThunk();
+	__declspec(noreturn) static void KernelThreadInitThunk();
+	__declspec(noreturn) static void UserThreadInitThunk();
 	void KernelThreadSleep(nano_t value);
 	void GetSystemTime(SystemTime* time);
 

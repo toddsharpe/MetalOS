@@ -1,5 +1,6 @@
 #pragma once
 
+#include "msvc.h"
 #include <cstdint>
 #include <MetalOS.Internal.h>
 

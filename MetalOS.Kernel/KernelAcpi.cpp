@@ -1,8 +1,8 @@
 #include "Kernel.h"
 #include <intrin.h>
-#include "x64.h"
 #include "KSpinLock.h"
 #include "KSemaphore.h"
+#include <MetalOS.Arch.h>
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
@@ -238,7 +238,7 @@ ACPI_STATUS Kernel::AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32* Value, UINT3
 	case 8:
 	case 16:
 	case 32:
-		*Value = x64_read_port(Address, Width);
+		*Value = ArchReadPort(Address, Width);
 		break;
 	default:
 		return AE_BAD_VALUE;
@@ -254,7 +254,7 @@ ACPI_STATUS Kernel::AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT3
 	case 8:
 	case 16:
 	case 32:
-		x64_write_port(Address, Value, Width);
+		ArchWritePort(Address, Value, Width);
 		break;
 	default:
 		return AE_BAD_VALUE;

@@ -2,12 +2,15 @@
 
 #include "UserProcess.h"
 
+class Scheduler;
 class UserThread
 {
 public:
 	static uint32_t LastId;
 
 	UserThread(ThreadStart startAddress, void* arg, void* stack, void* entry, UserProcess& process);
+
+	void Run();
 
 	UserProcess& GetProcess()
 	{
@@ -40,10 +43,13 @@ public:
 	void DisplayMessages();
 	void DisplayDetails();
 
+	friend class Scheduler;
+
 private:
 	uint32_t m_id;
 	UserProcess& m_process;
 	ThreadEnvironmentBlock* m_teb;
+	void* m_stack;
 	void* m_context;
 	std::list<Message*> m_messages;
 };

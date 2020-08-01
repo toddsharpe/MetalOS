@@ -28,4 +28,4 @@ jobs:
 
     # Runs a set of commands using the runners shell
     - name: MSBuild
-      run: msbuild MetalOS.sln
+      run: msbuild MetalOS.sln /p:Configuration=Debug /p:Platform=x64

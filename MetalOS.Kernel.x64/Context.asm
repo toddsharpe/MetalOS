@@ -73,7 +73,7 @@ ArchLoadContext proc
 	jmp r9
 ArchLoadContext endp
 
-; void ArchUserThreadStart(void* context, void* stack, void* teb);
+; void ArchUserThreadStart(void* context, void* teb);
 ArchUserThreadStart proc
 	; Load registers
 	mov r12, [rcx + CONTEXT._r12]
@@ -90,7 +90,7 @@ ArchUserThreadStart proc
 	mov r11, [rcx + CONTEXT._rflags]
 	mov rcx, [rcx + CONTEXT._rip]
 	swapgs
-	wrgsbase r8
+	wrgsbase rdx
 	sysretq
 ArchUserThreadStart endp
 

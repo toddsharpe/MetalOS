@@ -22,7 +22,7 @@ PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 	for (size_t i = 0; i < memoryMap.Length(); i++)
 	{
 		const EFI_MEMORY_DESCRIPTOR* desc = memoryMap.Get(i);
-		const PhysicalPageState state = GetPageState(desc);
+		const PageState state = GetPageState(desc);
 
 		for (size_t j = 0; j < desc->NumberOfPages; j++)
 		{
@@ -33,10 +33,10 @@ PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 			//Buddy cells can span memory types. To ensure buddy is only free if all states are free,
 			//use false for Free, and OR the results
 			const size_t buddyIndex = (base + j) / BuddySize;
-			const bool flag = state != PhysicalPageState::Free;
+			const bool flag = state != PageState::Free;
 			m_buddyMap.Set(buddyIndex, m_buddyMap.Get(buddyIndex) || flag);
 
-			if (state == PhysicalPageState::Free)
+			if (state == PageState::Free)
 			{
 				//Push on free stack
 				//Top of stack has null next ptr
@@ -53,7 +53,7 @@ PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 	m_nextBuddy = index / BuddySize + ((index % BuddySize != 0) ? 1 : 0);
 }
 
-bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& state)
+bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PageState& state)
 {
 	if (address != 0)
 	{
@@ -61,11 +61,11 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& st
 		Assert((address && PAGE_MASK) == 0);
 
 		PFN_ENTRY& entry = m_db[address >> PAGE_SHIFT];
-		if (entry.State != PhysicalPageState::Zeroed && entry.State != PhysicalPageState::Free)
+		if (entry.State != PageState::Zeroed && entry.State != PageState::Free)
 			return false;
 
 		state = entry.State;
-		entry.State = PhysicalPageState::Active;
+		entry.State = PageState::Active;
 		m_buddyMap.Set(GetBuddyIndex(address), true);
 		return true;
 	}
@@ -75,7 +75,7 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& st
 	{
 		address = GetPFN(m_zeroed) << PAGE_SHIFT;
 		m_zeroed = m_zeroed->Prev;
-		state = PhysicalPageState::Zeroed;
+		state = PageState::Zeroed;
 		m_buddyMap.Set(GetBuddyIndex(address), true);
 		return true;
 	}
@@ -83,7 +83,7 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PhysicalPageState& st
 	{
 		address = GetPFN(m_free) << PAGE_SHIFT;
 		m_free = m_free->Prev;
-		state = PhysicalPageState::Free;
+		state = PageState::Free;
 		m_buddyMap.Set(GetBuddyIndex(address), true);
 		return true;
 	}
@@ -149,18 +149,18 @@ bool PhysicalMemoryManager::AllocateContiguous(paddr_t& address, const size_t pa
 	return false;
 }
 
-const PhysicalPageState PhysicalMemoryManager::GetPageState(const EFI_MEMORY_DESCRIPTOR* desc)
+const PageState PhysicalMemoryManager::GetPageState(const EFI_MEMORY_DESCRIPTOR* desc)
 {
 	switch (desc->Type)
 	{
 	case EfiConventionalMemory:
-		return PhysicalPageState::Free;
+		return PageState::Free;
 
 	case EfiLoaderData:
-		return PhysicalPageState::Active;
+		return PageState::Active;
 
 	default:
-		return PhysicalPageState::Platform;
+		return PageState::Platform;
 	}
 }
 

@@ -125,14 +125,10 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Identity mappings are not possible now, lost access to params
 	//Alternatively - remove physical identity mappings from bootloader PT since entry in pt root can be cleared and subsequent pages are going to be eaten (since they are in boot memory)
 	//This requires copying at least the root
-	__writecr3(m_pageTables->GetCr3());
+	ArchSetPagingRoot(m_pageTables->GetCr3());
 
 	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
 	Print("  PhysicalAddressSize: 0x%16x\n", m_memoryMap->GetPhysicalAddressSize());
-
-	//Enable WRGSBASE instruction
-	__writecr4(__readcr4() | (1 << 16));
-	Print("  CR3: 0x%16x CR4: 0x%16x\n", __readcr3(), __readcr4());
 
 	//Check if SSE
 	int r[4];
@@ -274,7 +270,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	//	m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
 
 	//	x64::PrintGDT();
-	//	__halt();
+	//	ArchWait();
 	//}
 
 	const auto& it = m_interruptHandlers->find(vector);
@@ -333,7 +329,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	}
 
 	while (true)
-		__halt();
+		ArchWait();
 }
 
 bool inBugcheck = false;
@@ -346,7 +342,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 		m_textScreen->Printf("%s\n%s\n%s\n", file, line, assert);
 
 		while(true)
-			__halt();
+			ArchWait();
 	}
 	
 	inBugcheck = true;
@@ -397,7 +393,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	//m_textScreen->ResetX();
 	//m_textScreen->ResetY();
 
-	__halt();
+	ArchWait();
 }
 
 void Kernel::Printf(const char* format, ...)
@@ -422,14 +418,14 @@ void Kernel::InitializeAcpi()
 	if (ACPI_FAILURE(Status))
 	{
 		Print("Could not AcpiInitializeSubsystem: %d\n", Status);
-		__halt();
+		ArchWait();
 	}
 
 	Status = AcpiInitializeTables(nullptr, 16, FALSE);
 	if (ACPI_FAILURE(Status))
 	{
 		Print("Could not AcpiInitializeTables: %d\n", Status);
-		__halt();
+		ArchWait();
 	}
 
 	//TODO: notify handlers
@@ -439,28 +435,28 @@ void Kernel::InitializeAcpi()
 	if (ACPI_FAILURE(Status))
 	{
 		Print("Could not initialise SystemMemory handler, %s!", AcpiFormatException(Status));
-		__halt();
+		ArchWait();
 	}
 
 	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_SYSTEM_IO, ACPI_DEFAULT_HANDLER, NULL, NULL);
 	if (ACPI_FAILURE(Status))
 	{
 		Print("Could not initialise SystemIO handler, %s!", AcpiFormatException(Status));
-		__halt();
+		ArchWait();
 	}
 
 	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_PCI_CONFIG, ACPI_DEFAULT_HANDLER, NULL, NULL);
 	if (ACPI_FAILURE(Status))
 	{
 		Print("Could not initialise PciConfig handler, %s!", AcpiFormatException(Status));
-		__halt();
+		ArchWait();
 	}
 
 	Status = AcpiLoadTables();
 	if (ACPI_FAILURE(Status))
 	{
 		Print("Could not AcpiLoadTables: %d\n", Status);
-		__halt();
+		ArchWait();
 	}
 
 	//Local handlers should be installed here
@@ -469,14 +465,14 @@ void Kernel::InitializeAcpi()
 	if (ACPI_FAILURE(Status))
 	{
 		Print("Could not AcpiEnableSubsystem: %d\n", Status);
-		__halt();
+		ArchWait();
 	}
 
 	Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
 	if (ACPI_FAILURE(Status))
 	{
 		Print("Could not AcpiInitializeObjects: %d\n", Status);
-		__halt();
+		ArchWait();
 	}
 
 	Print("ACPI Finished\n");
@@ -494,16 +490,9 @@ void Kernel::CreateKernelThread(ThreadStart start, void* arg)
 	KThread* current = m_scheduler->GetCurrentThread();
 	Print("CreateThread - Id: 0x%x\n", current->GetId());
 	
-	//Create thread stack, point to bottom (stack grows shallow on x86)
-	uintptr_t stack = (uintptr_t)this->AllocateKernelPage(0, KThread::StackPageCount, MemoryProtection::PageReadWrite);
-	stack += (KThread::StackPageCount << PAGE_SHIFT);
-
-	//Subtract paramater area
-	stack -= 32;
-
 	//Add kernel thread
 	KThread* thread = new KThread(start, arg);
-	thread->InitContext(&Kernel::KernelThreadInitThunk, (void*)stack);
+	thread->InitContext(&Kernel::KernelThreadInitThunk);
 	m_scheduler->AddReady(*thread);
 }
 
@@ -526,7 +515,7 @@ void Kernel::KernelThreadInitThunk()
 
 	//Exit thread TODO
 	kernel.ExitKernelThread();
-	__halt();
+	ArchWait();
 }
 
 void Kernel::UserThreadInitThunk()
@@ -540,6 +529,7 @@ void Kernel::UserThreadInitThunk()
 
 	user->GetProcess().Display();
 	user->GetProcess().DisplayDetails();
+	ArchSetInterruptStack(current->GetStackPointer());
 	user->Run();
 }
 
@@ -724,7 +714,7 @@ bool Kernel::CreateProcess(const std::string& path)
 
 	//Swap to new process address space to load file
 	//TODO: page into kernel, load, then remove and page into process so we dont switch address space
-	__writecr3(process->GetCR3());
+	ArchSetPagingRoot(process->GetCR3());
 	Print("NewCr3: 0x%016x\n", process->GetCR3());
 
 	//Allocate pages
@@ -775,28 +765,16 @@ bool Kernel::CreateProcess(const std::string& path)
 	return true;
 }
 
-//TODO - usermode thread init thunk (it will bring us to ring 3 using iret and start address)
-
 Handle Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry)
 {
 	//TODO: validate addresses
 	
-	//Allocate user stack
-	void* stack = VirtualAlloc(process, nullptr, stackSize, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWrite);
-	void* stackTop = MakePtr(void*, stack, PAGE_ALIGN(stackSize) - 32);//Register parameter area
-	Print("User Stack: 0x%016x->0x%016x\n", stackTop, stack);
-
 	//Create user thread
-	UserThread* userThread = new UserThread(startAddress, arg, stackTop, entry, process);
-
-	//Create kernel thread stack, point to bottom (stack grows shallow on x86)
-	uintptr_t kStack = (uintptr_t)this->AllocateKernelPage(0, KThread::StackPageCount, MemoryProtection::PageReadWrite);
-	kStack += (KThread::StackPageCount << PAGE_SHIFT) - 32;
-	Print("Kernel Stack: 0x%016x->0x%016x\n", kStack, kStack - (KThread::StackPageCount << PAGE_SHIFT));
+	UserThread* userThread = new UserThread(startAddress, arg, entry, stackSize, process);
 
 	//Create kernel thread
 	KThread* thread = new KThread(nullptr, nullptr, userThread);
-	thread->InitContext(&Kernel::UserThreadInitThunk, (void*)kStack);
+	thread->InitContext(&Kernel::UserThreadInitThunk);
 	process.AddThread(*thread);
 	m_scheduler->AddReady(*thread);
 	
@@ -810,82 +788,21 @@ void* Kernel::VirtualAlloc(UserProcess& process, void* address, size_t size, Mem
 	return allocated;
 }
 
-uint64_t Kernel::Syscall(SystemCallFrame* frame)
-{
-	switch (frame->SystemCall)
-	{
-	case SystemCall::GetSystemInfo:
-		return (uint64_t)GetSystemInfo((SystemInfo*)frame->Arg0);
-
-	case SystemCall::GetTickCount:
-		return GetTickCount();
-
-	case SystemCall::Sleep:
-		Sleep((uint32_t)frame->Arg0);
-		return 0;
-
-	case SystemCall::ExitProcess:
-		return (uint64_t)ExitProcess(frame->Arg0);
-
-	case SystemCall::ExitThread:
-		return (uint64_t)ExitThread(frame->Arg0);
-
-	case SystemCall::CreateWindow:
-		return (uint64_t)CreateWindow((char*)frame->Arg0);
-
-	case SystemCall::GetWindowRect:
-		return (uint64_t)GetWindowRect((Handle)frame->Arg0, (Rectangle*)frame->Arg1);
-
-	case SystemCall::GetMessage:
-		return (uint64_t)GetMessage((Message*)frame->Arg0);
-
-	case SystemCall::PeekMessage:
-		return (uint64_t)PeekMessage((Message*)frame->Arg0);
-
-	case SystemCall::SetScreenBuffer:
-		return (uint64_t)SetScreenBuffer((void*)frame->Arg0);
-
-	case SystemCall::CreateFile:
-		return (uintptr_t)CreateFile((char*)frame->Arg0, (GenericAccess)frame->Arg1);
-
-	case SystemCall::ReadFile:
-		return (uint64_t)ReadFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
-
-	case SystemCall::WriteFile:
-		return (uint64_t)WriteFile((Handle*)frame->Arg0, (void*)frame->Arg1, (size_t)frame->Arg2, (size_t*)frame->Arg3);
-
-	case SystemCall::SetFilePointer:
-		return (uint64_t)SetFilePointer((Handle*)frame->Arg0, (__int64)frame->Arg1, (FilePointerMove)frame->Arg2, (size_t*)frame->Arg3);
-
-	case SystemCall::CloseFile:
-		return (uint64_t)CloseFile((Handle*)frame->Arg0);
-
-	case SystemCall::MoveFile:
-		return (uint64_t)MoveFile((char*)frame->Arg0, (char*)frame->Arg0);
-
-	case SystemCall::DeleteFile:
-		return (uint64_t)DeleteFile((char*)frame->Arg0);
-
-	case SystemCall::CreateDirectory:
-		return (uint64_t)CreateDirectory((char*)frame->Arg0);
-
-	case SystemCall::VirtualAlloc:
-		return (uintptr_t)VirtualAlloc((void*)frame->Arg0, (size_t)frame->Arg1, (MemoryAllocationType)frame->Arg2, (MemoryProtection)frame->Arg3);
-
-	case SystemCall::DebugPrint:
-		return (uint64_t)DebugPrint((char*)frame->Arg0);
-
-	default:
-		Print("SystemCall: 0x%x\n", frame->SystemCall);
-		Assert(false);
-		return -1;
-	}
-}
-
 void Kernel::PostMessage(Message* msg)
 {
 	if (!Window)
 		return;
 
 	Window->PostMessage(msg);
+}
+
+bool Kernel::IsValidUserPointer(const void* p)
+{
+	//Make sure pointer is in User's address half
+	if ((uintptr_t)p > UserStop)
+		return false;
+
+	//Make sure pointer is User's address space
+	UserProcess& process = m_scheduler->GetCurrentProcess();
+	return process.GetAddressSpace().IsValidPointer(p);
 }

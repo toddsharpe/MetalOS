@@ -29,6 +29,7 @@ extern "C"
 #include "Pdb.h"
 #include "KThread.h"
 #include "UserProcess.h"
+#include "MetalOS.Arch.h"
 
 class Kernel
 {
@@ -39,7 +40,7 @@ public:
 	void Initialize(const PLOADER_PARAMS params);
 
 	void HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame);
-	void __declspec(noreturn) Bugcheck(const char* file, const char* line, const char* assert);
+	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* assert);
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
@@ -59,12 +60,6 @@ public:
 		//TODO: assert
 		uint64_t rva = virtualAddress - KernelBaseAddress;
 		return m_physicalAddress + rva;
-	}
-
-	static uint32_t IdleThread(void* arg)
-	{
-		while (true)
-			__halt();
 	}
 
 #pragma region Heap Interface
@@ -126,22 +121,35 @@ public:
 	void* DriverMapPages(paddr_t address, size_t count);
 #pragma endregion
 
-#pragma region Kernel Interface
-	Handle CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
+#pragma region ThreadStarts
 	__declspec(noreturn) static void KernelThreadInitThunk();
 	__declspec(noreturn) static void UserThreadInitThunk();
+#pragma endregion
+
+#pragma region Kernel Interface
+	void CreateKernelThread(ThreadStart start, void* arg);
 	void KernelThreadSleep(nano_t value);
+	void ExitKernelThread();
+
+	bool CreateProcess(const std::string& path);
+	Handle CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
+
 	void GetSystemTime(SystemTime* time);
 
 	void RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
 
 	Device* GetDevice(const std::string path);
 
+	uint64_t Syscall(SystemCallFrame* frame);
+	bool IsValidUserPointer(const void* p);
+	void PostMessage(Message* msg);
+#pragma endregion
+
+#pragma region File Interface
 	FileHandle* CreateFile(const std::string& path, GenericAccess access);
 	bool ReadFile(FileHandle* file, void* buffer, size_t bufferSize, size_t* bytesRead);
 	bool SetFilePosition(FileHandle* file, size_t position);
 	void CloseFile(FileHandle* file);
-	bool CreateProcess(const std::string& path);
 #pragma endregion
 
 #pragma region Semaphore Interface
@@ -150,10 +158,6 @@ public:
 	WaitStatus WaitForSemaphore(Handle handle, size_t timeoutMs, size_t units = 1);
 	bool CloseSemaphore(Handle handle);
 #pragma endregion
-
-	void CreateKernelThread(ThreadStart start, void* arg);
-	void ExitKernelThread();
-	uint64_t Syscall(SystemCallFrame* frame);
 
 #pragma region System Calls
 	SystemCallResult GetSystemInfo(SystemInfo* info);
@@ -183,11 +187,15 @@ public:
 	SystemCallResult DebugPrint(char* s);
 #pragma endregion
 
-	void PostMessage(Message* msg);
-
 	UserWindow* Window;
 
 private:
+	static uint32_t IdleThread(void* arg)
+	{
+		while (true)
+			ArchWait();
+	}
+
 	void InitializeAcpi();
 
 	static void OnTimer0(void* arg) { ((Kernel*)arg)->OnTimer0(); };

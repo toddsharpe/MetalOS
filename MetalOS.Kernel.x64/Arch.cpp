@@ -9,6 +9,19 @@ void ArchInitialize()
 	x64::Initialize();
 }
 
+size_t ArchStackReserve()
+{
+	return 32;
+}
+
+void ArchSetPagingRoot(paddr_t root)
+{
+	if (__readcr3() != root)
+	{
+		__writecr3(root);
+	}
+}
+
 void ArchSetInterruptStack(void* stack)
 {
 	x64::SetKernelInterruptStack(stack);
@@ -27,6 +40,11 @@ void ArchSetUserCpuContext(void* context)
 void ArchPause()
 {
 	_pause();
+}
+
+void ArchWait()
+{
+	__halt();
 }
 
 uint32_t ArchReadPort(uint32_t port, uint8_t width)

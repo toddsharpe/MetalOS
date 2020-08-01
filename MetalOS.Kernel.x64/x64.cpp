@@ -19,7 +19,6 @@ void x64::SetKernelInterruptStack(void* stack)
 {
 	TSS64.RSP_0_low = QWordLow(stack);
 	TSS64.RSP_0_high = QWordHigh(stack);
-	_lgdt(&GDTR);
 }
 
 void x64::Initialize()
@@ -53,4 +52,7 @@ void x64::Initialize()
 	//Enable syscall
 	const size_t value = __readmsr(static_cast<uint32_t>(MSR::IA32_EFER));
 	__writemsr(static_cast<uint32_t>(MSR::IA32_EFER), value | 1);
+
+	//Enable WRGSBASE instruction
+	__writecr4(__readcr4() | (1 << 16));
 }

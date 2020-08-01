@@ -15,7 +15,7 @@ class PhysicalMemoryManager
 public:
 	PhysicalMemoryManager(MemoryMap& memoryMap);
 
-	bool AllocatePage(paddr_t& address, PhysicalPageState& state);
+	bool AllocatePage(paddr_t& address, PageState& state);
 	void DeallocatePage(paddr_t address);
 
 	bool AllocateContiguous(paddr_t& address, const size_t pageCount);
@@ -30,7 +30,7 @@ private:
 	static_assert(sizeof(PFN_ENTRY) == 32, "If this number changes, change boot allotment. TODO etc");
 
 	static const size_t GetBuddyIndex(paddr_t address);
-	static const PhysicalPageState GetPageState(const EFI_MEMORY_DESCRIPTOR* desc);
+	static const PageState GetPageState(const EFI_MEMORY_DESCRIPTOR* desc);
 	paddr_t GetPFN(PPFN_ENTRY entry);
 
 	//Lists for quick access at runtime

@@ -5,44 +5,34 @@
 
 class KThread
 {
+	friend class Scheduler;
+
 public:
-	static const size_t StackPageCount = 8;
-	
 	static uint32_t LastId;
 
 	KThread(ThreadStart start, void* arg, UserThread* userThread = nullptr);
 	~KThread();
 
 	void Run();
+	void InitContext(void* entry);
 
-	void InitContext(void* entry, void* stack);
+	uint32_t GetId() const;
+	void* GetStackPointer() const;
+	UserThread* GetUserThread() const;
 
-	uint32_t GetId() const
-	{
-		return m_id;
-	}
+	void Display() const;
 
-	UserThread* GetUserThread() const
-	{
-		return m_userThread;
-	}
 
-	void* GetStack() const
-	{
-		x64_context* ctx = (x64_context*)m_context;
-		return (void*)ctx->Rsp;
-	}
+private:
+	static const size_t StackPages = 8;
 
-	void Display();
-
-	friend class Scheduler;
-
-	//TODO: get Run working and make these private
+	uint32_t m_id;
 	ThreadStart m_start;
 	void* m_arg;
 
-private:
-	uint32_t m_id;
+	void* m_context;
+	void* m_stackPointer; //Points to bottom of stack minus ArchStackReserve
+	void* m_stackAllocation;//Points to top of stack
 
 	//Scheduler
 	ThreadState m_state;
@@ -50,7 +40,6 @@ private:
 	nano100_t m_sleepWake;
 	void* m_event;
 
-	void* m_context;
 	UserThread* m_userThread;
 };
 

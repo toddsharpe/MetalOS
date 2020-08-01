@@ -13,7 +13,7 @@ typedef struct
 } EFI_GRAPHICS_DEVICE, * PEFI_GRAPHICS_DEVICE;
 
 //Windows Internals, Part 2, Page 297
-typedef enum : uint8_t
+enum class PageState : uint8_t
 {
 	Zeroed,
 	Free,
@@ -24,7 +24,7 @@ typedef enum : uint8_t
 	Active,
 	//Transition,
 	Platform //Used for acpi/runtime/reserved pages
-} PhysicalPageState;
+};
 
 //Windows Internals, Part 2, Page 316
 typedef struct _PFN_ENTRY
@@ -35,7 +35,7 @@ typedef struct _PFN_ENTRY
 
 	//uintptr_t PTEAddress;
 	//uint8_t ShareCount;
-	PhysicalPageState State;
+	PageState State;
 
 	struct
 	{

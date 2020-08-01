@@ -165,16 +165,13 @@ void Scheduler::Schedule()
 			if (userThread != nullptr)
 			{
 				const uintptr_t cr3 = userThread->GetProcess().GetCR3();
-				if (__readcr3() != cr3)
-				{
-					__writecr3(cr3);
-					ArchSetInterruptStack(userThread->m_stack);
-				}
+				ArchSetPagingRoot(cr3);
 			}
 
 			//Switch to thread
 			next->m_state = ThreadState::Running;
 			SetCurrentThread(*next);
+			ArchSetInterruptStack(next->GetStackPointer());
 			ArchLoadContext(next->m_context);
 		}
 	}

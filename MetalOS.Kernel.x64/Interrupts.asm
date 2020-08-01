@@ -70,9 +70,9 @@ noswap_start:
 	mov rcx, number
 	mov rdx, rsp
 
-	sub rsp, 20h; Reserve 32bytes for register parameter area
+	sub rsp, StackReserve; Reserve 32bytes for register parameter area
 	call INTERRUPT_HANDLER; Call OS handler
-	add rsp, 20h; Reclaim register parameter area
+	add rsp, StackReserve; Reclaim register parameter area
 
 	; Restore previous frame
 	POP_INTERRUPT_FRAME

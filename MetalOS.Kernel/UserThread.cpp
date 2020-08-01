@@ -5,22 +5,28 @@
 
 uint32_t UserThread::LastId = 0;
 
-UserThread::UserThread(ThreadStart startAddress, void* arg, void* stack, void* entry, UserProcess& process) :
+UserThread::UserThread(ThreadStart startAddress, void* arg, void* entry, size_t stackSize, UserProcess& process) :
 	Window(),
 	m_id(++LastId),
 	m_process(process),
 	m_teb(),
-	m_stack(stack),
+	m_stackAllocation(),
+	m_context(),
 	m_messages()
 {
+	//Allocate user stack
+	m_stackAllocation = kernel.VirtualAlloc(process, nullptr, stackSize, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWrite);
+	void* stackPointer = (void*)((uintptr_t)m_stackAllocation + PAGE_ALIGN(stackSize) - ArchStackReserve());
+	
 	//Create user thread context
 	const size_t size = ArchContextSize();
 	m_context = new uint8_t[size];
-	ArchInitContext(m_context, entry, stack);
+	memset(m_context, 0, size);
+	ArchInitContext(m_context, entry, stackPointer);
 
 	//Setup args in TEB
 	m_teb = (ThreadEnvironmentBlock*)process.HeapAlloc(sizeof(ThreadEnvironmentBlock));
-	Assert(m_teb);
+	memset(m_teb, 0, sizeof(ThreadEnvironmentBlock));
 	m_teb->SelfPointer = m_teb;
 	m_teb->ThreadStart = startAddress;
 	m_teb->Arg = arg;
@@ -30,8 +36,7 @@ UserThread::UserThread(ThreadStart startAddress, void* arg, void* stack, void* e
 
 void UserThread::Run()
 {
-	ArchSetInterruptStack(m_stack);
-	ArchUserThreadStart(m_context, m_stack, m_teb);
+	ArchUserThreadStart(m_context, m_teb);
 }
 
 Message* UserThread::DequeueMessage()

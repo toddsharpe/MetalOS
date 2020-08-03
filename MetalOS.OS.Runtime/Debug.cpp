@@ -2,6 +2,12 @@
 #include <cstdarg>
 #include <crt_stdio.h>
 #include <MetalOS.h>
+#include <intrin.h>
+
+extern "C" void DebugBreak()
+{
+	__debugbreak();
+}
 
 extern "C" void DebugPrintf(const char* format, ...)
 {

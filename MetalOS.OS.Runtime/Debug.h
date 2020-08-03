@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 
+	void DebugBreak();
 	void DebugPrintf(const char* format, ...);
 	void __declspec(noreturn) Bugcheck(const char* file, const char* line, const char* assert);
 

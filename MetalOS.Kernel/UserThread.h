@@ -32,8 +32,6 @@ public:
 	void DisplayMessages();
 	void DisplayDetails();
 
-	friend class Scheduler;
-
 private:
 	uint32_t m_id;
 	UserProcess& m_process;

@@ -748,14 +748,14 @@ bool Kernel::CreateProcess(const std::string& path)
 		}
 	}
 
-	//Save init pointers
-	process->InitProcess = (void*)Loader::GetProcAddress(address, "InitProcess");
-	process->InitThread = (void*)Loader::GetProcAddress(address, "InitThread");
-	Print("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
-
 	//Load KernelAPI
 	Handle api = Loader::LoadLibrary(*process, "mosrt.dll");
 	Print("mosrt loaded at 0x%016x\n", api);
+
+	//Save init pointers in library
+	process->InitProcess = (void*)Loader::GetProcAddress(api, "InitProcess");
+	process->InitThread = (void*)Loader::GetProcAddress(api, "InitThread");
+	Print("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
 
 	//Patch imports of process for just mosapi
 	Loader::KernelExports(address, api);

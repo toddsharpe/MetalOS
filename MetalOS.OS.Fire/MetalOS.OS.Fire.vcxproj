@@ -67,6 +67,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies />
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <EntryPointSymbol>main</EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -86,9 +87,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MetalOS.OS.init\MetalOS.OS.init.vcxproj">
-      <Project>{9028453c-66c6-456c-8f3e-98ed24c253c3}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\MetalOS.OS.Runtime\MetalOS.OS.Runtime.vcxproj">
       <Project>{174d1dbb-31e8-4d0b-abee-96949547c682}</Project>
     </ProjectReference>

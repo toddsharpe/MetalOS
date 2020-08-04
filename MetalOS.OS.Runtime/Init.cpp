@@ -1,29 +1,12 @@
-#include <cstdint>
-#include <WindowsPE.h>
 #include <MetalOS.h>
-#include "Runtime.h"
+#include <WindowsPE.h>
 #include <string.h>
-#include <Debug.h>
+#include "Runtime.h"
 
-extern "C" int main(int argc, char** argv);
-typedef int (*ProcessEntry)();
+typedef int (*ProcessEntry)(int argc, char** argv);
 typedef void (*CrtInitializer)();
 
-PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name)
-{
-	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)imageBase;
-	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)((uint64_t)imageBase + dosHeader->e_lfanew);
-
-	//Find section
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
-	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
-	{
-		if (strcmp((char*)&section[i].Name, name) == 0)
-			return &section[i];
-	}
-
-	return nullptr;
-}
+extern PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name);
 
 void ExecuteStaticInitializers(Handle moduleBase)
 {
@@ -37,12 +20,6 @@ void ExecuteStaticInitializers(Handle moduleBase)
 			initializer++;
 		}
 	}
-}
-
-//Just to build
-extern "C" int WinMainCRTStartup() //should be placed at entry point by msvc
-{
-	return main(0, nullptr);
 }
 
 extern "C" __declspec(dllexport) void InitProcess()//Rename: init module?
@@ -99,7 +76,7 @@ extern "C" __declspec(dllexport) void InitProcess()//Rename: init module?
 
 	//Call entry
 	ProcessEntry entry = MakePtr(ProcessEntry, baseAddress, ntHeader->OptionalHeader.AddressOfEntryPoint);
-	int ret = entry();
+	int ret = entry(0, nullptr);
 
 	//Kill process
 	ExitProcess(0);
@@ -115,4 +92,3 @@ extern "C" __declspec(dllexport) void InitThread()
 	//Kill thread
 	ExitThread(0);
 }
-

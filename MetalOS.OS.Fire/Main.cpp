@@ -1,5 +1,6 @@
 #include <MetalOS.h>
 #include <stdlib.h>
+#include <new>
 #include "Matrix.h"
 #include "FireScreen.h"
 

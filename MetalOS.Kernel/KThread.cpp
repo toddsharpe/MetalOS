@@ -15,6 +15,7 @@ KThread::KThread(ThreadStart start, void* arg, UserThread* userThread) :
 	m_waitStatus(WaitStatus::None),
 	m_sleepWake(),
 	m_event(),
+	m_suspendCount(),
 	m_userThread(userThread)
 {
 	const size_t size = ArchContextSize();

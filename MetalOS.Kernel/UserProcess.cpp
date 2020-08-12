@@ -25,18 +25,6 @@ UserProcess::UserProcess(const std::string& name) :
 	m_pageTables->LoadKernelMappings(new PageTables(__readcr3()));
 }
 
-void UserProcess::AddModule(const char* name, void* address)
-{
-	//Has to be called within context of process for now
-	Assert(__readcr3() == m_pageTables->GetCr3());
-
-	//TODO: check name length
-
-	m_peb->LoadedModules[m_peb->ModuleIndex].Address = address;
-	strcpy(m_peb->LoadedModules[m_peb->ModuleIndex].Name, name);
-	m_peb->ModuleIndex++;
-}
-
 void UserProcess::Init(void* address)
 {
 	//Has to be called within context of process for now
@@ -56,9 +44,29 @@ void UserProcess::Init(void* address)
 	Print(" addr: 0x%016x\n", m_peb->BaseAddress);
 }
 
+void UserProcess::AddModule(const char* name, void* address)
+{
+	//Has to be called within context of process for now
+	Assert(__readcr3() == m_pageTables->GetCr3());
+
+	//TODO: check name length
+
+	m_peb->LoadedModules[m_peb->ModuleIndex].Address = address;
+	strcpy(m_peb->LoadedModules[m_peb->ModuleIndex].Name, name);
+	m_peb->ModuleIndex++;
+}
+
 void* UserProcess::HeapAlloc(size_t size)
 {
 	return m_heap->Allocate(size);
+}
+
+ThreadEnvironmentBlock* UserProcess::AllocTEB()
+{
+	ThreadEnvironmentBlock* teb = (ThreadEnvironmentBlock*)HeapAlloc(sizeof(ThreadEnvironmentBlock));
+	memset(teb, 0, sizeof(ThreadEnvironmentBlock));
+	teb->PEB = m_peb;
+	return teb;
 }
 
 uintptr_t UserProcess::GetModuleBase(uintptr_t ip) const
@@ -93,11 +101,6 @@ uintptr_t UserProcess::GetCR3() const
 VirtualAddressSpace& UserProcess::GetAddressSpace()
 {
 	return m_addressSpace;
-}
-
-ProcessEnvironmentBlock* UserProcess::GetPEB() const
-{
-	return m_peb;
 }
 
 void UserProcess::Display() const

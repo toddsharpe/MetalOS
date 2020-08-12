@@ -51,6 +51,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Notes", "_Notes", "{22092C
 		_Notes\ACPICA - OSDev Wiki.pdf = _Notes\ACPICA - OSDev Wiki.pdf
 		_Notes\acpica-reference_18.pdf = _Notes\acpica-reference_18.pdf
 		_Notes\AML - OSDev Wiki.pdf = _Notes\AML - OSDev Wiki.pdf
+		_Notes\CoreRT_Notes.txt = _Notes\CoreRT_Notes.txt
 		_Notes\DSP0134_2.7.1.pdf = _Notes\DSP0134_2.7.1.pdf
 		_Notes\hid1_11.pdf = _Notes\hid1_11.pdf
 		_Notes\Intel x64 IA-32 SDM.pdf = _Notes\Intel x64 IA-32 SDM.pdf

@@ -47,21 +47,25 @@ typedef size_t cpu_flags_t;
 //Keep in sync with MetalOS.KernalApi syscalls.asm
 enum class SystemCall : size_t
 {
-	GetSystemInfo = 1,
-	GetProcessInfo,
+	GetSystemInfo = 0x100,
 	GetTickCount,
 
+	GetCurrentThread = 0x200,
+	CreateThread,
 	Sleep,
+	SwitchToThread,
+	SuspendThread,
+	ResumeThread,
 	ExitProcess,
 	ExitThread,
 
-	CreateWindow,
+	CreateWindow = 0x300,
 	GetWindowRect,
 	GetMessage,
 	PeekMessage,
 	SetScreenBuffer,
 
-	CreateFile,
+	CreateFile = 0x400,
 	ReadFile,
 	WriteFile,
 	SetFilePointer,
@@ -70,11 +74,8 @@ enum class SystemCall : size_t
 	DeleteFile,
 	CreateDirectory,
 
-	VirtualAlloc,
+	VirtualAlloc = 0x500,
 
-	DebugPrint,
-
-	LoadLibrary,
-	GetProcAddress
+	DebugPrint = 0x600,
 };
 

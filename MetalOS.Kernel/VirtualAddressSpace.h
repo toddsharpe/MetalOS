@@ -6,10 +6,11 @@
 #include "MetalOS.Kernel.h"
 #include <MetalOS.Internal.h>
 
-
 class VirtualAddressSpace
 {
 public:
+	static const uint32_t AllocationGranularity = (PAGE_SIZE << 2);//16KB
+
 	VirtualAddressSpace(const uintptr_t start, const uintptr_t end, const bool global);
 	
 	bool IsFree(const uintptr_t address, const size_t count);
@@ -32,9 +33,6 @@ public:
 		return m_end - m_start;
 	}
 
-private:
-	static const uint32_t AllocationGranularity = (PAGE_SIZE << 2);//16KB
-	
 	struct Node
 	{
 		uint32_t PageCount;

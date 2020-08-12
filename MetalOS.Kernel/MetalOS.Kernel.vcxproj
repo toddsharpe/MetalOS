@@ -190,6 +190,7 @@
     <ClInclude Include="HyperVScsiDriver.h" />
     <ClInclude Include="HyperVTimer.h" />
     <ClInclude Include="Kernel.h" />
+    <ClInclude Include="KernelHeap.h" />
     <ClInclude Include="KObject.h" />
     <ClInclude Include="UserProcess.h" />
     <ClInclude Include="KSemaphore.h" />
@@ -222,7 +223,6 @@
     <ClInclude Include="Bitvector.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="Font.h" />
-    <ClInclude Include="KernelHeap.h" />
     <ClInclude Include="TextScreen.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="MemoryMap.h" />

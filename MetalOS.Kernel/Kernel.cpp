@@ -484,7 +484,7 @@ void Kernel::OnTimer0()
 	HyperV::EOI();
 }
 
-void Kernel::CreateKernelThread(ThreadStart start, void* arg)
+KThread* Kernel::CreateKernelThread(ThreadStart start, void* arg)
 {
 	//Current thread
 	KThread* current = m_scheduler->GetCurrentThread();
@@ -494,6 +494,7 @@ void Kernel::CreateKernelThread(ThreadStart start, void* arg)
 	KThread* thread = new KThread(start, arg);
 	thread->InitContext(&Kernel::KernelThreadInitThunk);
 	m_scheduler->AddReady(*thread);
+	return thread;
 }
 
 void Kernel::ExitKernelThread()
@@ -765,7 +766,7 @@ bool Kernel::CreateProcess(const std::string& path)
 	return true;
 }
 
-Handle Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry)
+KThread* Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry)
 {
 	//TODO: validate addresses
 	
@@ -778,7 +779,7 @@ Handle Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart 
 	process.AddThread(*thread);
 	m_scheduler->AddReady(*thread);
 	
-	return userThread;
+	return thread;
 }
 
 void* Kernel::VirtualAlloc(UserProcess& process, void* address, size_t size, MemoryAllocationType allocationType, MemoryProtection protect)

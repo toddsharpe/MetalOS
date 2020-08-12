@@ -77,7 +77,7 @@ struct SystemTime
 	uint16_t Milliseconds;
 };
 
-enum class SystemArchitecture
+enum class SystemArchitecture : uint32_t
 {
 	Unknown = 0,
 	x64 = 1
@@ -87,6 +87,10 @@ struct SystemInfo
 {
 	uint32_t PageSize;
 	SystemArchitecture Architecture;
+	uint32_t NumberOfProcessors;
+	uint32_t AllocationGranularity;
+	uintptr_t MinimumApplicationAddress;
+	uintptr_t MaximumApplicationAddress;
 };
 
 enum class GenericAccess
@@ -466,6 +470,12 @@ struct Message
 #define SYSTEMCALL(type) extern "C" __declspec(dllexport) type
 #endif
 
+#if !defined(EXPORT)
+#define RUNTIMECALL(type) extern "C" __declspec(dllimport) type
+#else
+#define RUNTIMECALL(type) extern "C" __declspec(dllexport) type
+#endif
+
 enum class WaitStatus
 {
 	None,
@@ -500,7 +510,6 @@ struct Module
 	void* Address;
 };
 
-typedef void (*KernelDebugPrint)(const char* format, ...);
 struct ProcessEnvironmentBlock
 {
 	uint32_t ProcessId;
@@ -516,6 +525,7 @@ struct ThreadEnvironmentBlock
 	ThreadStart ThreadStart;
 	void* Arg;
 	uint32_t ThreadId;
+	uint32_t Error;
 };
 
 enum class FilePointerMove
@@ -533,13 +543,22 @@ enum class SystemCallResult
 
 //Info
 SYSTEMCALL(SystemCallResult) GetSystemInfo(SystemInfo& info);
-SYSTEMCALL(SystemCallResult) GetProcessInfo(ProcessInfo& info); //Handled in usermode
+RUNTIMECALL(SystemCallResult) GetProcessInfo(ProcessInfo& info);
 SYSTEMCALL(size_t) GetTickCount();
 
 //Process/Thread
+SYSTEMCALL(Handle) GetCurrentThread();
+RUNTIMECALL(uint64_t) GetCurrentThreadId();
+SYSTEMCALL(Handle) CreateThread(size_t stackSize, ThreadStart startAddress, void* arg);
 SYSTEMCALL(void) Sleep(const uint32_t milliseconds);
+SYSTEMCALL(void) SwitchToThread();
+SYSTEMCALL(SystemCallResult) SuspendThread(Handle thread, size_t& prevCount);
+SYSTEMCALL(SystemCallResult) ResumeThread(Handle thread, size_t& prevCount);
 SYSTEMCALL(SystemCallResult) ExitProcess(const uint32_t exitCode);
 SYSTEMCALL(SystemCallResult) ExitThread(const uint32_t exitCode);
+
+RUNTIMECALL(uint32_t) GetLastError();
+RUNTIMECALL(void) SetLastError(uint32_t errorCode);
 
 //Semaphores
 //Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
@@ -565,9 +584,39 @@ SYSTEMCALL(void*) VirtualAlloc(const void* address, const size_t size, const Mem
 
 SYSTEMCALL(SystemCallResult) DebugPrint(const char* s);
 
-//Pseudo systemcalls that are handled by user mode
-SYSTEMCALL(Handle) LoadLibrary(const char* lpLibFileName);
-SYSTEMCALL(uintptr_t) GetProcAddress(Handle hModule, const char* lpProcName);
+RUNTIMECALL(Handle) LoadLibrary(const char* lpLibFileName);
+RUNTIMECALL(uintptr_t) GetProcAddress(Handle hModule, 
+	const char* lpProcName);
+
+class Thread
+{
+public:
+	static Thread* GetCurrent()
+	{
+		Thread* ret = new Thread();
+		ret->m_thread = GetCurrentThread();
+		return ret;
+	}
+
+	static void Sleep(const uint32_t milliseconds)
+	{
+		Sleep(milliseconds);
+	}
+
+	Thread(size_t stackSize, ThreadStart startAddress, void* arg)
+	{
+		m_thread = CreateThread(stackSize, startAddress, arg);
+	}
+
+	bool IsValid()
+	{
+		return m_thread != nullptr;
+	}
+
+private:
+	Thread();
+	Handle m_thread;
+};
 
 #define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
 

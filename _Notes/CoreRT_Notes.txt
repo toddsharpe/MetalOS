@@ -1,0 +1,5 @@
+https://mattwarren.org/2018/06/07/CoreRT-.NET-Runtime-for-AOT/
+https://github.com/dotnet/corert/issues/5523
+https://gitter.im/dotnet/corert
+
+

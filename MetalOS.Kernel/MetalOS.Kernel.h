@@ -107,6 +107,7 @@ enum class ThreadState
 	Running,
 	Sleeping,
 	Waiting,
+	Suspended,
 	MessageWait,
 	Terminated,
 	Initialized

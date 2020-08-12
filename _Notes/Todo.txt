@@ -1,10 +1,31 @@
 ﻿Todo List
 * Fork orignal doom source code and port to MetalOS
   * Use CPP for port entry points
-* Convert MetalOS header to c++
-* extract x64 functionality out to library
 * Kernel DPCs
 * Windowing system
 * UserThread shouldn't use a full context structure
-* Remove .init and just inject a dll with entries
 * Move loader entirely userside?
+* c++ headers like "Thread" or "File" that store the identifying handle and wrap the native interface:
+
+In Progress:
+* extract x64 functionality out to library
+
+class Thread
+{
+public:
+	Thread(Handle thread);
+
+	size_t Suspend()
+	{
+		return SuspendThread(m_thread);
+	}
+
+private:
+	Handle m_thread;
+}
+
+
+
+Done:
+* Convert MetalOS header to c++
+* Remove .init and just inject a dll with entries

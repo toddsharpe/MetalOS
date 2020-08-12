@@ -22,6 +22,9 @@ public:
 	void Sleep(nano_t value);
 	void KillThread();
 
+	size_t Suspend(KThread& thread);
+	size_t Resume(KThread& thread);
+
 	WaitStatus SemaphoreWait(KSemaphore* semaphore, nano100_t timeout);
 	void SemaphoreRelease(KSemaphore* semaphore, size_t count);
 

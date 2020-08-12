@@ -200,9 +200,6 @@
     <ClInclude Include="MemoryMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="KernelHeap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Bitvector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -351,6 +348,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="UserWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="KernelHeap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

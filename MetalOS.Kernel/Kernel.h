@@ -127,12 +127,12 @@ public:
 #pragma endregion
 
 #pragma region Kernel Interface
-	void CreateKernelThread(ThreadStart start, void* arg);
+	KThread* CreateKernelThread(ThreadStart start, void* arg);
 	void KernelThreadSleep(nano_t value);
 	void ExitKernelThread();
 
 	bool CreateProcess(const std::string& path);
-	Handle CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
+	KThread* CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
 
 	void GetSystemTime(SystemTime* time);
 
@@ -163,7 +163,12 @@ public:
 	SystemCallResult GetSystemInfo(SystemInfo* info);
 	size_t GetTickCount();
 
+	Handle GetCurrentThread();
+	Handle CreateThread(size_t stackSize, ThreadStart startAddress, void* arg);
 	void Sleep(const uint32_t milliseconds);
+	void SwitchToThread();
+	SystemCallResult SuspendThread(Handle thread, size_t* prevCount);
+	SystemCallResult ResumeThread(Handle thread, size_t* prevCount);
 	SystemCallResult ExitProcess(const uint32_t exitCode);
 	SystemCallResult ExitThread(const uint32_t exitCode);
 

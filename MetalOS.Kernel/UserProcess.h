@@ -3,6 +3,7 @@
 #include "msvc.h"
 #include <string>
 #include <cstdint>
+#include <set>
 #include "VirtualAddressSpace.h"
 #include <PageTables.h>
 #include "BootHeap.h"
@@ -18,25 +19,15 @@ public:
 	UserProcess(const std::string& name);
 	void Init(void* address);
 
-	uintptr_t GetImageBase() const
-	{
-		return m_imageBase;
-	}
 	uintptr_t GetModuleBase(uintptr_t ip) const;
 
 	uintptr_t GetCR3() const;
 	VirtualAddressSpace& GetAddressSpace();
-	ProcessEnvironmentBlock* GetPEB() const;
 
-	void* HeapAlloc(size_t size);
+	ThreadEnvironmentBlock* AllocTEB();
 
 	void* InitProcess;
 	void* InitThread;
-
-	size_t ThreadCount()
-	{
-		return m_threads.size();
-	}
 
 	void AddThread(KThread& thread)
 	{
@@ -57,6 +48,8 @@ public:
 
 	friend class Scheduler;
 private:
+	void* HeapAlloc(size_t size);
+
 	uintptr_t m_imageBase;
 	uint32_t m_id;
 	std::string m_name;

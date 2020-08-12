@@ -14,9 +14,25 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 	case SystemCall::GetTickCount:
 		return GetTickCount();
 
+	case SystemCall::GetCurrentThread:
+		return (uint64_t)GetCurrentThread();
+
+	case SystemCall::CreateThread:
+		return (uint64_t)CreateThread((size_t)frame->Arg0, (ThreadStart)frame->Arg1, (void*)frame->Arg2);
+
 	case SystemCall::Sleep:
 		Sleep((uint32_t)frame->Arg0);
 		return 0;
+
+	case SystemCall::SwitchToThread:
+		SwitchToThread();
+		return 0;
+
+	case SystemCall::SuspendThread:
+		return (uint64_t)SuspendThread((Handle*)frame->Arg0, (size_t*)frame->Arg1);
+
+	case SystemCall::ResumeThread:
+		return (uint64_t)ResumeThread((Handle*)frame->Arg0, (size_t*)frame->Arg1);
 
 	case SystemCall::ExitProcess:
 		return (uint64_t)ExitProcess(frame->Arg0);
@@ -83,6 +99,10 @@ SystemCallResult Kernel::GetSystemInfo(SystemInfo* info)
 	
 	info->PageSize = PAGE_SIZE;
 	info->Architecture = SystemArchitecture::x64;
+	info->NumberOfProcessors = 1;
+	info->AllocationGranularity = VirtualAddressSpace::AllocationGranularity;
+	info->MinimumApplicationAddress = VirtualAddressSpace::AllocationGranularity;
+	info->MaximumApplicationAddress = (UserStop - 1) - VirtualAddressSpace::AllocationGranularity;
 	return SystemCallResult::Success;
 }
 
@@ -93,12 +113,51 @@ size_t Kernel::GetTickCount()
 	return (tsc * 100) / 1000000;
 }
 
+Handle Kernel::GetCurrentThread()
+{
+	return m_scheduler->GetCurrentThread();
+}
+
+Handle Kernel::CreateThread(size_t stackSize, ThreadStart startAddress, void* arg)
+{
+	if (!startAddress || !arg)
+		return nullptr;
+
+	UserProcess& process = m_scheduler->GetCurrentProcess();
+	return CreateThread(process, stackSize, startAddress, arg, process.InitThread);
+}
+
 void Kernel::Sleep(const uint32_t milliseconds)
 {
 	if (!milliseconds)
 		return;
 
 	KernelThreadSleep((nano_t)milliseconds * 1000 * 1000);
+}
+
+void Kernel::SwitchToThread()
+{
+	m_scheduler->Schedule();
+}
+
+SystemCallResult Kernel::SuspendThread(Handle thread, size_t* prevCount)
+{
+	if (!thread || !IsValidUserPointer(prevCount))
+		return SystemCallResult::Failed;
+
+	KThread* kThread = (KThread*)thread;
+	*prevCount = m_scheduler->Suspend(*kThread);
+	return SystemCallResult::Success;
+}
+
+SystemCallResult Kernel::ResumeThread(Handle thread, size_t* prevCount)
+{
+	if (!thread || !IsValidUserPointer(prevCount))
+		return SystemCallResult::Failed;
+
+	KThread* kThread = (KThread*)thread;
+	*prevCount = m_scheduler->Resume(*kThread);
+	return SystemCallResult::Success;
 }
 
 SystemCallResult Kernel::ExitProcess(const uint32_t exitCode)

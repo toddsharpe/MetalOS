@@ -24,6 +24,8 @@ public:
 
 
 private:
+	bool IsSuspended() { return m_suspendCount != 0; }
+
 	static const size_t StackPages = 8;
 
 	uint32_t m_id;
@@ -39,6 +41,7 @@ private:
 	WaitStatus m_waitStatus;
 	nano100_t m_sleepWake;
 	void* m_event;
+	size_t m_suspendCount;
 
 	UserThread* m_userThread;
 };

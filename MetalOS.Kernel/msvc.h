@@ -1,5 +1,7 @@
 #pragma once
 
+#define _RAISE
+
 //Invalid param
 void __cdecl _invalid_parameter(char const*, char const*, char const*, unsigned int, int);
 #define _CRT_SECURE_INVALID_PARAMETER(expr) _invalid_parameter(#expr, __FUNCTION__, __FILE__, __LINE__, 0)

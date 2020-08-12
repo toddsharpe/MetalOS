@@ -157,8 +157,15 @@ void Scheduler::Schedule()
 
 			//Get next thread
 			KThread* next = m_readyQueue.front();
-			Assert(next);
 			m_readyQueue.pop_front();
+
+			while (next->IsSuspended())
+			{
+				m_readyQueue.push_back(next);
+
+				next = m_readyQueue.front();
+				m_readyQueue.pop_front();
+			}
 
 			//Switch cr3 if needed
 			UserThread* userThread = next->GetUserThread();
@@ -226,6 +233,26 @@ void Scheduler::KillThread()
 	}
 
 	this->Schedule();
+}
+
+//TODO: If more than 1 processor, reschedule to suspend
+size_t Scheduler::Suspend(KThread& thread)
+{
+	const size_t ret = thread.m_suspendCount;
+	
+	thread.m_suspendCount++;
+	return ret;
+}
+
+size_t Scheduler::Resume(KThread& thread)
+{
+	const size_t ret = thread.m_suspendCount;
+	
+	if (thread.m_suspendCount == 0)
+		return ret;
+
+	thread.m_suspendCount--;
+	return ret;
 }
 
 WaitStatus Scheduler::SemaphoreWait(KSemaphore* semaphore, nano100_t timeout)

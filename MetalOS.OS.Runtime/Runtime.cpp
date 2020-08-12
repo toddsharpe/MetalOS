@@ -33,3 +33,21 @@ extern "C" SystemCallResult GetProcessInfo(ProcessInfo& info)
 	info.Id = peb->ProcessId;
 	return SystemCallResult::Success;
 }
+
+extern "C" uint64_t GetCurrentThreadId()
+{
+	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
+	return teb->ThreadId;
+}
+
+extern "C" uint32_t GetLastError()
+{
+	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
+	return teb->Error;
+}
+
+extern "C" void SetLastError(uint32_t errorCode)
+{
+	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
+	teb->Error = errorCode;
+}

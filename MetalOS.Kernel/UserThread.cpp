@@ -25,12 +25,10 @@ UserThread::UserThread(ThreadStart startAddress, void* arg, void* entry, size_t 
 	ArchInitContext(m_context, entry, stackPointer);
 
 	//Setup args in TEB
-	m_teb = (ThreadEnvironmentBlock*)process.HeapAlloc(sizeof(ThreadEnvironmentBlock));
-	memset(m_teb, 0, sizeof(ThreadEnvironmentBlock));
+	m_teb = process.AllocTEB();
 	m_teb->SelfPointer = m_teb;
 	m_teb->ThreadStart = startAddress;
 	m_teb->Arg = arg;
-	m_teb->PEB = process.GetPEB();
 	m_teb->ThreadId = this->m_id;
 }
 
@@ -87,4 +85,3 @@ void UserThread::DisplayDetails()
 	x64_context* ctx = (x64_context*)m_context;
 	Print("  Rsp: 0x%016x Rip: 0x%016x RFlags:0x%08x\n", ctx->Rsp, ctx->Rip, (uint32_t)ctx->Rflags);
 }
-

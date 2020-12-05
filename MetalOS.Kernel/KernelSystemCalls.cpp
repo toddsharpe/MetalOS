@@ -71,7 +71,7 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 		return (uint64_t)CloseFile((Handle*)frame->Arg0);
 
 	case SystemCall::MoveFile:
-		return (uint64_t)MoveFile((char*)frame->Arg0, (char*)frame->Arg0);
+		return (uint64_t)MoveFile((char*)frame->Arg0, (char*)frame->Arg1);
 
 	case SystemCall::DeleteFile:
 		return (uint64_t)DeleteFile((char*)frame->Arg0);

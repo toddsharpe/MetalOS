@@ -23,7 +23,6 @@ Scheduler::Scheduler(KThread& bootThread) :
 
 	//Write CPU state
 	ArchSetUserCpuContext(context);
-	//ArchSetKernelCpuContext(context);
 }
 
 Scheduler::CpuContext* Scheduler::GetCpuContext() const

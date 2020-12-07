@@ -26,6 +26,8 @@ Cpuid::Cpuid()
 	m_vendor = vendor;
 	if (m_vendor == "GenuineIntel")
 		m_isIntel = true;
+	else if (m_vendor == "AuthenticAMD")
+		m_isAmd = true;
 
 	//CPUID 1
 	__cpuid(registers, 1);

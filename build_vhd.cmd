@@ -45,4 +45,4 @@ diskpart /s %VHD_SCRIPT%
 
 @rem Fix Perms
 @rem Get-VM 'MetalOS' | Select-Object VMID
-icacls %VHD% /grant 4ba14b7b-99cb-4179-bf86-b8c05f09091e:F
+icacls %VHD% /grant ee572dc7-71d5-4787-a3e2-91738eb43faa:F

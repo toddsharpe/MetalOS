@@ -13,6 +13,11 @@ public:
 		return m_isIntel;
 	}
 
+	bool IsAMD() const
+	{
+		return m_isAmd;
+	}
+
 	const std::string& GetVendor() const
 	{
 		return m_vendor;
@@ -28,6 +33,7 @@ private:
 
 	std::string m_vendor;
 	bool m_isIntel;
+	bool m_isAmd;
 
 	bitset_32 m_func1Ecx;
 };

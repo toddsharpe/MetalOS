@@ -20,6 +20,27 @@ PageTables::PageTables(uintptr_t physicalAddress) : m_physicalAddress(physicalAd
 	
 }
 
+void PageTables::ClearKernelEntries()
+{
+	PPML4E currentL4 = (PPML4E)Pool->GetVirtualAddress(m_physicalAddress);
+
+	const size_t kernelCount = (1 << 8);//high bit gets extended to full 64 bit width with 4 level paging
+	const size_t count = (1 << 9);
+	for (size_t i4 = kernelCount; i4 < count; i4++)
+	{
+		currentL4[i4].Value = 0;
+	}
+}
+
+constexpr uintptr_t PageTables::BuildAddress(size_t i4, size_t i3, size_t i2, size_t i1, size_t index)
+{
+	uint64_t virtualAddress = (i4 << 39) + (i3 << 30) + (i2 << 21) + (i1 << 12) + index;
+	if (i4 & (1 << 8)) //Sign extend
+		virtualAddress |= 0xFFFFull << 48;
+
+	return virtualAddress;
+}
+
 uintptr_t PageTables::GetCr3() const
 {
 	return m_physicalAddress;
@@ -29,7 +50,7 @@ void PageTables::Display()
 {
 	const size_t count = (1 << 9);
 
-	LibPrint("0x%016x", m_physicalAddress);
+	LibPrint("CR3: 0x%016x\r\n", m_physicalAddress);
 
 	PPML4E l4 = (PPML4E)Pool->GetVirtualAddress(m_physicalAddress);
 	for (size_t i4 = 0; i4 < count; i4++)
@@ -37,31 +58,43 @@ void PageTables::Display()
 		if (l4[i4].Value == 0)
 			continue;
 
-		LibPrint("  - 0x%016x (0x%016x) P: %d, RW: %d S: %d", l4[i4].Value, KernelStart + (i4 << 39), l4[i4].Present, l4[i4].ReadWrite, l4[i4].UserSupervisor);
+		uint64_t virtualAddress = BuildAddress(i4, 0, 0, 0);
+		LibPrint("  - 0x%016x (0x%016x) P: %d, RW: %d S: %d\r\n", l4[i4].Value, virtualAddress, l4[i4].Present, l4[i4].ReadWrite, l4[i4].UserSupervisor);
 
-		PPDPTE l3 = (PPDPTE)(Pool->GetVirtualAddress(l4[i4].Value & ~0xFFF));
-		for (size_t i3 = 0; i3 < count; i3++)
+		PPDPTE_DIR l3 = (PPDPTE_DIR)(Pool->GetVirtualAddress(l4[i4].Value & ~0xFFF));
+		if (l3->PageSize)
 		{
-			if (l3[i3].Value == 0)
-				continue;
-
-			LibPrint("    - 0x%016x (0x%016x) P: %d, RW: %d S: %d", l3[i3].Value, KernelStart + (i4 << 39) + (i3 << 30), l3[i3].Present, l3[i3].ReadWrite, l3[i3].UserSupervisor);
-
-			PPDE l2 = (PPDE)(Pool->GetVirtualAddress(l3[i3].Value & ~0xFFF));
-			for (size_t i2 = 0; i2 < count; i2++)
+			PPDPTE_PAGE l3Page = (PPDPTE_PAGE)l3;
+			LibPrint("PageFrame: 0x%016x\r\n", l3Page->PageFrameNumber);
+		}
+		else
+		{
+			for (size_t i3 = 0; i3 < count; i3++)
 			{
-				if (l2[i2].Value == 0)
+				if (l3[i3].Value == 0)
 					continue;
 
-				LibPrint("      - 0x%016x (0x%016x) P: %d, RW: %d S: %d", l2[i2].Value, KernelStart + (i4 << 39) + (i3 << 30) + (i2 << 21), l2[i2].Present, l2[i2].ReadWrite, l2[i2].UserSupervisor);
+				uint64_t virtualAddress = BuildAddress(i4, i3, 0, 0);
+				LibPrint("    - 0x%016x (0x%016x) P: %d, RW: %d S: %d\r\n", l3[i3].Value, virtualAddress, l3[i3].Present, l3[i3].ReadWrite, l3[i3].UserSupervisor);
 
-				PPTE l1 = (PPTE)(Pool->GetVirtualAddress(l2[i2].Value & ~0xFFF));
-				for (size_t i1 = 0; i1 < count; i1++)
+				PPDE_DIR l2 = (PPDE_DIR)(Pool->GetVirtualAddress(l3[i3].Value & ~0xFFF));
+				for (size_t i2 = 0; i2 < count; i2++)
 				{
-					if (l1[i1].Value == 0)
+					if (l2[i2].Value == 0)
 						continue;
 
-					LibPrint("        - 0x%016x P: %d, RW: %d S: %d", l1[i1].Value, l1[i1].Present, l1[i1].ReadWrite, l1[i1].UserSupervisor);
+					uint64_t virtualAddress = BuildAddress(i4, i3, i2, 0);
+					LibPrint("      - 0x%016x (0x%016x) P: %d, RW: %d S: %d\r\n", l2[i2].Value, virtualAddress, l2[i2].Present, l2[i2].ReadWrite, l2[i2].UserSupervisor);
+
+					PPTE l1 = (PPTE)(Pool->GetVirtualAddress(l2[i2].Value & ~0xFFF));
+					for (size_t i1 = 0; i1 < count; i1++)
+					{
+						if (l1[i1].Value == 0)
+							continue;
+
+						uint64_t virtualAddress = BuildAddress(i4, i3, i2, i1);
+						LibPrint("        - 0x%016x (0x%016x) P: %d, RW: %d S: %d\r\n", l1[i1].Value, virtualAddress, l1[i1].Present, l1[i1].ReadWrite, l1[i1].UserSupervisor);
+					}
 				}
 			}
 		}
@@ -80,7 +113,8 @@ void PageTables::DisplayCr3()
 		if (l4[i4].Value == 0)
 			continue;
 
-		Print("0x%x - 0x%016x (0x%016x) P: %d, RW: %d S: %d\n", i4, l4[i4].Value, KernelStart + (i4 << 39), l4[i4].Present, l4[i4].ReadWrite, l4[i4].UserSupervisor);
+		const uint64_t virtualAddress = BuildAddress(i4, 0, 0, 0);
+		Print("0x%x - 0x%016x (0x%016x) P: %d, RW: %d S: %d\n", i4, l4[i4].Value, virtualAddress, l4[i4].Present, l4[i4].ReadWrite, l4[i4].UserSupervisor);
 	}
 
 	MetalOsLibDebug = false;
@@ -142,7 +176,7 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 
 	PPML4E l4 = (PPML4E)Pool->GetVirtualAddress(m_physicalAddress);
 	uint32_t l4Index = (virtualAddress >> 39) & 0x1FF;
-	//LibPrint("L4: 0x%016x, Index: %d\r\n", l4, l4Index);
+	//LibPrint("L4: 0x%016x, Index: %d, V: 0x%016x\r\n", l4, l4Index, l4[l4Index].Value);
 
 	if (l4[l4Index].Value == 0)
 	{
@@ -158,15 +192,16 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 		l4[l4Index].Accessed = true;
 		//LibPrint("  0x%016x:", l4[l4Index].Value);
 	}
-	PPDPTE l3 = (PPDPTE)(Pool->GetVirtualAddress(l4[l4Index].Value & ~0xFFF));
+	PPDPTE_DIR l3 = (PPDPTE_DIR)(Pool->GetVirtualAddress(l4[l4Index].Value & ~0xFFF));
 	uint32_t l3Index = (virtualAddress >> 30) & 0x1FF;
-	//LibPrint("L3: 0x%016x, Index: %d\r\n", l3, l3Index);
+	//LibPrint("L3: 0x%016x, Index: %d, V: 0x%016x\r\n", l3, l3Index, l3[l3Index].Value);
 	Keywait(L"asd2\r\n");
 
 	if (l3[l3Index].Value == 0)
 	{
 		if (!Pool->AllocatePage(&newPageAddress))
 			return false;
+		//LibPrint("page: 0x%016x - r: 0x%016x c: 0x%016x\r\n", newPageAddress, &(l3[l3Index]), l3 + l3Index);
 		
 		//Add table to L3 lookup
 		l3[l3Index].Value = newPageAddress;
@@ -176,9 +211,11 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 		l3[l3Index].Accessed = true;
 		//LibPrint("  0x%016x:", l3[l3Index].Value);
 	}
-	PPDE l2 = (PPDE)(Pool->GetVirtualAddress(l3[l3Index].Value & ~0xFFF));
+	PPDE_DIR l2 = (PPDE_DIR)(Pool->GetVirtualAddress(l3[l3Index].Value & ~0xFFF));
 	Keywait(L"asd\r\n");
 	uint32_t l2Index = (virtualAddress >> 21) & 0x1FF;
+	//LibPrint("L2: 0x%016x, Index: %d, V: 0x%016x\r\n", l2, l2Index, l2[l2Index].Value);
+
 	if (l2[l2Index].Value == 0)
 	{
 		if (!Pool->AllocatePage(&newPageAddress))
@@ -189,10 +226,12 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 		l2[l2Index].Present = true;
 		l2[l2Index].ReadWrite = true;
 		l2[l2Index].UserSupervisor = !global;
+		//LibPrint("  0x%016x:", l2[l2Index].Value);
 	}
 	PPTE l1 = (PPTE)(Pool->GetVirtualAddress(l2[l2Index].Value & ~0xFFF));
 
 	uint32_t l1Index = (virtualAddress >> 12) & 0x1FF;
+	//LibPrint("L1: 0x%016x, Index: %d, V: 0x%016x\r\n", l1, l1Index, l1[l1Index].Value);
 	//Assert(l1[l1Index].Value == 0);
 
 	//Make the connection
@@ -216,9 +255,9 @@ uintptr_t PageTables::ResolveAddress(uintptr_t virtualAddress)
 
 	PPML4E l4 = (PPML4E)Pool->GetVirtualAddress(m_physicalAddress);
 	LibPrint("L4: 0x%016x, P: %d, RW: %d S: %d -\r\n", l4[l4Index].Value, l4[l4Index].Present, l4[l4Index].ReadWrite, l4[l4Index].UserSupervisor);
-	PPDPTE l3 = (PPDPTE)Pool->GetVirtualAddress(l4[l4Index].Value & ~0xFFF);
+	PPDPTE_DIR l3 = (PPDPTE_DIR)Pool->GetVirtualAddress(l4[l4Index].Value & ~0xFFF);
 	LibPrint("L3: 0x%016x, P: %d, RW: %d S: %d -\r\n", l3[l3Index].Value, l3[l3Index].Present, l3[l3Index].ReadWrite, l3[l3Index].UserSupervisor);
-	PPDE l2 = (PPDE)Pool->GetVirtualAddress(l3[l3Index].Value & ~0xFFF);
+	PPDE_DIR l2 = (PPDE_DIR)Pool->GetVirtualAddress(l3[l3Index].Value & ~0xFFF);
 	LibPrint("L2: 0x%016x, P: %d, RW: %d S: %d -\r\n", l2[l2Index].Value, l2[l2Index].Present, l2[l2Index].ReadWrite, l2[l2Index].UserSupervisor);
 
 	if (l2[l2Index].PageSize == 1)
@@ -246,8 +285,8 @@ bool PageTables::EnableWrite(uintptr_t virtualAddress)
 	uint32_t l4Index = (virtualAddress >> 39) & 0x1FF;
 
 	PPML4E l4 = (PPML4E)Pool->GetVirtualAddress(m_physicalAddress);
-	PPDPTE l3 = (PPDPTE)Pool->GetVirtualAddress(l4[l4Index].Value & ~0xFFF);
-	PPDE l2 = (PPDE)Pool->GetVirtualAddress(l3[l3Index].Value & ~0xFFF);
+	PPDPTE_DIR l3 = (PPDPTE_DIR)Pool->GetVirtualAddress(l4[l4Index].Value & ~0xFFF);
+	PPDE_DIR l2 = (PPDE_DIR)Pool->GetVirtualAddress(l3[l3Index].Value & ~0xFFF);
 
 	if (l2[l2Index].PageSize == 1)
 	{

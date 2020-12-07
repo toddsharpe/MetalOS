@@ -79,6 +79,8 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 		ReturnIfNotSuccess(status);
 	}
 
+	DumpMemoryMap();
+
 	if (LoaderParams.MemoryMapSize > MemoryMapReservedSize)
 	{
 		ReturnIfNotSuccess(EFI_BUFFER_TOO_SMALL);
@@ -168,6 +170,11 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	PageTablesPool pageTablesPool(bootloaderPagePoolAddress, BootloaderPagePoolCount);
 	PageTables::Pool = &pageTablesPool;
 	PageTables currentPT(__readcr3());
+	
+	//Some platforms have Kernel addresses already mapped (B550i/5950x). Clear them.
+	//The physical page tables will be reclaimed by Kernel, so just remove pointers.
+	currentPT.ClearKernelEntries();
+
 	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, EFI_SIZE_TO_PAGES(LoaderParams.KernelImageSize));
 	currentPT.MapKernelPages(KernelPageTablesPoolAddress, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
 	currentPT.MapKernelPages(KernelGraphicsDeviceAddress, LoaderParams.Display.FrameBufferBase, EFI_SIZE_TO_PAGES(LoaderParams.Display.FrameBufferSize));
@@ -427,8 +434,12 @@ EFI_STATUS Print(const CHAR16* format, ...)
 	vwprintf(buffer, format, args);
 	va_end(args);
 
-	//Write
+	//Write to UEFI
 	if (EFI_ERROR((status = ST->ConOut->OutputString(ST->ConOut, buffer))))
+		return status;
+
+	//Write to UART
+	if (EFI_ERROR(UartPrint(buffer)))
 		return status;
 
 	return EFI_SUCCESS;
@@ -444,7 +455,7 @@ void UartPrint(const char* format, ...)
 	va_end(args);
 }
 
-void UartPrint(const CHAR16* format, ...)
+EFI_STATUS UartPrint(const CHAR16* format, ...)
 {
 	Uart uart(ComPort::Com1);
 
@@ -457,6 +468,8 @@ void UartPrint(const CHAR16* format, ...)
 	char buffer[MAXBUFFER / 2] = { 0 };
 	wcstombs(buffer, wideBuffer, sizeof(buffer));
 	uart.Printf(buffer);
+
+	return EFI_SUCCESS;
 }
 
 EFI_STATUS Keywait(const CHAR16* String)

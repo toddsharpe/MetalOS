@@ -27,6 +27,8 @@ jobs:
     # Runs a single command using the runners shell
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.0.1
+      env:
+        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
 
     # Runs a set of commands using the runners shell
     - name: MSBuild

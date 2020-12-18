@@ -66,6 +66,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <OmitFramePointers>false</OmitFramePointers>
       <PreprocessToFile>false</PreprocessToFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>

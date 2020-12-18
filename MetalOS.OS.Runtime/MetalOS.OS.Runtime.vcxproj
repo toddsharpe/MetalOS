@@ -96,6 +96,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <SupportJustMyCode>false</SupportJustMyCode>
       <AdditionalIncludeDirectories>..\inc;..\MetalOS.crt;</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>

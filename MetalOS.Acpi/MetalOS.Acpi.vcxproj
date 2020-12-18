@@ -58,6 +58,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessToFile>false</PreprocessToFile>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

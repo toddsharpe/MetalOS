@@ -6,7 +6,7 @@ INCLUDE x64.s
 ; void ArchMain();
 ArchMain PROC
 	; Setup stack
-	mov rsp, KERNEL_STACK_STOP ; Stack grows from deep to shallow (high address to low address)
+	mov rsp, KERNEL_STACK_STOP ; Stack grows from high to low
 	sub rsp, StackReserve ; Register parameter area
 
 	; Jump to main

@@ -393,7 +393,8 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	//m_textScreen->ResetX();
 	//m_textScreen->ResetY();
 
-	ArchWait();
+	while (true)
+		ArchWait();
 }
 
 void Kernel::Printf(const char* format, ...)

@@ -7,7 +7,7 @@ extern "C"
 
 extern "C" const AH_DEVICE_ID* AcpiAhMatchHardwareId(char* HardwareId);
 
-AcpiDevice::AcpiDevice(ACPI_HANDLE object) :
+AcpiDevice::AcpiDevice(const ACPI_HANDLE object) :
 	Device(),
 	m_acpiObject(object),
 	m_resources()

@@ -8,7 +8,6 @@ class KThread
 	friend class Scheduler;
 
 public:
-	static uint32_t LastId;
 
 	KThread(ThreadStart start, void* arg, UserThread* userThread = nullptr);
 	~KThread();
@@ -24,12 +23,14 @@ public:
 
 
 private:
+	static uint32_t LastId;
+
 	bool IsSuspended() { return m_suspendCount != 0; }
 
 	static const size_t StackPages = 8;
 
-	uint32_t m_id;
-	ThreadStart m_start;
+	const uint32_t m_id;
+	const ThreadStart m_start;
 	void* m_arg;
 
 	void* m_context;

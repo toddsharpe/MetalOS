@@ -6,17 +6,18 @@
 #include <stdlib.h>
 #include "EfiMain.h"
 
-#define MAXBUFFER 128
 void Bugcheck(const char* file, const char* line, const char* assert)
 {
-	CHAR16 wideFile[MAXBUFFER] = { 0 };
-	mbstowcs(wideFile, file, MAXBUFFER);
+	static constexpr size_t MaxBuffer = 128;
+	
+	CHAR16 wideFile[MaxBuffer] = { 0 };
+	mbstowcs(wideFile, file, MaxBuffer);
 
-	CHAR16 wideLine[MAXBUFFER] = { 0 };
-	mbstowcs(wideLine, line, MAXBUFFER);
+	CHAR16 wideLine[MaxBuffer] = { 0 };
+	mbstowcs(wideLine, line, MaxBuffer);
 
-	CHAR16 wideAssert[MAXBUFFER] = { 0 };
-	mbstowcs(wideAssert, assert, MAXBUFFER);
+	CHAR16 wideAssert[MaxBuffer] = { 0 };
+	mbstowcs(wideAssert, assert, MaxBuffer);
 
 	Print(L"Error:\r\n");
 	Print(L"  %s\r\n", wideAssert);

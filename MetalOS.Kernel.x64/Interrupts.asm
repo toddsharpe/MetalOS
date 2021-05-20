@@ -46,7 +46,6 @@ POP_INTERRUPT_FRAME MACRO
 	pop r15
 ENDM
 
-; TODO: i think these routines need to swap code/data selectors to kernel ones?
 x64_INTERRUPT_HANDLER MACRO hasCode, number
 x64_interrupt_handler_&number& PROC
 	; Disable interrupts
@@ -57,6 +56,7 @@ x64_interrupt_handler_&number& PROC
 	push 0
 	ENDIF
 
+	; Compare CS to 8 (KernelCode), jumping over swapgs if equal
 	cmp qword ptr [rsp+10h], 8h
 	je noswap_start
 	swapgs
@@ -78,6 +78,7 @@ noswap_start:
 	POP_INTERRUPT_FRAME
 	ISR_EPILOG
 
+	; Compare CS to 8 (KernelCode), jumping over swapgs if equal
 	cmp qword ptr [rsp+10h], 8h
 	je noswap_stop
 	swapgs

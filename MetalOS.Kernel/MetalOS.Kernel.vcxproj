@@ -236,9 +236,6 @@
     <ProjectReference Include="..\MetalOS.Acpi\MetalOS.Acpi.vcxproj">
       <Project>{48e6f78a-5c2b-4c66-8767-df5be189bd2c}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\MetalOS.crt\MetalOS.crt.vcxproj">
-      <Project>{e2867f5b-2a93-4d4b-b71f-b65736436bc3}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\MetalOS.Kernel.x64\MetalOS.Kernel.x64.vcxproj">
       <Project>{b240a22c-2efc-487b-936f-b516812f1751}</Project>
     </ProjectReference>

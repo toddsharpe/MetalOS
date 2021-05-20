@@ -18,7 +18,7 @@ public:
 
 	bool IsValidPointer(const void* p);
 
-	bool IsGlobal()
+	bool IsGlobal() const
 	{
 		return m_global;
 	}

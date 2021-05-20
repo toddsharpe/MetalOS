@@ -15,6 +15,17 @@ MetalOS is homebrew operating system for x86-64. It is 64-bit only and has only 
 * 32-bit compatibility
 * Support for bios
 
+## Project dependencies
+![Dependencies](_Documents/Dependencies.png)
+
+| Project | Type | File | Description |
+| - | - | - | - |
+| MetalOS.Kernel | Exe | moskrnl.exe | Monolithic kernel |
+| MetalOS.Boot | EFI App | BOOTX64.efi | EFI Bootloader |
+| MetalOS.Apps.Doom | Exe | doom.exe |  Doom ported for MetalOS |
+| MetalOS.OS.Fire | Exe | fire.exe | Doom fire implemented as standalone app |
+| MetalOS.OS.Runtime | DLL | mosrt.dll | MetalOS Runtime library |
+
 ## Architecture
 MetalOS is a monolithic kernel that uses a custom UEFI bootloader:  
 ![Architecture](_Documents/Architecture.png)
@@ -31,10 +42,10 @@ The main purpose of Boot is to load the ``Kernel``, however it must also:
 See also: [Loader Params](inc/LoaderParams.h)
 
 ### Kernel
-TODO
+Monolithic preemptive kernel. 
 
 Quick Notes:
-* UEFI Runtime is mapped into Kernel addressspace, allowing runtime services to be called
+* UEFI Runtime is mapped into Kernel address space, allowing runtime services to be called
 * Each process has at least one thread
 * Each user thread also contains a kernel thread for when executing Kernel code (interrupt handler, systemcall)
 

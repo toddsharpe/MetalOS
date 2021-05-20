@@ -15,7 +15,7 @@ EFI_GUID gEfiFileInfoGuid = EFI_FILE_INFO_ID;
 
 typedef void (*CrtInitializer)();
 
-EFI_STATUS EfiLoader::MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS& address, size_t& size)
+EFI_STATUS EfiLoader::MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS& addressOut, size_t& sizeOut)
 {
 	EFI_STATUS status;
 	
@@ -33,19 +33,19 @@ EFI_STATUS EfiLoader::MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS& address, siz
 
 	//Get file info
 	ReturnIfNotSuccess(file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, (void*)fileInfo));
-	size = fileInfo->FileSize;
+	sizeOut = fileInfo->FileSize;
 
 	//Allocate space for file
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, EFI_SIZE_TO_PAGES(size), &address));
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, EFI_SIZE_TO_PAGES(sizeOut), &addressOut));
 
 	//Read file into memory
-	ReturnIfNotSuccess(file->Read(file, &size, (void*)address));
+	ReturnIfNotSuccess(file->Read(file, &sizeOut, (void*)addressOut));
 
 	return EFI_SUCCESS;
 }
 
 //This method should check the memory map file and ensure nobody else has this reservation
-EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64* pImageSizeOut, UINT64* pEntryPointOut, EFI_PHYSICAL_ADDRESS* pPhysicalImageBase)
+EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& entryPointOut, EFI_PHYSICAL_ADDRESS& physicalImageBaseOut)
 {
 	EFI_STATUS status;
 
@@ -73,21 +73,21 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64* pImageSizeOut, UINT64* 
 		ReturnIfNotSuccess(EFI_UNSUPPORTED);
 
 	//Allocate pages for full image
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, EFI_SIZE_TO_PAGES((UINTN)peHeader.OptionalHeader.SizeOfImage), pPhysicalImageBase));
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, EFI_SIZE_TO_PAGES((UINTN)peHeader.OptionalHeader.SizeOfImage), &physicalImageBaseOut));
 
 	//Read headers into memory
 	size = peHeader.OptionalHeader.SizeOfHeaders;
 	ReturnIfNotSuccess(pFile->SetPosition(pFile, 0));
-	ReturnIfNotSuccess(pFile->Read(pFile, &size, (void*)*pPhysicalImageBase));
+	ReturnIfNotSuccess(pFile->Read(pFile, &size, (void*)physicalImageBaseOut));
 
 	//Pointer into NTHeader loaded in memory
-	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(*pPhysicalImageBase + dosHeader.e_lfanew);
+	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(physicalImageBaseOut + dosHeader.e_lfanew);
 	
 	//Write sections into memory
 	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
-		EFI_PHYSICAL_ADDRESS destination = *pPhysicalImageBase + section[i].VirtualAddress;
+		EFI_PHYSICAL_ADDRESS destination = physicalImageBaseOut + section[i].VirtualAddress;
 
 		//If physical size is non-zero, read data to allocated address
 		UINTN rawSize = section[i].SizeOfRawData;
@@ -104,17 +104,17 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64* pImageSizeOut, UINT64* 
 
 	//Relocate image to KernelSpace. It gets allocated at KernelStart + ImageBase
 	IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-	Print(L"  Relocations: %u Relocate: %d\r\n", relocationDirectory.Size, relocate);
+	Print(L"  Relocations: %u Relocation Needed: %d\r\n", relocationDirectory.Size, relocate);
 	if (relocationDirectory.Size)
 	{
-		PIMAGE_BASE_RELOCATION pBaseRelocation = (PIMAGE_BASE_RELOCATION)(*pPhysicalImageBase + relocationDirectory.VirtualAddress);
+		PIMAGE_BASE_RELOCATION pBaseRelocation = (PIMAGE_BASE_RELOCATION)(physicalImageBaseOut + relocationDirectory.VirtualAddress);
 
 		//Calculate relative shift by subtracing location live ImageBase from ImageBase first read from image
 		UINT64 delta = (UINT64)pNtHeader->OptionalHeader.ImageBase - (UINT64)peHeader.OptionalHeader.ImageBase;
 
 		while (pBaseRelocation->VirtualAddress)
 		{
-			PBYTE locationBase = (PBYTE)(*pPhysicalImageBase + pBaseRelocation->VirtualAddress);
+			PBYTE locationBase = (PBYTE)(physicalImageBaseOut + pBaseRelocation->VirtualAddress);
 			PWORD locationData = (PWORD)((UINT64)pBaseRelocation + sizeof(IMAGE_BASE_RELOCATION));
 
 			for (DWORD i = 0; i < (pBaseRelocation->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD); i++, locationData++)
@@ -142,17 +142,17 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64* pImageSizeOut, UINT64* 
 	}
 
 	//Populate return variables
-	*pImageSizeOut = pNtHeader->OptionalHeader.SizeOfImage;
-	*pEntryPointOut = pNtHeader->OptionalHeader.ImageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint;
+	imageSizeOut = pNtHeader->OptionalHeader.SizeOfImage;
+	entryPointOut = pNtHeader->OptionalHeader.ImageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint;
 
-	Print(L"  ImageBase: 0x%016x ImageSize: 0x%08x\r\n", KernelBaseAddress, EFI_SIZE_TO_PAGES(*pImageSizeOut));
-	Print(L"  Entry: 0x%016x Physical: 0x%016x\r\n", *pEntryPointOut, *pPhysicalImageBase);
+	Print(L"  ImageBase: 0x%016x ImageSize: 0x%08x\r\n", KernelBaseAddress, imageSizeOut);
+	Print(L"  Entry: 0x%016x Physical: 0x%016x\r\n", entryPointOut, physicalImageBaseOut);
 
 	return EFI_SUCCESS;
 }
 
 //This function doesn't do any error checking, should it?
-EFI_STATUS EfiLoader::CrtInitialization(UINT64 imageBase)
+EFI_STATUS EfiLoader::CrtInitialization(const uintptr_t imageBase)
 {
 	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)imageBase;
 	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(imageBase + dosHeader->e_lfanew);

@@ -29,6 +29,14 @@ public:
 	}
 
 private:
+	enum Regs
+	{
+		EAX,
+		EBX,
+		ECX,
+		EDX
+	};
+
 	typedef std::bitset<std::numeric_limits<uint32_t>::digits> bitset_32;
 
 	std::string m_vendor;

@@ -4,3 +4,6 @@
 [submodule "MetalOS.Apps.Doom"]
 	path = MetalOS.Apps.Doom
 	url = https://github.com/toddsharpe/MetalOS.Apps.Doom
+[submodule "runtimelab"]
+	path = runtimelab
+	url = https://github.com/toddsharpe/runtimelab/

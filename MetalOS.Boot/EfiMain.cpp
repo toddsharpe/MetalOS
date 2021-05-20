@@ -44,9 +44,6 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	ReturnIfNotSuccess(ST->ConOut->ClearScreen(ST->ConOut));
 
-	//Disable the stupid watchdog - TODO: why doesnt it go away on its own? Maybe because i didnt call SetVirtualAddressMap?
-	ReturnIfNotSuccess(BS->SetWatchdogTimer(0, 0, 0, nullptr));
-
 	EFI_LOADED_IMAGE* LoadedImage;
 	ReturnIfNotSuccess(BS->OpenProtocol(ImageHandle, &LoadedImageProtocol, (void**)&LoadedImage, NULL, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
 	AllocationType = LoadedImage->ImageDataType;
@@ -141,7 +138,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Map kernel into memory. It will be relocated at KernelBaseAddress
 	UINT64 entryPoint;
-	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, &LoaderParams.KernelImageSize, &entryPoint, &LoaderParams.KernelAddress));
+	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, LoaderParams.KernelImageSize, entryPoint, LoaderParams.KernelAddress));
 
 	//Build path to kernelpdb
 	CHAR16* KernelPdbPath;
@@ -370,13 +367,11 @@ EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, E
 			break; //No more directories
 
 		if (wcscmp(fileInfo->FileName, L".") == 0 || wcscmp(fileInfo->FileName, L"..") == 0)
-		{
 			continue;
-		}
 
 		if (fileInfo->Attribute & EFI_FILE_DIRECTORY)
 		{
-			//recurse
+			//Recurse
 			EFI_FILE_HANDLE subDir;
 			ReturnIfNotSuccess(dir->Open(dir, &subDir, fileInfo->FileName, EFI_FILE_MODE_READ, 0));
 			subDir->SetPosition(subDir, 0);

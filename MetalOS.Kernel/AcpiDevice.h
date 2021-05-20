@@ -14,7 +14,7 @@ extern "C"
 class AcpiDevice : public Device
 {
 public:
-	AcpiDevice(ACPI_HANDLE object);
+	AcpiDevice(const ACPI_HANDLE object);
 
 	void Initialize() override;
 	const void* GetResource(uint32_t type) const override;
@@ -24,7 +24,7 @@ private:
 	static ACPI_STATUS AttachResource(ACPI_RESOURCE* Resource, void* Context);
 	static ACPI_STATUS DisplayResource(const ACPI_RESOURCE& Resource);
 
-	ACPI_HANDLE m_acpiObject;
+	const ACPI_HANDLE m_acpiObject;
 	std::list<ACPI_RESOURCE> m_resources;
 };
 

@@ -37,7 +37,7 @@ Result HyperVKeyboardDriver::Initialize()
 	return Result::Success;
 }
 
-Result HyperVKeyboardDriver::Read(const char* buffer, size_t length)
+Result HyperVKeyboardDriver::Read(char* buffer, size_t length, size_t* bytesRead)
 {
 	return Result::NotImplemented;
 }

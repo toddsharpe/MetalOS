@@ -143,6 +143,8 @@ enum class InterruptVector : uint8_t
 
 	//IRQs
 	Timer0 = 0x80,
+	COM2 = 0x83,
+	COM1 = 0x84,
 	HypervisorVmBus = 0x90,
 
 };

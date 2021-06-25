@@ -58,7 +58,7 @@ Result HyperVScsiDriver::Initialize()
 	return Result::Success;
 }
 
-Result HyperVScsiDriver::Read(const char* buffer, size_t length)
+Result HyperVScsiDriver::Read(char* buffer, size_t length, size_t* bytesRead)
 {
 	return Result::NotImplemented;
 }

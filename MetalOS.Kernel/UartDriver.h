@@ -4,11 +4,11 @@
 #include <string>
 #include "Driver.h"
 #include "Device.h"
+#include "RingBuffer.h"
 #include "StringPrinter.h"
 
-//https://www.lammertbies.nl/comm/info/serial-uart
-//https://www.freebsd.org/doc/en_US.ISO8859-1/articles/serial-uart/index.html
 //PNP0501 - Generic 16550A-compatible COM port
+//http://caro.su/msx/ocm_de1/16550.pdf . Page 9/18. Table 2.
 //Bit field note: https://docs.microsoft.com/en-us/cpp/cpp/cpp-bit-fields?view=vs-2019
 //Microsoft Specific: The ordering of data declared as bit fields is from low to high bit, as shown in the figure above.
 class UartDriver : public Driver, public StringPrinter
@@ -17,90 +17,201 @@ public:
 	UartDriver(Device& device);
 
 	Result Initialize() override;
-	Result Read(const char* buffer, size_t length) override;
+	Result Read(char* buffer, size_t length, size_t* bytesRead = nullptr) override;
 	Result Write(const char* buffer, size_t length) override;
 	Result EnumerateChildren() override;
+
+	static void OnInterrupt(void* arg) { ((UartDriver*)arg)->OnInterrupt(); };
 
 	void Write(const char* string);
 
 private:
-	struct _INTERRUPT_ENABLE_REGISTER //RW
+	enum class Reg
 	{
-		uint8_t ReceivedData : 1;
-		uint8_t TransmitterEmpty : 1;
-		uint8_t LineStatus : 1;
-		uint8_t ModemStatus : 1;
-		uint8_t Reserved : 4;
+		//DLAB = 0
+		ReceiverHolding = 0b000, //R (RHR)
+		TransmitterHolding = 0b000, //W (THR)
+
+		//DLAB = 1
+		DivisorLatchLeastSig = 0b000, //RW (DLL)
+		DivisorLatchMostSig = 0b001, //RW (DLM)
+		PrescalerDivision = 0b101, //W (PSD)
+
+		InterruptEnable = 0b001, //RW (IER)
+		InterruptStatus = 0b010, //R (ISR)
+		FifoControl = 0b010, //W (FCR)
+		LineControl = 0b011, //RW (LCR)
+		ModemControl = 0b100, //RW (MCR)
+		LineStatus = 0b101, //R (LSR)
+		ModemStatus = 0b110, //R (MSR)
+		ScratchPad = 0b111 //RW (SPR)
 	};
 
-	enum _IIR_TYPE : uint8_t
-	{
-		ModemStatus = 0,
-		TransmitterEmpty = 1,
-		ReceivedData = 2,
-		LineStatus = 3,
-		CharacterTimeout = 6,
-	};
-
-	struct _INTERRUPT_IDENTIFICATION_REGISTER //RO
-	{
-		uint8_t InterruptPending : 1;
-		_IIR_TYPE Type : 3;
-		uint8_t Reserved : 2;
-		uint8_t FifoEnabled : 1;
-		uint8_t FifoAttempted : 1;
-	};
-
-	enum _FCR_LEVEL : uint8_t
-	{
-		Byte,
-		DWord,
-		QWord,
-		FourteenBytes//ugh
-	};
-
-	struct _FIFO_CONTROL_REGISTER //WO
-	{
-		uint8_t Enable : 1;
-		uint8_t RecieverReset : 1;
-		uint8_t TransmitterReset : 1;
-		uint8_t DmaMode : 1;
-		uint8_t Reserved : 2;
-		_FCR_LEVEL : 2;
-	};
-
-	enum _LCR_WORD_LENGTH : uint8_t
-	{
-		Five,
-		Six,
-		Seven,
-		Eight
-	};
-	
-	struct _LINE_CONTROL_REGISTER //RW
+	struct InterruptEnableReg
 	{
 		union
 		{
 			struct
 			{
-				_LCR_WORD_LENGTH LengthSelect : 2;
+				uint8_t DataReady : 1;
+				uint8_t ThrEmpty : 1;
+				uint8_t ReceiverLineStatus : 1;
+				uint8_t ModemStatus : 1;
+				uint8_t Reserved : 2;
+				uint8_t DmaRxEnd : 1;
+				uint8_t DmaTxEnd : 1;
+			};
+			uint8_t AsUint8;
+		};
+	};
+	static_assert(sizeof(InterruptEnableReg) == sizeof(uint8_t));
+
+	enum class InterruptType : uint8_t
+	{
+		ReceiverLineStatus = 0b011,
+		ReceivedDataReady = 0b010,
+		ReceptionTimeout = 0b110,
+		ThrEmpty = 0b001,
+		ModemStatus = 0b000,
+		DmaReceptionEndOfTranfer = 0b111,
+		DmaTransmissionEndOfTranfer = 0b101,
+	};
+
+	struct InterruptStatusReg
+	{
+		union
+		{
+			struct
+			{
+				uint8_t Status : 1;
+				InterruptType Type : 3;
+				uint8_t DmaRxEnd : 1;
+				uint8_t DmaTxEnd : 1;
+				uint8_t FifoEnabled : 2;
+			};
+			uint8_t AsUint8;
+		};
+	};
+	static_assert(sizeof(InterruptStatusReg) == sizeof(uint8_t));
+
+	enum class FifoTriggerLevel : uint8_t
+	{
+		Byte = 0b00,
+		DWord = 0b01,
+		QWord = 0b10,
+		FourteenBytes = 0b11
+	};
+
+	struct FifoControlReg
+	{
+		union
+		{
+			struct
+			{
+				uint8_t Enable : 1;
+				uint8_t RxReset : 1;
+				uint8_t TxReset : 1;
+				uint8_t DmaMode : 1;
+				uint8_t EnableDmaEnd : 1;
+				uint8_t Reserved : 1;
+				FifoTriggerLevel TriggerLevel : 2;
+			};
+			uint8_t AsUint8;
+		};
+	};
+	static_assert(sizeof(FifoControlReg) == sizeof(uint8_t));
+
+	enum LcrWordLength : uint8_t
+	{
+		Five = 0b00,
+		Six = 0b01,
+		Seven = 0b10,
+		Eight = 0b00
+	};
+	
+	struct LineControlReg
+	{
+		union
+		{
+			struct
+			{
+				LcrWordLength WordLength : 2;
 				uint8_t StopBits : 1;
 				uint8_t ParityEnabled : 1;
 				uint8_t EvenParity : 1;
-				uint8_t StickParity : 1;
+				uint8_t ForceParity : 1;
 				uint8_t SetBreak : 1;
-				uint8_t DivisorLatchAccess : 1;
-			} Fields;
-			uint8_t Value;
+				uint8_t DivisorLatchAccess : 1; //DLAB
+			};
+			uint8_t AsUint8;
 		};
 	};
-	static_assert(sizeof(_LINE_CONTROL_REGISTER) == sizeof(uint8_t));
+	static_assert(sizeof(LineControlReg) == sizeof(uint8_t));
 
-	uint8_t Read(uint8_t offset);
-	void Write(uint8_t offset, uint8_t value);
+	struct ModemControlReg
+	{
+		union
+		{
+			struct
+			{
+				uint8_t DTR : 1;
+				uint8_t RTS : 1;
+				uint8_t Out1 : 1;
+				uint8_t Out2IntEnable : 1;
+				uint8_t LoopBack : 1;
+				uint8_t Reserved : 3;
+			};
+			uint8_t AsUint8;
+		};
+	};
+	static_assert(sizeof(ModemControlReg) == sizeof(uint8_t));
 
-	uint16_t ReadDivisorLatch();
+	struct LineStatusReg
+	{
+		union
+		{
+			struct
+			{
+				uint8_t DataReady : 1;
+				uint8_t OverrunError : 1;
+				uint8_t ParityError : 1;
+				uint8_t FramingError : 1;
+				uint8_t BreakInterrupt : 1;
+				uint8_t ThrEmpty : 1;
+				uint8_t TransmitterEmpty : 1;
+				uint8_t FifoDataError : 1;
+			};
+			uint8_t AsUint8;
+		};
+	};
+	static_assert(sizeof(LineStatusReg) == sizeof(uint8_t));
+
+	struct ModemStatusReg
+	{
+		union
+		{
+			struct
+			{
+				uint8_t DeltaCTS : 1;
+				uint8_t DeltaDSR : 1;
+				uint8_t TrailingEdgeRI : 1;
+				uint8_t DeltaCD : 1;
+				uint8_t CTS : 1;
+				uint8_t DSR : 1;
+				uint8_t RI : 1;
+				uint8_t CD : 1;
+			};
+			uint8_t AsUint8;
+		};
+	};
+	static_assert(sizeof(ModemStatusReg) == sizeof(uint8_t));
+
+	void OnInterrupt();
+	uint8_t Read(Reg reg);
+	void Write(Reg reg, uint8_t value);
 
 	uint16_t m_port;
+	size_t m_index;
+	RingBuffer<uint8_t, 0x200> m_rxBuffer;
 };
 

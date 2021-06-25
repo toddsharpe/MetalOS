@@ -20,6 +20,7 @@ typedef EFI_GUID GUID;
 #include "KSemaphore.h"
 #include "RamDriveDriver.h"
 #include "SoftwareDevice.h"
+#include "IoApicDriver.h"
 #include "Loader.h"
 #include <string>
 #include "KThread.h"
@@ -255,6 +256,18 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Show loading screen (works but we don't need yet)
 	//LoadingScreen loadingScreen(*m_display);
 	//loadingScreen.Initialize();
+
+	//Install interrupts
+	Device* com2;
+	Assert(m_deviceTree.GetDeviceByName("COM2", &com2));
+	UartDriver* com2Driver = ((UartDriver*)com2->GetDriver());
+	m_interruptHandlers->insert({ InterruptVector::COM2, { &UartDriver::OnInterrupt, com2Driver} });
+
+	Device* ioapic;
+	Assert(m_deviceTree.GetDeviceByName("IOAPIC", &ioapic));
+	IoApicDriver* ioapicDriver = ((IoApicDriver*)ioapic->GetDriver());
+	ioapicDriver->MapInterrupt(InterruptVector::COM2, 3);//TODO: find a way to get 3 from ACPI
+	ioapicDriver->UnmaskInterrupt(3);
 
 	//Done
 	Print("Kernel Initialized\n");

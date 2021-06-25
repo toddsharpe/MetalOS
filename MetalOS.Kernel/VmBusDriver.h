@@ -12,7 +12,7 @@ public:
 	VmBusDriver(Device& device);
 
 	Result Initialize() override;
-	Result Read(const char* buffer, size_t length) override;
+	Result Read(char* buffer, size_t length, size_t* bytesRead = nullptr) override;
 	Result Write(const char* buffer, size_t length) override;
 	Result EnumerateChildren() override;
 

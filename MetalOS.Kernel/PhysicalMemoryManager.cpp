@@ -58,7 +58,7 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PageState& state)
 	if (address != 0)
 	{
 		//Specific address request
-		Assert((address && PAGE_MASK) == 0);
+		Assert((address & PAGE_MASK) == 0);
 
 		PFN_ENTRY& entry = m_db[address >> PAGE_SHIFT];
 		if (entry.State != PageState::Zeroed && entry.State != PageState::Free)

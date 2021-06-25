@@ -121,6 +121,7 @@
     <ClCompile Include="BootHeap.cpp" />
     <ClCompile Include="ConfigTables.cpp" />
     <ClCompile Include="AcpiDevice.cpp" />
+    <ClCompile Include="Debugger.cpp" />
     <ClCompile Include="DeviceTree.cpp" />
     <ClCompile Include="Cpuid.cpp" />
     <ClCompile Include="Device.cpp" />
@@ -133,6 +134,7 @@
     <ClCompile Include="HyperVRingBuffer.cpp" />
     <ClCompile Include="HyperVScsiDriver.cpp" />
     <ClCompile Include="HyperVTimer.cpp" />
+    <ClCompile Include="IoApicDriver.cpp" />
     <ClCompile Include="Kernel.cpp" />
     <ClCompile Include="KernelAcpi.cpp" />
     <ClCompile Include="KernelDriverInterface.cpp" />
@@ -178,6 +180,7 @@
     <ClInclude Include="BootHeap.h" />
     <ClInclude Include="ConfigTables.h" />
     <ClInclude Include="AcpiDevice.h" />
+    <ClInclude Include="Debugger.h" />
     <ClInclude Include="DeviceTree.h" />
     <ClInclude Include="Cpuid.h" />
     <ClInclude Include="Device.h" />
@@ -190,9 +193,11 @@
     <ClInclude Include="HyperVRingBuffer.h" />
     <ClInclude Include="HyperVScsiDriver.h" />
     <ClInclude Include="HyperVTimer.h" />
+    <ClInclude Include="IoApicDriver.h" />
     <ClInclude Include="Kernel.h" />
     <ClInclude Include="KernelHeap.h" />
     <ClInclude Include="KObject.h" />
+    <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="UserProcess.h" />
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />

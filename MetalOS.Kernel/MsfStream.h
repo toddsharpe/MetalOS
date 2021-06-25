@@ -154,7 +154,7 @@ public:
 
 	void Display() const;
 
-	uint32_t GetSize()
+	uint32_t GetSize() const
 	{
 		return m_size;
 	}

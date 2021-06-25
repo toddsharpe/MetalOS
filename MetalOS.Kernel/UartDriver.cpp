@@ -2,7 +2,7 @@
 #include "Main.h"
 #include <MetalOS.Arch.h>
 
-UartDriver::UartDriver(Device& device) : Driver(device)
+UartDriver::UartDriver(Device& device) : Driver(device), m_port(), m_index(), m_rxBuffer()
 {
 	const ACPI_RESOURCE* resource = (ACPI_RESOURCE*)device.GetResource(ACPI_RESOURCE_TYPE_IO);
 	Assert(resource->Data.Io.AddressLength == 8);
@@ -12,19 +12,58 @@ UartDriver::UartDriver(Device& device) : Driver(device)
 Result UartDriver::Initialize()
 {
 	m_device.Type = DeviceType::Serial;
+
+	//Disable interrupts
+	InterruptEnableReg ier = { 0 };
+	Write(Reg::InterruptEnable, ier.AsUint8);
+
+	//Enable FIFO, clear RX/TX queues, set interrupt watermark at 14 bytes
+	FifoControlReg fcr = { 0 };
+	fcr.TriggerLevel = FifoTriggerLevel::FourteenBytes;
+	fcr.Enable = 1;
+	fcr.RxReset = 1;
+	fcr.TxReset = 1;
+	Write(Reg::FifoControl, fcr.AsUint8);
+
+	//Mark terminal ready, enable interrupts
+	ModemControlReg mcr = { 0 };
+	mcr.Out2IntEnable = 1;
+	mcr.RTS = 1;
+	mcr.DTR = 1;
+	Write(Reg::ModemControl, mcr.AsUint8);
+
+	//Enable interrupts
+	ier.DataReady = 1;
+	Write(Reg::InterruptEnable, ier.AsUint8);
+
 	return Result::NotImplemented;
 }
 
-Result UartDriver::Read(const char* buffer, size_t length)
+Result UartDriver::Read(char* buffer, size_t length, size_t* bytesRead)
 {
-	return Result::NotImplemented;
+	Assert(buffer != nullptr);
+	uint8_t* pBuffer = reinterpret_cast<uint8_t*>(buffer);
+
+	size_t count = 0;
+	while (count < length)
+	{
+		if (!m_rxBuffer.Read(*pBuffer))
+			break;
+		pBuffer++;
+		count++;
+	}
+
+	if (bytesRead != nullptr)
+		*bytesRead = count;
+
+	return Result::Success;
 }
 
 Result UartDriver::Write(const char* buffer, size_t length)
 {
 	for (size_t i = 0; i < length; i++)
 	{
-		Write(0, static_cast<uint8_t>(buffer[i]));
+		Write(Reg::TransmitterHolding, static_cast<uint8_t>(buffer[i]));
 	}
 
 	return Result::Success;
@@ -40,30 +79,39 @@ void UartDriver::Write(const char* string)
 	this->Write(string, strlen(string));
 }
 
-uint8_t UartDriver::Read(uint8_t offset)
+void UartDriver::OnInterrupt()
 {
-	return ArchReadPort(m_port + offset, std::numeric_limits<uint8_t>::digits);
-}
-
-void UartDriver::Write(uint8_t offset, uint8_t value)
-{
-	ArchWritePort(m_port + offset, value, std::numeric_limits<uint8_t>::digits);
-}
-
-//Returns 0 on hyper-v?
-uint16_t UartDriver::ReadDivisorLatch()
-{
-	uint8_t raw = this->Read(3);
+	InterruptStatusReg isr = { 0 };
+	isr.AsUint8 = Read(Reg::InterruptStatus);
+	Assert(isr.Status == false);//Interrupt is pending
+	Assert(isr.Type == InterruptType::ReceivedDataReady);
 	
-	_LINE_CONTROL_REGISTER lcr;
-	lcr.Value = raw;
-	lcr.Fields.DivisorLatchAccess = true;
-	this->Write(3, lcr.Value);
+	//Read all characters into a buffer
+	LineStatusReg status = { 0 };
+	status.AsUint8 = Read(Reg::LineStatus);
+	while (status.DataReady)
+	{
+		Assert(!m_rxBuffer.IsFull());
 
-	uint8_t lsb = this->Read(0);
-	uint8_t msb = this->Read(1);
+		m_rxBuffer.Write(Read(Reg::ReceiverHolding));
+		status.AsUint8 = Read(Reg::LineStatus);
+	}
 
-	this->Write(3, raw);
+	//Ensure interrupts are handled
+	isr.AsUint8 = Read(Reg::InterruptStatus);
+	Assert(isr.Status == true);
+	
+	kernel.Printf("RxBuffer: 0x%x of 0x%x\n", m_rxBuffer.Count(), m_rxBuffer.Size());
 
-	return (((uint16_t)msb) << 8) | lsb;
+	HyperV::EOI();
+}
+
+uint8_t UartDriver::Read(Reg reg)
+{
+	return ArchReadPort(m_port + static_cast<uint8_t>(reg), std::numeric_limits<uint8_t>::digits);
+}
+
+void UartDriver::Write(Reg reg, uint8_t value)
+{
+	ArchWritePort(m_port + static_cast<uint8_t>(reg), value, std::numeric_limits<uint8_t>::digits);
 }

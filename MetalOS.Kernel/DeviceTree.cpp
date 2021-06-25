@@ -11,6 +11,7 @@
 #include "HyperVMouseDriver.h"
 #include "HyperVScsiDriver.h"
 #include "RamDriveDriver.h"
+#include "IoApicDriver.h"
 #include <crt_stdio.h>
 
 DeviceTree::DeviceTree() :
@@ -144,6 +145,8 @@ void DeviceTree::AttachDriver(Device& device)
 		//device.SetDriver(new HyperVScsiDriver(device));
 	else if (device.GetHid() == RamDriveHid)
 		device.SetDriver(new RamDriveDriver(device));
+	else if (device.GetHid() == "PNP0003")
+		device.SetDriver(new IoApicDriver(device));
 	//else if (device.GetHid() == "{CFA8B69E-5B4A-4CC0-B98B-8BA1A1F3F95A}")
 		//device.SetDriver(new HyperVMouseDriver(device));
 }

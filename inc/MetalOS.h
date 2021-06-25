@@ -585,8 +585,7 @@ SYSTEMCALL(void*) VirtualAlloc(const void* address, const size_t size, const Mem
 SYSTEMCALL(SystemCallResult) DebugPrint(const char* s);
 
 RUNTIMECALL(Handle) LoadLibrary(const char* lpLibFileName);
-RUNTIMECALL(uintptr_t) GetProcAddress(Handle hModule, 
-	const char* lpProcName);
+RUNTIMECALL(uintptr_t) GetProcAddress(Handle hModule, const char* lpProcName);
 
 class Thread
 {

@@ -19,7 +19,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{35DFADE8-8138-4EAD-8722-B29DE8093465}"
 	ProjectSection(SolutionItems) = preProject
 		build_vhd.cmd = build_vhd.cmd
+		debug_com2.ps1 = debug_com2.ps1
 		mount_vhd.cmd = mount_vhd.cmd
+		read_com1.ps1 = read_com1.ps1
 		unmount_vhd.cmd = unmount_vhd.cmd
 	EndProjectSection
 EndProject

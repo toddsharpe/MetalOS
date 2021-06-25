@@ -11,7 +11,7 @@ public:
 	Driver(Device& device);
 	
 	virtual Result Initialize() = 0;
-	virtual Result Read(const char* buffer, size_t length) = 0;
+	virtual Result Read(char* buffer, size_t length, size_t* bytesRead = nullptr) = 0;
 	virtual Result Write(const char* buffer, size_t length) = 0;
 	virtual Result EnumerateChildren() = 0;
 

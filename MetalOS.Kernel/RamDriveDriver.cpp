@@ -30,7 +30,7 @@ Result RamDriveDriver::Initialize()
 	return Result();
 }
 
-Result RamDriveDriver::Read(const char* buffer, size_t length)
+Result RamDriveDriver::Read(char* buffer, size_t length, size_t* bytesRead)
 {
 	return Result();
 }

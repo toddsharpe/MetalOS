@@ -56,7 +56,7 @@ Result HyperVMouseDriver::Initialize()
 	return Result::Success;
 }
 
-Result HyperVMouseDriver::Read(const char* buffer, size_t length)
+Result HyperVMouseDriver::Read(char* buffer, size_t length, size_t* bytesRead)
 {
 	return Result::NotImplemented;
 }

@@ -34,7 +34,7 @@ Result VmBusDriver::Initialize()
 	return Result::Success;
 }
 
-Result VmBusDriver::Read(const char* buffer, size_t length)
+Result VmBusDriver::Read(char* buffer, size_t length, size_t* bytesRead)
 {
 	return Result::NotImplemented;
 }

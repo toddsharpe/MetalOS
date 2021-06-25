@@ -104,6 +104,8 @@ ACPI_STATUS AcpiDevice::AttachResource(ACPI_RESOURCE* Resource, void* Context)
 	case ACPI_RESOURCE_TYPE_IRQ:
 	case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
 	case ACPI_RESOURCE_TYPE_IO:
+		//Remove if resource already exists
+		pDevice->m_resources.remove_if([&](const ACPI_RESOURCE& _Other) { return _Other.Type == Resource->Type; });
 		pDevice->m_resources.push_back(*Resource);
 		break;
 	}

@@ -37,6 +37,109 @@ bool Loader::ReadHeaders(const char* path, uintptr_t& imageBase, DWORD& imageSiz
 	return true;
 }
 
+Handle Loader::LoadKernelLibrary(const char* path)
+{
+	FileHandle* file = kernel.CreateFile(std::string(path), GenericAccess::Read);
+	Assert(file);
+
+	size_t read;
+
+	//Dos header
+	IMAGE_DOS_HEADER dosHeader;
+	Assert(kernel.ReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
+	Assert(read == sizeof(IMAGE_DOS_HEADER));
+	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
+
+	//NT Header
+	IMAGE_NT_HEADERS64 peHeader;
+	Assert(kernel.SetFilePosition(file, dosHeader.e_lfanew));
+	Assert(kernel.ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
+	Assert(read == sizeof(IMAGE_NT_HEADERS64));
+
+	//Verify image
+	if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
+		peHeader.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
+		peHeader.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+	{
+		Assert(false);
+		return nullptr;
+	}
+
+	void* address = kernel.AllocateKernelPage(peHeader.OptionalHeader.ImageBase, SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage), MemoryProtection::PageReadWriteExecute);
+	if (address == nullptr)
+	{
+		address = kernel.AllocateKernelPage(0, SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage), MemoryProtection::PageReadWriteExecute);
+	}
+	Assert(address);
+
+	//Read headers
+	Assert(kernel.SetFilePosition(file, 0));
+	Assert(kernel.ReadFile(file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
+	Assert(read == peHeader.OptionalHeader.SizeOfHeaders);
+
+	PIMAGE_NT_HEADERS64 pNtHeader = MakePtr(PIMAGE_NT_HEADERS64, address, dosHeader.e_lfanew);
+
+	//Write sections into memory
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
+	{
+		uintptr_t destination = (uintptr_t)address + section[i].VirtualAddress;
+
+		//If physical size is non-zero, read data to allocated address
+		DWORD rawSize = section[i].SizeOfRawData;
+		if (rawSize != 0)
+		{
+			Assert(kernel.SetFilePosition(file, section[i].PointerToRawData));
+			Assert(kernel.ReadFile(file, (void*)destination, rawSize, &read));
+			Assert(read == section[i].SizeOfRawData);
+		}
+	}
+
+	//Relocations
+	IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
+	if (((uintptr_t)address != pNtHeader->OptionalHeader.ImageBase) && (relocationDirectory.Size))
+	{
+		PIMAGE_BASE_RELOCATION pBaseRelocation = MakePtr(PIMAGE_BASE_RELOCATION, address, relocationDirectory.VirtualAddress);
+
+		//Calculate relative shift
+		uintptr_t delta = (uintptr_t)address - (uintptr_t)pNtHeader->OptionalHeader.ImageBase;
+
+		DWORD bytes = 0;
+		while (bytes < relocationDirectory.Size)
+		{
+			PDWORD locationBase = MakePtr(PDWORD, address, pBaseRelocation->VirtualAddress);
+			PWORD locationData = MakePtr(PWORD, pBaseRelocation, sizeof(IMAGE_BASE_RELOCATION));
+
+			DWORD count = (pBaseRelocation->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+			for (DWORD i = 0; i < count; i++)
+			{
+				int type = (*locationData >> 12);
+				int value = (*locationData & 0x0FFF);
+
+				switch (type)
+				{
+				case IMAGE_REL_BASED_ABSOLUTE:
+					break;
+
+				case IMAGE_REL_BASED_HIGHLOW:
+					*MakePtr(PDWORD, locationBase, value) += delta;
+					break;
+				}
+
+				locationData++;
+			}
+
+			bytes += pBaseRelocation->SizeOfBlock;
+			pBaseRelocation = (PIMAGE_BASE_RELOCATION)locationData;
+		}
+	}
+
+	//Kernel library dont have imports yet
+	Assert(pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size == 0);
+
+	return address;
+}
+
 //TODO: this is very similar to KernelAPI's loader, as well as create process
 Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 {

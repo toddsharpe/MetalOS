@@ -212,6 +212,6 @@ private:
 
 	uint16_t m_port;
 	size_t m_index;
-	RingBuffer<uint8_t, 0x200> m_rxBuffer;
+	RingBuffer<uint8_t, 0x100> m_rxBuffer;
 };
 

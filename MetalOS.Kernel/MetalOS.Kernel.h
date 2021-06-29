@@ -404,13 +404,6 @@ enum UnwindHandlerType
 	UNW_FLAG_CHAININFO = 4
 };
 
-enum class Result
-{
-	Success,
-	Failed,
-	NotImplemented
-};
-
 #define AlignSize(x,a) (((x) + ((a) - 1)) & ~((a)-1))
 struct kvec {
 	void* iov_base; /* and that should *never* hold a userland pointer */

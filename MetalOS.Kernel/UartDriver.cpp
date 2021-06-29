@@ -41,6 +41,9 @@ Result UartDriver::Initialize()
 
 Result UartDriver::Read(char* buffer, size_t length, size_t* bytesRead)
 {
+	if (length > m_rxBuffer.Count())
+		return Result::Failed;
+	
 	Assert(buffer != nullptr);
 	uint8_t* pBuffer = reinterpret_cast<uint8_t*>(buffer);
 
@@ -84,7 +87,9 @@ void UartDriver::OnInterrupt()
 	InterruptStatusReg isr = { 0 };
 	isr.AsUint8 = Read(Reg::InterruptStatus);
 	Assert(isr.Status == false);//Interrupt is pending
-	Assert(isr.Type == InterruptType::ReceivedDataReady);
+	//Assert(isr.Type == InterruptType::ReceivedDataReady); ReceptionTimeout?
+
+	kernel.Printf("ISR: 0x%x\n", isr.AsUint8);
 	
 	//Read all characters into a buffer
 	LineStatusReg status = { 0 };
@@ -102,6 +107,7 @@ void UartDriver::OnInterrupt()
 	Assert(isr.Status == true);
 	
 	kernel.Printf("RxBuffer: 0x%x of 0x%x\n", m_rxBuffer.Count(), m_rxBuffer.Size());
+	kernel.PrintBytes((char*)&m_rxBuffer, sizeof(m_rxBuffer));
 
 	HyperV::EOI();
 }

@@ -44,6 +44,13 @@
 
 typedef size_t cpu_flags_t;
 
+enum class Result
+{
+	Success,
+	Failed,
+	NotImplemented
+};
+
 //Keep in sync with MetalOS.KernalApi syscalls.asm
 enum class SystemCall : size_t
 {

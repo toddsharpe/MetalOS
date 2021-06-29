@@ -14,6 +14,11 @@ VirtualAddressSpace::VirtualAddressSpace(const uintptr_t start, const uintptr_t 
 bool VirtualAddressSpace::IsFree(const uintptr_t address, const size_t count)
 {
 	Assert((address & PAGE_MASK) == 0);
+
+	//Check if address is inside out address space
+	if ((address < m_start) || (address >= m_end))
+		return false;
+
 	const uintptr_t highAddress = address + (count << PAGE_SHIFT);
 	for (const auto& kvp : m_nodes)
 	{
@@ -34,7 +39,8 @@ bool VirtualAddressSpace::IsFree(const uintptr_t address, const size_t count)
 bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, MemoryProtection protection)
 {
 	Assert(count != 0);
-	Print("Reserve: 0x%016x Size: 0x%x\n", address, count);
+	Print("Reserve: 0x%016x in [0x%016x, 0x%016x] Size: 0x%x\n", address, m_start, m_end, count);
+
 	if (address != 0)
 	{
 		//If address is specified, don't round

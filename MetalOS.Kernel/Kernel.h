@@ -17,6 +17,7 @@ extern "C"
 }
 #include <map>
 #include "DeviceTree.h"
+#include "Debugger.h"
 #include "UartDriver.h"
 #include "HyperVTimer.h"
 #include "HyperV.h"
@@ -130,6 +131,8 @@ public:
 	KThread* CreateKernelThread(ThreadStart start, void* arg);
 	void KernelThreadSleep(nano_t value);
 	void ExitKernelThread();
+
+	Handle LoadKernelLibrary(const char* path);
 
 	bool CreateProcess(const std::string& path);
 	KThread* CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
@@ -256,5 +259,7 @@ private:
 
 	//PDB
 	Pdb* m_pdb;
+
+	Debugger* m_debugger;
 };
 

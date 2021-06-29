@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef CONST
+#define CONST               const
+#endif
+
 #ifndef BASETYPES
 #define BASETYPES
 typedef unsigned long ULONG;
@@ -11,6 +15,28 @@ typedef UCHAR* PUCHAR;
 typedef char* PSZ;
 #endif  /* !BASETYPES */
 
+/* SAL annotations */
+#ifndef IN
+#define IN
+#define OUT
+#define OPTIONAL
+#endif
+
+#ifndef NULL
+#ifdef __cplusplus
+#define NULL    0
+#else
+#define NULL    ((void *)0)
+#endif
+#endif
+
+typedef char CHAR;
+
+#ifndef VOID
+#define VOID void
+#endif
+
+typedef void* PVOID;
 typedef uint8_t UINT8;
 typedef uint16_t UINT16;
 
@@ -40,3 +66,24 @@ typedef unsigned int        UINT;
 typedef unsigned int* PUINT;
 typedef const void* PCVOID;
 
+//
+// Boolean
+//
+
+typedef UCHAR BOOLEAN;           // winnt
+typedef BOOLEAN* PBOOLEAN;       // winnt
+
+//
+// ANSI (Multi-byte Character) types
+//
+typedef CHAR* PCHAR, * LPCH, * PCH;
+typedef CONST CHAR* LPCCH, * PCCH;
+
+typedef struct _STRING {
+	USHORT Length;
+	USHORT MaximumLength;
+	PCHAR Buffer;
+} STRING;
+typedef STRING* PSTRING;
+
+#define NTAPI

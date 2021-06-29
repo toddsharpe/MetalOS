@@ -41,5 +41,6 @@ public:
 	static PUNWIND_INFO GetUnwindInfo(const uintptr_t address);
 	static void VirtualUnwind(UnwindHandlerType HandlerType, uintptr_t ImageBase, uintptr_t ControlPC, PRUNTIME_FUNCTION FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers);
 	static void UnwindPrologue(const uintptr_t ImageBase, const uintptr_t ControlPc, const uintptr_t FrameBase, PRUNTIME_FUNCTION FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers);
+	static uintptr_t GetProcAddress(Handle hModule, const char* lpProcName);
 };
 

@@ -60,7 +60,9 @@ Kernel::Kernel() :
 
 	m_timer(),
 
-	m_pdb()
+	m_pdb(),
+
+	m_debugger()
 {
 
 }
@@ -258,16 +260,20 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//loadingScreen.Initialize();
 
 	//Install interrupts
-	Device* com2;
-	Assert(m_deviceTree.GetDeviceByName("COM2", &com2));
-	UartDriver* com2Driver = ((UartDriver*)com2->GetDriver());
-	m_interruptHandlers->insert({ InterruptVector::COM2, { &UartDriver::OnInterrupt, com2Driver} });
+	//Device* com2;
+	//Assert(m_deviceTree.GetDeviceByName("COM2", &com2));
+	//UartDriver* com2Driver = ((UartDriver*)com2->GetDriver());
+	//m_interruptHandlers->insert({ InterruptVector::COM2, { &UartDriver::OnInterrupt, com2Driver} });
 
-	Device* ioapic;
-	Assert(m_deviceTree.GetDeviceByName("IOAPIC", &ioapic));
-	IoApicDriver* ioapicDriver = ((IoApicDriver*)ioapic->GetDriver());
-	ioapicDriver->MapInterrupt(InterruptVector::COM2, 3);//TODO: find a way to get 3 from ACPI
-	ioapicDriver->UnmaskInterrupt(3);
+	//Device* ioapic;
+	//Assert(m_deviceTree.GetDeviceByName("IOAPIC", &ioapic));
+	//IoApicDriver* ioapicDriver = ((IoApicDriver*)ioapic->GetDriver());
+	//ioapicDriver->MapInterrupt(InterruptVector::COM2, 3);//TODO: find a way to get 3 from ACPI
+	//ioapicDriver->UnmaskInterrupt(3);
+
+	//Debugger
+	m_debugger = new Debugger();
+	m_debugger->Initialize();
 
 	//Done
 	Print("Kernel Initialized\n");
@@ -516,6 +522,11 @@ void Kernel::ExitKernelThread()
 	Print("Kernel::ExitKernelThread\n");
 
 	m_scheduler->KillThread();
+}
+
+Handle Kernel::LoadKernelLibrary(const char* path)
+{
+	return Loader::LoadKernelLibrary(path);
 }
 
 void Kernel::KernelThreadInitThunk()

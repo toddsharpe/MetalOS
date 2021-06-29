@@ -10,6 +10,8 @@
 #define FIELD_OFFSET(type, field)    ((LONG)(LONG_PTR)&(((type *)0)->field))
 #define UFIELD_OFFSET(type, field)    ((DWORD)(LONG_PTR)&(((type *)0)->field))
 
+#define FALSE   0
+#define TRUE    1
 
 typedef unsigned long       DWORD, *PDWORD;
 typedef unsigned char       BYTE, *PBYTE;

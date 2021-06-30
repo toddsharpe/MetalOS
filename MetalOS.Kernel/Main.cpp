@@ -79,7 +79,7 @@ extern "C" uint64_t SYSTEMCALL_HANDLER(SystemCallFrame* frame)
 	return kernel.Syscall(frame);
 }
 
-void __declspec(noreturn) Bugcheck(const char* file, const char* line, const char* assert)
+void Bugcheck(const char* file, const char* line, const char* assert)
 {
 	kernel.Bugcheck(file, line, assert);
 }

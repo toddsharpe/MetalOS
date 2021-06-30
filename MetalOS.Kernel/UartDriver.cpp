@@ -108,8 +108,6 @@ void UartDriver::OnInterrupt()
 	
 	kernel.Printf("RxBuffer: 0x%x of 0x%x\n", m_rxBuffer.Count(), m_rxBuffer.Size());
 	kernel.PrintBytes((char*)&m_rxBuffer, sizeof(m_rxBuffer));
-
-	HyperV::EOI();
 }
 
 uint8_t UartDriver::Read(Reg reg)

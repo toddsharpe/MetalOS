@@ -203,6 +203,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();
 	m_interruptHandlers->insert({ InterruptVector::Timer0, { &Kernel::OnTimer0, this} });
+	m_interruptHandlers->insert({ InterruptVector::Breakpoint, { [](void* arg) { ((Kernel*)arg)->Printf("Debug Breakpoint Exception\n"); }, this} });
 
 	//Test interrupts
 	__debugbreak();
@@ -297,6 +298,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	{
 		InterruptContext ctx = it->second;
 		ctx.Handler(ctx.Context);
+		HyperV::EOI();
 		return;
 	}
 	
@@ -306,10 +308,6 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	//m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
 	switch (vector)
 	{
-	//Let debug continue (we use this to check ISRs on bootup)
-	case InterruptVector::Breakpoint:
-		m_textScreen->Printf("  Debug Breakpoint Exception\n");
-		return;
 	case InterruptVector::PageFault:
 		m_textScreen->Printf("  CR2: 0x%16x\n", __readcr2());
 		if (__readcr2() == 0)
@@ -501,7 +499,6 @@ void Kernel::InitializeAcpi()
 void Kernel::OnTimer0()
 {
 	m_scheduler->Schedule();
-	HyperV::EOI();
 }
 
 KThread* Kernel::CreateKernelThread(ThreadStart start, void* arg)

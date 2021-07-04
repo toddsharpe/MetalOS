@@ -37,6 +37,11 @@ extern "C" void __cdecl __CxxFrameHandler3()
 	Assert(false);
 }
 
+extern "C" void __cdecl __CxxFrameHandler4()
+{
+	Assert(false);
+}
+
 __declspec(noreturn) void __stdcall _CxxThrowException(void* pExceptionObject, void* pThrowInfo)
 {
 	Assert(false);

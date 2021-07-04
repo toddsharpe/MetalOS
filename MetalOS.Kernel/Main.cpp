@@ -79,7 +79,7 @@ extern "C" uint64_t SYSTEMCALL_HANDLER(SystemCallFrame* frame)
 	return kernel.Syscall(frame);
 }
 
-void Bugcheck(const char* file, const char* line, const char* assert)
+extern "C" void Bugcheck(const char* file, const char* line, const char* assert)
 {
 	kernel.Bugcheck(file, line, assert);
 }
@@ -91,7 +91,7 @@ void main(LOADER_PARAMS* loader)
 
 	//Load process
 	//kernel.CreateProcess("fire.exe");
-	//kernel.CreateProcess("doom.exe");
+	kernel.CreateProcess("doom.exe");
 	//kernel.CreateProcess("shell.exe");
 
 	//Exit init thread

@@ -203,10 +203,10 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();
 	m_interruptHandlers->insert({ InterruptVector::Timer0, { &Kernel::OnTimer0, this} });
-	m_interruptHandlers->insert({ InterruptVector::Breakpoint, { [](void* arg) { ((Kernel*)arg)->Printf("Debug Breakpoint Exception\n"); }, this} });
+	//m_interruptHandlers->insert({ InterruptVector::Breakpoint, { [](void* arg) { ((Kernel*)arg)->Printf("Debug Breakpoint Exception\n"); }, this} });
 
 	//Test interrupts
-	__debugbreak();
+	//__debugbreak();
 
 	//Create boot thread
 	KThread* bootThread = new KThread(nullptr, nullptr);
@@ -356,7 +356,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	
 	if (inBugcheck)
 	{
-		m_textScreen->Printf("%s\n%s\n%s\n", file, line, assert);
+		m_textScreen->Printf("\n%s\n%s\n%s\n", file, line, assert);
 
 		while(true)
 			ArchWait();
@@ -370,7 +370,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	if (m_timer != nullptr)
 		m_timer->Disable();
 
-	m_textScreen->Printf("%s\n%s\n%s\n", file, line, assert);
+	m_textScreen->Printf("\n%s\n%s\n%s\n", file, line, assert);
 
 	if (m_scheduler)
 	{
@@ -776,8 +776,8 @@ bool Kernel::CreateProcess(const std::string& path)
 	Print("mosrt loaded at 0x%016x\n", api);
 
 	//Save init pointers in library
-	process->InitProcess = (void*)Loader::GetProcAddress(api, "InitProcess");
-	process->InitThread = (void*)Loader::GetProcAddress(api, "InitThread");
+	process->InitProcess = (void*)RuntimeSupport::GetProcAddress(api, "InitProcess");
+	process->InitThread = (void*)RuntimeSupport::GetProcAddress(api, "InitThread");
 	Print("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
 
 	//Patch imports of process for just mosapi

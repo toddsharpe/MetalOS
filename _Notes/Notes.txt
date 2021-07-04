@@ -263,7 +263,7 @@ _SB_.TRC0
 Enabling Gen2 Uart:
 https://docs.microsoft.com/en-us/archive/blogs/jhoward/hyper-v-generation-2-virtual-machines-part-5
 Get-VMComPort -VMName MetalOS
-Set-VMComPort -VMName MetalOS -Path \\.\pipe\metalos_com1 -Number 1
+Set-VMComPort -VMName MetalOS -Path \\.\pipe\metalos_com1 -Number 1 
 Set-VMComPort -VMName MetalOS -Path \\.\pipe\metalos_com2 -Number 2
 Get-VMComPort -VMName MetalOS
 

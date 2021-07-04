@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include "EfiMain.h"
 
-void Bugcheck(const char* file, const char* line, const char* assert)
+extern "C" void Bugcheck(const char* file, const char* line, const char* assert)
 {
 	static constexpr size_t MaxBuffer = 128;
 	

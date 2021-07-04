@@ -55,7 +55,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2\MdePkg\Include;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;..\tianocore-edk2\MdePkg\Include\IndustryStandard;..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2\MdePkg\Include;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;..\tianocore-edk2\MdePkg\Include\IndustryStandard;..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;..\MetalOS.Kernel.drivers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -127,16 +127,9 @@
     <ClCompile Include="DeviceTree.cpp" />
     <ClCompile Include="Cpuid.cpp" />
     <ClCompile Include="Device.cpp" />
-    <ClCompile Include="Driver.cpp" />
     <ClCompile Include="HyperV.cpp" />
-    <ClCompile Include="HyperVChannel.cpp" />
     <ClCompile Include="HyperVDevice.cpp" />
-    <ClCompile Include="HyperVKeyboardDriver.cpp" />
-    <ClCompile Include="HyperVMouseDriver.cpp" />
-    <ClCompile Include="HyperVRingBuffer.cpp" />
-    <ClCompile Include="HyperVScsiDriver.cpp" />
     <ClCompile Include="HyperVTimer.cpp" />
-    <ClCompile Include="IoApicDriver.cpp" />
     <ClCompile Include="Kernel.cpp" />
     <ClCompile Include="KernelAcpi.cpp" />
     <ClCompile Include="KernelDriverInterface.cpp" />
@@ -156,13 +149,11 @@
     <ClCompile Include="PdbPdb.cpp" />
     <ClCompile Include="PdbPublicsStream.cpp" />
     <ClCompile Include="msvc.cpp" />
-    <ClCompile Include="RamDriveDriver.cpp" />
     <ClCompile Include="RuntimeSupport.cpp" />
     <ClCompile Include="Scheduler.cpp" />
     <ClCompile Include="SoftwareDevice.cpp" />
     <ClCompile Include="StackWalk.cpp" />
     <ClCompile Include="StringPrinter.cpp" />
-    <ClCompile Include="UartDriver.cpp" />
     <ClCompile Include="UserThread.cpp" />
     <ClCompile Include="UserWindow.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
@@ -176,7 +167,6 @@
     <ClCompile Include="PhysicalMemoryManager.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="VirtualMemoryManager.cpp" />
-    <ClCompile Include="VmBusDriver.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BootHeap.h" />
@@ -186,16 +176,9 @@
     <ClInclude Include="DeviceTree.h" />
     <ClInclude Include="Cpuid.h" />
     <ClInclude Include="Device.h" />
-    <ClInclude Include="Driver.h" />
     <ClInclude Include="HyperV.h" />
-    <ClInclude Include="HyperVChannel.h" />
     <ClInclude Include="HyperVDevice.h" />
-    <ClInclude Include="HyperVKeyboardDriver.h" />
-    <ClInclude Include="HyperVMouseDriver.h" />
-    <ClInclude Include="HyperVRingBuffer.h" />
-    <ClInclude Include="HyperVScsiDriver.h" />
     <ClInclude Include="HyperVTimer.h" />
-    <ClInclude Include="IoApicDriver.h" />
     <ClInclude Include="Kernel.h" />
     <ClInclude Include="KernelHeap.h" />
     <ClInclude Include="KObject.h" />
@@ -218,13 +201,11 @@
     <ClInclude Include="PdbPdb.h" />
     <ClInclude Include="PdbPublicsStream.h" />
     <ClInclude Include="msvc.h" />
-    <ClInclude Include="RamDriveDriver.h" />
     <ClInclude Include="RuntimeSupport.h" />
     <ClInclude Include="Scheduler.h" />
     <ClInclude Include="SoftwareDevice.h" />
     <ClInclude Include="StackWalk.h" />
     <ClInclude Include="StringPrinter.h" />
-    <ClInclude Include="UartDriver.h" />
     <ClInclude Include="UserThread.h" />
     <ClInclude Include="UserWindow.h" />
     <ClInclude Include="VirtualAddressSpace.h" />
@@ -237,11 +218,13 @@
     <ClInclude Include="PhysicalMemoryManager.h" />
     <ClInclude Include="System.h" />
     <ClInclude Include="VirtualMemoryManager.h" />
-    <ClInclude Include="VmBusDriver.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MetalOS.Acpi\MetalOS.Acpi.vcxproj">
       <Project>{48e6f78a-5c2b-4c66-8767-df5be189bd2c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MetalOS.Kernel.drivers\MetalOS.Kernel.drivers.vcxproj">
+      <Project>{88c07ebe-4d24-44a9-8ad8-20acbcf34883}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MetalOS.Kernel.x64\MetalOS.Kernel.x64.vcxproj">
       <Project>{b240a22c-2efc-487b-936f-b516812f1751}</Project>

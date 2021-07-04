@@ -3,7 +3,7 @@
 
 extern void Print(const char* format, ...);
 extern void Print(const char* format, va_list args);
-extern "C" void __declspec(noreturn) Bugcheck(const char* file, const char* line, const char* assert);
+extern "C" void Bugcheck(const char* file, const char* line, const char* assert);
 extern bool MetalOsLibDebug;
 
 #define STR_HELPER(x) #x

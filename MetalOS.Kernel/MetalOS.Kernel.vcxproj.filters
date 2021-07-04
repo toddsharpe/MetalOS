@@ -57,12 +57,6 @@
     <ClCompile Include="AcpiOSL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="UartDriver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Driver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AcpiDevice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,9 +102,6 @@
     <ClCompile Include="StackWalk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="VmBusDriver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="KObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -121,21 +112,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="HyperVDevice.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HyperVKeyboardDriver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HyperVChannel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HyperVRingBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HyperVMouseDriver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="HyperVScsiDriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Pdb.cpp">
@@ -162,9 +138,6 @@
     <ClCompile Include="SoftwareDevice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RamDriveDriver.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Loader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -184,9 +157,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Debugger.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="IoApicDriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -225,12 +195,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="KSemaphore.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="UartDriver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Driver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AcpiDevice.h">
@@ -278,9 +242,6 @@
     <ClInclude Include="StackWalk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VmBusDriver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="KObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -294,21 +255,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="HyperVDevice.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HyperVKeyboardDriver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HyperVChannel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HyperVRingBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HyperVMouseDriver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="HyperVScsiDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Pdb.h">
@@ -338,9 +284,6 @@
     <ClInclude Include="SoftwareDevice.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RamDriveDriver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Loader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -360,9 +303,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Debugger.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="IoApicDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RingBuffer.h">

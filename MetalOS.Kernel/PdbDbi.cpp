@@ -1,7 +1,7 @@
 #include "PdbDbi.h"
 #include "Main.h"
 
-#include "RuntimeSupport.h"
+#include "PortableExecutable.h"
 
 PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file) :
 	m_stream(stream),
@@ -15,7 +15,7 @@ PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file) :
 	Assert(m_header.VersionHeader == DbiStreamVersion::V70);
 	Assert(m_header.Machine == 0x8664);
 
-	m_kernelText = RuntimeSupport::GetPESection(TextSection - 1, KernelBaseAddress);
+	m_kernelText = PortableExecutable::GetPESection(TextSection - 1, KernelBaseAddress);
 	Assert(strcmp((char*)m_kernelText->Name, ".text") == 0);
 
 	m_publics.Load(m_file.GetStream(m_header.SymRecordStreamIndex));

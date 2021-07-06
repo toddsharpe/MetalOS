@@ -2,7 +2,7 @@
 #include "Main.h"
 #include <windbgkd.h>
 #include "Loader.h"
-#include "RuntimeSupport.h"
+#include "PortableExecutable.h"
 
 #define KdpMoveMemory memcpy
 
@@ -21,9 +21,9 @@ void Debugger::Initialize()
 	kernel.Printf("kddll loaded at 0x%016x\n", kddll);
 
 	//Load pointers
-	m_dll.KdInitialize = (OnKdInitialize)RuntimeSupport::GetProcAddress(kddll, "KdInitialize");
-	m_dll.KdReceivePacket = (OnKdReceivePacket)RuntimeSupport::GetProcAddress(kddll, "KdReceivePacket");
-	m_dll.KdSendPacket = (OnKdSendPacket)RuntimeSupport::GetProcAddress(kddll, "KdSendPacket");
+	m_dll.KdInitialize = (OnKdInitialize)PortableExecutable::GetProcAddress(kddll, "KdInitialize");
+	m_dll.KdReceivePacket = (OnKdReceivePacket)PortableExecutable::GetProcAddress(kddll, "KdReceivePacket");
+	m_dll.KdSendPacket = (OnKdSendPacket)PortableExecutable::GetProcAddress(kddll, "KdSendPacket");
 
 	kernel.Printf("KdInitialize loaded at 0x%016x\n", m_dll.KdInitialize);
 	kernel.Printf("KdReceivePacket loaded at 0x%016x\n", m_dll.KdReceivePacket);

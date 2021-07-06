@@ -11,6 +11,7 @@ typedef EFI_GUID GUID;
 #include "AcpiDevice.h"
 #include "UartDriver.h"
 #include "RuntimeSupport.h"
+#include "PortableExecutable.h"
 #include "LoadingScreen.h"
 #include "HyperVTimer.h"
 #include "HyperV.h"
@@ -776,8 +777,8 @@ bool Kernel::CreateProcess(const std::string& path)
 	Print("mosrt loaded at 0x%016x\n", api);
 
 	//Save init pointers in library
-	process->InitProcess = (void*)RuntimeSupport::GetProcAddress(api, "InitProcess");
-	process->InitThread = (void*)RuntimeSupport::GetProcAddress(api, "InitThread");
+	process->InitProcess = (void*)PortableExecutable::GetProcAddress(api, "InitProcess");
+	process->InitThread = (void*)PortableExecutable::GetProcAddress(api, "InitThread");
 	Print("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
 
 	//Patch imports of process for just mosapi

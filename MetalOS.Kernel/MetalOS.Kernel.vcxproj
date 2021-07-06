@@ -135,6 +135,7 @@
     <ClCompile Include="KernelDriverInterface.cpp" />
     <ClCompile Include="KernelSystemCalls.cpp" />
     <ClCompile Include="KObject.cpp" />
+    <ClCompile Include="PortableExecutable.cpp" />
     <ClCompile Include="UserProcess.cpp" />
     <ClCompile Include="KSemaphore.cpp" />
     <ClCompile Include="KSpinLock.cpp" />
@@ -182,6 +183,7 @@
     <ClInclude Include="Kernel.h" />
     <ClInclude Include="KernelHeap.h" />
     <ClInclude Include="KObject.h" />
+    <ClInclude Include="PortableExecutable.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="UserProcess.h" />
     <ClInclude Include="KSemaphore.h" />

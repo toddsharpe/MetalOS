@@ -95,7 +95,6 @@ void AcpiDevice::DisplayDetails() const
 ACPI_STATUS AcpiDevice::AttachResource(ACPI_RESOURCE* Resource, void* Context)
 {
 	AcpiDevice* pDevice = (AcpiDevice*)Context;
-
 	switch (Resource->Type)
 	{
 	case ACPI_RESOURCE_TYPE_ADDRESS32:
@@ -183,8 +182,8 @@ ACPI_STATUS AcpiDevice::DisplayResource(const ACPI_RESOURCE& Resource)
 			Resource.Data.ExtendedIrq.Shareable,
 			Resource.Data.ExtendedIrq.WakeCapable,
 			Resource.Data.ExtendedIrq.InterruptCount);
-		for (i = 0; i < Resource.Data.Irq.InterruptCount; i++)
-			Print("%.02X ", Resource.Data.Irq.Interrupts[i]);
+		for (i = 0; i < Resource.Data.ExtendedIrq.InterruptCount; i++)
+			Print("%.02X ", Resource.Data.ExtendedIrq.Interrupts[i]);
 		Print("\n");
 		break;
 	case ACPI_RESOURCE_TYPE_FIXED_MEMORY32:

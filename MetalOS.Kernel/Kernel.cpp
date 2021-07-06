@@ -134,55 +134,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	Print("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
 	Print("  PhysicalAddressSize: 0x%16x\n", m_memoryMap->GetPhysicalAddressSize());
 
-	//Check if SSE
-	int r[4];
-	__cpuid(r, 0x1);
-	Assert(r[3] & (1 << 25));//sse
-
-	__writecr0(__readcr0() & ~(1 << 2));//!Emulated
-	__writecr0(__readcr0() | (1 << 1));
-	__writecr4(__readcr4() | (1 << 9));//OSFXSR 
-	__writecr4(__readcr4() | (1 << 10));//OSXMMEXCPT 
-
-	//Check if OSXsave is enabled
-	if (!(r[2] & (1 << 27)))
-	{
-		//osxsave not enabled, set it
-
-		//Have to have xave
-		Assert(r[3] & (1 << 26));//xsave
-
-		//Enable osxsave
-		__writecr4(__readcr4() | (1 << 18));//OSXSAVE
-		Assert(__readcr4() & (1 << 18));//Check osxsave enabled
-	}
-
-	//Check if AVX is supported
-	if (r[2] & (1 << 28));
-	{
-		//Enable avx
-		_xsetbv(0, _xgetbv(0) | 0x7);
-
-		Print("Enabled AVX\n");
-	}
-
-	if (r[2] & (1 << 20))
-		Print("SSE 4.2\n");
-	if (r[2] & (1 << 19))
-		Print("SSE 4.1\n");
-	if (r[2] & (1 << 9))
-		Print("SSSE 3\n");
-	if (r[2] & (1 << 0))
-		Print("SSE 3\n");
-	if (r[3] & (1 << 26))
-		Print("SSE 2\n");
-
-	//Check AVX512
-	__cpuidex(r, 0x7, 0);
-	Print("EBX: 0x%08x\n", r[1]);
-	if (r[1] & (1 << 16))
-		Print("AVX 512\n");
-
 	//Test UEFI runtime access
 	EFI_TIME time = { 0 };
 	m_runtime.GetTime(&time, nullptr);
@@ -204,10 +155,10 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();
 	m_interruptHandlers->insert({ InterruptVector::Timer0, { &Kernel::OnTimer0, this} });
-	//m_interruptHandlers->insert({ InterruptVector::Breakpoint, { [](void* arg) { ((Kernel*)arg)->Printf("Debug Breakpoint Exception\n"); }, this} });
+	m_interruptHandlers->insert({ InterruptVector::Breakpoint, { [](void* arg) { ((Kernel*)arg)->Printf("Debug Breakpoint Exception\n"); }, this} });
 
 	//Test interrupts
-	//__debugbreak();
+	__debugbreak();
 
 	//Create boot thread
 	KThread* bootThread = new KThread(nullptr, nullptr);

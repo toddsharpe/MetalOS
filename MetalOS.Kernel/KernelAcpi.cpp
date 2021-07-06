@@ -46,9 +46,9 @@ void* Kernel::AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE L
 	size_t pageCount = SIZE_TO_PAGES(pageOffset + Length);
 
 	uintptr_t physicalBase = PhysicalAddress & ~PAGE_MASK;
-	m_pageTables->MapKernelPages(KernelACPIAddress + physicalBase, physicalBase, pageCount);
+	m_pageTables->MapKernelPages(KernelAcpiStart + physicalBase, physicalBase, pageCount);
 
-	return (void*)(KernelACPIAddress + physicalBase + pageOffset);
+	return (void*)(KernelAcpiStart + physicalBase + pageOffset);
 }
 
 void Kernel::AcpiOsUnmapMemory(void* where, ACPI_SIZE length)

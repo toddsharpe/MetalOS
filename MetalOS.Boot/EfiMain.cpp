@@ -173,8 +173,8 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	currentPT.ClearKernelEntries();
 
 	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, EFI_SIZE_TO_PAGES(LoaderParams.KernelImageSize));
-	currentPT.MapKernelPages(KernelPageTablesPoolAddress, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
-	currentPT.MapKernelPages(KernelGraphicsDeviceAddress, LoaderParams.Display.FrameBufferBase, EFI_SIZE_TO_PAGES(LoaderParams.Display.FrameBufferSize));
+	currentPT.MapKernelPages(KernelPageTablesPool, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
+	currentPT.MapKernelPages(KernelGraphicsDevice, LoaderParams.Display.FrameBufferBase, EFI_SIZE_TO_PAGES(LoaderParams.Display.FrameBufferSize));
 
 	//Re-enable write protection
 	__writecr0(__readcr0() | (1 << 16));
@@ -205,7 +205,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 		if ((current->Attribute & EFI_MEMORY_RUNTIME) == 0)
 			continue;
 
-		current->VirtualStart = current->PhysicalStart + KernelRuntimeAddress;
+		current->VirtualStart = current->PhysicalStart + KernelUefiStart;
 	}
 
 	//Update UEFI virtual address map

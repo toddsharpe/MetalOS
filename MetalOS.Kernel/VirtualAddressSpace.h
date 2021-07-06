@@ -50,6 +50,6 @@ public:
 class UserAddressSpace : public VirtualAddressSpace
 {
 public:
-	UserAddressSpace() : VirtualAddressSpace(UserStart, UserStop, false) { }
+	UserAddressSpace() : VirtualAddressSpace(UserAddress::UserStart, UserAddress::UserStop, false) { }
 };
 

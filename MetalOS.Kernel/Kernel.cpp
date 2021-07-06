@@ -86,7 +86,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	const paddr_t ramDriveAddress = params->RamDriveAddress;
 
 	//Initialize Display
-	m_display = new Display(params->Display, KernelGraphicsDeviceAddress);
+	m_display = new Display(params->Display, KernelGraphicsDevice);
 	m_display->ColorScreen(Colors::Black);
 	m_textScreen = new TextScreen(*m_display);
 	m_printer = m_textScreen;
@@ -100,15 +100,15 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_configTables = new ConfigTables(params->ConfigTables, params->ConfigTableSizes);
 
 	//Initialize page table pool
-	PageTables::Pool = new PageTablesPool(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	PageTables::Pool = new PageTablesPool(KernelPageTablesPool, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
 
 	//Construct kernel page table
 	m_pageTables = new PageTables();
 	m_pageTables->MapKernelPages(KernelBaseAddress, params->KernelAddress, EFI_SIZE_TO_PAGES(params->KernelImageSize));
-	m_pageTables->MapKernelPages(KernelPageTablesPoolAddress, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
-	m_pageTables->MapKernelPages(KernelGraphicsDeviceAddress, params->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(params->Display.FrameBufferSize));
+	m_pageTables->MapKernelPages(KernelPageTablesPool, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	m_pageTables->MapKernelPages(KernelGraphicsDevice, params->Display.FrameBufferBase, EFI_SIZE_TO_PAGES(params->Display.FrameBufferSize));
 	m_pageTables->MapKernelPages(KernelPfnDbStart, params->PfnDbAddress, EFI_SIZE_TO_PAGES(params->PfnDbSize));
-	m_pageTables->MapKernelPages(KernelPdbStart, params->PdbAddress, EFI_SIZE_TO_PAGES(params->PdbSize));
+	m_pageTables->MapKernelPages(KernelKernelPdb, params->PdbAddress, EFI_SIZE_TO_PAGES(params->PdbSize));
 
 	//Map in runtime sections
 	{
@@ -191,14 +191,14 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_pfnDb = new PhysicalMemoryManager(*m_memoryMap);
 	Assert(m_pfnDb->GetSize() == pfnDbSize);
 	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb);
-	m_addressSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
 
 	//Initialize Heap
+	m_addressSpace = new VirtualAddressSpace(KernelHeapStart, KernelHeapEnd, true);
 	m_heap = new KernelHeap(*m_virtualMemory, *m_addressSpace);
 	m_heapInitialized = true;
 
 	//PDB
-	m_pdb = new Pdb(KernelPdbStart);
+	m_pdb = new Pdb(KernelKernelPdb);
 
 	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();

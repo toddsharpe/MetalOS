@@ -98,6 +98,7 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& e
 		}
 	}
 
+	//TODO: Remove relocation logic, it has no meaning as we are allocating in Identity Paging
 	bool relocate = pNtHeader->OptionalHeader.ImageBase != KernelBaseAddress;
 	//Update NTHeader to point to new virtual address
 	pNtHeader->OptionalHeader.ImageBase = KernelBaseAddress;

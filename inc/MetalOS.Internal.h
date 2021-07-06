@@ -1,27 +1,54 @@
 #pragma once
+#include <cstdint>
 
 //Shared header between loader and kernel
 
-//This is defined in Kernel but kernel shouldn't be shared. TODO
-#define UserStart   0x0
-//#define UserStop    0x00007FFFFFFFFFFF
-#define UserStop    0x0000800000000000
-#define KernelStart 0xFFFF800000000000
+enum UserAddress : uintptr_t
+{
+	UserStart = 0x0,
+	UserStop = 0x0000800000000000,
+};
 
-#define RamDriveSize 0x4000000 //64MB ramdrive
+const size_t KernelSectionLength = 0x10'0000'0000; //64GB
+enum KernelAddress : uintptr_t
+{
+	KernelStart = 0xFFFF'8000'0000'0000,
 
-//16MB region unused
-#define KernelBaseAddress (KernelStart + 0x1000000)//16 MB kernel
-#define KernelPageTablesPoolAddress (KernelStart + 0x2000000)//16MB page pool (currently only 2mb is used - 512 * 4096)
-#define KernelGraphicsDeviceAddress (KernelStart + 0x3000000)//16MB graphics device (Hyper-v device uses 8MB)
-#define KernelRamDriveAddress (KernelStart + 0x4000000)//64MB Ram Drive
-#define KernelRuntimeAddress (KernelStart + 0x100000000000)//UEFI services needed to exist in runtime
-#define KernelACPIAddress (KernelStart + 0x200000000000)//ACPI Request area. ACPI requests pages to be mapped so use this chunk
-#define KernelDriverIOAddress (KernelStart + 0x300000000000)//Driver IO space
-#define KernelRuntimeStart (KernelStart + 0x400000000000)//Connected to kernel virtual address space for runtime mappings
-#define KernelRuntimeEnd (KernelStart + 0x500000000000)
-#define KernelPfnDbStart (KernelStart + 0x500000000000)//PFNDatabase
-#define KernelPdbStart (KernelStart + 0x600000000000)//PDB
+	//Kernel libraries
+	KernelBaseAddress = 0xFFFF'8000'0100'0000,
+	KernelKdComBaseAddress = 0xFFFF'8000'0200'0000,
+
+	//Kernel pdbs
+	KernelKernelPdb = 0xFFFF'8000'1100'0000,
+	KernelKdComPdb = 0xFFFF'8000'1200'0000,
+
+	//Hardware 0xFFFF'8010'0000'0000
+	KernelHardwareStart = KernelStart + KernelSectionLength,
+	KernelPageTablesPool = KernelHardwareStart, //32MB (512 pages used)
+	KernelGraphicsDevice = KernelHardwareStart + 0x200'0000, //32MB
+	KernelRamDrive = KernelHardwareStart + 0x400'0000, //64MB
+	KernelHardwareEnd = KernelHardwareStart + 0x800'0000,
+	KernelPfnDbStart = KernelHardwareStart + 0x1'0000'0000,//4GB
+
+	//Heap 0xFFFF'8020'0000'0000
+	KernelHeapStart = KernelHardwareStart + KernelSectionLength,
+	KernelHeapEnd = KernelHeapStart + KernelSectionLength,
+
+	//UEFI 0xFFFF'8030'0000'0000
+	KernelUefiStart = KernelHeapEnd,
+	KernelUefiEnd = KernelUefiStart + KernelSectionLength,
+
+	//ACPI 0xFFFF'8040'0000'0000
+	KernelAcpiStart = KernelUefiEnd,
+	KernelAcpiEnd = KernelAcpiStart + KernelSectionLength,
+
+	//IO 0xFFFF'8050'0000'0000 (physical page)
+	KernelIoStart = KernelAcpiEnd,
+	KernelIoEnd = KernelIoStart + KernelSectionLength,
+
+	KernelEnd = 0xFFFF'FFFF'FFFF'FFFF
+};
+const size_t RamDriveSize = KernelHardwareEnd - KernelRamDrive;
 
 #define PAGE_SHIFT  12
 #define PAGE_SIZE (1 << PAGE_SHIFT)

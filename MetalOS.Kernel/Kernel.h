@@ -118,7 +118,6 @@ public:
 #pragma endregion
 
 #pragma region Driver Interface
-	void* DriverMapIoSpace(paddr_t PhysicalAddress, size_t NumberOfBytes);
 	void* DriverMapPages(paddr_t address, size_t count);
 #pragma endregion
 

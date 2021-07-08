@@ -3,10 +3,11 @@
 //#include <crt_string.h>
 #include <WindowsPE.h>
 #include "Main.h"
+#include "PortableExecutable.h"
 
-bool Loader::ReadHeaders(const char* path, uintptr_t& imageBase, DWORD& imageSize)
+Handle Loader::LoadKernelLibrary(const std::string& path)
 {
-	FileHandle* file = kernel.CreateFile(std::string(path), GenericAccess::Read);
+	FileHandle* file = kernel.CreateFile(path, GenericAccess::Read);
 	Assert(file);
 
 	size_t read;
@@ -24,52 +25,15 @@ bool Loader::ReadHeaders(const char* path, uintptr_t& imageBase, DWORD& imageSiz
 	Assert(read == sizeof(IMAGE_NT_HEADERS64));
 
 	//Verify image
-	if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
-		peHeader.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
-		peHeader.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
-	{
-		Assert(false);
-	}
+	Assert(peHeader.Signature == IMAGE_NT_SIGNATURE);
+	Assert(peHeader.FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64);
+	Assert(peHeader.OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC);
 
-	imageBase = peHeader.OptionalHeader.ImageBase;
-	imageSize = peHeader.OptionalHeader.SizeOfImage;
+	//Verify base address is reasonable
+	Assert(peHeader.OptionalHeader.ImageBase >= KernelAddress::KernelLibraryStart);
+	Assert(peHeader.OptionalHeader.ImageBase < KernelAddress::KernelLibraryEnd);
 
-	return true;
-}
-
-Handle Loader::LoadKernelLibrary(const char* path)
-{
-	FileHandle* file = kernel.CreateFile(std::string(path), GenericAccess::Read);
-	Assert(file);
-
-	size_t read;
-
-	//Dos header
-	IMAGE_DOS_HEADER dosHeader;
-	Assert(kernel.ReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
-	Assert(read == sizeof(IMAGE_DOS_HEADER));
-	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
-
-	//NT Header
-	IMAGE_NT_HEADERS64 peHeader;
-	Assert(kernel.SetFilePosition(file, dosHeader.e_lfanew));
-	Assert(kernel.ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
-	Assert(read == sizeof(IMAGE_NT_HEADERS64));
-
-	//Verify image
-	if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
-		peHeader.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
-		peHeader.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
-	{
-		Assert(false);
-		return nullptr;
-	}
-
-	void* address = kernel.AllocateKernelPage(peHeader.OptionalHeader.ImageBase, SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage), MemoryProtection::PageReadWriteExecute);
-	if (address == nullptr)
-	{
-		address = kernel.AllocateKernelPage(0, SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage), MemoryProtection::PageReadWriteExecute);
-	}
+	void* address = kernel.AllocateLibrary(peHeader.OptionalHeader.ImageBase, SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage));
 	Assert(address);
 
 	//Read headers
@@ -95,44 +59,7 @@ Handle Loader::LoadKernelLibrary(const char* path)
 		}
 	}
 
-	//Relocations
-	IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-	if (((uintptr_t)address != pNtHeader->OptionalHeader.ImageBase) && (relocationDirectory.Size))
-	{
-		PIMAGE_BASE_RELOCATION pBaseRelocation = MakePtr(PIMAGE_BASE_RELOCATION, address, relocationDirectory.VirtualAddress);
-
-		//Calculate relative shift
-		uintptr_t delta = (uintptr_t)address - (uintptr_t)pNtHeader->OptionalHeader.ImageBase;
-
-		DWORD bytes = 0;
-		while (bytes < relocationDirectory.Size)
-		{
-			PDWORD locationBase = MakePtr(PDWORD, address, pBaseRelocation->VirtualAddress);
-			PWORD locationData = MakePtr(PWORD, pBaseRelocation, sizeof(IMAGE_BASE_RELOCATION));
-
-			DWORD count = (pBaseRelocation->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
-			for (DWORD i = 0; i < count; i++)
-			{
-				int type = (*locationData >> 12);
-				int value = (*locationData & 0x0FFF);
-
-				switch (type)
-				{
-				case IMAGE_REL_BASED_ABSOLUTE:
-					break;
-
-				case IMAGE_REL_BASED_HIGHLOW:
-					*MakePtr(PDWORD, locationBase, value) += delta;
-					break;
-				}
-
-				locationData++;
-			}
-
-			bytes += pBaseRelocation->SizeOfBlock;
-			pBaseRelocation = (PIMAGE_BASE_RELOCATION)locationData;
-		}
-	}
+	//Kernel libraries should never be relocated
 
 	//Kernel library dont have imports yet
 	Assert(pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size == 0);
@@ -206,66 +133,6 @@ Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 	return address;
 }
 
-uintptr_t Loader::GetProcAddress(Handle hModule, const char* lpProcName)
-{
-	//Headers
-	PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, hModule, 0);
-	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-		return NULL;
-
-	PIMAGE_NT_HEADERS64 ntHeader = MakePtr(PIMAGE_NT_HEADERS64, hModule, dosHeader->e_lfanew);
-	if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
-		return NULL;
-
-	if (ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size == 0)
-		return NULL;
-
-	PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-	if ((directory->Size == 0) || (directory->VirtualAddress == 0))
-		return NULL;
-
-	PIMAGE_EXPORT_DIRECTORY exportDirectory = MakePtr(PIMAGE_EXPORT_DIRECTORY, hModule, directory->VirtualAddress);
-
-	PDWORD pNames = MakePtr(PDWORD, hModule, exportDirectory->AddressOfNames);
-	PWORD pOrdinals = MakePtr(PWORD, hModule, exportDirectory->AddressOfNameOrdinals);
-	PDWORD pFunctions = MakePtr(PDWORD, hModule, exportDirectory->AddressOfFunctions);
-
-	uintptr_t search = 0;
-	for (int i = 0; i < exportDirectory->NumberOfNames; i++)
-	{
-		char* name = MakePtr(char*, hModule, pNames[i]);
-		if (stricmp(lpProcName, name) == 0)
-		{
-			WORD ordinal = pOrdinals[i];
-			search = MakePtr(uintptr_t, hModule, pFunctions[ordinal]);
-		}
-	}
-
-	//Check if forwarded
-	uintptr_t base = (uintptr_t)hModule + directory->VirtualAddress;
-	if ((search >= base) && (search < (base + directory->Size)))
-	{
-		Assert(false);
-		return NULL;
-	}
-
-	//If function is forwarded, (PCHAR)search is its name
-	//DWORD base = (DWORD)hModule + directory->VirtualAddress;
-	//if ((search >= base) && (search < (base + directory->Size)))
-	//{
-	//    char* name = (char*)search;
-	//    char* copy = (char*)malloc((strlen(name) + 1) * sizeof(char));
-	//    strcpy(copy, name);
-	//    char* library = strtok(copy, ".");
-	//    char* function = strtok(NULL, ".");
-
-	//    HMODULE hLibrary = LoadLibrary(library);//Get the address
-	//    return GetExportAddress(hLibrary, function);
-	//}
-
-	return search;
-}
-
 void Loader::KernelExports(void* address, void* kernelAddress)
 {
 	uintptr_t baseAddress = (uintptr_t)address;
@@ -292,7 +159,7 @@ void Loader::KernelExports(void* address, void* kernelAddress)
 				{
 					PIMAGE_IMPORT_BY_NAME pImportByName = MakePtr(PIMAGE_IMPORT_BY_NAME, baseAddress, pThunkData->u1.AddressOfData);
 
-					pThunkData->u1.Function = GetProcAddress(hModule, (char*)pImportByName->Name);
+					pThunkData->u1.Function = PortableExecutable::GetProcAddress(hModule, (char*)pImportByName->Name);
 					Print("Patched %s to 0x%016x\n", (char*)pImportByName->Name, pThunkData->u1.Function);
 					pThunkData++;
 

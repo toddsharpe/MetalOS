@@ -41,7 +41,7 @@ void KThread::Run()
 
 void KThread::InitContext(void* entry)
 {
-	m_stackAllocation = kernel.AllocateKernelPage(0, KThread::StackPages, MemoryProtection::PageReadWrite);
+	m_stackAllocation = kernel.AllocateStack(KThread::StackPages);
 	m_stackPointer = (void*)((uintptr_t)m_stackAllocation + (KThread::StackPages << PAGE_SHIFT) - ArchStackReserve());
 	
 	ArchInitContext(m_context, entry, m_stackPointer);

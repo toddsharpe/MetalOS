@@ -14,13 +14,25 @@ enum KernelAddress : uintptr_t
 {
 	KernelStart = 0xFFFF'8000'0000'0000,
 
-	//Kernel libraries
-	KernelBaseAddress = 0xFFFF'8000'0100'0000,
+	//Kernel libraries 0xFFFF'8000'0000'0000 (256MB)
+	KernelLibraryStart     = KernelStart,
+	KernelBaseAddress      = 0xFFFF'8000'0100'0000,
 	KernelKdComBaseAddress = 0xFFFF'8000'0200'0000,
+	KernelLibraryEnd       = 0xFFFF'8000'1000'0000,
 
-	//Kernel pdbs
+	//Kernel pdbs 0xFFFF'8000'1000'0000 (256MB)
+	KernelPdbStart  = KernelLibraryEnd,
 	KernelKernelPdb = 0xFFFF'8000'1100'0000,
-	KernelKdComPdb = 0xFFFF'8000'1200'0000,
+	KernelKdComPdb  = 0xFFFF'8000'1200'0000,
+	KernelPdbEnd    = 0xFFFF'8000'2000'0000,
+
+	//Kernel stacks 0xFFFF'8000'2000'0000 (256MB)
+	KernelStackStart = KernelPdbEnd,
+	KernelStackEnd   = 0xFFFF'8000'3000'0000,
+
+	//Kernel runtime 0xFFFF'8000'3000'0000 (256MB) TODO: condense with IO?
+	KernelRuntimeStart = KernelStackEnd,
+	KernelRuntimeEnd = 0xFFFF'8000'4000'0000,
 
 	//Hardware 0xFFFF'8010'0000'0000
 	KernelHardwareStart = KernelStart + KernelSectionLength,

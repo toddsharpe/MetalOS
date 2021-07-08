@@ -15,6 +15,8 @@ extern "C"
 {
 #include <acpi.h>
 }
+#include <vector>
+#include <list>
 #include <map>
 #include "DeviceTree.h"
 #include "Debugger.h"
@@ -70,6 +72,9 @@ public:
 
 #pragma region Virtual Memory Interface
 	paddr_t AllocatePhysical(const size_t count);
+	void* AllocateLibrary(const uintptr_t address, const size_t count);
+	void* AllocatePdb(const size_t count);
+	void* AllocateStack(const size_t count);
 	void* AllocateKernelPage(const uintptr_t address, const size_t count, const MemoryProtection& protect);
 	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses, const MemoryProtection& protect);
 
@@ -131,12 +136,13 @@ public:
 	void KernelThreadSleep(nano_t value);
 	void ExitKernelThread();
 
-	Handle LoadKernelLibrary(const char* path);
+	Handle KeLoadLibrary(const std::string& path);
+	Handle KeGetModuleHandle(const std::string& path);
 
 	bool CreateProcess(const std::string& path);
 	KThread* CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
 
-	void GetSystemTime(SystemTime* time);
+	void KeGetSystemTime(SystemTime* time);
 
 	void RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
 
@@ -232,12 +238,18 @@ private:
 	PageTablesPool* m_pagePool;
 	PageTables* m_pageTables;
 
+	//Heap spaces
+	VirtualAddressSpace* m_librarySpace;
+	VirtualAddressSpace* m_pdbSpace;
+	VirtualAddressSpace* m_stackSpace;
+	VirtualAddressSpace* m_heapSpace;
+	VirtualAddressSpace* m_runtimeSpace;
+
 	//Memory Management
 	bool m_heapInitialized;
 	paddr_t m_pfnDbAddress;
 	PhysicalMemoryManager* m_pfnDb;
 	VirtualMemoryManager* m_virtualMemory;
-	VirtualAddressSpace* m_addressSpace;
 	KernelHeap* m_heap;
 
 	//Interrupts
@@ -247,6 +259,9 @@ private:
 	std::map<uint32_t, UserProcess*>* m_processes;
 	Scheduler* m_scheduler;
 	
+	//Libraries
+	std::list<KeLibrary>* m_modules;
+
 	//Platform
 	HyperV* m_hyperV;
 

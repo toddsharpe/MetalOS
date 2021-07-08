@@ -387,3 +387,7 @@ If _DEBUG not defined
 if _DEBUG defined
    /FAILIFMISMATCH:RuntimeLibrary=MTd_StaticDebug
 
+KdCom
+https://sysprogs.com/legacy/articles/kdvmware/kdcom/
+http://standa-note.blogspot.com/2015/06/reverse-engineering-winbg-for-profit.html
+http://www.nynaeve.net/?p=171

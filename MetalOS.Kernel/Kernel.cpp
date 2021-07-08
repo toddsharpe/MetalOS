@@ -28,6 +28,7 @@ typedef EFI_GUID GUID;
 #include <MetalOS.Arch.h>
 
 Kernel::Kernel() :
+	Window(),
 	m_physicalAddress(),
 	m_imageSize(),
 	m_runtime(),
@@ -42,18 +43,25 @@ Kernel::Kernel() :
 	m_configTables(),
 	m_pagePool(),
 	m_pageTables(),
+	
+	m_librarySpace(),
+	m_pdbSpace(),
+	m_stackSpace(),
+	m_heapSpace(),
+	m_runtimeSpace(),
 
 	m_heapInitialized(),
 	m_pfnDbAddress(),
 	m_pfnDb(),
 	m_virtualMemory(),
-	m_addressSpace(),
 	m_heap(),
 
 	m_interruptHandlers(),
 
 	m_processes(),
 	m_scheduler(),
+
+	m_modules(),
 
 	m_hyperV(),
 
@@ -144,9 +152,15 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	Assert(m_pfnDb->GetSize() == pfnDbSize);
 	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb);
 
+	//Initialize address spaces (TODO: condense with split method)
+	m_librarySpace = new VirtualAddressSpace(KernelLibraryStart, KernelLibraryEnd, true);
+	m_pdbSpace = new VirtualAddressSpace(KernelPdbStart, KernelPdbEnd, true);
+	m_stackSpace = new VirtualAddressSpace(KernelStackStart, KernelStackEnd, true);
+	m_heapSpace = new VirtualAddressSpace(KernelHeapStart, KernelHeapEnd, true);
+	m_runtimeSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
+
 	//Initialize Heap
-	m_addressSpace = new VirtualAddressSpace(KernelHeapStart, KernelHeapEnd, true);
-	m_heap = new KernelHeap(*m_virtualMemory, *m_addressSpace);
+	m_heap = new KernelHeap(*m_virtualMemory, *m_heapSpace);
 	m_heapInitialized = true;
 
 	//PDB
@@ -166,6 +180,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Process and thread containers
 	m_processes = new std::map<uint32_t, UserProcess*>();
 	m_scheduler = new Scheduler(*bootThread);
+
+	m_modules = new std::list<KeLibrary>();
 
 	//Create idle thread
 	CreateKernelThread(&Kernel::IdleThread, this);
@@ -473,9 +489,21 @@ void Kernel::ExitKernelThread()
 	m_scheduler->KillThread();
 }
 
-Handle Kernel::LoadKernelLibrary(const char* path)
+Handle Kernel::KeLoadLibrary(const std::string& path)
 {
-	return Loader::LoadKernelLibrary(path);
+	Handle library = Loader::LoadKernelLibrary(path);
+	m_modules->push_back({ path, library });
+	return library;
+}
+
+Handle Kernel::KeGetModuleHandle(const std::string& path)
+{
+	for (const auto& module : *m_modules)
+	{
+		if (module.Name == path)
+			return module.Handle;
+	}
+	return nullptr;
 }
 
 void Kernel::KernelThreadInitThunk()
@@ -513,7 +541,7 @@ void Kernel::KernelThreadSleep(nano_t value)
 	m_scheduler->Sleep(value);
 }
 
-void Kernel::GetSystemTime(SystemTime* time)
+void Kernel::KeGetSystemTime(SystemTime* time)
 {
 	EFI_TIME efiTime = { 0 };
 	Assert(!EFI_ERROR(m_runtime.GetTime(&efiTime, nullptr)));
@@ -538,9 +566,24 @@ void Kernel::Deallocate(void* address)
 	m_heap->Deallocate(address);
 }
 
+void* Kernel::AllocateLibrary(const uintptr_t address, const size_t count)
+{
+	return m_virtualMemory->Allocate(address, count, MemoryProtection::PageReadWriteExecute, *m_librarySpace);
+}
+
+void* Kernel::AllocatePdb(const size_t count)
+{
+	return m_virtualMemory->Allocate(0, count, MemoryProtection::PageReadWrite, *m_pdbSpace);
+}
+
+void* Kernel::AllocateStack(const size_t count)
+{
+	return m_virtualMemory->Allocate(0, count, MemoryProtection::PageReadWrite, *m_stackSpace);
+}
+
 void* Kernel::AllocateKernelPage(uintptr_t address, const size_t count, const MemoryProtection& protection)
 {
-	return m_virtualMemory->Allocate(address, count, protection, *m_addressSpace);
+	return m_virtualMemory->Allocate(address, count, protection, *m_heapSpace);
 }
 
 Handle Kernel::CreateSemaphore(const size_t initial, const size_t maximum, const std::string& name)
@@ -616,7 +659,7 @@ paddr_t Kernel::AllocatePhysical(const size_t count)
 
 void* Kernel::VirtualMap(const void* address, const std::vector<paddr_t>& addresses, const MemoryProtection& protection)
 {
-	return m_virtualMemory->VirtualMap((uintptr_t)address, addresses, protection, *m_addressSpace);
+	return m_virtualMemory->VirtualMap((uintptr_t)address, addresses, protection, *m_runtimeSpace);
 }
 
 Device* Kernel::GetDevice(const std::string path)

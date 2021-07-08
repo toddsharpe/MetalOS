@@ -457,3 +457,9 @@ struct x64_context
 	uint64_t Rip;
 	uint64_t Rflags;
 };
+
+struct KeLibrary
+{
+	std::string Name;
+	Handle Handle;
+};

@@ -91,7 +91,7 @@ void main(LOADER_PARAMS* loader)
 
 	//Load process
 	//kernel.CreateProcess("fire.exe");
-	//kernel.CreateProcess("doom.exe");
+	kernel.CreateProcess("doom.exe");
 	//kernel.CreateProcess("shell.exe");
 
 	//Exit init thread

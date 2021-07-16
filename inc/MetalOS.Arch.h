@@ -26,6 +26,7 @@ extern "C"
 	void ArchWait();
 	uint32_t ArchReadPort(uint32_t port, uint8_t width);
 	void ArchWritePort(uint32_t port, uint32_t value, uint8_t width);
+	void ArchEnableInterrupts();
 	cpu_status_t ArchDisableInterrupts();
 	void ArchRestoreFlags(cpu_status_t val);
 }

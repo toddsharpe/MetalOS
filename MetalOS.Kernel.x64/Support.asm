@@ -15,6 +15,11 @@ _sti proc
 	ret
 _sti endp
 
+ArchEnableInterrupts PROC
+	sti
+	ret
+ArchEnableInterrupts ENDP
+
 ArchDisableInterrupts PROC
 	pushfq
 	cli

@@ -15,6 +15,20 @@ size_t PortableExecutable::GetSizeOfImage(const Handle hModule)
 	return ntHeader->OptionalHeader.SizeOfImage;
 }
 
+uintptr_t PortableExecutable::GetEntryPoint(const Handle hModule)
+{
+	//Headers
+	PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, hModule, 0);
+	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+		return NULL;
+
+	PIMAGE_NT_HEADERS64 ntHeader = MakePtr(PIMAGE_NT_HEADERS64, hModule, dosHeader->e_lfanew);
+	if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
+		return NULL;
+
+	return ntHeader->OptionalHeader.AddressOfEntryPoint;
+}
+
 PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(const std::string& name, const uintptr_t ImageBase)
 {
 	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ImageBase;

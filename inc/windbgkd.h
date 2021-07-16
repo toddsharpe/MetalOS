@@ -5,7 +5,7 @@
 // Dependencies
 //
 #include <wdbgexts.h>
-#include <winnt.h>
+#include <winnt_.h>
 #include <ntstatus.h>
 
 //

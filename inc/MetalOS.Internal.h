@@ -58,6 +58,10 @@ enum KernelAddress : uintptr_t
 	KernelIoStart = KernelAcpiEnd,
 	KernelIoEnd = KernelIoStart + KernelSectionLength,
 
+	//Windows
+	KernelSharedPageStart = 0xFFFF'F780'0000'0000,
+	KernelSharedPageStop  = 0xFFFF'F780'0000'1000,
+
 	KernelEnd = 0xFFFF'FFFF'FFFF'FFFF
 };
 const size_t RamDriveSize = KernelHardwareEnd - KernelRamDrive;

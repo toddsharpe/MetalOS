@@ -144,7 +144,7 @@ public:
 
 	Handle KeLoadLibrary(const std::string& path);
 	void* KeLoadPdb(const std::string& path);
-	Handle KeGetModuleHandle(const std::string& path);
+	const  KeLibrary* KeGetModule(const std::string& path);
 	const KeLibrary* KeGetModule(const uintptr_t address);
 
 	bool CreateProcess(const std::string& path);

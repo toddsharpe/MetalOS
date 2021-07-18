@@ -21,6 +21,10 @@ public:
 
 	void Display() const;
 
+	void SetName(const std::string& name)
+	{
+		m_name = name;
+	}
 
 private:
 	static uint32_t LastId;
@@ -30,6 +34,7 @@ private:
 	static const size_t StackPages = 8;
 
 	const uint32_t m_id;
+	std::string m_name;
 	const ThreadStart m_start;
 	void* m_arg;
 

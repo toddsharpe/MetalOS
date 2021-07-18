@@ -13,9 +13,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{4F1726A7-E0E
 		inc\MetalOS.h = inc\MetalOS.h
 		inc\MetalOS.Internal.h = inc\MetalOS.Internal.h
 		inc\MetalOS.Kernel.s = inc\MetalOS.Kernel.s
+		inc\ntbasedef.h = inc\ntbasedef.h
+		inc\ntstatus.h = inc\ntstatus.h
+		inc\wdbgexts.h = inc\wdbgexts.h
 		inc\windbgkd.h = inc\windbgkd.h
 		inc\WindowsPE.h = inc\WindowsPE.h
 		inc\WindowsTypes.h = inc\WindowsTypes.h
+		inc\winnt.h = inc\winnt.h
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{35DFADE8-8138-4EAD-8722-B29DE8093465}"

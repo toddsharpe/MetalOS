@@ -1,7 +1,5 @@
 #pragma once
 
-#include "crt_string.h"
-#include "crt_wchar.h"
 #include <type_traits>
 
 template<typename T>
@@ -27,4 +25,20 @@ void GetDirectoryName(const T* source, T* destination)
 
 	//Add null
 	destination[marker + 1] = L'\0';
+}
+
+template<typename T>
+const T* GetFileName(const T* path)
+{
+	if (path == nullptr)
+		return nullptr;
+
+	const T* pFileName = path;
+	for (const T* pCur = path; *pCur != '\0'; pCur++)
+	{
+		if (*pCur == '/' || *pCur == '\\')
+			pFileName = pCur + 1;
+	}
+
+	return pFileName;
 }

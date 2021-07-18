@@ -5,10 +5,11 @@ VirtualAddressSpace::VirtualAddressSpace(const uintptr_t start, const uintptr_t 
 	m_start(start),
 	m_end(end),
 	m_global(global),
-	m_watermark(end),
+	m_watermark(start),
 	m_nodes()
 {
-
+	if (m_start == 0)
+		m_watermark = 0x140000000;
 }
 
 bool VirtualAddressSpace::IsFree(const uintptr_t address, const size_t count)
@@ -39,7 +40,7 @@ bool VirtualAddressSpace::IsFree(const uintptr_t address, const size_t count)
 bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, MemoryProtection protection)
 {
 	Assert(count != 0);
-	Print("Reserve: 0x%016x in [0x%016x, 0x%016x] Size: 0x%x\n", address, m_start, m_end, count);
+	kernel.Printf("Reserve: 0x%016x in [0x%016x, 0x%016x] Size: 0x%x\n", address, m_start, m_end, count);
 
 	if (address != 0)
 	{
@@ -49,30 +50,22 @@ bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, Memory
 	}
 	else
 	{
-		//Round size to multiple of AllocationGranularity
-		size_t desired = (count << PAGE_SHIFT);
-		const uintptr_t remainder = desired % AllocationGranularity;
-		if (remainder != 0)
-			desired += (AllocationGranularity - remainder);
-
-		//Choose address using watermark
-		//Watermark is address that can be given out
-		//m_watermark -= desired;
-		m_watermark -= BYTE_ALIGN(desired, AllocationGranularity);
-		Print("Watermark: 0x%016x Gran: 0x%016x\n", m_watermark, AllocationGranularity);
-		Assert(m_watermark % AllocationGranularity == 0);
+		kernel.Printf("  Watermark: 0x%016x Gran: 0x%016x\n", m_watermark, AllocationGranularity);
 
 		while (!IsFree(m_watermark, count))
 		{
-			Assert(m_watermark != 0);
-			m_watermark -= AllocationGranularity;
+			Assert(m_watermark < m_end);
+			m_watermark += AllocationGranularity;
 		}
-
+		
 		address = m_watermark;
+		m_watermark += ByteAlign((count << PAGE_SHIFT), AllocationGranularity);;
+		kernel.Printf("  NewWatermark: 0x%016x\n", m_watermark);
 	}
 
 	Node n = { count, protection };
 	m_nodes.insert({ address, n });
+	kernel.Printf("  Received: 0x%016x Count:0x%x\n", address, count);
 
 	return true;
 }

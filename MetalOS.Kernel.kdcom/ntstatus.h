@@ -1,6 +1,6 @@
 #pragma once
 
-typedef LONG NTSTATUS;
+typedef long NTSTATUS;
 
 //
 // Generic test for success on any status value (non-negative numbers

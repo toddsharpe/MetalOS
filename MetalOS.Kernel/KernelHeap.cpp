@@ -24,10 +24,13 @@ KernelHeap::KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace&
 
 void KernelHeap::Grow(size_t pages)
 {
+	PrintHeapHeaders();
+	kernel.Printf("Heap Grow - 0x%x\n", pages);
 	void* address = m_memoryManager.Allocate(m_end, pages, MemoryProtection::PageReadWrite, m_addressSpace);
 	Assert(address);
 
 	m_end += (pages << PAGE_SHIFT);
+	kernel.Printf("  NewEnd: 0x%016x, Addr: 0x%016x\n", m_end, address);
 }
 
 void* KernelHeap::Allocate(const size_t size, const uintptr_t callerAddress)
@@ -117,16 +120,20 @@ void KernelHeap::Deallocate(const void* address)
 
 void KernelHeap::PrintHeap() const
 {
-	Print("PrintHeap\n");
-	Print("Head: 0x%016x\n", this->m_head);
-	Print("Addressead: 0x%016x\n", this->m_address);
-	Print("End: 0x%016x\n", this->m_end);
-	Print("Allocated: 0x%016x\n", this->m_allocated);
-
+	PrintHeapHeaders();
 	HeapBlock* current = this->m_head;
 	while (current != nullptr)
 	{
 		Print("  L: 0x%8x F: 0x%8x P: 0x%16x, N: 0x%016x IP: 0x%16x\n", current->GetLength(), current->Flags, current->Prev, current->Next, current->CallerAddress);
 		current = current->Next;
 	}
+}
+
+void KernelHeap::PrintHeapHeaders() const
+{
+	Print("PrintHeap\n");
+	Print("Head: 0x%016x\n", this->m_head);
+	Print("Address: 0x%016x\n", this->m_address);
+	Print("End: 0x%016x\n", this->m_end);
+	Print("Allocated: 0x%016x\n", this->m_allocated);
 }

@@ -8,12 +8,12 @@ Kernel kernel;
 
 //Init Stack - set by x64_main
 //TODO: reclaim
-static constexpr size_t InitStackSize = (1 << 12); //12kb Init Stack
+static constexpr size_t InitStackSize = PAGE_SIZE << 2; //16kb Init Stack
 KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[InitStackSize] = { 0 };
 extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[InitStackSize];
 
 //Boot Heap
-static constexpr size_t BootHeapSize = (4 * PAGE_SIZE); //16kb Boot Heap
+static constexpr size_t BootHeapSize = PAGE_SIZE << 8; //1MB Boot Heap
 KERNEL_PAGE_ALIGN static volatile UINT8 BOOT_HEAP[BootHeapSize] = { 0 };
 KERNEL_GLOBAL_ALIGN BootHeap bootHeap((void*)BOOT_HEAP, BootHeapSize);
 

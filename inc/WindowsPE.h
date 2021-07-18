@@ -13,6 +13,10 @@
 #define FALSE   0
 #define TRUE    1
 
+typedef unsigned char UCHAR;
+typedef unsigned short USHORT;
+typedef unsigned long ULONG;
+
 typedef unsigned long       DWORD, *PDWORD;
 typedef unsigned char       BYTE, *PBYTE;
 typedef unsigned short      WORD, *PWORD;
@@ -634,3 +638,35 @@ typedef struct _UNWIND_INFO {
 
 } UNWIND_INFO, * PUNWIND_INFO;
 
+//
+// Debug Format
+//
+
+typedef struct _IMAGE_DEBUG_DIRECTORY {
+	DWORD   Characteristics;
+	DWORD   TimeDateStamp;
+	WORD    MajorVersion;
+	WORD    MinorVersion;
+	DWORD   Type;
+	DWORD   SizeOfData;
+	DWORD   AddressOfRawData;
+	DWORD   PointerToRawData;
+} IMAGE_DEBUG_DIRECTORY, * PIMAGE_DEBUG_DIRECTORY;
+
+#define IMAGE_DEBUG_TYPE_UNKNOWN          0
+#define IMAGE_DEBUG_TYPE_COFF             1
+#define IMAGE_DEBUG_TYPE_CODEVIEW         2
+#define IMAGE_DEBUG_TYPE_FPO              3
+#define IMAGE_DEBUG_TYPE_MISC             4
+#define IMAGE_DEBUG_TYPE_EXCEPTION        5
+#define IMAGE_DEBUG_TYPE_FIXUP            6
+#define IMAGE_DEBUG_TYPE_OMAP_TO_SRC      7
+#define IMAGE_DEBUG_TYPE_OMAP_FROM_SRC    8
+#define IMAGE_DEBUG_TYPE_BORLAND          9
+#define IMAGE_DEBUG_TYPE_RESERVED10       10
+#define IMAGE_DEBUG_TYPE_CLSID            11
+#define IMAGE_DEBUG_TYPE_VC_FEATURE       12
+#define IMAGE_DEBUG_TYPE_POGO             13
+#define IMAGE_DEBUG_TYPE_ILTCG            14
+#define IMAGE_DEBUG_TYPE_MPX              15
+#define IMAGE_DEBUG_TYPE_REPRO            16

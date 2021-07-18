@@ -7,6 +7,9 @@
 * Move loader entirely userside?
 * c++ headers like "Thread" or "File" that store the identifying handle and wrap the native interface:
 
+Code cleanup
+* Fix/standardize windows headers (WindowsPE->winnt.h)
+
 In Progress:
 * extract x64 functionality out to library
 

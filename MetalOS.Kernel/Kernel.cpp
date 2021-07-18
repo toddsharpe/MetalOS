@@ -26,6 +26,7 @@ typedef EFI_GUID GUID;
 #include <string>
 #include "KThread.h"
 #include <MetalOS.Arch.h>
+#include <Path.h>
 
 Kernel::Kernel() :
 	Window(),
@@ -176,12 +177,15 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Create boot thread
 	KThread* bootThread = new KThread(nullptr, nullptr);
+	bootThread->SetName("boot");
 
 	//Process and thread containers
 	m_processes = new std::map<uint32_t, UserProcess*>();
 	m_scheduler = new Scheduler(*bootThread);
 
+	//Modules
 	m_modules = new std::list<KeLibrary>();
+	m_modules->push_back({ "moskrnl", (Handle)KernelBaseAddress, m_pdb });
 
 	//Create idle thread
 	CreateKernelThread(&Kernel::IdleThread, this);
@@ -250,17 +254,6 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
-	//if (vector == InterruptVector::DoubleFault)
-	//{
-	//	m_textScreen->Printf("ISR: 0x%x, Code: %d, RBP: 0x%016x, RIP: 0x%016x, RSP: 0x%016x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
-	//	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
-	//	m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS());
-	//	m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
-
-	//	x64::PrintGDT();
-	//	ArchWait();
-	//}
-
 	const auto& it = m_interruptHandlers->find(vector);
 	if (it != m_interruptHandlers->end())
 	{
@@ -269,31 +262,22 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 		HyperV::EOI();
 		return;
 	}
-	
-	m_textScreen->Printf("ISR: 0x%x, Code: %x, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
-	m_textScreen->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
-	//m_textScreen->Printf("   CS: 0x%16x,  SS: 0x%16x,  GS: 0x%16x\n", pFrame->CS, pFrame->SS, x64_ReadGS());
-	//m_textScreen->Printf("   Current CS: 0x%16x,  SS: 0x%16x CR3: 0x%016x\n", x64_ReadCS(), x64_ReadSS(), __readcr3());
+
+	this->Printf("ISR: 0x%x, Code: %x, RBP: 0x%16x, RIP: 0x%16x, RSP: 0x%16x\n", vector, pFrame->ErrorCode, pFrame->RBP, pFrame->RIP, pFrame->RSP);
+	this->Printf("  RAX: 0x%16x, RBX: 0x%16x, RCX: 0x%16x, RDX: 0x%16x\n", pFrame->RAX, pFrame->RBX, pFrame->RCX, pFrame->RDX);
+
 	switch (vector)
 	{
 	case InterruptVector::PageFault:
-		m_textScreen->Printf("  CR2: 0x%16x\n", __readcr2());
+		this->Printf("  CR2: 0x%16x\n", __readcr2());
 		if (__readcr2() == 0)
-			m_textScreen->Printf("  Null pointer dereference\n", __readcr2());
+			this->Printf("  Null pointer dereference\n", __readcr2());
 	}
-
-	if (m_scheduler != nullptr)
-		m_scheduler->Enabled = false;
-	if (m_timer != nullptr)
-		m_timer->Disable();
-
-	//m_heap->PrintHeap();
 
 	CONTEXT context = { 0 };
 	context.Rip = pFrame->RIP;
 	context.Rsp = pFrame->RSP;
 	context.Rbp = pFrame->RBP;
-
 
 	KThread* current = m_scheduler->GetCurrentThread();
 	current->Display();
@@ -303,18 +287,28 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	StackWalk sw(&context);
 	while (sw.HasNext())
 	{
-		uintptr_t base = user == nullptr ? KernelBaseAddress : user->GetProcess().GetModuleBase(context.Rip);
-		Print("IP: 0x%016x Base: 0x%016x", context.Rip, base);
-		if (m_pdb != nullptr && (context.Rip >= KernelBaseAddress))
-			m_pdb->PrintStack((uint32_t)context.Rip - KernelBaseAddress);
+		uintptr_t base;
+		if (user != nullptr)
+		{
+			base = user->GetProcess().GetModuleBase(context.Rip);
+			Print("IP: 0x%016x Base: 0x%016x", context.Rip, base);
+		}
 		else
-			Print("\n");
-
+		{
+			Assert(context.Rip >= KernelStart);
+			//Kernel address
+			const KeLibrary* module = KeGetModule(context.Rip);
+			base = (uintptr_t)module->Handle;
+			Print("IP: 0x%016x Base: 0x%016x ", context.Rip, base);
+			if (module->Pdb != nullptr)
+				module->Pdb->PrintStack((uint32_t)context.Rip - base);
+		}
+		
+		Print("\n");
 		sw.Next(base);
 	}
 
-	while (true)
-		ArchWait();
+	Fatal("Unhandled exception");
 }
 
 bool inBugcheck = false;
@@ -324,7 +318,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	
 	if (inBugcheck)
 	{
-		m_textScreen->Printf("\n%s\n%s\n%s\n", file, line, assert);
+		this->Printf("\n%s\n%s\n%s\n", file, line, assert);
 
 		while(true)
 			ArchWait();
@@ -338,7 +332,8 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	if (m_timer != nullptr)
 		m_timer->Disable();
 
-	m_textScreen->Printf("\n%s\n%s\n%s\n", file, line, assert);
+	this->Printf("Kernel Bugcheck\n");
+	this->Printf("\n%s\n%s\n%s\n", file, line, assert);
 
 	if (m_scheduler)
 	{
@@ -362,21 +357,17 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 	StackWalk sw(&context);
 	uint32_t rva = (uint32_t)context.Rip - KernelBaseAddress;
 	
+	this->Printf("Call Stack\n");
 	while (sw.HasNext())
 	{
-		Print("IP: 0x%016x ", context.Rip);
+		this->Printf("IP: 0x%016x ", context.Rip);
 		if (m_pdb != nullptr && (context.Rip >= KernelBaseAddress))
 			m_pdb->PrintStack((uint32_t)context.Rip - KernelBaseAddress);
 		else
-			Print("\n");
+			this->Printf("\n");
 
 		sw.Next(KernelBaseAddress);
 	}
-
-	//m_display->ColorScreen(Red);
-
-	//m_textScreen->ResetX();
-	//m_textScreen->ResetY();
 
 	while (true)
 		ArchWait();
@@ -393,7 +384,9 @@ void Kernel::Printf(const char* format, ...)
 
 void Kernel::Printf(const char* format, va_list args)
 {
-	if (m_printer != nullptr)
+	if ((m_debugger != nullptr) && m_debugger->IsBrokenIn())
+		m_debugger->KdpDprintf(format, args);
+	else if (m_printer != nullptr)
 		m_printer->Printf(format, args);
 }
 
@@ -466,7 +459,8 @@ void Kernel::InitializeAcpi()
 
 void Kernel::OnTimer0()
 {
-	m_scheduler->Schedule();
+	if (m_scheduler->Enabled)
+		m_scheduler->Schedule();
 }
 
 KThread* Kernel::CreateKernelThread(ThreadStart start, void* arg)
@@ -492,7 +486,16 @@ void Kernel::ExitKernelThread()
 Handle Kernel::KeLoadLibrary(const std::string& path)
 {
 	Handle library = Loader::LoadKernelLibrary(path);
-	m_modules->push_back({ path, library });
+
+	const char* fullPath = PortableExecutable::GetPdbName(library);
+	Assert(fullPath);
+	const char* pdbName = GetFileName(fullPath);
+
+	const void* address = KeLoadPdb(pdbName);
+	Pdb* pdb = new Pdb((uintptr_t)address);
+	this->Printf("KeLoadLibrary %s (0x%016x), %s (0x%016x)\n", path.c_str(), (uintptr_t)library, pdbName, address);
+
+	m_modules->push_back({ path, library, pdb });
 	return library;
 }
 
@@ -502,6 +505,19 @@ Handle Kernel::KeGetModuleHandle(const std::string& path)
 	{
 		if (module.Name == path)
 			return module.Handle;
+	}
+	return nullptr;
+}
+
+const KeLibrary* Kernel::KeGetModule(const uintptr_t address)
+{
+	for (const auto& module : *m_modules)
+	{
+		const uintptr_t imageBase = (uintptr_t)module.Handle;
+		const size_t imageSize = PortableExecutable::GetSizeOfImage(module.Handle);
+
+		if ((address > imageBase) && (address < imageBase + imageSize))
+			return &module;
 	}
 	return nullptr;
 }
@@ -541,19 +557,19 @@ void Kernel::KernelThreadSleep(nano_t value)
 	m_scheduler->Sleep(value);
 }
 
-void Kernel::KeGetSystemTime(SystemTime* time)
+void Kernel::KeGetSystemTime(SystemTime& time)
 {
 	EFI_TIME efiTime = { 0 };
 	Assert(!EFI_ERROR(m_runtime.GetTime(&efiTime, nullptr)));
 
-	time->Year = efiTime.Year;
-	time->Month = efiTime.Month;
+	time.Year = efiTime.Year;
+	time.Month = efiTime.Month;
 	//TODO: day of the week
-	time->Day = efiTime.Day;
-	time->Hour = efiTime.Hour;
-	time->Minute = efiTime.Minute;
-	time->Second = efiTime.Second;
-	time->Milliseconds = efiTime.Nanosecond / 1000;
+	time.Day = efiTime.Day;
+	time.Hour = efiTime.Hour;
+	time.Minute = efiTime.Minute;
+	time.Second = efiTime.Second;
+	time.Milliseconds = efiTime.Nanosecond / 1000;
 }
 
 void* Kernel::Allocate(const size_t size, const uintptr_t callerAddress)
@@ -644,7 +660,7 @@ WaitStatus Kernel::WaitForSemaphore(Handle handle, size_t timeoutMs, size_t unit
 	}
 }
 
-void Kernel::RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context)
+void Kernel::KeRegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context)
 {
 	Assert(m_interruptHandlers->find(interrupt) == m_interruptHandlers->end());
 	m_interruptHandlers->insert({ interrupt, context });
@@ -667,6 +683,19 @@ Device* Kernel::GetDevice(const std::string path)
 	return m_deviceTree.GetDevice(path);
 }
 
+void* Kernel::KeLoadPdb(const std::string& path)
+{
+	FileHandle* file = CreateFile(path, GenericAccess::Read);
+	Assert(file);
+	
+	void* address = AllocatePdb(SIZE_TO_PAGES(file->Length));
+	bool success = ReadFile(file, address, file->Length, nullptr);
+	Assert(success);
+	CloseFile(file);
+
+	return address;
+}
+
 FileHandle* Kernel::CreateFile(const std::string& path, GenericAccess access)
 {
 	Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
@@ -680,8 +709,10 @@ bool Kernel::ReadFile(FileHandle* file, void* buffer, size_t bufferSize, size_t*
 {
 	Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
 	RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
-	
-	*bytesRead = hdd->ReadFile(file, buffer, bufferSize);
+
+	size_t read = hdd->ReadFile(file, buffer, bufferSize);;
+	if (bytesRead != nullptr)
+		*bytesRead = read;
 	return true;
 }
 
@@ -823,4 +854,16 @@ bool Kernel::IsValidUserPointer(const void* p)
 	//Make sure pointer is User's address space
 	UserProcess& process = m_scheduler->GetCurrentProcess();
 	return process.GetAddressSpace().IsValidPointer(p);
+}
+
+void Kernel::KePauseSystem()
+{
+	m_scheduler->Enabled = false;
+	//m_timer->Disable();
+}
+
+void Kernel::KeResumeSystem()
+{
+	m_scheduler->Enabled = true;
+	//m_timer->enable();
 }

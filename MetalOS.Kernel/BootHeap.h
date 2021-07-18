@@ -11,6 +11,8 @@ public:
 	void Deallocate(void* address);
 
 private:
+	const size_t Alignment = 16;
+
 	uintptr_t m_address;
 	size_t m_length;
 

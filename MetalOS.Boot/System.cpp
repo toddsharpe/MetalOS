@@ -2,6 +2,8 @@
 
 #include <crt_string.h>
 #include <efilib.h>
+#include "crt_string.h"
+#include "crt_wchar.h"
 #include <Path.h>
 #include "Error.h"
 #include "EfiMain.h"

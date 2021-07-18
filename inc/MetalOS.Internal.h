@@ -17,13 +17,13 @@ enum KernelAddress : uintptr_t
 	//Kernel libraries 0xFFFF'8000'0000'0000 (256MB)
 	KernelLibraryStart     = KernelStart,
 	KernelBaseAddress      = 0xFFFF'8000'0100'0000,
-	KernelKdComBaseAddress = 0xFFFF'8000'0200'0000,
+	//KernelKdComBaseAddress = 0xFFFF'8000'0200'0000,
 	KernelLibraryEnd       = 0xFFFF'8000'1000'0000,
 
 	//Kernel pdbs 0xFFFF'8000'1000'0000 (256MB)
 	KernelPdbStart  = KernelLibraryEnd,
 	KernelKernelPdb = 0xFFFF'8000'1100'0000,
-	KernelKdComPdb  = 0xFFFF'8000'1200'0000,
+	//KernelKdComPdb  = 0xFFFF'8000'1200'0000,
 	KernelPdbEnd    = 0xFFFF'8000'2000'0000,
 
 	//Kernel stacks 0xFFFF'8000'2000'0000 (256MB)

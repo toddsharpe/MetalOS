@@ -55,18 +55,18 @@ void UserThread::EnqueueMessage(Message* message)
 
 void UserThread::Display()
 {
-	Print("UserThread\n");
-	Print("     Id: %d\n", m_id);
-	Print("  m_teb: 0x%016x\n", m_teb);
-	Print("    ctx: 0x%016x\n", m_context);
+	kernel.Printf("UserThread\n");
+	kernel.Printf("     Id: %d\n", m_id);
+	kernel.Printf("  m_teb: 0x%016x\n", m_teb);
+	kernel.Printf("    ctx: 0x%016x\n", m_context);
 }
 
 void UserThread::DisplayMessages()
 {
-	Print("DisplayMessages");
+	kernel.Printf("DisplayMessages");
 	for (const auto& msg : m_messages)
 	{
-		Print("A: 0x%016x Type: %x\n", msg, msg->Header.MessageType);
+		kernel.Printf("A: 0x%016x Type: %x\n", msg, msg->Header.MessageType);
 	}
 }
 
@@ -75,13 +75,13 @@ void UserThread::DisplayDetails()
 	//This reads the TEB which is in the users process space
 	Assert(m_process.GetCR3() == __readcr3());
 	
-	Print("DisplayTEB\n");
-	Print("   Self: 0x%016x\n", m_teb->SelfPointer);
-	Print("     ID: 0x%016x\n", m_teb->ThreadId);
-	Print("    PEB: 0x%016x\n", m_teb->PEB);
-	Print("  Start: 0x%016x\n", m_teb->ThreadStart);
-	Print("    Arg: 0x%016x\n", m_teb->Arg);
+	kernel.Printf("DisplayTEB\n");
+	kernel.Printf("   Self: 0x%016x\n", m_teb->SelfPointer);
+	kernel.Printf("     ID: 0x%016x\n", m_teb->ThreadId);
+	kernel.Printf("    PEB: 0x%016x\n", m_teb->PEB);
+	kernel.Printf("  Start: 0x%016x\n", m_teb->ThreadStart);
+	kernel.Printf("    Arg: 0x%016x\n", m_teb->Arg);
 
 	x64_context* ctx = (x64_context*)m_context;
-	Print("  Rsp: 0x%016x Rip: 0x%016x RFlags:0x%08x\n", ctx->Rsp, ctx->Rip, (uint32_t)ctx->Rflags);
+	kernel.Printf("  Rsp: 0x%016x Rip: 0x%016x RFlags:0x%08x\n", ctx->Rsp, ctx->Rip, (uint32_t)ctx->Rflags);
 }

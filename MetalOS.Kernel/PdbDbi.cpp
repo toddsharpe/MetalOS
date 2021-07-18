@@ -85,7 +85,7 @@ bool PdbDbi::PrintStack(const uint32_t rva)
 					{
 						std::string& function = m_publics.GetFunction(linesHeader.offCon);
 
-						Print("Function: %s Line: %d\n", function.c_str(), line.linenumStart);
+						Print("Function: %s Line: %d", function.c_str(), line.linenumStart);
 						//Print("  Obj: %s\n", buffer);
 						found = true;
 						break;

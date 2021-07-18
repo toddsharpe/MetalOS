@@ -14,8 +14,7 @@ void* BootHeap::Allocate(size_t size)
 	Assert(m_watermark + size <= m_address + m_length);
 
 	const uintptr_t level = m_watermark;
-
-	m_watermark += HEAP_ALIGN(size);
+	m_watermark += ByteAlign(size, Alignment);
 	return (void*)level;
 }
 

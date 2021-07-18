@@ -13,6 +13,7 @@ public:
 	void Deallocate(const void* address);
 
 	void PrintHeap() const;
+	void PrintHeapHeaders() const;
 	uint32_t GetAllocated() const
 	{
 		return m_allocated;

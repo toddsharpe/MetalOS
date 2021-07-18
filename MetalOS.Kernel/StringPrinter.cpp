@@ -26,6 +26,7 @@ void StringPrinter::PrintBytes(const char* buffer, const size_t length)
 	const uint32_t width = 16;
 	
 	//Print headers
+	this->Printf("A: 0x%016x S: 0x%016x\n", buffer, length);
 	this->Printf("---- ");
 	for (size_t i = 0; i < width; i++)
 	{

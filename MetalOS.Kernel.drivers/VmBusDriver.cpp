@@ -28,7 +28,7 @@ Result VmBusDriver::Initialize()
 	kernel.CreateKernelThread(VmBusDriver::ThreadLoop, this);
 
 	HyperV::SetSintVector(VMBUS_MESSAGE_SINT, (uint32_t)InterruptVector::HypervisorVmBus);
-	kernel.RegisterInterrupt(InterruptVector::HypervisorVmBus, { &VmBusDriver::OnInterrupt, this });
+	kernel.KeRegisterInterrupt(InterruptVector::HypervisorVmBus, { &VmBusDriver::OnInterrupt, this });
 	HyperV::EnableSynic();
 	
 	return Result::Success;

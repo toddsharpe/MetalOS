@@ -86,4 +86,11 @@ typedef struct _STRING {
 } STRING;
 typedef STRING* PSTRING;
 
+typedef struct _CSTRING {
+	USHORT Length;
+	USHORT MaximumLength;
+	const char* Buffer;
+} CSTRING;
+typedef CSTRING* PCSTRING;
+
 #define NTAPI

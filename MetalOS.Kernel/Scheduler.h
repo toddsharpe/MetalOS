@@ -7,9 +7,11 @@
 #include "HyperV.h"
 #include "KSemaphore.h"
 #include "KThread.h"
+#include "Debugger.h"
 
 class Scheduler
 {
+	friend Debugger;
 public:
 	Scheduler(KThread& bootThread);
 

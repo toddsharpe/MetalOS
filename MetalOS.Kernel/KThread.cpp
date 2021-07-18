@@ -64,15 +64,23 @@ UserThread* KThread::GetUserThread() const
 
 void KThread::Display() const
 {
-	Print("KThread\n");
-	Print("     Id: %d\n", m_id);
-	Print("  Start: 0x%016x\n", m_start);
-	Print("    Arg: 0x%016x\n", m_arg);
-	Print("  State: %d\n", m_state);
-	Print("   User: 0x%016x\n", m_userThread);
+	kernel.Printf("KThread\n");
+	kernel.Printf("     Id: %d\n", m_id);
+	kernel.Printf("   Name: %s\n", m_name.c_str());
+	kernel.Printf("  Start: 0x%016x\n", m_start);
+	kernel.Printf("    Arg: 0x%016x\n", m_arg);
+	kernel.Printf("  State: %d\n", m_state);
+	kernel.Printf("   User: 0x%016x\n", m_userThread);
+
+	switch (m_state)
+	{
+	case ThreadState::Sleeping:
+		kernel.Printf("  SleepAwake: %d\n", m_sleepWake);
+		break;
+	}
 
 	x64_context* ctx = (x64_context*)m_context;
-	Print("  Rbp: 0x%016x Rsp: 0x%016x Rip: 0x%016x RFlags:0x%08x\n", ctx->Rbp, ctx->Rsp, ctx->Rip, (uint32_t)ctx->Rflags);
+	kernel.Printf("  Rbp: 0x%016x Rsp: 0x%016x Rip: 0x%016x RFlags:0x%08x\n", ctx->Rbp, ctx->Rsp, ctx->Rip, (uint32_t)ctx->Rflags);
 
 	if (m_userThread != nullptr)
 		m_userThread->Display();

@@ -62,8 +62,7 @@ void Scheduler::SetCurrentThread(KThread& thread)
 
 void Scheduler::Schedule()
 {
-	if (!Enabled)
-		return;
+	Assert(Enabled);
 
 	const uint64_t tsc = m_hyperv.ReadTsc();
 	KThread* current = GetCurrentThread();

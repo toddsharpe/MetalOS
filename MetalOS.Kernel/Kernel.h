@@ -36,7 +36,7 @@ extern "C"
 
 class Kernel
 {
-
+	friend Debugger;
 public:
 	Kernel();
 	::NO_COPY_OR_ASSIGN(Kernel);
@@ -131,20 +131,28 @@ public:
 	__declspec(noreturn) static void UserThreadInitThunk();
 #pragma endregion
 
+#pragma region Kd
+	void KePauseSystem();
+	void KeResumeSystem();
+#pragma endregion
+
+
 #pragma region Kernel Interface
 	KThread* CreateKernelThread(ThreadStart start, void* arg);
 	void KernelThreadSleep(nano_t value);
 	void ExitKernelThread();
 
 	Handle KeLoadLibrary(const std::string& path);
+	void* KeLoadPdb(const std::string& path);
 	Handle KeGetModuleHandle(const std::string& path);
+	const KeLibrary* KeGetModule(const uintptr_t address);
 
 	bool CreateProcess(const std::string& path);
 	KThread* CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
 
-	void KeGetSystemTime(SystemTime* time);
+	void KeGetSystemTime(SystemTime& time);
 
-	void RegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
+	void KeRegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
 
 	Device* GetDevice(const std::string path);
 

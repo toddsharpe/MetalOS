@@ -164,6 +164,12 @@ struct InterruptContext
 #define HEAP_ALIGNMENT_MASK (HEAP_ALIGNMENT - 1)
 #define HEAP_ALIGN(x) ((x + HEAP_ALIGNMENT_MASK) & ~(HEAP_ALIGNMENT_MASK))
 
+constexpr size_t ByteAlign(const size_t size, const size_t alignment)
+{
+	const size_t mask = alignment - 1;
+	return ((size + mask) & ~(mask));
+}
+
 #define BYTE_ALIGN(x, alignment) ((x + (alignment - 1)) & ~(alignment - 1))
 #define PAGE_ALIGN(x) BYTE_ALIGN(x, PAGE_SIZE)
 
@@ -458,8 +464,10 @@ struct x64_context
 	uint64_t Rflags;
 };
 
+class Pdb;
 struct KeLibrary
 {
 	std::string Name;
 	Handle Handle;
+	Pdb* Pdb;
 };

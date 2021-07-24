@@ -185,7 +185,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Modules
 	m_modules = new std::list<KeLibrary>();
-	m_modules->push_back({ "moskrnl", (Handle)KernelBaseAddress, m_pdb });
+	m_modules->push_back({ "moskrnl.exe", (Handle)KernelBaseAddress, m_pdb });
 
 	//Create idle thread
 	CreateKernelThread(&Kernel::IdleThread, this);
@@ -288,7 +288,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	while (sw.HasNext())
 	{
 		uintptr_t base;
-		if (user != nullptr)
+		if ((user != nullptr) && (context.Rip < KernelStart))
 		{
 			base = user->GetProcess().GetModuleBase(context.Rip);
 			Print("IP: 0x%016x Base: 0x%016x", context.Rip, base);
@@ -363,8 +363,8 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 		this->Printf("IP: 0x%016x ", context.Rip);
 		if (m_pdb != nullptr && (context.Rip >= KernelBaseAddress))
 			m_pdb->PrintStack((uint32_t)context.Rip - KernelBaseAddress);
-		else
-			this->Printf("\n");
+		
+		this->Printf("\n");
 
 		sw.Next(KernelBaseAddress);
 	}
@@ -459,7 +459,7 @@ void Kernel::InitializeAcpi()
 
 void Kernel::OnTimer0()
 {
-	if (m_scheduler->Enabled)
+	if (m_scheduler && m_scheduler->Enabled)
 		m_scheduler->Schedule();
 }
 
@@ -499,16 +499,6 @@ Handle Kernel::KeLoadLibrary(const std::string& path)
 	return library;
 }
 
-Handle Kernel::KeGetModuleHandle(const std::string& path)
-{
-	for (const auto& module : *m_modules)
-	{
-		if (module.Name == path)
-			return module.Handle;
-	}
-	return nullptr;
-}
-
 const KeLibrary* Kernel::KeGetModule(const uintptr_t address)
 {
 	for (const auto& module : *m_modules)
@@ -517,6 +507,16 @@ const KeLibrary* Kernel::KeGetModule(const uintptr_t address)
 		const size_t imageSize = PortableExecutable::GetSizeOfImage(module.Handle);
 
 		if ((address > imageBase) && (address < imageBase + imageSize))
+			return &module;
+	}
+	return nullptr;
+}
+
+const KeLibrary* Kernel::KeGetModule(const std::string& path)
+{
+	for (const auto& module : *m_modules)
+	{
+		if (module.Name == path)
 			return &module;
 	}
 	return nullptr;
@@ -858,12 +858,14 @@ bool Kernel::IsValidUserPointer(const void* p)
 
 void Kernel::KePauseSystem()
 {
+	ArchDisableInterrupts();
 	m_scheduler->Enabled = false;
 	//m_timer->Disable();
 }
 
 void Kernel::KeResumeSystem()
 {
+	ArchEnableInterrupts();
 	m_scheduler->Enabled = true;
 	//m_timer->enable();
 }

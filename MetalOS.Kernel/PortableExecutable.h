@@ -15,6 +15,7 @@
 class PortableExecutable
 {
 public:
+	static uintptr_t GetEntryPoint(const Handle hModule);
 	static size_t GetSizeOfImage(const Handle hModule);
 	static PIMAGE_SECTION_HEADER GetPESection(const std::string& name, const uintptr_t ImageBase);
 	static PIMAGE_SECTION_HEADER GetPESection(const uint32_t index, const uintptr_t ImageBase);

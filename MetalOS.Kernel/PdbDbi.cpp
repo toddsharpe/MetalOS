@@ -1,5 +1,6 @@
 #include "Kernel.h"
 #include "Assert.h"
+#include <coreclr/cvinfo.h>
 
 #include "PdbDbi.h"
 #include "PortableExecutable.h"

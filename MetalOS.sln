@@ -76,6 +76,36 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Kernel.kdcom", "Met
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Kernel.drivers", "MetalOS.Kernel.drivers\MetalOS.Kernel.drivers.vcxproj", "{88C07EBE-4D24-44A9-8AD8-20ACBCF34883}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "external", "external", "{3C569801-0CF6-439C-8B5D-A423C847A605}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{0C68A248-CC40-4842-9F74-753C07F00360}"
+	ProjectSection(SolutionItems) = preProject
+		external\windows\types.h = external\windows\types.h
+		external\windows\winnt.h = external\windows\winnt.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "reactos", "reactos", "{27A79A9D-B22F-42E5-807B-CF833DBEE847}"
+	ProjectSection(SolutionItems) = preProject
+		external\reactos\ioaccess.h = external\reactos\ioaccess.h
+		external\reactos\ldrtypes.h = external\reactos\ldrtypes.h
+		external\reactos\rtltypes.h = external\reactos\rtltypes.h
+		external\reactos\wdbgexts.h = external\reactos\wdbgexts.h
+		external\reactos\windbgkd.h = external\reactos\windbgkd.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux", "linux", "{CA25B833-A6D9-426E-86B5-C0EEA7B0513A}"
+	ProjectSection(SolutionItems) = preProject
+		external\linux\hyperv.h = external\linux\hyperv.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "coreclr", "coreclr", "{68B1988B-BE6D-46FC-BB81-00C60B6ABF49}"
+	ProjectSection(SolutionItems) = preProject
+		external\coreclr\cvconst.h = external\coreclr\cvconst.h
+		external\coreclr\cvinfo.h = external\coreclr\cvinfo.h
+		external\coreclr\list.h = external\coreclr\list.h
+		external\coreclr\win64unwind.h = external\coreclr\win64unwind.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -278,6 +308,12 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0C68A248-CC40-4842-9F74-753C07F00360} = {3C569801-0CF6-439C-8B5D-A423C847A605}
+		{27A79A9D-B22F-42E5-807B-CF833DBEE847} = {3C569801-0CF6-439C-8B5D-A423C847A605}
+		{CA25B833-A6D9-426E-86B5-C0EEA7B0513A} = {3C569801-0CF6-439C-8B5D-A423C847A605}
+		{68B1988B-BE6D-46FC-BB81-00C60B6ABF49} = {3C569801-0CF6-439C-8B5D-A423C847A605}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {07B8C566-1C42-4369-A531-DB7C7971F0C2}

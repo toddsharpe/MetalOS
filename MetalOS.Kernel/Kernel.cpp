@@ -1,7 +1,6 @@
 #include "Kernel.h"
 #include "Assert.h"
 
-typedef EFI_GUID GUID;
 #define PACKED
 #include <PlatformAcpi.h>
 #include <intrin.h>

@@ -2,7 +2,6 @@
 #include "Assert.h"
 #include "System.h"
 
-typedef EFI_GUID GUID;
 #include <SmBios.h>
 #define PACKED
 #include <PlatformAcpi.h>

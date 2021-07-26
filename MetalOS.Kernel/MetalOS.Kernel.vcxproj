@@ -55,7 +55,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2\MdePkg\Include;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;..\tianocore-edk2\MdePkg\Include\IndustryStandard;..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;..\MetalOS.Kernel.drivers;..\external;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\inc;..\MetalOS.lib;..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;..\MetalOS.Kernel.drivers;..\external;..\external\tianocore-edk2;..\external\gnu-efi;..\external\gnu-efi\x86_64;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>

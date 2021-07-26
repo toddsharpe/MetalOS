@@ -118,7 +118,7 @@
       <ConformanceMode>true</ConformanceMode>
       <SupportJustMyCode>false</SupportJustMyCode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>..\inc;..\MetalOS.Kernel;..\gnu-efi\inc;..\MetalOS.lib;..\gnu-efi\inc\x86_64;..\acpica\source\include;..\acpica\source\include\platform;..\MetalOS.crt;..\external</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\inc;..\MetalOS.Kernel;..\MetalOS.lib;..\acpica\source\include;..\acpica\source\include\platform;..\MetalOS.crt;..\external;..\external\gnu-efi;..\external\gnu-efi\x86_64</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>

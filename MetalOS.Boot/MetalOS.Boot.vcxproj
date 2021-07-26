@@ -59,7 +59,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>_CONSOLE;CRT_STATIC;GNU_EFI_SETJMP_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc\x86_64;..\gnu-efi\inc;..\gnu-efi\inc\protocol;..\inc;..\MetalOS.lib;..\MetalOS.crt;..\external</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\inc;..\MetalOS.lib;..\MetalOS.crt;..\external;..\external\gnu-efi;..\external\gnu-efi\protocol;..\external\gnu-efi\x86_64</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <SupportJustMyCode>false</SupportJustMyCode>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>

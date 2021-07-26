@@ -2,9 +2,9 @@
 #include "Assert.h"
 #include "System.h"
 
-#include <SmBios.h>
+#include <tianocore-edk2/IndustryStandard/SmBios.h>
 #define PACKED
-#include <PlatformAcpi.h>
+#include <tianocore-edk2/IndustryStandard/PlatformAcpi.h>
 #include <intrin.h>
 #include <crt_string.h>
 

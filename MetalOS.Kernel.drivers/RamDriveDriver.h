@@ -2,7 +2,6 @@
 
 #include "Device.h"
 #include "Driver.h"
-#include "MicrosoftHyperV.h"
 #include <RamDrive.h>
 
 static const char* RamDriveHid = "RDRV";

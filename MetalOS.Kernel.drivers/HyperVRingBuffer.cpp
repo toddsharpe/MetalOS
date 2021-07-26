@@ -1,7 +1,8 @@
-#include "HyperVRingBuffer.h"
+#include <Kernel.h>
+#include <Assert.h>
+#include <linux/hyperv.h>
 
-#include "Main.h"
-#include "VmBusDriver.h"
+#include "HyperVRingBuffer.h"
 #include "HyperVChannel.h"
 
 HyperVRingBuffer::HyperVRingBuffer(const paddr_t address, const size_t count, HyperVChannel& channel) :
@@ -27,7 +28,7 @@ HyperVRingBuffer::HyperVRingBuffer(const paddr_t address, const size_t count, Hy
 	void* base = kernel.VirtualMap(nullptr, addresses, MemoryProtection::PageReadWrite);
 	memset(base, 0, PAGE_SIZE * count);
 
-	Print("Virtual 0x%016x, Physical: 0x%016x, Size: 0x%x\n", base, address, m_size);
+	kernel.Printf("Virtual 0x%016x, Physical: 0x%016x, Size: 0x%x\n", base, address, m_size);
 	m_header = (volatile hv_ring_buffer * )base;
 	m_header->feature_bits.value = 1;
 }

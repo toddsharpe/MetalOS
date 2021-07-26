@@ -1,9 +1,12 @@
 #pragma once
 #include "Driver.h"
 
-#include "windbgkd.h"
+#include <windows/types.h>
+#include <coreclr/list.h>
+#include <reactos/ldrtypes.h>
+#include <windows/winnt.h>
+#include <reactos/windbgkd.h>
 #include "UartDriver.h"
-#include "WindowsPE.h"
 #include <kddll.h>
 #include <map>
 
@@ -99,37 +102,6 @@ private:
 		Waiting,
 		Stopped
 	};
-
-	typedef struct _LDR_DATA_TABLE_ENTRY
-	{
-		LIST_ENTRY InLoadOrderLinks;
-		LIST_ENTRY InMemoryOrderLinks;
-		LIST_ENTRY InInitializationOrderLinks;
-		PVOID DllBase;
-		PVOID EntryPoint;
-		ULONG SizeOfImage;
-		UNICODE_STRING FullDllName;
-		UNICODE_STRING BaseDllName;
-		ULONG Flags;
-		USHORT LoadCount;
-		USHORT TlsIndex;
-		union
-		{
-			LIST_ENTRY HashLinks;
-			struct
-			{
-				PVOID SectionPointer;
-				ULONG CheckSum;
-			};
-		};
-		union
-		{
-			ULONG TimeDateStamp;
-			PVOID LoadedImports;
-		};
-		void* EntryPointActivationContext;
-		PVOID PatchInformation;
-	} LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
 
 	uint32_t ThreadLoop();
 	void Dispatch();

@@ -1,5 +1,7 @@
+#include "Kernel.h"
+#include "Assert.h"
+
 #include "BootHeap.h"
-#include "Main.h"
 
 BootHeap::BootHeap(const void* address, const size_t length) :
 	m_address((uintptr_t)address),

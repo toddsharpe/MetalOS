@@ -1,8 +1,9 @@
+#include <Kernel.h>
+#include <Assert.h>
+#include <linux/hyperv.h>
+
 #include "VmBusDriver.h"
-#include "Main.h"
 #include "HyperVDevice.h"
-#include <crt_stdio.h>
-#include "MicrosoftHyperV.h"
 
 volatile uint8_t VmBusDriver::MonitorPage1[PAGE_SIZE] = { 0 }; //Parent->child notifications
 volatile uint8_t VmBusDriver::MonitorPage2[PAGE_SIZE] = { 0 }; //Child->parent notifications
@@ -23,7 +24,7 @@ Result VmBusDriver::Initialize()
 {
 	//Initialize
 	m_threadSignal = kernel.CreateSemaphore(0, 0, "HyperVThread");
-	Print("m_threadSignal 0x%016x\n", m_threadSignal);
+	kernel.Printf("m_threadSignal 0x%016x\n", m_threadSignal);
 	m_connectSemaphore = kernel.CreateSemaphore(0, 0, "HyperVConnect");
 	kernel.CreateKernelThread(VmBusDriver::ThreadLoop, this);
 
@@ -219,7 +220,7 @@ uint32_t VmBusDriver::ThreadLoop()
 		break;
 		default:
 		{
-			Print("HyperV::ThreadLoop - Type: %d Header: %d\n", message.Header.MessageType, header->msgtype);
+			kernel.Printf("HyperV::ThreadLoop - Type: %d Header: %d\n", message.Header.MessageType, header->msgtype);
 			Assert(false);
 		}
 		break;

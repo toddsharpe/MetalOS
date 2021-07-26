@@ -7,8 +7,8 @@
 #include "HyperV.h"
 #include "KSemaphore.h"
 #include "KThread.h"
-#include "Debugger.h"
 
+class Debugger;
 class Scheduler
 {
 	friend Debugger;

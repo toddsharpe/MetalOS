@@ -8,16 +8,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <cstdint>
-#include <WindowsPE.h>
-#include "ntstatus.h"
-#include "basetsd.h"
-#include "windbgkd.h"
-#include <MetalOS.Internal.h>
-
-#include "kddll.h"
-#include "kdcom.h"
+#include <ntdef.h>
+#include <ntstatus.h>
+#include <rtltypes.h>
+#include <windbgkd.h>
 #include "cportlib.h"
+#include "kdcom.h"
 
  /* Serial debug connection */
 #if defined(SARCH_PC98)
@@ -88,21 +84,16 @@ KdpPortInitialize(IN ULONG ComPortNumber,
  * \param [opt] LoaderBlock Pointer to the Loader parameter block. Can be NULL.
  * \return Status
  */
-Result
+NTSTATUS
 NTAPI
 KdInitialize(IN ULONG ComPortNumber)
 {
 	ULONG ComPortBaudRate = DEFAULT_DEBUG_BAUD_RATE;
 
-
 	KDDBGPRINT("KdDebuggerInitialize0\n");
 
 	/* Initialize the port */
-	NTSTATUS status = KdpPortInitialize(ComPortNumber, ComPortBaudRate);
-	if (status == STATUS_SUCCESS)
-		return Result::Success;
-	else
-		return Result::Failed;
+	return KdpPortInitialize(ComPortNumber, ComPortBaudRate);
 }
 
 VOID

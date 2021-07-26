@@ -1,5 +1,7 @@
+#include "Kernel.h"
+#include "Assert.h"
+
 #include "VirtualAddressSpace.h"
-#include "Main.h"
 
 VirtualAddressSpace::VirtualAddressSpace(const uintptr_t start, const uintptr_t end, const bool global) :
 	m_start(start),

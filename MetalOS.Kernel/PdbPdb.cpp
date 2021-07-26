@@ -1,5 +1,7 @@
+#include "Kernel.h"
+#include "Assert.h"
+
 #include "PdbPdb.h"
-#include "Main.h"
 
 PdbPdb::PdbPdb(MsfStream& stream) :
 	m_stream(stream),

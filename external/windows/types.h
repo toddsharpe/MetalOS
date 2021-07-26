@@ -4,6 +4,14 @@
 #define CONST               const
 #endif
 
+//
+// Basics
+//
+
+typedef char CHAR;
+typedef short SHORT;
+typedef long LONG;
+
 #ifndef BASETYPES
 #define BASETYPES
 typedef unsigned long ULONG;
@@ -66,6 +74,15 @@ typedef unsigned int        UINT;
 typedef unsigned int* PUINT;
 typedef const void* PCVOID;
 
+typedef WORD * PWORD;
+typedef WORD * LPWORD;
+typedef long * LPLONG;
+typedef DWORD * PDWORD;
+typedef DWORD * LPDWORD;
+
+typedef BYTE* PBYTE;
+typedef BYTE* LPBYTE;
+
 //
 // Boolean
 //
@@ -93,4 +110,28 @@ typedef struct _CSTRING {
 } CSTRING;
 typedef CSTRING* PCSTRING;
 
+
+// Unicode strings are counted 16-bit character strings. If they are
+// NULL terminated, Length does not include trailing NULL.
+//
+typedef wchar_t* PWSTR;
+typedef struct _UNICODE_STRING {
+	USHORT Length;
+	USHORT MaximumLength;
+	PWSTR  Buffer;
+} UNICODE_STRING;
+typedef UNICODE_STRING* PUNICODE_STRING;
+typedef const UNICODE_STRING* PCUNICODE_STRING;
+
 #define NTAPI
+
+typedef __int64 INT_PTR, * PINT_PTR;
+typedef unsigned __int64 UINT_PTR, * PUINT_PTR;
+
+typedef __int64 LONG_PTR, * PLONG_PTR;
+typedef unsigned __int64 ULONG_PTR, * PULONG_PTR;
+
+#define __int3264   __int64
+#define UNALIGNED __unaligned
+
+typedef LONG NTSTATUS;

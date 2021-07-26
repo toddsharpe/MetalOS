@@ -1,6 +1,7 @@
-#include "Scheduler.h"
+#include "Kernel.h"
+#include "Assert.h"
 
-#include "Main.h"
+#include "Scheduler.h"
 #include "KSemaphore.h"
 #include <MetalOS.Arch.h>
 
@@ -352,7 +353,7 @@ void Scheduler::Remove(KThread*& thread)
 		break;
 
 	default:
-		Print("ThreadState: 0x%x\n", thread->m_state);
+		kernel.Printf("ThreadState: 0x%x\n", thread->m_state);
 		Assert(false);
 	}
 }
@@ -367,47 +368,47 @@ void Scheduler::RemoveFromEvent(KThread*& thread)
 
 void Scheduler::Display() const
 {
-	Print("Scheduler::Schedule - Ready: %d, Sleep: %d, SemTimeout %d, SemWait %d\n", m_readyQueue.size(), m_sleepQueue.size(), m_timeouts.size(),
+	kernel.Printf("Scheduler::Schedule - Ready: %d, Sleep: %d, SemTimeout %d, SemWait %d\n", m_readyQueue.size(), m_sleepQueue.size(), m_timeouts.size(),
 		m_events.size());
 	if (!m_readyQueue.empty())
 	{
-		Print("  Ready: ");
+		kernel.Printf("  Ready: ");
 		for (const auto& i : m_readyQueue)
 		{
-			Print("%x ", i->GetId());
+			kernel.Printf("%x ", i->GetId());
 		}
-		Print("\n");
+		kernel.Printf("\n");
 	}
 	if (!m_sleepQueue.empty())
 	{
-		Print("  Sleep: ");
+		kernel.Printf("  Sleep: ");
 		for (const auto& i : m_sleepQueue)
 		{
-			Print("%x(0x%016x) ", i->GetId(), i->m_sleepWake);
+			kernel.Printf("%x(0x%016x) ", i->GetId(), i->m_sleepWake);
 		}
-		Print("\n");
+		kernel.Printf("\n");
 	}
 	if (!m_timeouts.empty())
 	{
-		Print("  Timeouts: ");
+		kernel.Printf("  Timeouts: ");
 		for (const auto& i : m_timeouts)
 		{
-			Print("%x(0x%016x) ", i->GetId(), i->m_sleepWake);
+			kernel.Printf("%x(0x%016x) ", i->GetId(), i->m_sleepWake);
 		}
-		Print("\n");
+		kernel.Printf("\n");
 	}
 	if (!m_events.empty())
 	{
-		Print("  Events: ");
+		kernel.Printf("  Events: ");
 		for (const auto& i : m_events)
 		{
 			KSemaphore* s = (KSemaphore*)i.first;
-			Print("0x%016x - ", s);
+			kernel.Printf("0x%016x - ", s);
 			for (const auto& j : i.second)
 			{
-				Print("%x ", j->GetId());
+				kernel.Printf("%x ", j->GetId());
 			}
 		}
-		Print("\n");
+		kernel.Printf("\n");
 	}
 }

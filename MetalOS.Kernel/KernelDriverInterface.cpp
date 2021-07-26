@@ -1,5 +1,5 @@
 #include "Kernel.h"
-#include "Main.h"
+#include "Assert.h"
 
 void* Kernel::DriverMapPages(paddr_t address, size_t count)
 {

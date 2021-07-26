@@ -1,7 +1,7 @@
 #pragma once
 
 #include "msvc.h"
-#include "MicrosoftHyperV.h"
+#include <linux/hyperv.h>
 #include "Device.h"
 
 #include <map>

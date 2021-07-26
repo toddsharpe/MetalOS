@@ -3,7 +3,7 @@
 #include <cstdint>
 #include "MsfStream.h"
 #include <map>
-#include "MicrosoftCodeView.h"
+#include <microsoft-pdb/cvinfo.h>
 
 //Public stream is a list of records, concatenated, aligned on 4 bytes 
 //RecordHeader

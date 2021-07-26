@@ -1,6 +1,7 @@
-#include "Font.h"
+#include "Kernel.h"
+#include "Assert.h"
 
-#include "Main.h"
+#include "Font.h"
 
 const char* Font::GetCharacterMap(char c) const
 {

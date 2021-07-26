@@ -1,6 +1,7 @@
+#include <Kernel.h>
+#include <Assert.h>
+
 #include "HyperVChannel.h"
-#include "MetalOS.Kernel.h"
-#include "Main.h"
 
 HyperVChannel::HyperVChannel(size_t sendSize, size_t receiveSize, CallContext callback) :
 	m_sendCount(SIZE_TO_PAGES(sendSize)),
@@ -16,7 +17,7 @@ HyperVChannel::HyperVChannel(size_t sendSize, size_t receiveSize, CallContext ca
 	Assert((sendSize % PAGE_SIZE) == 0);
 	Assert((receiveSize % PAGE_SIZE) == 0);
 	Assert((m_address & PAGE_MASK) == 0);
-	Print("Send: 0x%x Receive: 0x%x\n", sendSize, receiveSize);
+	kernel.Printf("Send: 0x%x Receive: 0x%x\n", sendSize, receiveSize);
 
 	Device* bus = kernel.GetDevice("\\_SB_\\VMOD\\VMBS");
 	Assert(bus);
@@ -51,13 +52,13 @@ void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const 
 
 	msg->header.msgtype = CHANNELMSG_GPADL_HEADER;
 	msg->child_relid = m_channel->child_relid;
-	Print("Rel_ID: %d\n", m_channel->child_relid);
+	kernel.Printf("Rel_ID: %d\n", m_channel->child_relid);
 
 	VmBusResponse response;
 	HV_HYPERCALL_RESULT_VALUE result = m_vmbus->PostMessage(msgsize, msg, response);
 	m_gpadlHandle = response.gpadl_created.gpadl;
 
-	Print("GPADL created\n");
+	kernel.Printf("GPADL created\n");
 
 	//Open channel
 	vmbus_channel_open_channel openChannel;
@@ -130,8 +131,8 @@ void HyperVChannel::StopRead()
 
 void HyperVChannel::Display()
 {
-	Print("Inbound:\n");
+	kernel.Printf("Inbound:\n");
 	m_inbound.Display();
-	Print("Outbound:\n");
+	kernel.Printf("Outbound:\n");
 	m_outbound.Display();
 }

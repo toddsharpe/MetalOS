@@ -1,5 +1,9 @@
+#include "Kernel.h"
+#include "Assert.h"
+#include <windows/types.h>
+#include <windows/winnt.h>
+
 #include "PortableExecutable.h"
-#include "Main.h"
 
 size_t PortableExecutable::GetSizeOfImage(const Handle hModule)
 {
@@ -35,7 +39,7 @@ PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(const std::string& name, 
 	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)((uint64_t)ImageBase + dosHeader->e_lfanew);
 
 	//Find section
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		if ((char*)&section[i].Name == name)
@@ -54,7 +58,7 @@ PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(const uint32_t index, con
 	Assert(index < pNtHeader->FileHeader.NumberOfSections);
 
 	//Find section
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	return &section[index];
 }
 

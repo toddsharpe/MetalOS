@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MetalOS.Kernel.h"
+#include <linux\hyperv.h>
 #include "HyperVRingBuffer.h"
 #include "VmBusDriver.h"
 

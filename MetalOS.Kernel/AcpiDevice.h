@@ -1,14 +1,11 @@
 #pragma once
 
-#include "msvc.h"
-#include <string>
+#include <cstdint>
 extern "C"
 {
 #include <acpi.h>
 }
-#include <vector>
 #include <list>
-#include "Driver.h"
 #include "Device.h"
 
 class AcpiDevice : public Device

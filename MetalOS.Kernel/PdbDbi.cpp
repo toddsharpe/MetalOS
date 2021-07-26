@@ -1,6 +1,7 @@
-#include "PdbDbi.h"
-#include "Main.h"
+#include "Kernel.h"
+#include "Assert.h"
 
+#include "PdbDbi.h"
 #include "PortableExecutable.h"
 
 PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file) :
@@ -46,7 +47,11 @@ bool PdbDbi::PrintStack(const uint32_t rva)
 	{
 		CV_DebugSSubsectionHeader_t checksumHeader;
 		Assert(moduleStream.Read(&checksumHeader));
-		Assert(checksumHeader.type == DEBUG_S_SUBSECTION_TYPE::DEBUG_S_FILECHKSMS);
+		//if (checksumHeader.type != DEBUG_S_SUBSECTION_TYPE::DEBUG_S_FILECHKSMS)
+		//{
+		//	kernel.Printf("Unexpected checksum type: 0x%x\n", checksumHeader.type);
+		//	Assert(false);
+		//}
 
 		//Skip checksums section
 		moduleStream.Skip(checksumHeader.cbLen);
@@ -57,7 +62,12 @@ bool PdbDbi::PrintStack(const uint32_t rva)
 		{
 			CV_DebugSSubsectionHeader_t subHeader;
 			Assert(moduleStream.Read(&subHeader));
-			Assert(subHeader.type == DEBUG_S_SUBSECTION_TYPE::DEBUG_S_LINES);
+
+			//if (subHeader.type != DEBUG_S_SUBSECTION_TYPE::DEBUG_S_LINES)
+			//{
+			//	kernel.Printf("Unexpected subHeader type: 0x%x\n", subHeader.type);
+			//	Assert(false);
+			//}
 			
 			CV_DebugSLinesHeader_t linesHeader;
 			Assert(moduleStream.Read(&linesHeader));
@@ -85,7 +95,7 @@ bool PdbDbi::PrintStack(const uint32_t rva)
 					{
 						std::string& function = m_publics.GetFunction(linesHeader.offCon);
 
-						Print("Function: %s Line: %d", function.c_str(), line.linenumStart);
+						kernel.Printf("Function: %s Line: %d", function.c_str(), line.linenumStart);
 						//Print("  Obj: %s\n", buffer);
 						found = true;
 						break;

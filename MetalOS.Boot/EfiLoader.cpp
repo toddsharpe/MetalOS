@@ -4,7 +4,8 @@
 #include <MetalOS.Internal.h>
 #include <LoaderParams.h>
 #include <crt_string.h>
-#include <WindowsPE.h>
+#include <windows/types.h>
+#include <windows/winnt.h>
 #include "EfiMain.h"
 #include "Error.h"
 
@@ -84,7 +85,7 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& e
 	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(physicalImageBaseOut + dosHeader.e_lfanew);
 	
 	//Write sections into memory
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		EFI_PHYSICAL_ADDRESS destination = physicalImageBaseOut + section[i].VirtualAddress;
@@ -160,7 +161,7 @@ EFI_STATUS EfiLoader::CrtInitialization(const uintptr_t imageBase)
 
 	//Find CRT section
 	PIMAGE_SECTION_HEADER crtSection = nullptr;
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		if (strcmp((char*)& section[i].Name, ".CRT") == 0)

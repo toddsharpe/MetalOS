@@ -1,5 +1,4 @@
 #include "KSemaphore.h"
-#include "Main.h"
 #include <MetalOS.Arch.h>
 
 KSemaphore::KSemaphore(const uint32_t initial, const uint32_t maximum, const std::string& name) :

@@ -1,7 +1,7 @@
 #pragma once
 #include "msvc.h"
 #include "MsfStream.h"
-#include "MicrosoftHyperV.h"
+#include <linux/hyperv.h>
 #include "PdbHashTable.h"
 #include "MetalOS.Kernel.h"
 #include <string>

@@ -1,5 +1,3 @@
-#pragma once
-
 /*
  * COPYRIGHT:       GPL, see COPYING in the top level directory
  * PROJECT:         ReactOS kernel
@@ -7,6 +5,8 @@
  * PURPOSE:         Base definitions for the kernel debugger.
  * PROGRAMMER:      Timo Kreuzer (timo.kreuzer@reactos.org)
  */
+
+#pragma once
 
  // #define KDDEBUG /* uncomment to enable debugging this dll */
 
@@ -16,6 +16,13 @@
 extern ULONG KdpDbgPrint(const char* Format, ...);
 #define KDDBGPRINT KdpDbgPrint
 #endif
+
+typedef enum
+{
+	KDP_PACKET_RECEIVED = 0,
+	KDP_PACKET_TIMEOUT = 1,
+	KDP_PACKET_RESEND = 2
+} KDP_STATUS;
 
 VOID
 NTAPI
@@ -49,4 +56,3 @@ KdpReceiveByte(OUT PUCHAR OutByte);
 KDP_STATUS
 NTAPI
 KdpPollBreakIn(VOID);
-

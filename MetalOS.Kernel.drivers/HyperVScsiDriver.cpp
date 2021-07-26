@@ -1,5 +1,7 @@
+#include <Kernel.h>
+#include <Assert.h>
+
 #include "HyperVScsiDriver.h"
-#include "Main.h"
 #include "HyperVDevice.h"
 
 HyperVScsiDriver::HyperVScsiDriver(Device& device) :
@@ -43,7 +45,7 @@ Result HyperVScsiDriver::Initialize()
 	Execute(&transaction, true);
 	Assert(transaction.Response.storage_channel_properties.max_channel_cnt == 0);
 	Assert((transaction.Response.storage_channel_properties.flags & STORAGE_CHANNEL_SUPPORTS_MULTI_CHANNEL) == 0);
-	Print("Max bytes 0x%x\n", transaction.Response.storage_channel_properties.max_transfer_bytes);
+	kernel.Printf("Max bytes 0x%x\n", transaction.Response.storage_channel_properties.max_transfer_bytes);
 
 	//HBA Data
 	//	memset(&transaction, 0, sizeof(Transaction));
@@ -87,7 +89,7 @@ Result HyperVScsiDriver::EnumerateChildren()
 
 void HyperVScsiDriver::OnCallback()
 {
-	Print("HyperVScsiDriver::OnCallback\n");
+	kernel.Printf("HyperVScsiDriver::OnCallback\n");
 
 	vmpacket_descriptor* packet;
 	uint32_t length = sizeof(vmpacket_descriptor);
@@ -98,7 +100,7 @@ void HyperVScsiDriver::OnCallback()
 		Transaction* transaction = (Transaction*)packet->trans_id;
 		void* data = (void*)((uintptr_t)packet + (packet->offset8 << 3));
 
-		Print("Rec: 0x%x Small: 0x%x Large: 0x%x\n", packet->len8 << 3, (sizeof(struct vstor_packet) - vmscsi_size_delta), sizeof(struct vstor_packet));
+		kernel.Printf("Rec: 0x%x Small: 0x%x Large: 0x%x\n", packet->len8 << 3, (sizeof(struct vstor_packet) - vmscsi_size_delta), sizeof(struct vstor_packet));
 		kernel.PrintBytes((char*)data, packet->len8 << 3);
 
 		//Switch on request
@@ -146,7 +148,7 @@ void HyperVScsiDriver::OnCallback()
 
 void HyperVScsiDriver::Execute(Transaction* transaction, bool status_check)
 {
-	Print("Execute. Delta: 0x%x\n", m_sizeDelta);
+	kernel.Printf("Execute. Delta: 0x%x\n", m_sizeDelta);
 
 	//Create semaphore
 	transaction->Semaphore = kernel.CreateSemaphore(0, 0, "HyperVScsiDriver");

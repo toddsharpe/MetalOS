@@ -1,5 +1,7 @@
 #include "IoApicDriver.h"
-#include "Main.h"
+
+#include "AcpiDevice.h"
+#include "Kernel.h"
 
 IoApicDriver::IoApicDriver(Device& device) :
 	Driver(device),
@@ -22,8 +24,6 @@ Result IoApicDriver::Initialize()
 
 	VersionReg versionReg = { 0 };
 	versionReg.AsUint32 = ReadReg(IoApicReg::Version);
-
-	//kernel.Printf("Id: %x Version: %x Max: %x\n", idReg.Id, versionReg.Version, versionReg.MaxEntry);
 
 	this->m_device.Name = "IOAPIC";
 

@@ -1,11 +1,9 @@
 #pragma once
 #include "msvc.h"
 #include <cstdint>
-#include "MsfFile.h"
-#include "MsfStream.h"
-#include "PdbDbi.h"
 #include <string>
-#include "MetalOS.Kernel.h"
+#include "MsfFile.h"
+#include "PdbDbi.h"
 #include "PdbPdb.h"
 
 // https://github.com/willglynn/pdb

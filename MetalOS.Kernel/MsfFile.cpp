@@ -1,7 +1,8 @@
-#include "MsfFile.h"
-#include "Main.h"
+#include "Kernel.h"
+#include "Assert.h"
 #include "crt_string.h"
 #include <array>
+
 #include "MsfFile.h"
 
 const char MsfFile::Magic[0x1e] = "Microsoft C/C++ MSF 7.00\r\n\x1a\x44\x53";
@@ -74,18 +75,18 @@ void* MsfFile::GetBlock(const uint32_t blockNumber) const
 
 void MsfFile::Display()
 {
-	Print("MsfFile::Display\n");
-	Print("  Header:\n");
-	Print("    BlockSize: 0x%x\n", m_header->BlockSize);
-	Print("    FreeBlockMapBlock: 0x%x\n", m_header->FreeBlockMapBlock);
-	Print("    NumBlocks: 0x%x\n", m_header->NumBlocks);
-	Print("    NumDirectoryBytes: 0x%x\n", m_header->NumDirectoryBytes);
-	Print("    Unknown: 0x%x\n", m_header->Unknown);
-	Print("    BlockMapAddr: 0x%x\n", m_header->BlockMapAddr);
-	Print("  Streams: 0x%x\n", m_streams.size());
+	kernel.Printf("MsfFile::Display\n");
+	kernel.Printf("  Header:\n");
+	kernel.Printf("    BlockSize: 0x%x\n", m_header->BlockSize);
+	kernel.Printf("    FreeBlockMapBlock: 0x%x\n", m_header->FreeBlockMapBlock);
+	kernel.Printf("    NumBlocks: 0x%x\n", m_header->NumBlocks);
+	kernel.Printf("    NumDirectoryBytes: 0x%x\n", m_header->NumDirectoryBytes);
+	kernel.Printf("    Unknown: 0x%x\n", m_header->Unknown);
+	kernel.Printf("    BlockMapAddr: 0x%x\n", m_header->BlockMapAddr);
+	kernel.Printf("  Streams: 0x%x\n", m_streams.size());
 	for (size_t i = 0; i < m_streams.size(); i++)
 	{
-		Print("    [0x%x]: ", i);
+		kernel.Printf("    [0x%x]: ", i);
 		
 		//const Stream& stream = m_streams[i];
 		//for (size_t j = 0; j < stream.BlockNumbers.size(); j++)

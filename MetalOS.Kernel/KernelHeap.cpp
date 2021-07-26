@@ -1,6 +1,7 @@
-#include "KernelHeap.h"
+#include "Kernel.h"
+#include "Assert.h"
 
-#include "Main.h"
+#include "KernelHeap.h"
 
 KernelHeap::KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace& addressSpace) :
 	m_memoryManager(virtualMemory),
@@ -124,16 +125,16 @@ void KernelHeap::PrintHeap() const
 	HeapBlock* current = this->m_head;
 	while (current != nullptr)
 	{
-		Print("  L: 0x%8x F: 0x%8x P: 0x%16x, N: 0x%016x IP: 0x%16x\n", current->GetLength(), current->Flags, current->Prev, current->Next, current->CallerAddress);
+		kernel.Printf("  L: 0x%8x F: 0x%8x P: 0x%16x, N: 0x%016x IP: 0x%16x\n", current->GetLength(), current->Flags, current->Prev, current->Next, current->CallerAddress);
 		current = current->Next;
 	}
 }
 
 void KernelHeap::PrintHeapHeaders() const
 {
-	Print("PrintHeap\n");
-	Print("Head: 0x%016x\n", this->m_head);
-	Print("Address: 0x%016x\n", this->m_address);
-	Print("End: 0x%016x\n", this->m_end);
-	Print("Allocated: 0x%016x\n", this->m_allocated);
+	kernel.Printf("PrintHeap\n");
+	kernel.Printf("Head: 0x%016x\n", this->m_head);
+	kernel.Printf("Address: 0x%016x\n", this->m_address);
+	kernel.Printf("End: 0x%016x\n", this->m_end);
+	kernel.Printf("Allocated: 0x%016x\n", this->m_allocated);
 }

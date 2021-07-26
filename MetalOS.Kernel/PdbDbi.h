@@ -1,8 +1,10 @@
 #pragma once
+
+#include <windows/types.h>
+#include <windows/winnt.h>
+#include <microsoft-pdb/cvinfo.h>
+
 #include "MsfStream.h"
-#include "MicrosoftCodeView.h"
-#include "WindowsPE.h"
-#include "MetalOS.Kernel.h"
 #include "PdbPublicsStream.h"
 
 //https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/dbi.h

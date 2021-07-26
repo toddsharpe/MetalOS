@@ -1,5 +1,5 @@
 #include "Kernel.h"
-#include "Main.h"
+#include "Assert.h"
 #include "UserWindow.h"
 
 //TODO: Method to check handles
@@ -86,7 +86,7 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 		return (uint64_t)DebugPrint((char*)frame->Arg0);
 
 	default:
-		Print("SystemCall: 0x%x\n", frame->SystemCall);
+		kernel.Printf("SystemCall: 0x%x\n", frame->SystemCall);
 		Assert(false);
 		return -1;
 	}
@@ -164,7 +164,7 @@ SystemCallResult Kernel::ExitProcess(const uint32_t exitCode)
 {
 	UserProcess& process = m_scheduler->GetCurrentProcess();
 	process.Delete = true;
-	Print("Process: %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
+	kernel.Printf("Process: %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
 	m_scheduler->KillThread();
 	return SystemCallResult::Success;
 }
@@ -172,7 +172,7 @@ SystemCallResult Kernel::ExitProcess(const uint32_t exitCode)
 SystemCallResult Kernel::ExitThread(const uint32_t exitCode)
 {
 	UserProcess& process = m_scheduler->GetCurrentProcess();
-	Print("Thread of %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
+	kernel.Printf("Thread of %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
 	m_scheduler->KillThread();
 	return SystemCallResult::Success;
 }
@@ -272,7 +272,7 @@ Handle Kernel::CreateFile(const char* name, const GenericAccess access)
 	if (!IsValidUserPointer(name))
 		return nullptr;
 
-	Print("CreateFile: %s Access: %d\n", name, access);
+	kernel.Printf("CreateFile: %s Access: %d\n", name, access);
 
 	return this->CreateFile(std::string(name), access);
 }

@@ -10,7 +10,7 @@ void PdbPublicsStream::Load(MsfStream& stream)
 	{
 		RecordHeader header;
 		Assert(stream.Read(&header));
-		Assert(header.Type == SYM_ENUM_e::S_PUB32);
+		AssertEqual(header.Type, SYM_ENUM_e::S_PUB32);
 
 		S_PUB32_Record record;
 		Assert(stream.Read(&record));

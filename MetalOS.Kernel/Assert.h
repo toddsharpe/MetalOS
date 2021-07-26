@@ -6,7 +6,7 @@
 #define AssertEqual(x, y) \
 	if (!(x == y)) \
 	{ \
-		kernel.Bugcheck("File: " __FILE__, "Line: " STR(__LINE__), #x " (%d) != " #y " (%d)", x, y); \
+		kernel.Bugcheck("File: " __FILE__, "Line: " STR(__LINE__), #x " (0x%x) != " #y " (0x%x)", x, y); \
 	}
 #define Fatal(x) kernel.Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); 
 #define Trace() kernel.Print(__FILE__ "-" STR(__LINE__));

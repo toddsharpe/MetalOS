@@ -1,6 +1,9 @@
+#include "Main.h"
+#include "Assert.h"
+#include <windows/types.h>
+#include <windows/winnt.h>
 #include "RuntimeSupport.h"
 
-#include "Main.h"
 #include "PortableExecutable.h"
 
 //TODO: History Table?
@@ -31,20 +34,28 @@ PUNWIND_INFO RuntimeSupport::GetUnwindInfo(const uintptr_t ImageBase, const PRUN
 //src\coreclr\src\unwinder\amd64\unwinder_amd64.cpp
 //https://docs.microsoft.com/en-us/cpp/build/exception-handling-x64?view=vs-2019
 //Either 1. complete epilog, 2. unwind prolog, or 3. call handler/unwind directly
-void RuntimeSupport::VirtualUnwind(UnwindHandlerType HandlerType, uintptr_t ImageBase, uintptr_t ControlPC, PRUNTIME_FUNCTION FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers)
+void RuntimeSupport::VirtualUnwind(DWORD HandlerType, ULONG64 ImageBase, ULONG64 ControlPC, _PIMAGE_RUNTIME_FUNCTION_ENTRY FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers)
 {
 	PUNWIND_INFO unwindInfo = GetUnwindInfo(ImageBase, FunctionEntry);
-	Assert(unwindInfo->Version == 1);
-	Assert(unwindInfo->Flags == UnwindHandlerType::UNW_FLAG_NHANDLER);
-	//Print("Unknown FrameRegister: 0x%x\n", unwindInfo->FrameRegister);
-	Assert(unwindInfo->FrameRegister == x64_NV_REG_NUM::Rbp);
+	AssertEqual(unwindInfo->Version, 1);
+	AssertEqual(unwindInfo->Flags, UNW_FLAG_NHANDLER);
 
 	const uintptr_t PrologOffset = ContextRecord->Rip - (FunctionEntry->BeginAddress + ImageBase);
 	Assert(PrologOffset > unwindInfo->SizeOfProlog);
 
+	uintptr_t EstablisherFrame;
+	if (unwindInfo->FrameRegister == 0)
+	{
+		EstablisherFrame = (uintptr_t)ContextRecord->Rsp;
+	}
+	else 
+	{
+		AssertEqual(unwindInfo->FrameRegister, x64_NV_REG_NUM::Rbp);
+		EstablisherFrame = (&ContextRecord->Rax)[unwindInfo->FrameRegister];
+		EstablisherFrame -= (uintptr_t)unwindInfo->FrameOffset * 16;
+	}
+
 	//TODO: detect epilog based on bytes in list: https://docs.microsoft.com/en-us/windows/win32/api/winnt/nf-winnt-rtlvirtualunwind
-	uintptr_t EstablisherFrame = (&ContextRecord->Rax)[unwindInfo->FrameRegister];
-	EstablisherFrame -= (uintptr_t)unwindInfo->FrameOffset * 16;
 
 	UnwindPrologue(ImageBase, ContextRecord->Rip, EstablisherFrame, FunctionEntry, ContextRecord, ContextPointers);
 }
@@ -58,20 +69,6 @@ static M128A MemoryRead128(PM128A addr)
 {
 	return *(PM128A)((ULONG_PTR)addr);
 }
-
-static const UCHAR UnwindOpExtraSlotTable[] = {
-	0,          // UWOP_PUSH_NONVOL
-	1,          // UWOP_ALLOC_LARGE (or 3, special cased in lookup code)
-	0,          // UWOP_ALLOC_SMALL
-	0,          // UWOP_SET_FPREG
-	1,          // UWOP_SAVE_NONVOL
-	2,          // UWOP_SAVE_NONVOL_FAR
-	1,          // UWOP_EPILOG
-	2,          // UWOP_SPARE_CODE      // previously 64-bit UWOP_SAVE_XMM_FAR
-	1,          // UWOP_SAVE_XMM128
-	2,          // UWOP_SAVE_XMM128_FAR
-	0,          // UWOP_PUSH_MACHFRAME
-};
 
 ULONG UnwindOpSlots(__in UNWIND_CODE UnwindCode)
 /*++

@@ -6,9 +6,9 @@
 #include <string>
 #include <bitset>
 #include <intrin.h>
+#include <windows/types.h>
+#include <linux\hyperv.h>
 #include "MetalOS.Kernel.h"
-#include "MicrosoftHyperV.h"
-//#include "Main.h"
 
 //TODO: separate into hypervplatform and hypervinfo
 //platform is basically the hal

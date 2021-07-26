@@ -4,7 +4,6 @@
 #include <efi.h>
 #include <LoaderParams.h>
 #include <MetalOS.h>
-#include <WindowsPE.h>
 #include <cstdint>
 #include "msvc.h"
 #include <string>

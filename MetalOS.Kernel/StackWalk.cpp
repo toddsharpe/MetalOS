@@ -1,6 +1,8 @@
+#include "Kernel.h"
+#include "Assert.h"
+
 #include "StackWalk.h"
 #include "RuntimeSupport.h"
-#include "Main.h"
 
 StackWalk::StackWalk(PCONTEXT context, PKNONVOLATILE_CONTEXT_POINTERS contextPointers) :
 	m_context(context),

@@ -1,10 +1,7 @@
 #pragma once
 
 #include "Driver.h"
-#include "Device.h"
-#include "MicrosoftHyperV.h"
-#include "HyperV.h"
-#include <map>
+#include <linux/hyperv.h>
 
 class VmBusDriver : public Driver
 {

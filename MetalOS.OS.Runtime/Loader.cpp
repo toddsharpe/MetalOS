@@ -1,6 +1,7 @@
 #include <MetalOS.h>
-#include <WindowsPE.h>
 #include <crt_string.h>
+#include <windows/types.h>
+#include <windows/winnt.h>
 #include "Runtime.h"
 #include <MetalOS.Internal.h>
 #include "Debug.h"
@@ -14,7 +15,7 @@ PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name)
 	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)((uint64_t)imageBase + dosHeader->e_lfanew);
 
 	//Find section
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		if (strcmp((char*)&section[i].Name, name) == 0)
@@ -75,7 +76,7 @@ extern "C" Handle LoadLibrary(const char* lpLibFileName)
 	PIMAGE_NT_HEADERS64 pNtHeader = MakePtr(PIMAGE_NT_HEADERS64, moduleBase, dosHeader.e_lfanew);
 
 	//Write sections into memory
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		uintptr_t destination = (uintptr_t)moduleBase + section[i].VirtualAddress;

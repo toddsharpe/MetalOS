@@ -1,5 +1,4 @@
 #include "PdbHashTable.h"
-#include "Main.h"
 
 PdbHashTable::PdbHashTable()
 {

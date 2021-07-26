@@ -6,15 +6,10 @@
  * PROGRAMMER:      Timo Kreuzer (timo.kreuzer@reactos.org)
  */
 
-#include <cstdint>
-#include <intrin.h>
-#include <WindowsPE.h>
-#include "ntstatus.h"
-#include "basetsd.h"
-#include "windbgkd.h"
-#include <MetalOS.Internal.h>
-
-#include "kddll.h"
+#include <ntdef.h>
+#include <ntstatus.h>
+#include <rtltypes.h>
+#include <windbgkd.h>
 #include "kdcom.h"
 
  /* FUNCTIONS ******************************************************************/
@@ -146,7 +141,6 @@ KdpReceivePacketLeader(
 	} while (Index < 4);
 
 	/* Enable the debugger */
-	//TODO
 	//KD_DEBUGGER_NOT_PRESENT = FALSE;
 	//SharedUserData->KdDebuggerEnabled |= 0x00000002;
 

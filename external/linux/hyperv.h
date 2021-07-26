@@ -1,7 +1,6 @@
 #pragma once
 #include <cstdint>
 #include <MetalOS.Internal.h>
-#include <WindowsTypes.h>
 
 //Sources: include\linux\hyperv.h
 

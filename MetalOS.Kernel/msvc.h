@@ -1,6 +1,7 @@
 #pragma once
 
-#define _RAISE
+#undef _RAISE
+#define _RAISE(x)
 
 //Invalid param
 void __cdecl _invalid_parameter(char const*, char const*, char const*, unsigned int, int);

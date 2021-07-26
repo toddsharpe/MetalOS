@@ -1,7 +1,8 @@
-#include "Display.h"
-
+#include "Kernel.h"
+#include "Assert.h"
 #include <algorithm>
-#include "Main.h"
+
+#include "Display.h"
 
 //Hyper-V
 //PixelBlueGreenRedReserved8BitPerColor

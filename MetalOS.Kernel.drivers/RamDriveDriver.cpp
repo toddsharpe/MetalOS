@@ -1,7 +1,9 @@
-#include "RamDriveDriver.h"
-#include "Main.h"
-#include "SoftwareDevice.h"
 #include <crt_stdio.h>
+#include <Kernel.h>
+#include <Assert.h>
+
+#include "RamDriveDriver.h"
+#include "SoftwareDevice.h"
 
 RamDriveDriver::RamDriveDriver(Device& device) : 
 	Driver(device),
@@ -15,7 +17,7 @@ Result RamDriveDriver::Initialize()
 	//Map space
 	paddr_t address = (paddr_t)this->m_device.GetResource((uint32_t)SoftwareDevice::ResourceType::Context);
 	void* virtualAddress = kernel.DriverMapPages(address, SIZE_TO_PAGES(RamDriveSize));
-	Print("virt: 0x%016x\n", virtualAddress);
+	kernel.Printf("virt: 0x%016x\n", virtualAddress);
 	m_ramDrive = new RamDrive(virtualAddress, SIZE_TO_PAGES(RamDriveSize));
 
 	m_device.Type = DeviceType::Harddrive;

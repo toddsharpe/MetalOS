@@ -55,14 +55,14 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2\MdePkg\Include;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;..\tianocore-edk2\MdePkg\Include\IndustryStandard;..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;..\MetalOS.Kernel.drivers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2\MdePkg\Include;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;..\tianocore-edk2\MdePkg\Include\IndustryStandard;..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;..\MetalOS.Kernel.drivers;..\external;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <SupportJustMyCode>false</SupportJustMyCode>
       <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
-      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;CRT_STATIC;_NO_CRT_STDIO_INLINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;CRT_STATIC;_NO_CRT_STDIO_INLINE;_AMD64_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <OmitFramePointers>false</OmitFramePointers>
       <PreprocessToFile>false</PreprocessToFile>
@@ -171,6 +171,7 @@
     <ClCompile Include="VirtualMemoryManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Assert.h" />
     <ClInclude Include="BootHeap.h" />
     <ClInclude Include="ConfigTables.h" />
     <ClInclude Include="AcpiDevice.h" />
@@ -194,8 +195,6 @@
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="MetalOS.Kernel.h" />
-    <ClInclude Include="MicrosoftCodeView.h" />
-    <ClInclude Include="MicrosoftHyperV.h" />
     <ClInclude Include="MsfFile.h" />
     <ClInclude Include="MsfStream.h" />
     <ClInclude Include="Pdb.h" />

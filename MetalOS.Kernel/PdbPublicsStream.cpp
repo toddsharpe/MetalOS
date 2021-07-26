@@ -1,5 +1,7 @@
+#include "Kernel.h"
+#include "Assert.h"
+
 #include "PdbPublicsStream.h"
-#include "Main.h"
 
 void PdbPublicsStream::Load(MsfStream& stream)
 {

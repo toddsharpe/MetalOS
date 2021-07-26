@@ -1,6 +1,8 @@
-#include "HyperVTimer.h"
-#include "Main.h"
 #include <intrin.h>
+#include "Kernel.h"
+#include "Assert.h"
+
+#include "HyperVTimer.h"
 #include "HyperV.h"
 
 HyperVTimer::HyperVTimer(uint32_t timerId) :
@@ -38,5 +40,5 @@ void HyperVTimer::Display() const
 {
 	const uint64_t config = __readmsr(m_configRegister);
 	const uint64_t count = __readmsr(m_countRegister);
-	Print("Config: 0x%016x Count: 0x%016x\n", config, count);
+	kernel.Printf("Config: 0x%016x Count: 0x%016x\n", config, count);
 }

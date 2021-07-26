@@ -1,6 +1,8 @@
-#include "LoadingScreen.h"
-#include "Main.h"
+#include "Kernel.h"
+#include "Assert.h"
 #include <algorithm>
+
+#include "LoadingScreen.h"
 
 //BGR pixels
 const Color LoadingScreen::FireColors[] =

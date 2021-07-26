@@ -1,5 +1,6 @@
+#include "Kernel.h"
+#include "Assert.h"
 #include "VirtualMemoryManager.h"
-#include "Main.h"
 
 VirtualMemoryManager::VirtualMemoryManager(PhysicalMemoryManager& physicalMemory) :
 	m_physicalMemory(physicalMemory)
@@ -10,7 +11,7 @@ VirtualMemoryManager::VirtualMemoryManager(PhysicalMemoryManager& physicalMemory
 //TODO: round down address to nearest page or granularity boundary?
 void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, const MemoryProtection protection, VirtualAddressSpace& addressSpace)
 {
-	Print("Allocate: 0x%016x, Count: 0x%x Global: %d\n", address, count, addressSpace.IsGlobal());
+	kernel.Printf("Allocate: 0x%016x, Count: 0x%x Global: %d\n", address, count, addressSpace.IsGlobal());
 	
 	if (address != 0)
 		Assert((address & PAGE_MASK) == 0);
@@ -47,7 +48,7 @@ void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, cons
 
 void* VirtualMemoryManager::VirtualMap(uintptr_t virtualAddress, const std::vector<paddr_t>& addresses, const MemoryProtection& protection, VirtualAddressSpace& addressSpace)
 {
-	Print("VirtualMap: 0x%016x, Count: 0x%x\n", addresses.front(), addresses.size());
+	kernel.Printf("VirtualMap: 0x%016x, Count: 0x%x\n", addresses.front(), addresses.size());
 	Assert(addresses.size() != 0);
 
 	if (virtualAddress != 0)

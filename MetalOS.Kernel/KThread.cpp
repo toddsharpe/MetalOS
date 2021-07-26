@@ -1,5 +1,7 @@
+#include "Kernel.h"
+#include "Assert.h"
+
 #include "KThread.h"
-#include "Main.h"
 #include <MetalOS.Arch.h>
 
 uint32_t KThread::LastId = 0;

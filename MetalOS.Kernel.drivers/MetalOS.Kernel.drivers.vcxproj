@@ -114,11 +114,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;CRT_STATIC;_NO_CRT_STDIO_INLINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;CRT_STATIC;_NO_CRT_STDIO_INLINE;_AMD64_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <SupportJustMyCode>false</SupportJustMyCode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>..\inc;..\MetalOS.Kernel;..\gnu-efi\inc;..\MetalOS.lib;..\gnu-efi\inc\x86_64;..\acpica\source\include;..\acpica\source\include\platform;..\MetalOS.crt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\inc;..\MetalOS.Kernel;..\gnu-efi\inc;..\MetalOS.lib;..\gnu-efi\inc\x86_64;..\acpica\source\include;..\acpica\source\include\platform;..\MetalOS.crt;..\external</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>

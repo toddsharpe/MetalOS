@@ -1,6 +1,7 @@
-#include "Bitvector.h"
+#include "Kernel.h"
+#include "Assert.h"
 
-#include "Main.h"
+#include "Bitvector.h"
 
 constexpr size_t Bitvector::GetMapSize(size_t length)
 {

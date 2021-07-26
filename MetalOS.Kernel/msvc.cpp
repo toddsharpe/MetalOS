@@ -1,7 +1,7 @@
 #include "msvc.h"
 
-#include "Main.h"
-#include "MetalOS.Kernel.h"
+#include "Kernel.h"
+#include "Assert.h"
 
 namespace std
 {

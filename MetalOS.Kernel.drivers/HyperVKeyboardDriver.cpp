@@ -1,6 +1,8 @@
+#include <Kernel.h>
+#include <Assert.h>
+
 #include "HyperVKeyboardDriver.h"
 #include "HyperVDevice.h"
-#include "Main.h"
 
 HyperVKeyboardDriver::HyperVKeyboardDriver(Device& device) :
 	Driver(device),
@@ -13,7 +15,7 @@ HyperVKeyboardDriver::HyperVKeyboardDriver(Device& device) :
 
 Result HyperVKeyboardDriver::Initialize()
 {
-	Print("HyperVKeyboardDriver::Initialize\n");
+	kernel.Printf("HyperVKeyboardDriver::Initialize\n");
 	
 	m_device.Type = DeviceType::Keyboard;
 
@@ -93,7 +95,7 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 	{
 		Assert(size >= sizeof(synth_kbd_protocol_response));
 		memcpy(&m_response, header, sizeof(synth_kbd_protocol_response));
-		Print("Keyboard Connected: %d\n", m_response.proto_status);
+		kernel.Printf("Keyboard Connected: %d\n", m_response.proto_status);
 		kernel.ReleaseSemaphore(m_semaphore, 1);
 	}
 	break;

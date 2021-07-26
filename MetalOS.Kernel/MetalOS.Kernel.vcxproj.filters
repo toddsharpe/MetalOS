@@ -254,9 +254,6 @@
     <ClInclude Include="DeviceTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MicrosoftHyperV.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HyperVDevice.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -270,9 +267,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PdbDbi.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MicrosoftCodeView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PdbHashTable.h">
@@ -312,6 +306,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PortableExecutable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Assert.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

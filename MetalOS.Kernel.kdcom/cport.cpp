@@ -30,29 +30,12 @@
 
   /* INCLUDES *******************************************************************/
 
-#include <cstdint>
-#include <intrin.h>
-#include <WindowsPE.h>
-#include "ntstatus.h"
-#include "basetsd.h"
-#include "ns16550.h"
+#include <ntdef.h>
+#include <ntstatus.h>
 #include "cportlib.h"
-
-/* ioacces.h */
-#define H2I(p) PtrToUshort(p)
-
-#define READ_REGISTER_UCHAR(r) (*(volatile UCHAR *)(r))
-#define READ_REGISTER_USHORT(r) (*(volatile USHORT *)(r))
-#define READ_REGISTER_ULONG(r) (*(volatile ULONG *)(r))
-#define WRITE_REGISTER_UCHAR(r, v) (*(volatile UCHAR *)(r) = (v))
-#define WRITE_REGISTER_USHORT(r, v) (*(volatile USHORT *)(r) = (v))
-#define WRITE_REGISTER_ULONG(r, v) (*(volatile ULONG *)(r) = (v))
-#define READ_PORT_UCHAR(p) (UCHAR)(__inbyte (H2I(p)))
-#define READ_PORT_USHORT(p) (USHORT)(__inword (H2I(p)))
-#define READ_PORT_ULONG(p) (ULONG)(__indword (H2I(p)))
-#define WRITE_PORT_UCHAR(p, v) __outbyte (H2I(p), (v))
-#define WRITE_PORT_USHORT(p, v) __outword (H2I(p), (v))
-#define WRITE_PORT_ULONG(p, v) __outdword (H2I(p), (v))
+#include "ns16550.h"
+#include <intrin.h>
+#include <ioaccess.h>
 
 /* GLOBALS ********************************************************************/
 

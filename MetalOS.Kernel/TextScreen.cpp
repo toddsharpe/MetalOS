@@ -1,7 +1,8 @@
-#include "TextScreen.h"
+#include "Kernel.h"
+#include "Assert.h"
 
 #include <crt_stdio.h>
-#include "Main.h"
+#include "TextScreen.h"
 
 #define PositionToPixelScale 10
 

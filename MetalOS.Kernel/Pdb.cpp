@@ -1,6 +1,7 @@
-#include "Pdb.h"
 #include <cstdint>
-#include "Main.h"
+#include <windows/types.h>
+#include <windows/winnt.h>
+#include "Pdb.h"
 
 Pdb::Pdb(uintptr_t address) :
 	m_msfFile(address),

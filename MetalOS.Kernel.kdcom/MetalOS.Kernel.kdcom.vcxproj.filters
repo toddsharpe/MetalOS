@@ -21,13 +21,7 @@
     <ClInclude Include="cportlib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ntstatus.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="kdcom.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="basetsd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

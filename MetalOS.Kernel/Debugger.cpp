@@ -1,10 +1,13 @@
+#include "Kernel.h"
+#include "Assert.h"
+
+#include <algorithm>
+#include <windows/types.h>
+#include <ntstatus.h>
+
 #include "Debugger.h"
-#include "Main.h"
-#include <WindowsPE.h>
-#include <windbgkd.h>
 #include "Loader.h"
 #include "PortableExecutable.h"
-#include <algorithm>
 
 #define KdpMoveMemory memcpy
 #define KdpZeroMemory(dst, len) memset(dst, 0, len)
@@ -16,8 +19,8 @@ Debugger::Debugger() :
 	KdDebuggerEnabled(true),
 	KdDebuggerNotPresent(false)
 {
-	static uint16_t KernelName[16] = L"moskrnl.exe";
-	static uint16_t KdComName[16] = L"kdcom.dll";
+	static wchar_t KernelName[16] = L"moskrnl.exe";
+	static wchar_t KdComName[16] = L"kdcom.dll";
 	
 	ULONG NtBuildNumber = VER_PRODUCTBUILD;
 

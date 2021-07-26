@@ -1,6 +1,6 @@
 #include "Kernel.h"
+#include "Assert.h"
 
-typedef EFI_GUID GUID;
 #define PACKED
 #include <PlatformAcpi.h>
 #include <intrin.h>
@@ -77,10 +77,6 @@ Kernel::Kernel() :
 
 }
 
-#define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
-#define Assert(x) if (!(x)) { this->Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
-#define Trace() Print(__FILE__ "-" STR(__LINE__));
 void Kernel::Initialize(const PLOADER_PARAMS params)
 {
 	ArchInitialize();
@@ -308,17 +304,24 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 		sw.Next(base);
 	}
 
-	Fatal("Unhandled exception");
+	ArchDisableInterrupts();
+	while (true)
+		ArchWait();
 }
 
 bool inBugcheck = false;
-void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
+void Kernel::Bugcheck(const char* file, const char* line, const char* format, ...)
 {
 	cpu_flags_t flags = ArchDisableInterrupts();
 	
 	if (inBugcheck)
 	{
-		this->Printf("\n%s\n%s\n%s\n", file, line, assert);
+		this->Printf("\n%s\n%s\n", file, line);
+		va_list args;
+		va_start(args, format);
+		this->Printf(format, args);
+		this->Printf("\n");
+		va_end(args);
 
 		while(true)
 			ArchWait();
@@ -333,7 +336,13 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 		m_timer->Disable();
 
 	this->Printf("Kernel Bugcheck\n");
-	this->Printf("\n%s\n%s\n%s\n", file, line, assert);
+	this->Printf("\n%s\n%s\n", file, line);
+
+	va_list args;
+	va_start(args, format);
+	this->Printf(format, args);
+	this->Printf("\n");
+	va_end(args);
 
 	if (m_scheduler)
 	{
@@ -386,7 +395,7 @@ void Kernel::Printf(const char* format, va_list args)
 {
 	if ((m_debugger != nullptr) && m_debugger->IsBrokenIn())
 		m_debugger->KdpDprintf(format, args);
-	else if (m_printer != nullptr)
+	if (m_printer != nullptr)
 		m_printer->Printf(format, args);
 }
 
@@ -782,7 +791,7 @@ bool Kernel::CreateProcess(const std::string& path)
 	PIMAGE_NT_HEADERS64 pNtHeader = MakePtr(PIMAGE_NT_HEADERS64, address, dosHeader.e_lfanew);
 
 	//Write sections into memory
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		uintptr_t destination = (uintptr_t)address + section[i].VirtualAddress;

@@ -1,11 +1,14 @@
+#include "msvc.h"
+#include <cstdint>
+#include <windows/types.h>
 #include "AcpiDevice.h"
-#include "Main.h"
 extern "C"
 {
 #include <aclocal.h>
+const AH_DEVICE_ID* AcpiAhMatchHardwareId(char* HardwareId);
 }
-
-extern "C" const AH_DEVICE_ID* AcpiAhMatchHardwareId(char* HardwareId);
+#include "Kernel.h"
+#include "Assert.h"
 
 AcpiDevice::AcpiDevice(const ACPI_HANDLE object) :
 	Device(),
@@ -117,7 +120,7 @@ ACPI_STATUS AcpiDevice::DisplayResource(const ACPI_RESOURCE& Resource)
 	int i;
 	switch (Resource.Type) {
 	case ACPI_RESOURCE_TYPE_IRQ:
-		Print("    IRQ: dlen=%d trig=%d pol=%d shar=%d intc=%d cnt=%d int=",
+		kernel.Printf("    IRQ: dlen=%d trig=%d pol=%d shar=%d intc=%d cnt=%d int=",
 			Resource.Data.Irq.DescriptorLength,
 			Resource.Data.Irq.Triggering,
 			Resource.Data.Irq.Polarity,
@@ -125,12 +128,12 @@ ACPI_STATUS AcpiDevice::DisplayResource(const ACPI_RESOURCE& Resource)
 			Resource.Data.Irq.WakeCapable,
 			Resource.Data.Irq.InterruptCount);
 		for (i = 0; i < Resource.Data.Irq.InterruptCount; i++)
-			Print("%.02X ", Resource.Data.Irq.Interrupts[i]);
-		Print("\n");
+			kernel.Printf("%.02X ", Resource.Data.Irq.Interrupts[i]);
+		kernel.Printf("\n");
 		break;
 	case ACPI_RESOURCE_TYPE_IO:
 	{
-		Print("     IO: Decode=0x%x Align=0x%x AddrLen=%d Min=0x%.04X Max=0x%.04X\n",
+		kernel.Printf("     IO: Decode=0x%x Align=0x%x AddrLen=%d Min=0x%.04X Max=0x%.04X\n",
 			Resource.Data.Io.IoDecode,
 			Resource.Data.Io.Alignment,
 			Resource.Data.Io.AddressLength,
@@ -139,22 +142,22 @@ ACPI_STATUS AcpiDevice::DisplayResource(const ACPI_RESOURCE& Resource)
 	}
 		break;
 	case ACPI_RESOURCE_TYPE_END_TAG:
-		Print("    END:\n");
+		kernel.Printf("    END:\n");
 		break;
 	case ACPI_RESOURCE_TYPE_ADDRESS16:
-		Print("    A16: 0x%04X-0x%04X, Gran=0x%04X, Offset=0x%04X\n",
+		kernel.Printf("    A16: 0x%04X-0x%04X, Gran=0x%04X, Offset=0x%04X\n",
 			Resource.Data.Address16.Address.Minimum,
 			Resource.Data.Address16.Address.Maximum,
 			Resource.Data.Address16.Address.Granularity,
 			Resource.Data.Address16.Address.TranslationOffset);
 		break;
 	case ACPI_RESOURCE_TYPE_ADDRESS32:
-		Print("    A32: 0x%08X-0x%08X, Gran=0x%08X, Offset=0x%08X\n",
+		kernel.Printf("    A32: 0x%08X-0x%08X, Gran=0x%08X, Offset=0x%08X\n",
 			Resource.Data.Address32.Address.Minimum,
 			Resource.Data.Address32.Address.Maximum,
 			Resource.Data.Address32.Address.Granularity,
 			Resource.Data.Address32.Address.TranslationOffset);
-		Print("         T: %d, PC: %d, Decode=0x%x, Min=0x%02X, Max=0x%02X\n",
+		kernel.Printf("         T: %d, PC: %d, Decode=0x%x, Min=0x%02X, Max=0x%02X\n",
 			Resource.Data.Address32.ResourceType,
 			Resource.Data.Address32.ProducerConsumer,
 			Resource.Data.Address32.Decode,
@@ -162,12 +165,12 @@ ACPI_STATUS AcpiDevice::DisplayResource(const ACPI_RESOURCE& Resource)
 			Resource.Data.Address32.MaxAddressFixed);
 		break;
 	case ACPI_RESOURCE_TYPE_ADDRESS64:
-		Print("    A64: 0x%016X-0x%016X, Gran=0x%016X, Offset=0x%016X\n",
+		kernel.Printf("    A64: 0x%016X-0x%016X, Gran=0x%016X, Offset=0x%016X\n",
 			Resource.Data.Address64.Address.Minimum,
 			Resource.Data.Address64.Address.Maximum,
 			Resource.Data.Address64.Address.Granularity,
 			Resource.Data.Address64.Address.TranslationOffset);
-		Print("       : T: %d, PC: %d, Decode=0x%x, Min=0x%02X, Max=0x%02X\n",
+		kernel.Printf("       : T: %d, PC: %d, Decode=0x%x, Min=0x%02X, Max=0x%02X\n",
 			Resource.Data.Address64.ResourceType,
 			Resource.Data.Address64.ProducerConsumer,
 			Resource.Data.Address64.Decode,
@@ -175,7 +178,7 @@ ACPI_STATUS AcpiDevice::DisplayResource(const ACPI_RESOURCE& Resource)
 			Resource.Data.Address64.MaxAddressFixed);
 		break;
 	case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
-		Print("   EIRQ: PC=%d Trig=%d Pol=%d Share=%d Wake=%d Cnt=%d Int=",
+		kernel.Printf("   EIRQ: PC=%d Trig=%d Pol=%d Share=%d Wake=%d Cnt=%d Int=",
 			Resource.Data.ExtendedIrq.ProducerConsumer,
 			Resource.Data.ExtendedIrq.Triggering,
 			Resource.Data.ExtendedIrq.Polarity,
@@ -183,17 +186,17 @@ ACPI_STATUS AcpiDevice::DisplayResource(const ACPI_RESOURCE& Resource)
 			Resource.Data.ExtendedIrq.WakeCapable,
 			Resource.Data.ExtendedIrq.InterruptCount);
 		for (i = 0; i < Resource.Data.ExtendedIrq.InterruptCount; i++)
-			Print("%.02X ", Resource.Data.ExtendedIrq.Interrupts[i]);
-		Print("\n");
+			kernel.Printf("%.02X ", Resource.Data.ExtendedIrq.Interrupts[i]);
+		kernel.Printf("\n");
 		break;
 	case ACPI_RESOURCE_TYPE_FIXED_MEMORY32:
-		Print("    M32: Addr=0x%016x, Len=0x%x, WP=%d\n",
+		kernel.Printf("    M32: Addr=0x%016x, Len=0x%x, WP=%d\n",
 			Resource.Data.FixedMemory32.Address,
 			Resource.Data.FixedMemory32.AddressLength,
 			Resource.Data.FixedMemory32.WriteProtect);
 		break;
 	default:
-		Print("    Unknown: Type=%d\n", Resource.Type);
+		kernel.Printf("    Unknown: Type=%d\n", Resource.Type);
 		break;
 
 	}

@@ -1,5 +1,7 @@
+#include "Kernel.h"
+#include "Assert.h"
+
 #include "ConfigTables.h"
-#include "Main.h"
 
 ConfigTables::ConfigTables(EFI_CONFIGURATION_TABLE* ConfigurationTables, UINTN NumConfigTables) :
 	m_tables(new EFI_CONFIGURATION_TABLE[NumConfigTables]),
@@ -40,7 +42,7 @@ void ConfigTables::Dump() const
 		const EFI_GUID guid = m_tables[i].VendorGuid;
 		const void* address = m_tables[i].VendorTable;
 
-		Print("Guid: {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}, Address: 0x%016x\n",
+		kernel.Printf("Guid: {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}, Address: 0x%016x\n",
 			guid.Data1, guid.Data2, guid.Data3,
 			guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
 			guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7],

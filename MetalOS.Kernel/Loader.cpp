@@ -1,8 +1,9 @@
+#include "Kernel.h"
+#include "Assert.h"
 #include "Loader.h"
+#include <windows/types.h>
+#include <windows/winnt.h>
 
-//#include <crt_string.h>
-#include <WindowsPE.h>
-#include "Main.h"
 #include "PortableExecutable.h"
 
 Handle Loader::LoadKernelLibrary(const std::string& path)
@@ -19,10 +20,10 @@ Handle Loader::LoadKernelLibrary(const std::string& path)
 	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 	//NT Header
-	IMAGE_NT_HEADERS64 peHeader;
+	IMAGE_NT_HEADERS peHeader;
 	Assert(kernel.SetFilePosition(file, dosHeader.e_lfanew));
-	Assert(kernel.ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
-	Assert(read == sizeof(IMAGE_NT_HEADERS64));
+	Assert(kernel.ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
+	Assert(read == sizeof(IMAGE_NT_HEADERS));
 
 	//Verify image
 	Assert(peHeader.Signature == IMAGE_NT_SIGNATURE);
@@ -41,10 +42,10 @@ Handle Loader::LoadKernelLibrary(const std::string& path)
 	Assert(kernel.ReadFile(file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	Assert(read == peHeader.OptionalHeader.SizeOfHeaders);
 
-	PIMAGE_NT_HEADERS64 pNtHeader = MakePtr(PIMAGE_NT_HEADERS64, address, dosHeader.e_lfanew);
+	PIMAGE_NT_HEADERS pNtHeader = MakePtr(PIMAGE_NT_HEADERS, address, dosHeader.e_lfanew);
 
 	//Write sections into memory
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		uintptr_t destination = (uintptr_t)address + section[i].VirtualAddress;
@@ -82,10 +83,10 @@ Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 	//NT Header
-	IMAGE_NT_HEADERS64 peHeader;
+	IMAGE_NT_HEADERS peHeader;
 	Assert(kernel.SetFilePosition(file, dosHeader.e_lfanew));
-	Assert(kernel.ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
-	Assert(read == sizeof(IMAGE_NT_HEADERS64));
+	Assert(kernel.ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
+	Assert(read == sizeof(IMAGE_NT_HEADERS));
 
 	//Verify image
 	if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
@@ -106,10 +107,10 @@ Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 
 	Assert((uintptr_t)address == peHeader.OptionalHeader.ImageBase);
 
-	PIMAGE_NT_HEADERS64 pNtHeader = MakePtr(PIMAGE_NT_HEADERS64, address, dosHeader.e_lfanew);
+	PIMAGE_NT_HEADERS pNtHeader = MakePtr(PIMAGE_NT_HEADERS, address, dosHeader.e_lfanew);
 
 	//Write sections into memory
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION_64(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
 		uintptr_t destination = (uintptr_t)address + section[i].VirtualAddress;
@@ -137,19 +138,19 @@ void Loader::KernelExports(void* address, void* kernelAddress)
 {
 	uintptr_t baseAddress = (uintptr_t)address;
 
-	IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER*)baseAddress;
-	IMAGE_NT_HEADERS64* ntHeader = (PIMAGE_NT_HEADERS64)(baseAddress + dosHeader->e_lfanew);
+	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)baseAddress;
+	PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)(baseAddress + dosHeader->e_lfanew);
 	
 	IMAGE_DATA_DIRECTORY importDirectory = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-	Print("import size: 0x%016x\n", importDirectory.Size);
+	kernel.Printf("import size: 0x%016x\n", importDirectory.Size);
 	if (importDirectory.Size)
 	{
 		PIMAGE_IMPORT_DESCRIPTOR importDescriptor = MakePtr(PIMAGE_IMPORT_DESCRIPTOR, baseAddress, importDirectory.VirtualAddress);
 
 		while (importDescriptor->Name)
 		{
-			char* module = MakePtr(char*, baseAddress, importDescriptor->Name);
-			Print("    %s\n", module);
+			const char* module = MakePtr(char*, baseAddress, importDescriptor->Name);
+			kernel.Printf("    %s\n", module);
 			if (stricmp(module, "mosrt.dll") == 0)
 			{
 				Handle hModule = kernelAddress;
@@ -160,7 +161,7 @@ void Loader::KernelExports(void* address, void* kernelAddress)
 					PIMAGE_IMPORT_BY_NAME pImportByName = MakePtr(PIMAGE_IMPORT_BY_NAME, baseAddress, pThunkData->u1.AddressOfData);
 
 					pThunkData->u1.Function = PortableExecutable::GetProcAddress(hModule, (char*)pImportByName->Name);
-					Print("Patched %s to 0x%016x\n", (char*)pImportByName->Name, pThunkData->u1.Function);
+					kernel.Printf("Patched %s to 0x%016x\n", (char*)pImportByName->Name, pThunkData->u1.Function);
 					pThunkData++;
 
 				}

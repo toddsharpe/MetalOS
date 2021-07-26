@@ -1,7 +1,8 @@
-#include "HyperVMouseDriver.h"
-#include "Main.h"
-#include "HyperVDevice.h"
+#include <Kernel.h>
+#include <Assert.h>
 
+#include "HyperVMouseDriver.h"
+#include "HyperVDevice.h"
 
 HyperVMouseDriver::HyperVMouseDriver(Device& device) :
 	Driver(device),
@@ -14,7 +15,7 @@ HyperVMouseDriver::HyperVMouseDriver(Device& device) :
 
 Result HyperVMouseDriver::Initialize()
 {
-	Print("HyperVKeyboardDriver::Initialize\n");
+	kernel.Printf("HyperVKeyboardDriver::Initialize\n");
 
 	m_device.Type = DeviceType::Mouse;
 
@@ -112,14 +113,14 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 		return;
 
 	synthhid_msg* message = (synthhid_msg*)msg->data;
-	Print("Size: %d\n", msg->size);
-	Print("ProcessMessage: %d Size: %d\n", message->header.type, message->header.size);
+	kernel.Printf("Size: %d\n", msg->size);
+	kernel.Printf("ProcessMessage: %d Size: %d\n", message->header.type, message->header.size);
 	switch (message->header.type)
 	{
 	case SYNTH_HID_PROTOCOL_RESPONSE:
 	{
 		const uint32_t innerSize = msg->size + sizeof(struct pipe_prt_msg) - sizeof(unsigned char);
-		Print("innerSize %d struct %d\n", innerSize, sizeof(mousevsc_prt_msg));
+		kernel.Printf("innerSize %d struct %d\n", innerSize, sizeof(mousevsc_prt_msg));
 		Assert(innerSize == sizeof(mousevsc_prt_msg));
 		memcpy(&m_response, msg, innerSize);
 		Assert(m_response.response.approved);
@@ -138,10 +139,10 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 	{
 		synthhid_input_report* report = (synthhid_input_report*)msg->data;
 
-		Print("Report: %d\n", report->header.size);
+		kernel.Printf("Report: %d\n", report->header.size);
 
 		const uint32_t innerSize = msg->size + sizeof(struct pipe_prt_msg) - sizeof(unsigned char);
-		Print("innerSize %d struct %d\n", innerSize, sizeof(synthhid_input_report));
+		kernel.Printf("innerSize %d struct %d\n", innerSize, sizeof(synthhid_input_report));
 		Assert(innerSize == sizeof(synthhid_input_report));
 
 		////TODO: wait for init?

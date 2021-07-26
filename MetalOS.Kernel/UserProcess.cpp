@@ -1,7 +1,8 @@
-#include "UserProcess.h"
+#include "Kernel.h"
+#include "Assert.h"
 #include <intrin.h>
-#include "Main.h"
-//#include "Main.h"
+
+#include "UserProcess.h"
 
 uint32_t UserProcess::LastId = 0;
 
@@ -33,15 +34,15 @@ void UserProcess::Init(void* address)
 	m_imageBase = (uintptr_t)address;
 
 	void* start = kernel.VirtualAlloc(*this, nullptr, PAGE_SIZE, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWrite);
-	Print("heap: 0x%016x\n", start);
+	kernel.Printf("heap: 0x%016x\n", start);
 	m_heap = new BootHeap(start, PAGE_SIZE);
 	m_peb = (ProcessEnvironmentBlock*)m_heap->Allocate(sizeof(ProcessEnvironmentBlock));
 	Assert(m_peb);
 	memset(m_peb, 0, sizeof(ProcessEnvironmentBlock));
 	m_peb->ProcessId = m_id;
 	m_peb->BaseAddress = (uintptr_t)address;
-	Print("m_peb: 0x%016x\n", m_peb);
-	Print(" addr: 0x%016x\n", m_peb->BaseAddress);
+	kernel.Printf("m_peb: 0x%016x\n", m_peb);
+	kernel.Printf(" addr: 0x%016x\n", m_peb->BaseAddress);
 }
 
 void UserProcess::AddModule(const char* name, void* address)
@@ -88,7 +89,7 @@ uintptr_t UserProcess::GetModuleBase(uintptr_t ip) const
 			return address;
 	}
 
-	Print("IP: 0x%016x\n", ip);
+	kernel.Printf("IP: 0x%016x\n", ip);
 	Assert(false);
 	return 0;
 }
@@ -105,23 +106,23 @@ VirtualAddressSpace& UserProcess::GetAddressSpace()
 
 void UserProcess::Display() const
 {
-	Print("UserProcess::Display\n");
-	Print("    ID: %d\n", m_id);
-	Print("  Name: %s\n", m_name.c_str());
-	Print("  Base: 0x%016x\n", m_imageBase);
-	Print("    Ts: %d\n", m_threads.size());
-	Print("   PEB: 0x%016x\n", m_peb);
+	kernel.Printf("UserProcess::Display\n");
+	kernel.Printf("    ID: %d\n", m_id);
+	kernel.Printf("  Name: %s\n", m_name.c_str());
+	kernel.Printf("  Base: 0x%016x\n", m_imageBase);
+	kernel.Printf("    Ts: %d\n", m_threads.size());
+	kernel.Printf("   PEB: 0x%016x\n", m_peb);
 }
 
 void UserProcess::DisplayDetails() const
 {
 	Assert(GetCR3() == __readcr3());
 
-	Print("DisplayPEB\n");
-	Print("    ID: %d\n", m_peb->ProcessId);
-	Print("  Base: 0x%016x\n", m_peb->BaseAddress);
-	Print("  Mods: %d\n", m_peb->ModuleIndex);
+	kernel.Printf("DisplayPEB\n");
+	kernel.Printf("    ID: %d\n", m_peb->ProcessId);
+	kernel.Printf("  Base: 0x%016x\n", m_peb->BaseAddress);
+	kernel.Printf("  Mods: %d\n", m_peb->ModuleIndex);
 	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
-		Print("    %s: 0x%016x\n", m_peb->LoadedModules[i].Name, m_peb->LoadedModules[i].Address);
+		kernel.Printf("    %s: 0x%016x\n", m_peb->LoadedModules[i].Name, m_peb->LoadedModules[i].Address);
 }
 

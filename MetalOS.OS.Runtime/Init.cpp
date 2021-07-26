@@ -1,6 +1,7 @@
 #include <MetalOS.h>
-#include <WindowsPE.h>
 #include <string.h>
+#include <windows/types.h>
+#include <windows/winnt.h>
 #include "Runtime.h"
 
 typedef int (*ProcessEntry)(int argc, char** argv);

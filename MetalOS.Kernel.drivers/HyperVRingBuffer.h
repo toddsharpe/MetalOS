@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MetalOS.Kernel.h"
-#include "MicrosoftHyperV.h"
 
 class HyperVChannel;
 class HyperVRingBuffer//TODO: inbound ring buffer, outbound ring buffer

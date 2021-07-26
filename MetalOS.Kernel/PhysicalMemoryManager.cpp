@@ -1,6 +1,7 @@
-#include "PhysicalMemoryManager.h"
+#include "Kernel.h"
+#include "Assert.h"
 
-#include "Main.h"
+#include "PhysicalMemoryManager.h"
 
 //TODO: consider loader building this structure?
 //Chicken and egg with memorymap not being finalized?
@@ -96,7 +97,7 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address, PageState& state)
 
 bool PhysicalMemoryManager::AllocateContiguous(paddr_t& address, const size_t pageCount)
 {
-	Print("AllocateContiguous: 0x%x\n", pageCount);
+	kernel.Printf("AllocateContiguous: 0x%x\n", pageCount);
 	const size_t size = m_buddyMap.Size();
 	const size_t count = pageCount / BuddySize + ((pageCount % BuddySize != 0) ? 1 : 0);
 	while (m_nextBuddy < size - count)

@@ -4,8 +4,6 @@
 #include <efi.h>
 #include <LoaderParams.h>
 #include <MetalOS.h>
-#include <WindowsPE.h>
-#include "MetalOS.Kernel.h"
 #include "Display.h"
 #include "TextScreen.h"
 #include <PageTablesPool.h>
@@ -18,8 +16,8 @@ extern "C"
 #include <vector>
 #include <list>
 #include <map>
-#include "DeviceTree.h"
 #include "Debugger.h"
+#include "DeviceTree.h"
 #include "UartDriver.h"
 #include "HyperVTimer.h"
 #include "HyperV.h"
@@ -39,11 +37,13 @@ class Kernel
 	friend Debugger;
 public:
 	Kernel();
-	::NO_COPY_OR_ASSIGN(Kernel);
+	Kernel(const Kernel&) = delete;
+	Kernel& operator = (const Kernel&) = delete;
+
 	void Initialize(const PLOADER_PARAMS params);
 
 	void HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame);
-	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* assert);
+	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* format, ...);
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
@@ -284,4 +284,5 @@ private:
 
 	Debugger* m_debugger;
 };
+extern Kernel kernel;
 

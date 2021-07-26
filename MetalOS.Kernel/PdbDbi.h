@@ -1,8 +1,9 @@
 #pragma once
+
+#include <windows/types.h>
+#include <windows/winnt.h>
+
 #include "MsfStream.h"
-#include "MicrosoftCodeView.h"
-#include "WindowsPE.h"
-#include "MetalOS.Kernel.h"
 #include "PdbPublicsStream.h"
 
 //https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/dbi.h
@@ -148,74 +149,11 @@ private:
 	};
 
 
-	enum DEBUG_S_SUBSECTION_TYPE {
-		DEBUG_S_IGNORE = 0x80000000,    // if this bit is set in a subsection type then ignore the subsection contents
-
-		DEBUG_S_SYMBOLS = 0xf1,
-		DEBUG_S_LINES,
-		DEBUG_S_STRINGTABLE,
-		DEBUG_S_FILECHKSMS,
-		DEBUG_S_FRAMEDATA,
-		DEBUG_S_INLINEELINES,
-		DEBUG_S_CROSSSCOPEIMPORTS,
-		DEBUG_S_CROSSSCOPEEXPORTS,
-
-		DEBUG_S_IL_LINES,
-		DEBUG_S_FUNC_MDTOKEN_MAP,
-		DEBUG_S_TYPE_MDTOKEN_MAP,
-		DEBUG_S_MERGED_ASSEMBLYINPUT,
-
-		DEBUG_S_COFF_SYMBOL_RVA,
-	};
-
-	typedef          long   CV_off32_t;
-
-	struct CV_DebugSSubsectionHeader_t
-	{
-		enum DEBUG_S_SUBSECTION_TYPE type;
-		CV_off32_t                   cbLen; //Size of record following
-	};
-
-	//Ex
+	//Ex CV_DebugSLinesHeader_t
 	//  C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.26.28801\include\xtree
 	// (MD5: 0A759C57860302D8664203C1D6CFE56F),
 	// 0001:00010330-00010411, - segCon:offCon-offCon+cbCon
 	// line/addr pairs = 8 - nLines
-
-	struct CV_DebugSLinesHeader_t {
-		CV_off32_t     offCon; //start of offset
-		unsigned short segCon;
-		unsigned short flags;
-		CV_off32_t     cbCon;
-	};
-
-	struct CV_Line_t
-	{
-		uint32_t offset;             // Offset to start of code bytes for line number
-		uint32_t linenumStart : 24;    // line where statement/expression starts
-		uint32_t deltaLineEnd : 7;     // delta to line where statement ends (optional)
-		uint32_t fStatement : 1;       // true if a statement linenumber, else an expression line num
-	};
-
-	struct CV_DebugSLinesFileBlockHeader_t {
-		CV_off32_t     offFile; //offset into name stream?
-		CV_off32_t     nLines;
-		CV_off32_t     cbBlock; //Not sure what this is
-		// CV_Line_t      lines[nLines];
-		// CV_Column_t    columns[nColumns]; - no columns
-	};
-
-	//
-	// Line flags (data present)
-	//
-#define CV_LINES_HAVE_COLUMNS 0x0001
-
-	typedef unsigned short CV_columnpos_t;    // byte offset in a source line
-
-	struct CV_Column_t {
-		CV_columnpos_t offColumnStart;
-		CV_columnpos_t offColumnEnd;
-	};
 
 	//Module-specific stream
 	//struct ModiStream

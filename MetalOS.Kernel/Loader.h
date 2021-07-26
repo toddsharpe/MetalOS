@@ -2,7 +2,6 @@
 
 #include "msvc.h"
 #include <cstdint>
-#include <WindowsTypes.h>
 #include "VirtualAddressSpace.h"
 #include "UserProcess.h"
 

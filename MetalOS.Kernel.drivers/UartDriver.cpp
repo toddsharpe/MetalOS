@@ -1,6 +1,7 @@
 #include "UartDriver.h"
-#include "Main.h"
-#include <MetalOS.Arch.h>
+
+#include "Kernel.h"
+#include "Assert.h"
 
 UartDriver::UartDriver(Device& device) : Driver(device), m_port(), m_index(), m_rxBuffer()
 {

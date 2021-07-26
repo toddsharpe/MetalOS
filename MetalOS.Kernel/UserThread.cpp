@@ -1,7 +1,8 @@
-#include "UserThread.h"
-
+#include "Kernel.h"
+#include "Assert.h"
 #include <MetalOS.Arch.h>
-#include "Main.h"
+
+#include "UserThread.h"
 
 uint32_t UserThread::LastId = 0;
 

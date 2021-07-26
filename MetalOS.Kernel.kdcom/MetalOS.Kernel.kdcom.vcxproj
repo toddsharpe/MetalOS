@@ -116,10 +116,10 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_AMD64_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\inc;..\external\reactos</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <SupportJustMyCode>false</SupportJustMyCode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -158,11 +158,9 @@
     <ClCompile Include="kdserial.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="basetsd.h" />
     <ClInclude Include="cportlib.h" />
     <ClInclude Include="kdcom.h" />
     <ClInclude Include="ns16550.h" />
-    <ClInclude Include="ntstatus.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="kdcom.def" />

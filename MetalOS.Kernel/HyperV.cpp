@@ -1,3 +1,6 @@
+#include "Kernel.h"
+#include "Assert.h"
+
 #include "HyperV.h"
 
 #include "Cpuid.h"

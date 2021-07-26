@@ -43,8 +43,7 @@ public:
 	void Initialize(const PLOADER_PARAMS params);
 
 	void HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame);
-	__declspec(noreturn) void BugcheckEx(const char* file, const char* line, const char* format, ...);
-	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* assert);
+	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* format, ...);
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);

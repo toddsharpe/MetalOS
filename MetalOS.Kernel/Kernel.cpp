@@ -310,26 +310,19 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 		ArchWait();
 }
 
-void Kernel::BugcheckEx(const char* file, const char* line, const char* format, ...)
-{
-	char buffer[256] = { 0 };
-	
-	va_list args;
-	va_start(args, format);
-	vsprintf(buffer, format, args);
-	va_end(args);
-
-	Bugcheck(file, line, buffer);
-}
-
 bool inBugcheck = false;
-void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
+void Kernel::Bugcheck(const char* file, const char* line, const char* format, ...)
 {
 	cpu_flags_t flags = ArchDisableInterrupts();
 	
 	if (inBugcheck)
 	{
-		this->Printf("\n%s\n%s\n%s\n", file, line, assert);
+		this->Printf("\n%s\n%s\n", file, line);
+		va_list args;
+		va_start(args, format);
+		this->Printf(format, args);
+		this->Printf("\n");
+		va_end(args);
 
 		while(true)
 			ArchWait();
@@ -344,7 +337,13 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* assert)
 		m_timer->Disable();
 
 	this->Printf("Kernel Bugcheck\n");
-	this->Printf("\n%s\n%s\n%s\n", file, line, assert);
+	this->Printf("\n%s\n%s\n", file, line);
+
+	va_list args;
+	va_start(args, format);
+	this->Printf(format, args);
+	this->Printf("\n");
+	va_end(args);
 
 	if (m_scheduler)
 	{

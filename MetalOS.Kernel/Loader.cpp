@@ -149,7 +149,7 @@ void Loader::KernelExports(void* address, void* kernelAddress)
 
 		while (importDescriptor->Name)
 		{
-			char* module = MakePtr(char*, baseAddress, importDescriptor->Name);
+			const char* module = MakePtr(char*, baseAddress, importDescriptor->Name);
 			kernel.Printf("    %s\n", module);
 			if (stricmp(module, "mosrt.dll") == 0)
 			{

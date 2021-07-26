@@ -34,15 +34,41 @@ void StringPrinter::PrintBytes(const char* buffer, const size_t length)
 	}
 	this->Printf("\n");
 
+	char line[width] = { 0 };
 	for (size_t i = 0; i < length; i++)
 	{
 		if (i != 0 && i % width == 0)
+		{
+			//Print characters
+			this->Printf(" | ");
+			for (const auto c : line)
+			{
+				this->Printf("%c", c == 0 ? '.' : c);
+			}
+
+			memset(line, 0, width);
 			this->Printf("\n");
+		}
 
 		if (i % width == 0)
-			this->Printf("%02x - ", (i / 16) << 4);
+			this->Printf("%02x - ", (i / width) << 4);
 
 		this->Printf("%02x ", (unsigned char)buffer[i]);
+		line[i % width] = (unsigned char)buffer[i];
+	}
+
+	//Print the rest of the line
+	if ((length % width) != 0)
+		for (size_t i = 0; i < width - (length % width); i++)
+		{
+			this->Printf("   ");
+		}
+
+	//Print characters
+	this->Printf(" | ");
+	for (const auto c : line)
+	{
+		this->Printf("%c", c == 0 ? '.' : c);
 	}
 	this->Printf("\n");
 }

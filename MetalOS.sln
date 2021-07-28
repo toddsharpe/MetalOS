@@ -87,6 +87,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "reactos", "reactos", "{27A79A9D-B22F-42E5-807B-CF833DBEE847}"
 	ProjectSection(SolutionItems) = preProject
 		external\reactos\ioaccess.h = external\reactos\ioaccess.h
+		external\reactos\ketypes.h = external\reactos\ketypes.h
 		external\reactos\ldrtypes.h = external\reactos\ldrtypes.h
 		external\reactos\rtltypes.h = external\reactos\rtltypes.h
 		external\reactos\wdbgexts.h = external\reactos\wdbgexts.h
@@ -105,6 +106,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "coreclr", "coreclr", "{68B1
 		external\coreclr\list.h = external\coreclr\list.h
 		external\coreclr\win64unwind.h = external\coreclr\win64unwind.h
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Kernel.kd64", "MetalOS.Kernel.kd64\MetalOS.Kernel.kd64.vcxproj", "{68683AA3-0311-441B-B2C5-74005D79B8E5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -305,6 +308,22 @@ Global
 		{88C07EBE-4D24-44A9-8AD8-20ACBCF34883}.Template|x64.Build.0 = Debug|x64
 		{88C07EBE-4D24-44A9-8AD8-20ACBCF34883}.Template|x86.ActiveCfg = Debug|Win32
 		{88C07EBE-4D24-44A9-8AD8-20ACBCF34883}.Template|x86.Build.0 = Debug|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Debug|x64.ActiveCfg = Debug|x64
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Debug|x64.Build.0 = Debug|x64
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Debug|x86.ActiveCfg = Debug|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Debug|x86.Build.0 = Debug|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Release|Any CPU.ActiveCfg = Release|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Release|x64.ActiveCfg = Release|x64
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Release|x64.Build.0 = Release|x64
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Release|x86.ActiveCfg = Release|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Release|x86.Build.0 = Release|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Template|Any CPU.ActiveCfg = Debug|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Template|Any CPU.Build.0 = Debug|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Template|x64.ActiveCfg = Debug|x64
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Template|x64.Build.0 = Debug|x64
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Template|x86.ActiveCfg = Debug|Win32
+		{68683AA3-0311-441B-B2C5-74005D79B8E5}.Template|x86.Build.0 = Debug|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

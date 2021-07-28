@@ -1,19 +1,17 @@
 #pragma once
 
-typedef enum
-{
-	KDP_PACKET_RECEIVED = 0,
-	KDP_PACKET_TIMEOUT = 1,
-	KDP_PACKET_RESEND = 2
-} KDP_STATUS;
+typedef ULONG KDSTATUS;
+#define KdPacketReceived     0
+#define KdPacketTimedOut     1
+#define KdPacketNeedsResend  2
 
-Result
+NTSTATUS
 NTAPI
 KdInitialize(
 	IN ULONG ComPortNumber
 );
 
-KDP_STATUS
+KDSTATUS
 NTAPI
 KdReceivePacket(
 	IN ULONG PacketType,
@@ -32,10 +30,10 @@ KdSendPacket(
 	IN OUT PKD_CONTEXT Context
 );
 
-typedef Result(*OnKdInitialize)(
+typedef NTSTATUS(*OnKdInitialize)(
 	IN ULONG ComPortNumber
 	);
-typedef KDP_STATUS(*OnKdReceivePacket)(
+typedef KDSTATUS(*OnKdReceivePacket)(
 	IN ULONG PacketType,
 	OUT PSTRING MessageHeader,
 	OUT PSTRING MessageData,

@@ -26,13 +26,13 @@ Scheduler::Scheduler(KThread& bootThread) :
 	ArchSetUserCpuContext(context);
 }
 
-Scheduler::CpuContext* Scheduler::GetCpuContext() const
+Scheduler::CpuContext* Scheduler::GetCpuContext()
 {
 	Assert(_readgsbase_u64() != 0);
 	return (CpuContext*)__readgsqword(offsetof(CpuContext, SelfPointer));
 }
 
-KThread* Scheduler::GetCurrentThread() const
+KThread* Scheduler::GetCurrentThread()
 {
 	CpuContext* context = GetCpuContext();
 	Assert(context);

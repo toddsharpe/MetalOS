@@ -16,7 +16,7 @@ public:
 	Scheduler(KThread& bootThread);
 
 	void Schedule();
-	KThread* GetCurrentThread() const;
+	static KThread* GetCurrentThread();
 	UserThread* GetCurrentUserThread() const;
 	UserProcess& GetCurrentProcess() const;
 
@@ -43,7 +43,7 @@ private:
 		KThread* Thread;
 	};
 
-	CpuContext* GetCpuContext() const;
+	static CpuContext* GetCpuContext();
 	void SetCurrentThread(KThread& thread);
 	void Remove(KThread*& thread);
 	void RemoveFromEvent(KThread*& thread);

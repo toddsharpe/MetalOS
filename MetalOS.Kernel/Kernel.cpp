@@ -250,6 +250,12 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
+	if (m_debugger != nullptr && m_debugger->Enabled() && vector == InterruptVector::Breakpoint)
+	{
+		m_debugger->DebuggerEvent(vector, pFrame);
+		return;
+	}
+	
 	const auto& it = m_interruptHandlers->find(vector);
 	if (it != m_interruptHandlers->end())
 	{
@@ -393,8 +399,8 @@ void Kernel::Printf(const char* format, ...)
 
 void Kernel::Printf(const char* format, va_list args)
 {
-	if ((m_debugger != nullptr) && m_debugger->IsBrokenIn())
-		m_debugger->KdpDprintf(format, args);
+	//if ((m_debugger != nullptr) && m_debugger->IsBrokenIn())
+		//m_debugger->KdpDprintf(format, args);
 	if (m_printer != nullptr)
 		m_printer->Printf(format, args);
 }

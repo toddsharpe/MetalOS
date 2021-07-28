@@ -20,6 +20,7 @@ typedef unsigned short USHORT;
 typedef USHORT* PUSHORT;
 typedef unsigned char UCHAR;
 typedef UCHAR* PUCHAR;
+typedef char CCHAR;          // winnt
 typedef char* PSZ;
 #endif  /* !BASETYPES */
 
@@ -135,3 +136,12 @@ typedef unsigned __int64 ULONG_PTR, * PULONG_PTR;
 #define UNALIGNED __unaligned
 
 typedef LONG NTSTATUS;
+
+typedef size_t SIZE_T;
+
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#endif
+
+typedef LONGLONG* PLONGLONG;
+typedef ULONGLONG* PULONGLONG;

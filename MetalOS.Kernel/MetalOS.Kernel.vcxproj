@@ -55,7 +55,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\inc;..\MetalOS.lib;..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;..\MetalOS.Kernel.drivers;..\external;..\external\tianocore-edk2;..\external\gnu-efi;..\external\gnu-efi\x86_64;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\inc;..\MetalOS.lib;..\acpica\source\include\platform;..\acpica\source\include;..\MetalOS.crt;..\MetalOS.Kernel.drivers;..\external;..\external\tianocore-edk2;..\external\gnu-efi;..\external\gnu-efi\x86_64;..\MetalOS.Kernel.kd64;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExceptionHandling>false</ExceptionHandling>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -227,6 +227,9 @@
     </ProjectReference>
     <ProjectReference Include="..\MetalOS.Kernel.drivers\MetalOS.Kernel.drivers.vcxproj">
       <Project>{88c07ebe-4d24-44a9-8ad8-20acbcf34883}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MetalOS.Kernel.kd64\MetalOS.Kernel.kd64.vcxproj">
+      <Project>{68683aa3-0311-441b-b2c5-74005d79b8e5}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MetalOS.Kernel.x64\MetalOS.Kernel.x64.vcxproj">
       <Project>{b240a22c-2efc-487b-936f-b516812f1751}</Project>

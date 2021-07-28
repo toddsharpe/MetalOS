@@ -2,6 +2,9 @@
 
 #define ANYSIZE_ARRAY 1       
 
+#define FALSE   0
+#define TRUE    1
+
 #ifndef DECLSPEC_ALIGN
 #if (_MSC_VER >= 1300) && !defined(MIDL_PASS)
 #define DECLSPEC_ALIGN(x)   __declspec(align(x))
@@ -17,6 +20,17 @@
 #define DECLSPEC_NOINITALL
 #endif
 #endif
+
+#ifndef FORCEINLINE
+#if (_MSC_VER >= 1200)
+#define FORCEINLINE __forceinline
+#else
+#define FORCEINLINE __inline
+#endif
+#endif
+
+/* Use to silence unused variable warnings when it is intentional */
+#define UNREFERENCED_PARAMETER(P) ((void)(P))
 
 //
 // For compilers that don't support nameless unions/structs
@@ -910,10 +924,6 @@ typedef struct _IMAGE_LINENUMBER {
 } IMAGE_LINENUMBER;
 typedef IMAGE_LINENUMBER UNALIGNED* PIMAGE_LINENUMBER;
 
-#ifndef _MAC
-#include "poppack.h"                        // Back to 4 byte packing
-#endif
-
 //
 // Based relocation format.
 //
@@ -1545,3 +1555,20 @@ typedef struct LIST_ENTRY64 {
 	ULONGLONG Flink;
 	ULONGLONG Blink;
 } LIST_ENTRY64, * PLIST_ENTRY64;
+
+typedef union _LARGE_INTEGER
+{
+	struct
+	{
+		ULONG LowPart;
+		LONG HighPart;
+	};
+	struct
+	{
+		ULONG LowPart;
+		LONG HighPart;
+	} u;
+	LONGLONG QuadPart;
+} LARGE_INTEGER, * PLARGE_INTEGER;
+
+#define ANSI_NULL ((CHAR)0)     // winnt

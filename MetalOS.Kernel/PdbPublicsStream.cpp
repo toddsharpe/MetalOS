@@ -28,7 +28,7 @@ void PdbPublicsStream::Load(MsfStream& stream)
 std::string& PdbPublicsStream::GetFunction(const uint32_t offset)
 {
 	const auto& it = m_functionLookup.find(offset);
-	Assert(it != m_functionLookup.end());
+	AssertPrintInt(it != m_functionLookup.end(), offset);
 
 	return it->second;
 }

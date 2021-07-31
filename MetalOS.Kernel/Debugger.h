@@ -21,6 +21,8 @@ public:
 
 	static uint32_t ThreadLoop(void* arg) { return ((Debugger*)arg)->ThreadLoop(); };
 
+	void AddModule(KeLibrary& library);
+
 	void DebuggerEvent(InterruptVector vector, PINTERRUPT_FRAME pFrame);
 	void KdpDprintf(const char* format, va_list args);
 	bool Enabled();
@@ -29,7 +31,6 @@ private:
 	uint32_t ThreadLoop();
 	void ConvertToContext(PINTERRUPT_FRAME frame, PCONTEXT context);
 
-	LDR_DATA_TABLE_ENTRY KernelEntry;
 	LIST_ENTRY PsLoadedModuleList;
 };
 

@@ -12,6 +12,8 @@ ENDM
 
 ; Pushed in the opposite order as INTERRUPT_FRAME since stack grows shallow in x64
 PUSH_INTERRUPT_FRAME MACRO
+	push GS
+	push FS
 	push r15
 	push r14
 	push r13
@@ -44,6 +46,7 @@ POP_INTERRUPT_FRAME MACRO
 	pop r13
 	pop r14
 	pop r15
+	add rsp, 16; Pop GS/FS
 ENDM
 
 x64_INTERRUPT_HANDLER MACRO hasCode, number

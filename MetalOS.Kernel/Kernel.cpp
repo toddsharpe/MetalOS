@@ -181,7 +181,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Modules
 	m_modules = new std::list<KeLibrary>();
-	m_modules->push_back({ "moskrnl.exe", (Handle)KernelBaseAddress, m_pdb });
+	KeLibrary keLibrary = { "moskrnl.exe", (Handle)KernelBaseAddress, m_pdb };
+	m_modules->push_back(keLibrary);
 
 	//Create idle thread
 	CreateKernelThread(&Kernel::IdleThread, this);
@@ -243,6 +244,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Debugger
 	m_debugger = new Debugger();
 	m_debugger->Initialize();
+	m_debugger->AddModule(keLibrary);
 
 	//Done
 	Print("Kernel Initialized\n");
@@ -510,7 +512,10 @@ Handle Kernel::KeLoadLibrary(const std::string& path)
 	Pdb* pdb = new Pdb((uintptr_t)address);
 	this->Printf("KeLoadLibrary %s (0x%016x), %s (0x%016x)\n", path.c_str(), (uintptr_t)library, pdbName, address);
 
-	m_modules->push_back({ path, library, pdb });
+	KeLibrary keLibrary = { path, library, pdb };
+	m_modules->push_back(keLibrary);
+	m_debugger->AddModule(keLibrary);
+
 	return library;
 }
 

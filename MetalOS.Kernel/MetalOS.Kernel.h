@@ -35,6 +35,10 @@ typedef struct
 	uint64_t R13;
 	uint64_t R14;
 	uint64_t R15;
+
+	uint64_t FS;
+	uint64_t GS;
+
 	uint64_t RBP; //Position between automatically pushed context and additional context
 
 	//Intel SDM Vol3A Figure 6-4

@@ -25,9 +25,6 @@ namespace Kd64
 
 Debugger::Debugger()
 {
-	static wchar_t KernelName[16] = L"moskrnl.exe";
-	static wchar_t KdComName[16] = L"kdcom.dll";
-	
 	/* Fill out the KD Version Block */
 	Kd64::KdVersionBlock.MajorVersion = DBGKD_MAJOR_EFI;
 	Kd64::KdVersionBlock.MinorVersion = 7601;
@@ -43,32 +40,6 @@ Debugger::Debugger()
 	Kd64::KdVersionBlock.PsLoadedModuleList = (ULONG64)(LONG_PTR)&PsLoadedModuleList;
 
 	InitializeListHead(&PsLoadedModuleList);
-
-	const KeLibrary* hKernel = kernel.KeGetModule("moskrnl.exe");
-
-	KernelEntry.DllBase = (void*)hKernel->Handle;
-	KernelEntry.EntryPoint = (void*)((uintptr_t)hKernel->Handle + PortableExecutable::GetEntryPoint(hKernel->Handle));
-	KernelEntry.SizeOfImage = PortableExecutable::GetSizeOfImage(hKernel->Handle);
-	KernelEntry.FullDllName = { (USHORT)wcslen(KernelName), 0, KernelName };
-	KernelEntry.BaseDllName = { (USHORT)wcslen(KernelName), 0, KernelName };
-	KernelEntry.LoadCount = 1;
-
-	InsertTailList(&PsLoadedModuleList, &KernelEntry.InLoadOrderLinks);
-
-	PLIST_ENTRY NextEntry;
-	PLDR_DATA_TABLE_ENTRY LdrEntry;
-	for (NextEntry = PsLoadedModuleList.Flink;
-		NextEntry != &PsLoadedModuleList;
-		NextEntry = NextEntry->Flink)
-	{
-		LdrEntry = CONTAINING_RECORD(NextEntry,
-			LDR_DATA_TABLE_ENTRY,
-			InLoadOrderLinks);
-		
-		char buffer[256] = { 0 };
-		wcstombs(buffer, LdrEntry->BaseDllName.Buffer, 256);
-		kernel.Printf("Dll: %s\n", &buffer);
-	}
 }
 
 void Debugger::Initialize()
@@ -94,6 +65,33 @@ void Debugger::Initialize()
 	Kd64::KdDebuggerEnabled = TRUE;
 	Kd64::KdDebuggerNotPresent = FALSE;
 	Kd64::KdpDprintf("MetalOS::KdCom initialized!\n");
+}
+
+void Debugger::AddModule(KeLibrary& library)
+{
+	LDR_DATA_TABLE_ENTRY* entry = new LDR_DATA_TABLE_ENTRY();
+
+	entry->InMemoryOrderLinks.Blink = (LIST_ENTRY*)0x1000;
+	entry->InMemoryOrderLinks.Flink = (LIST_ENTRY*)0x1100;
+	entry->InInitializationOrderLinks.Flink = (LIST_ENTRY*)0x1100;
+	entry->InInitializationOrderLinks.Blink = (LIST_ENTRY*)0x1100;
+
+	entry->DllBase = (void*)library.Handle;
+	entry->EntryPoint = (void*)((uintptr_t)library.Handle + PortableExecutable::GetEntryPoint(library.Handle));
+	entry->SizeOfImage = PortableExecutable::GetSizeOfImage(library.Handle);
+	entry->LoadCount = 1;
+
+	//Allocate name unicode strings
+	size_t length = library.Name.length();
+	size_t wideLength = (length + 1) * 2;
+	wchar_t* s = new wchar_t[wideLength];
+	mbstowcs(s, library.Name.c_str(), wideLength);
+	s[length] = '\0';
+
+	entry->FullDllName = { (USHORT)wcslen(s), 0, s };
+	entry->BaseDllName = { (USHORT)wcslen(s), 0, s };
+
+	InsertHeadList(&PsLoadedModuleList, &entry->InLoadOrderLinks);
 }
 
 void Debugger::DebuggerEvent(InterruptVector vector, PINTERRUPT_FRAME pFrame)
@@ -134,6 +132,21 @@ uint32_t Debugger::ThreadLoop()
 	{
 		if (Kd64::KdPollBreakIn())
 		{
+			PLIST_ENTRY NextEntry;
+			PLDR_DATA_TABLE_ENTRY LdrEntry;
+			for (NextEntry = PsLoadedModuleList.Flink;
+				NextEntry != &PsLoadedModuleList;
+				NextEntry = NextEntry->Flink)
+			{
+				LdrEntry = CONTAINING_RECORD(NextEntry,
+					LDR_DATA_TABLE_ENTRY,
+					InLoadOrderLinks);
+
+				char buffer[256] = { 0 };
+				wcstombs(buffer, LdrEntry->BaseDllName.Buffer, 256);
+				kernel.Printf("Dll: %s\n", &buffer);
+			}
+			
 			__debugbreak();
 		}
 		kernel.Sleep(50);
@@ -145,10 +158,8 @@ uint32_t Debugger::ThreadLoop()
 void Debugger::ConvertToContext(PINTERRUPT_FRAME frame, PCONTEXT context)
 {
 	context->SegCs = frame->CS;
-	//context->SegDs = frame->DS;
-	//context->SegEs = frame->ES;
-	//context->SegFs = frame->FS;
-	//context->SegGs = frame->GS;
+	context->SegFs = frame->FS;
+	context->SegGs = frame->GS;
 	context->SegSs = frame->SS;
 	context->EFlags = frame->RFlags;
 	

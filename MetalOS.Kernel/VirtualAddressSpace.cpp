@@ -39,7 +39,7 @@ bool VirtualAddressSpace::IsFree(const uintptr_t address, const size_t count)
 	return true;
 }
 
-bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, MemoryProtection protection)
+bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, const MemoryProtection protection)
 {
 	Assert(count != 0);
 	kernel.Printf("Reserve: 0x%016x in [0x%016x, 0x%016x] Size: 0x%x\n", address, m_start, m_end, count);

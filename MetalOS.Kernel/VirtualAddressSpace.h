@@ -14,7 +14,7 @@ public:
 	VirtualAddressSpace(const uintptr_t start, const uintptr_t end, const bool global);
 	
 	bool IsFree(const uintptr_t address, const size_t count);
-	bool Reserve(uintptr_t& address, const size_t count, MemoryProtection protection);
+	bool Reserve(uintptr_t& address, const size_t count, const MemoryProtection protection);
 
 	bool IsValidPointer(const void* p);
 

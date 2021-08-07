@@ -8,7 +8,8 @@
  */
 
  /* INCLUDES ******************************************************************/
-
+#include <msvc.h>
+#include <string>
 #include <sal.h>
 #include <cstdint>
 #include <algorithm>
@@ -35,6 +36,60 @@ VOID NTAPI PspDumpThreads(BOOLEAN SystemThreads);
 #define KeProcessor 0
 #define KeProcessorLevel 1
 #define Isa 1
+
+const char* DbgKdApis[] =
+{
+	"DbgKdReadVirtualMemoryApi",
+	"DbgKdWriteVirtualMemoryApi",
+	"DbgKdGetContextApi",
+	"DbgKdSetContextApi",
+	"DbgKdWriteBreakPointApi",
+	"DbgKdRestoreBreakPointApi",
+	"DbgKdContinueApi",
+	"DbgKdReadControlSpaceApi",
+	"DbgKdWriteControlSpaceApi",
+	"DbgKdReadIoSpaceApi",
+	"DbgKdWriteIoSpaceApi",
+	"DbgKdRebootApi",
+	"DbgKdContinueApi2",
+	"DbgKdReadPhysicalMemoryApi",
+	"DbgKdWritePhysicalMemoryApi",
+	"DbgKdQuerySpecialCallsApi",
+	"DbgKdSetSpecialCallApi",
+	"DbgKdClearSpecialCallsApi",
+	"DbgKdSetInternalBreakPointApi",
+	"DbgKdGetInternalBreakPointApi",
+	"DbgKdReadIoSpaceExtendedApi",
+	"DbgKdWriteIoSpaceExtendedApi",
+	"DbgKdGetVersionApi",
+	"DbgKdWriteBreakPointExApi",
+	"DbgKdRestoreBreakPointExApi",
+	"DbgKdCauseBugCheckApi",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"DbgKdSwitchProcessor",
+	"DbgKdPageInApi",
+	"DbgKdReadMachineSpecificRegister",
+	"DbgKdWriteMachineSpecificRegister",
+	"OldVlm1",
+	"OldVlm2",
+	"DbgKdSearchMemoryApi",
+	"DbgKdGetBusDataApi",
+	"DbgKdSetBusDataApi",
+	"DbgKdCheckLowMemoryApi",
+	"DbgKdClearAllInternalBreakpointsApi",
+	"DbgKdFillMemoryApi",
+	"DbgKdQueryMemoryApi",
+	"DbgKdSwitchPartition",
+	"DbgKdWriteCustomBreakpointApi",
+	"DbgKdGetContextExApi",
+	"DbgKdSetContextExApi",
+};
+static_assert(sizeof(DbgKdApis) / sizeof(DbgKdApis[0]) == DbgKdMaximumManipulate - DbgKdMinimumManipulate, "Invalid DbgKd size");
 
 /* PRIVATE FUNCTIONS *********************************************************/
 
@@ -1340,7 +1395,7 @@ SendPacket:
 			if (RecvCode == KdPacketNeedsResend) goto SendPacket;
 		} while (RecvCode == KdPacketTimedOut);
 
-		KePrintf("Kd64 Api: 0x%x\n", ManipulateState.ApiNumber);
+		KePrintf("Kd64 Api: %s 0x%x\n", DbgKdApis[ManipulateState.ApiNumber - DbgKdMinimumManipulate], ManipulateState.ApiNumber);
 
 		/* Now check what API we got */
 		switch (ManipulateState.ApiNumber)

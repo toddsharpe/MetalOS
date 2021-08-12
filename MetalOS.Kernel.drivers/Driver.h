@@ -22,7 +22,7 @@ protected:
 class HardDriveDriver
 {
 public:
-	virtual FileHandle* OpenFile(const std::string& path, GenericAccess access) = 0;
-	virtual size_t ReadFile(FileHandle* handle, void* buffer, size_t bytesToRead) = 0;
+	virtual FileHandle* OpenFile(const std::string& path, const GenericAccess access) const = 0;
+	virtual size_t ReadFile(const FileHandle& handle, void* const buffer, const size_t bytesToRead) const = 0;
 };
 

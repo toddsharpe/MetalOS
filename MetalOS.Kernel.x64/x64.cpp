@@ -27,11 +27,11 @@ void x64::Initialize()
 	_lgdt(&GDTR);
 
 	//Update segment registers
-	SEGMENT_SELECTOR dataSelector(static_cast<uint16_t>(GDT::KernelData));
-	SEGMENT_SELECTOR codeSelector(static_cast<uint16_t>(GDT::KernelCode));
+	const SEGMENT_SELECTOR dataSelector(static_cast<uint16_t>(GDT::KernelData));
+	const SEGMENT_SELECTOR codeSelector(static_cast<uint16_t>(GDT::KernelCode));
 	UpdateSegments(dataSelector.Value, codeSelector.Value);
 
-	SEGMENT_SELECTOR tssSelector(static_cast<uint16_t>(GDT::TssEntry));
+	const SEGMENT_SELECTOR tssSelector(static_cast<uint16_t>(GDT::TssEntry));
 	_ltr(tssSelector.Value);
 
 	//Load interrupt handlers
@@ -41,10 +41,8 @@ void x64::Initialize()
 	_sti();
 
 	//Enable syscalls
-	SEGMENT_SELECTOR userCodeSelector(static_cast<uint16_t>(GDT::User32Code), UserDPL);
-	IA32_STAR_REG starReg = { 0 };
-	starReg.SyscallCS = codeSelector.Value;
-	starReg.SysretCS = userCodeSelector.Value;
+	const SEGMENT_SELECTOR userCodeSelector(static_cast<uint16_t>(GDT::User32Code), UserDPL);
+	const IA32_STAR_REG starReg = { {0, codeSelector.Value, userCodeSelector.Value } };
 	__writemsr(static_cast<uint32_t>(MSR::IA32_STAR), starReg.AsUint64);
 	__writemsr(static_cast<uint32_t>(MSR::IA32_LSTAR), (uintptr_t)&x64_SYSTEMCALL);
 	__writemsr(static_cast<uint32_t>(MSR::IA32_FMASK), 0x200 | 0x100); //Disable interrupts and traps

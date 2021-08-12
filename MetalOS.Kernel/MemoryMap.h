@@ -4,35 +4,12 @@
 #include <efi.h>
 #include <cstdint>
 
-// https://dox.ipxe.org/UefiMultiPhase_8h.html
-const char mem_types[16][27] = {
-	  "EfiReservedMemoryType     ",
-	  "EfiLoaderCode             ",
-	  "EfiLoaderData             ",
-	  "EfiBootServicesCode       ",
-	  "EfiBootServicesData       ",
-	  "EfiRuntimeServicesCode    ",
-	  "EfiRuntimeServicesData    ",
-	  "EfiConventionalMemory     ",
-	  "EfiUnusableMemory         ",
-	  "EfiACPIReclaimMemory      ",
-	  "EfiACPIMemoryNVS          ",
-	  "EfiMemoryMappedIO         ",
-	  "EfiMemoryMappedIOPortSpace",
-	  "EfiPalCode                ",
-	  "EfiPersistentMemory       ",
-	  "EfiMaxMemoryType          "
-};
-
-#define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
 class MemoryMap
 {
 public:
+	MemoryMap(const UINTN MemoryMapSize, const UINTN MemoryMapDescriptorSize, const UINT32 MemoryMapDescriptorVersion, const EFI_MEMORY_DESCRIPTOR& MemoryMap);
 
-
-	MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap);
-
-	void ReclaimBootPages();
+	void ReclaimBootPages() const;
 	void MergeConventionalPages();
 	EFI_PHYSICAL_ADDRESS AllocatePages(UINT32 count);
 
@@ -62,15 +39,14 @@ public:
 private:
 	//Allocate the current size of the map plus space for more entries
 	static const size_t BufferCount = 3;
+	static const char MemTypes[16][27];
 
 	EFI_MEMORY_DESCRIPTOR* ResolveAddress(EFI_PHYSICAL_ADDRESS address);
 
-	const char(*MemTypes)[16][27] = &mem_types;
-
 	UINTN m_memoryMapSize;
-	UINTN m_memoryMapMaxSize;
-	UINTN m_memoryMapDescriptorSize;
-	UINT32 m_memoryMapDescriptorVersion;
+	const UINTN m_memoryMapMaxSize;
+	const UINTN m_memoryMapDescriptorSize;
+	const UINT32 m_memoryMapDescriptorVersion;
 	EFI_MEMORY_DESCRIPTOR* m_memoryMap;
 };
 

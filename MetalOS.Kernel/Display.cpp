@@ -7,33 +7,36 @@
 //Hyper-V
 //PixelBlueGreenRedReserved8BitPerColor
 
-Display::Display(EFI_GRAPHICS_DEVICE& device) : Display(device, device.FrameBufferBase)
+Display::Display(const EFI_GRAPHICS_DEVICE& device) :
+	Display(device, device.FrameBufferBase)
 {
 
 }
 
-Display::Display(EFI_GRAPHICS_DEVICE& device, uintptr_t virtualAddress) : m_address(virtualAddress), m_device(device)
+Display::Display(const EFI_GRAPHICS_DEVICE& device, const uintptr_t virtualAddress) :
+	m_address(virtualAddress),
+	m_device(device)
 {
 
 }
 
-void Display::ColorScreen(Color color)
+void Display::ColorScreen(const Color color) const
 {
 	Rectangle rectangle;
 	rectangle.P1 = { 0, 0 };
 	rectangle.P2 = { m_device.HorizontalResolution, m_device.VerticalResolution };
-	this->ColorRectangle(color, &rectangle);
+	this->ColorRectangle(color, rectangle);
 }
 
 //This can definitely be done faster with memory ops
-void Display::ColorRectangle(Color color, Rectangle* region)
+void Display::ColorRectangle(const Color color, const Rectangle& region) const
 {
 	uint32_t* start = (uint32_t*)m_address;
 
 	//y * width + x
-	for (uint32_t x = region->P1.X; x < region->P2.X; x++)
+	for (uint32_t x = region.P1.X; x < region.P2.X; x++)
 	{
-		for (uint32_t y = region->P1.Y; y < region->P2.Y; y++)
+		for (uint32_t y = region.P1.Y; y < region.P2.Y; y++)
 		{
 			x = std::clamp(x, 0U, m_device.HorizontalResolution - 1);
 			y = std::clamp(y, 0U, m_device.VerticalResolution - 1);
@@ -43,7 +46,7 @@ void Display::ColorRectangle(Color color, Rectangle* region)
 	}
 }
 
-void Display::SetPixel(Color color, Point2D position)
+void Display::SetPixel(const Color color, const Point2D& position) const
 {
 	Assert(position.X < m_device.HorizontalResolution);
 	Assert(position.Y < m_device.VerticalResolution);
@@ -53,7 +56,7 @@ void Display::SetPixel(Color color, Point2D position)
 	*(Color*)cell = color;
 }
 
-Color Display::GetPixel(Point2D position)
+Color Display::GetPixel(const Point2D& position) const
 {
 	Assert(position.X < m_device.HorizontalResolution);
 	Assert(position.Y < m_device.VerticalResolution);

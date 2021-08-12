@@ -39,7 +39,7 @@ public:
 		m_driver = driver;
 	}
 
-	Driver* GetDriver()
+	Driver* GetDriver() const
 	{
 		return m_driver;
 	}

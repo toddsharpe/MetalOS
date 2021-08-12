@@ -7,24 +7,19 @@
 class TextScreen: public StringPrinter
 {
 public:
-	TextScreen(Display& display);
+	TextScreen(const Display& display, const Color color = Colors::White);
 
 	void Write(const char* string);
 
-	void ResetX();
-	void ResetY();
-
 private:
 	static constexpr size_t PixelScale = 10;
+	static constexpr size_t FontScale = 1;
 
-	void WriteCharacter(char c);
-	void AdvanceX();
-	void AdvanceY();
+	void WriteCharacter(const char c);
 
-	const uint8_t m_fontScale;
-	static const Color m_white;
 	Point2D m_position;
-	Display& m_display;
-	Font m_font;
+	const Font m_font;
+	const Color m_color;
+	const Display& m_display;
 };
 

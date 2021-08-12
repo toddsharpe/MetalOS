@@ -287,7 +287,7 @@ SystemCallResult Kernel::ReadFile(const Handle handle, void* buffer, const size_
 
 	FileHandle* file = (FileHandle*)handle;
 
-	bool result = this->ReadFile(file, buffer, bufferSize, bytesRead);
+	bool result = this->ReadFile(*file, buffer, bufferSize, bytesRead);
 	return result ? SystemCallResult::Success : SystemCallResult::Failed;
 }
 
@@ -324,7 +324,7 @@ SystemCallResult Kernel::SetFilePointer(const Handle handle, const __int64 posit
 		return SystemCallResult::Failed;
 	}
 
-	bool result = this->SetFilePosition(file, pos);
+	bool result = this->SetFilePosition(*file, pos);
 	if (result)
 	{
 		if (newPosition != nullptr)

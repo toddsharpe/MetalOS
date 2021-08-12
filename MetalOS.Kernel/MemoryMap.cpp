@@ -5,7 +5,27 @@
 #include "MetalOS.Kernel.h"
 #include "MemoryMap.h"
 
-MemoryMap::MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 MemoryMapDescriptorVersion, EFI_MEMORY_DESCRIPTOR* MemoryMap) :
+// https://dox.ipxe.org/UefiMultiPhase_8h.html
+const char MemoryMap::MemTypes[16][27] = {
+	  "EfiReservedMemoryType     ",
+	  "EfiLoaderCode             ",
+	  "EfiLoaderData             ",
+	  "EfiBootServicesCode       ",
+	  "EfiBootServicesData       ",
+	  "EfiRuntimeServicesCode    ",
+	  "EfiRuntimeServicesData    ",
+	  "EfiConventionalMemory     ",
+	  "EfiUnusableMemory         ",
+	  "EfiACPIReclaimMemory      ",
+	  "EfiACPIMemoryNVS          ",
+	  "EfiMemoryMappedIO         ",
+	  "EfiMemoryMappedIOPortSpace",
+	  "EfiPalCode                ",
+	  "EfiPersistentMemory       ",
+	  "EfiMaxMemoryType          "
+};
+
+MemoryMap::MemoryMap(const UINTN MemoryMapSize, const UINTN MemoryMapDescriptorSize, const UINT32 MemoryMapDescriptorVersion, const EFI_MEMORY_DESCRIPTOR& MemoryMap) :
 	m_memoryMapSize(MemoryMapSize),
 	m_memoryMapMaxSize(MemoryMapSize + BufferCount * MemoryMapDescriptorSize),
 	m_memoryMapDescriptorSize(MemoryMapDescriptorSize),
@@ -16,13 +36,10 @@ MemoryMap::MemoryMap(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, UINT32 
 	//Allocate copy of memory map
 	m_memoryMap = (EFI_MEMORY_DESCRIPTOR*)operator new(m_memoryMapMaxSize);
 	Assert(m_memoryMap);
-	memcpy(m_memoryMap, MemoryMap, MemoryMapSize);
-
-	//Update pointers
-
+	memcpy(m_memoryMap, &MemoryMap, MemoryMapSize);
 }
 
-void MemoryMap::ReclaimBootPages()
+void MemoryMap::ReclaimBootPages() const
 {
 	EFI_MEMORY_DESCRIPTOR* current;
 	for (current = m_memoryMap;
@@ -128,7 +145,7 @@ void MemoryMap::DumpMemoryMap()
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
 		const bool runtime = (current->Attribute & EFI_MEMORY_RUNTIME) != 0;
-		kernel.Printf("P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, (*MemTypes)[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
+		kernel.Printf("P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, MemTypes[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
 	}
 }
 

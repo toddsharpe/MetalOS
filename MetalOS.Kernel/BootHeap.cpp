@@ -11,7 +11,7 @@ BootHeap::BootHeap(const void* address, const size_t length) :
 
 }
 
-void* BootHeap::Allocate(size_t size)
+void* BootHeap::Allocate(const size_t size)
 {
 	Assert(m_watermark + size <= m_address + m_length);
 
@@ -21,7 +21,7 @@ void* BootHeap::Allocate(size_t size)
 }
 
 //Don't deallocate
-void BootHeap::Deallocate(void* address)
+void BootHeap::Deallocate(void* const address)
 {
 	Assert(false);
 }

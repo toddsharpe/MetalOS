@@ -136,7 +136,7 @@ const char font8x8_basic[128][8] = {
 class Font
 {
 public:
-	const char* GetCharacterMap(char c) const;
+	const char* GetCharacterMap(const char c) const;
 
 private:
 	const char(*FontMap)[128][8] = &font8x8_basic;

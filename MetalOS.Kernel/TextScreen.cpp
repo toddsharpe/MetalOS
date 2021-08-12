@@ -6,11 +6,13 @@
 
 #define PositionToPixelScale 10
 
-const Color TextScreen::m_white = { 0xFF, 0xFF, 0xFF, 0x00 };
-
-TextScreen::TextScreen(Display& display) : m_display(display), m_fontScale(1)
+TextScreen::TextScreen(const Display& display, const Color color) :
+	m_position(),
+	m_font(),
+	m_display(display),
+	m_color(color)
 {
-	m_position = { 0 };
+	
 }
 
 void TextScreen::Write(const char* text)
@@ -21,13 +23,13 @@ void TextScreen::Write(const char* text)
 	{
 		if (*text == '\n')
 		{
-			AdvanceY();
-			ResetX();
+			m_position.Y = (m_position.Y += PixelScale);
+			m_position.X = 0;
 		}
 		else if (*text != '\r')
 		{
 			WriteCharacter(*text);
-			AdvanceX();
+			m_position.X = (m_position.X += PixelScale);
 		}
 
 		text++;
@@ -35,7 +37,7 @@ void TextScreen::Write(const char* text)
 }
 
 //TODO: edgecases
-void TextScreen::WriteCharacter(char c)
+void TextScreen::WriteCharacter(const char c)
 {
 	const char* map = m_font.GetCharacterMap(c);
 	uint8_t size = 8; // TODO: get from font
@@ -52,14 +54,14 @@ void TextScreen::WriteCharacter(char c)
 			if ((line & mask) != 0)
 			{
 				Point2D origin;
-				origin.X = (m_position.X + (8 - x - 1)) * m_fontScale;
-				origin.Y = (m_position.Y + y) * m_fontScale;
+				origin.X = (m_position.X + (8 - x - 1)) * FontScale;
+				origin.Y = (m_position.Y + y) * FontScale;
 				
 				Rectangle rect;
 				rect.P1 = origin;
-				rect.P2.X = origin.X + m_fontScale;
-				rect.P2.Y = origin.Y + m_fontScale;
-				m_display.ColorRectangle(m_white, &rect);
+				rect.P2.X = origin.X + FontScale;
+				rect.P2.Y = origin.Y + FontScale;
+				m_display.ColorRectangle(Colors::White, rect);
 			}
 
 			mask = mask >> 1;
@@ -67,25 +69,4 @@ void TextScreen::WriteCharacter(char c)
 		}
 	}
 }
-
-void TextScreen::ResetX()
-{
-	m_position.X = 0;
-}
-
-void TextScreen::AdvanceY()
-{
-	m_position.Y = (m_position.Y += PixelScale);
-}
-
-void TextScreen::ResetY()
-{
-	m_position.Y = 0;
-}
-
-void TextScreen::AdvanceX()
-{
-	m_position.X = (m_position.X += PixelScale);
-}
-
 

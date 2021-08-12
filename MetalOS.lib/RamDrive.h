@@ -9,8 +9,9 @@
 class RamDrive
 {
 public:
-	static const size_t MAX_NAME = 28 - sizeof(size_t);
-	static const size_t MAX_ENTRIES = 128;
+	static const size_t EntrySize = 32;
+	static const size_t MAX_NAME = EntrySize - sizeof(uint32_t) - sizeof(size_t);
+	static const size_t MAX_ENTRIES = PAGE_SIZE / EntrySize;
 
 	struct Entry
 	{
@@ -18,9 +19,9 @@ public:
 		uint32_t PageNumber;
 		size_t Length;
 	};
-	static_assert(sizeof(Entry) == 32, "Invalid Entry size");
+	static_assert(sizeof(Entry) == EntrySize, "Invalid Entry size");
 
-	RamDrive(void* address, size_t size);
+	RamDrive(const void* address, const size_t size);
 	void Clear();
 	size_t FileCount();
 
@@ -35,15 +36,13 @@ private:
 
 	struct Superblock
 	{
-		Entry Entries[128];
+		Entry Entries[MAX_ENTRIES];
 	};
 	static_assert(sizeof(Superblock) == PAGE_SIZE, "Invalid superblock size");
 
 	uintptr_t m_address;
 	size_t m_size;
-
 	Superblock* m_superblock;
-
 	size_t m_pageWatermark;
 };
 

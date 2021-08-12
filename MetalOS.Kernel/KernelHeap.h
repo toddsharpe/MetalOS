@@ -14,13 +14,9 @@ public:
 
 	void PrintHeap() const;
 	void PrintHeapHeaders() const;
-	uint32_t GetAllocated() const
-	{
-		return m_allocated;
-	}
 
 	static const uint32_t MinBlockSize = 4;
-	static constexpr uint16_t Magic = 0xBEEF;
+	static const uint16_t Magic = 0xBEEF;
 
 private:
 	void Grow(size_t pages);

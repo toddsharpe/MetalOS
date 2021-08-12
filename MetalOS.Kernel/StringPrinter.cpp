@@ -11,7 +11,7 @@ void StringPrinter::Printf(const char* format, ...)
 	va_end(args);
 }
 
-void StringPrinter::Printf(const char* format, va_list args)
+void StringPrinter::Printf(const char* format, const va_list args)
 {
 	char buffer[255];
 

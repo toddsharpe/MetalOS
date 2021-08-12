@@ -1,8 +1,6 @@
 #include "Cpuid.h"
-
 #include <intrin.h>
 #include <cstdint>
-
 
 // On Intel 64 processors, CPUID clears the high 32 bits of the RAX/RBX/RCX/RDX registers in all modes.
 //https://docs.microsoft.com/en-us/cpp/intrinsics/cpuid-cpuidex?view=vs-2019

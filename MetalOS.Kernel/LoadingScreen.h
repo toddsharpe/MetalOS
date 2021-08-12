@@ -6,7 +6,7 @@
 class LoadingScreen
 {
 public:
-	LoadingScreen(Display& display);
+	LoadingScreen(const Display& display);
 	void Initialize();
 
 private:
@@ -24,7 +24,7 @@ private:
 	void DoFire();
 	void SpreadFire(Point2D point);
 
-	Display& m_display;
+	const Display& m_display;
 	Matrix<uint8_t> m_indexes;
 	Matrix<Color> m_buffer;
 };

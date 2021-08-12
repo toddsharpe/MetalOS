@@ -131,15 +131,14 @@ public:
 	__declspec(noreturn) static void UserThreadInitThunk();
 #pragma endregion
 
-#pragma region Kd
-	void KePauseSystem();
-	void KeResumeSystem();
+#pragma region Kernel Debugger
+	void KePauseSystem() const;
+	void KeResumeSystem() const;
 #pragma endregion
 
-
 #pragma region Kernel Interface
-	KThread* CreateKernelThread(ThreadStart start, void* arg);
-	void KernelThreadSleep(nano_t value);
+	KThread* CreateKernelThread(const ThreadStart start, void* arg);
+	void KernelThreadSleep(const nano_t value) const;
 	void ExitKernelThread();
 
 	Handle KeLoadLibrary(const std::string& path);
@@ -154,7 +153,7 @@ public:
 
 	void KeRegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
 
-	Device* GetDevice(const std::string path);
+	Device* GetDevice(const std::string path) const;
 
 	uint64_t Syscall(SystemCallFrame* frame);
 	bool IsValidUserPointer(const void* p);
@@ -162,9 +161,9 @@ public:
 #pragma endregion
 
 #pragma region File Interface
-	FileHandle* CreateFile(const std::string& path, GenericAccess access);
-	bool ReadFile(FileHandle* file, void* buffer, size_t bufferSize, size_t* bytesRead);
-	bool SetFilePosition(FileHandle* file, size_t position);
+	FileHandle* CreateFile(const std::string& path, const GenericAccess access) const;
+	bool ReadFile(FileHandle& file, void* buffer, size_t bufferSize, size_t* bytesRead);
+	bool SetFilePosition(FileHandle& file, const size_t position);
 	void CloseFile(FileHandle* file);
 #pragma endregion
 

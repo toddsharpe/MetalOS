@@ -7,7 +7,7 @@
 class FireScreen
 {
 public:
-	FireScreen(size_t height, size_t width);
+	FireScreen(const size_t height, const size_t width);
 
 	void Initialize();
 	void Update();

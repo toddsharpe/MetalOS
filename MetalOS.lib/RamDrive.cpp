@@ -1,7 +1,7 @@
 #include "RamDrive.h"
 #include "crt_string.h"
 
-RamDrive::RamDrive(void* address, size_t size) :
+RamDrive::RamDrive(const void* address, const size_t size) :
 	m_address((uintptr_t)address),
 	m_size(size),
 	m_superblock((Superblock*)address),
@@ -53,7 +53,7 @@ bool RamDrive::Open(const char* name, void*& address, size_t& length)
 	if (!GetFileIndex(name, index))
 		return false;
 
-	Entry& entry = m_superblock->Entries[index];
+	const Entry& entry = m_superblock->Entries[index];
 	length = entry.Length;
 	address = (void*)(m_address + (entry.PageNumber << PAGE_SHIFT));
 	return true;

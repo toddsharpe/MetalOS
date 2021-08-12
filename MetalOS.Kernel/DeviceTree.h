@@ -15,10 +15,10 @@ public:
 	
 	void Display() const;
 
-	bool GetDeviceByHid(const std::string& hid, Device** device);
-	bool GetDeviceByName(const std::string& name, Device** device);
-	Device* GetDeviceByType(DeviceType type);
-	Device* GetDevice(const std::string& path);
+	Device* GetDeviceByHid(const std::string& hid) const;
+	Device* GetDeviceByName(const std::string& name) const;
+	Device* GetDeviceByType(const DeviceType type) const;
+	Device* GetDevice(const std::string& path) const;
 
 private:
 	static ACPI_STATUS AddAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue);

@@ -37,7 +37,7 @@ void Print(const char* format, va_list args)
 	kernel.Printf(format, args);
 }
 
-void* operator new(size_t n)
+void* operator new(const size_t n)
 {
 	uintptr_t callerAddress = (uintptr_t)_ReturnAddress();
 	if (kernel.IsHeapInitialized())
@@ -46,7 +46,7 @@ void* operator new(size_t n)
 		return (void*)bootHeap.Allocate(n);
 }
 
-void operator delete(void* p)
+void operator delete(void* const p)
 {
 	if (kernel.IsHeapInitialized())
 		kernel.Deallocate(p);

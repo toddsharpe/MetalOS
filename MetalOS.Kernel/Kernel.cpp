@@ -98,7 +98,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_printer = m_textScreen;
 
 	//Initialize and process memory map
-	m_memoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, params->MemoryMap);
+	m_memoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, *params->MemoryMap);
 	m_memoryMap->ReclaimBootPages();
 	m_memoryMap->MergeConventionalPages();
 
@@ -205,8 +205,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 		m_deviceTree.AddRootDevice(*new SoftwareDevice(RamDriveHid, (void*)ramDriveAddress));
 
 	//Swap output to uart
-	Device* com1;
-	Assert(m_deviceTree.GetDeviceByName("COM1", &com1));
+	Device* com1 = m_deviceTree.GetDeviceByName("COM1");
+	Assert(com1 != nullptr);
 	this->m_printer = ((UartDriver*)com1->GetDriver());
 
 	//Output full current state
@@ -480,10 +480,10 @@ void Kernel::OnTimer0()
 		m_scheduler->Schedule();
 }
 
-KThread* Kernel::CreateKernelThread(ThreadStart start, void* arg)
+KThread* Kernel::CreateKernelThread(const ThreadStart start, void* arg)
 {
 	//Current thread
-	KThread* current = m_scheduler->GetCurrentThread();
+	const KThread* current = m_scheduler->GetCurrentThread();
 	Print("CreateThread - Id: 0x%x\n", current->GetId());
 	
 	//Add kernel thread
@@ -544,22 +544,22 @@ const KeLibrary* Kernel::KeGetModule(const std::string& path)
 
 void Kernel::KernelThreadInitThunk()
 {
-	Print("Kernel::KernelThreadInitThunk\n");
+	kernel.Printf("Kernel::KernelThreadInitThunk\n");
 	KThread* current = kernel.m_scheduler->GetCurrentThread();
 	current->Display();
 	
 	//Run thread
 	current->Run();
-	Print("Kill thread: %d\n", current->GetId());
+	kernel.Printf("Kill thread: %d\n", current->GetId());
 
 	//Exit thread TODO
 	kernel.ExitKernelThread();
-	ArchWait();
+	Assert(false);
 }
 
 void Kernel::UserThreadInitThunk()
 {
-	Print("Kernel::UserThreadInitThunk\n");
+	kernel.Printf("Kernel::UserThreadInitThunk\n");
 	KThread* current = kernel.m_scheduler->GetCurrentThread();
 	current->Display();
 
@@ -570,9 +570,11 @@ void Kernel::UserThreadInitThunk()
 	user->GetProcess().DisplayDetails();
 	ArchSetInterruptStack(current->GetStackPointer());
 	user->Run();
+
+	Assert(false);
 }
 
-void Kernel::KernelThreadSleep(nano_t value)
+void Kernel::KernelThreadSleep(const nano_t value) const
 {
 	m_scheduler->Sleep(value);
 }
@@ -698,7 +700,7 @@ void* Kernel::VirtualMap(const void* address, const std::vector<paddr_t>& addres
 	return m_virtualMemory->VirtualMap((uintptr_t)address, addresses, protection, *m_runtimeSpace);
 }
 
-Device* Kernel::GetDevice(const std::string path)
+Device* Kernel::GetDevice(const std::string path) const
 {
 	return m_deviceTree.GetDevice(path);
 }
@@ -709,39 +711,41 @@ void* Kernel::KeLoadPdb(const std::string& path)
 	Assert(file);
 	
 	void* address = AllocatePdb(SIZE_TO_PAGES(file->Length));
-	bool success = ReadFile(file, address, file->Length, nullptr);
+	bool success = ReadFile(*file, address, file->Length, nullptr);
 	Assert(success);
 	CloseFile(file);
 
 	return address;
 }
 
-FileHandle* Kernel::CreateFile(const std::string& path, GenericAccess access)
+FileHandle* Kernel::CreateFile(const std::string& path, const GenericAccess access) const
 {
-	Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
-	RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
+	const Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
+	const RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
 
 	FileHandle* handle = hdd->OpenFile(path, access);
 	return handle;
 }
 
-bool Kernel::ReadFile(FileHandle* file, void* buffer, size_t bufferSize, size_t* bytesRead)
+bool Kernel::ReadFile(FileHandle& file, void* buffer, size_t bufferSize, size_t* bytesRead)
 {
-	Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
-	RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
+	const Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
+	const RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
 
-	size_t read = hdd->ReadFile(file, buffer, bufferSize);;
+	const size_t read = hdd->ReadFile(file, buffer, bufferSize);
+	file.Position += read;
+
 	if (bytesRead != nullptr)
 		*bytesRead = read;
 	return true;
 }
 
-bool Kernel::SetFilePosition(FileHandle* file, size_t position)
+bool Kernel::SetFilePosition(FileHandle& file, const size_t position)
 {
-	if (position >= file->Length)
+	if (position >= file.Length)
 		return false;
 
-	file->Position = position;
+	file.Position = position;
 	return true;
 }
 
@@ -760,14 +764,14 @@ bool Kernel::CreateProcess(const std::string& path)
 
 	//Dos header
 	IMAGE_DOS_HEADER dosHeader;
-	Assert(ReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
+	Assert(ReadFile(*file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
 	Assert(read == sizeof(IMAGE_DOS_HEADER));
 	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 	//NT Header
 	IMAGE_NT_HEADERS64 peHeader;
-	Assert(SetFilePosition(file, dosHeader.e_lfanew));
-	Assert(ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
+	Assert(SetFilePosition(*file, dosHeader.e_lfanew));
+	Assert(ReadFile(*file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
 	Assert(read == sizeof(IMAGE_NT_HEADERS64));
 
 	//Verify image
@@ -795,8 +799,8 @@ bool Kernel::CreateProcess(const std::string& path)
 	process->AddModule(path.c_str(), address);
 
 	//Read headers
-	Assert(SetFilePosition(file, 0));
-	Assert(ReadFile(file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
+	Assert(SetFilePosition(*file, 0));
+	Assert(ReadFile(*file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	Assert(read == peHeader.OptionalHeader.SizeOfHeaders);
 
 	PIMAGE_NT_HEADERS64 pNtHeader = MakePtr(PIMAGE_NT_HEADERS64, address, dosHeader.e_lfanew);
@@ -811,8 +815,8 @@ bool Kernel::CreateProcess(const std::string& path)
 		DWORD rawSize = section[i].SizeOfRawData;
 		if (rawSize != 0)
 		{
-			Assert(SetFilePosition(file, section[i].PointerToRawData));
-			Assert(ReadFile(file, (void*)destination, rawSize, &read));
+			Assert(SetFilePosition(*file, section[i].PointerToRawData));
+			Assert(ReadFile(*file, (void*)destination, rawSize, &read));
 			Assert(read == section[i].SizeOfRawData);
 		}
 	}
@@ -876,16 +880,16 @@ bool Kernel::IsValidUserPointer(const void* p)
 	return process.GetAddressSpace().IsValidPointer(p);
 }
 
-void Kernel::KePauseSystem()
+void Kernel::KePauseSystem() const
 {
 	ArchDisableInterrupts();
 	m_scheduler->Enabled = false;
 	//m_timer->Disable();
 }
 
-void Kernel::KeResumeSystem()
+void Kernel::KeResumeSystem() const
 {
-	ArchEnableInterrupts();
 	m_scheduler->Enabled = true;
+	ArchEnableInterrupts();
 	//m_timer->enable();
 }

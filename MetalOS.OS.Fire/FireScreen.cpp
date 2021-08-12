@@ -43,7 +43,7 @@ const Color FireScreen::FireColors[] =
 	{ 0xFF, 0xFF, 0xFF, 0x00},
 };
 
-FireScreen::FireScreen(size_t height, size_t width) :
+FireScreen::FireScreen(const size_t height, const size_t width) :
 	m_indexes(height / PixelSize, width / PixelSize),
 	m_buffer(height, width)
 {

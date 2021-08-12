@@ -46,7 +46,7 @@ const Color LoadingScreen::FireColors[] =
 	{ 0xFF, 0xFF, 0xFF, 0x00},
 };
 
-LoadingScreen::LoadingScreen(Display& display) :
+LoadingScreen::LoadingScreen(const Display& display) :
 	m_display(display),
 	m_indexes(display.GetHeight() / PixelSize, display.GetWidth() / PixelSize),
 	m_buffer(display.GetHeight(), display.GetWidth())
@@ -73,7 +73,7 @@ void LoadingScreen::Initialize()
 	Draw();
 
 	//Create thread
-	kernel.CreateKernelThread(LoadingScreen::ThreadLoop, this);
+	kernel.CreateKernelThread(&LoadingScreen::ThreadLoop, this);
 }
 
 void LoadingScreen::Update()

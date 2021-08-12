@@ -8,18 +8,21 @@ template<class T>
 class Matrix
 {
 public:
-	Matrix(size_t M, size_t N) : m_height(M), m_width(N), m_backing(new T[N * M * sizeof(T)])
+	Matrix(const size_t M, const size_t N) :
+		m_height(M),
+		m_width(N),
+		m_backing(new T[N * M * sizeof(T)])
 	{
 		Assert(m_backing);
 	}
 
-	void Set(Point2D p, T value)
+	void Set(const Point2D p, const T value) const
 	{
 		const size_t index = GetIndex(p);
 		m_backing[index] = value;
 	}
 
-	T Get(Point2D p) const
+	T Get(const Point2D p) const
 	{
 		const size_t index = GetIndex(p);
 		return m_backing[index];
@@ -35,25 +38,25 @@ public:
 		return m_width;
 	}
 
-	T* Buffer() const
+	T* const Buffer() const
 	{
 		return m_backing;
 	}
 
-	size_t Size()
+	size_t Size() const
 	{
 		return m_height * m_width * sizeof(T);
 	}
 
 private:
-	constexpr size_t GetIndex(Point2D p) const
+	constexpr size_t GetIndex(const Point2D p) const
 	{
 		Assert(p.Y < m_height);
 		Assert(p.X < m_width);
 		return p.Y * m_width + p.X;
 	}
 
-	size_t m_height;
-	size_t m_width;
-	T* m_backing;
+	const size_t m_height;
+	const size_t m_width;
+	T* const m_backing;
 };

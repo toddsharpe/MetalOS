@@ -9,15 +9,15 @@
 class Display
 {
 public:
-	Display(EFI_GRAPHICS_DEVICE& device);
-	Display(EFI_GRAPHICS_DEVICE& device, uintptr_t virtualAddress);
+	Display(const EFI_GRAPHICS_DEVICE& device);
+	Display(const EFI_GRAPHICS_DEVICE& device, const uintptr_t virtualAddress);
 	::NO_COPY_OR_ASSIGN(Display);
 
-	void ColorScreen(Color color);
-	void ColorRectangle(Color color, Rectangle* region);
+	void ColorScreen(const Color color) const;
+	void ColorRectangle(const Color color, const Rectangle& region) const;
 
-	void SetPixel(Color color, Point2D position);
-	Color GetPixel(Point2D position);
+	void SetPixel(const Color color, const Point2D& position) const;
+	Color GetPixel(const Point2D& position) const;
 
 	uint32_t GetWidth() const
 	{
@@ -35,7 +35,7 @@ public:
 	}
 
 private:
-	uintptr_t m_address;
-	EFI_GRAPHICS_DEVICE m_device;
+	const uintptr_t m_address;
+	const EFI_GRAPHICS_DEVICE m_device;
 };
 

@@ -158,7 +158,7 @@ void DeviceTree::Display() const
 	this->m_root->Display();
 }
 
-bool DeviceTree::GetDeviceByHid(const std::string& hid, Device** device)
+Device* DeviceTree::GetDeviceByHid(const std::string& hid) const
 {
 	std::stack<Device*> stack;
 	stack.push(m_root);
@@ -169,18 +169,16 @@ bool DeviceTree::GetDeviceByHid(const std::string& hid, Device** device)
 		stack.pop();
 
 		if (current->GetHid() == hid)
-		{
-			*device = current;
-			return true;
-		}
+			return current;
 
 		for (auto& child : current->GetChildren())
 			stack.push(child);
 	}
 
-	return false;
+	return nullptr;
 }
-bool DeviceTree::GetDeviceByName(const std::string& name, Device** device)
+
+Device* DeviceTree::GetDeviceByName(const std::string& name) const
 {
 	std::stack<Device*> stack;
 	stack.push(m_root);
@@ -191,19 +189,16 @@ bool DeviceTree::GetDeviceByName(const std::string& name, Device** device)
 		stack.pop();
 
 		if (current->Name == name)
-		{
-			*device = current;
-			return true;
-		}
+			return current;
 
 		for (auto& child : current->GetChildren())
 			stack.push(child);
 	}
 
-	return false;
+	return nullptr;
 }
 
-Device* DeviceTree::GetDeviceByType(DeviceType type)
+Device* DeviceTree::GetDeviceByType(const DeviceType type) const
 {
 	std::stack<Device*> stack;
 	stack.push(m_root);
@@ -214,9 +209,7 @@ Device* DeviceTree::GetDeviceByType(DeviceType type)
 		stack.pop();
 
 		if (current->Type == type)
-		{
 			return current;
-		}
 
 		for (auto& child : current->GetChildren())
 			stack.push(child);
@@ -226,7 +219,7 @@ Device* DeviceTree::GetDeviceByType(DeviceType type)
 }
 
 //This could be smarter and split the path to search. For now just DFS
-Device* DeviceTree::GetDevice(const std::string& path)
+Device* DeviceTree::GetDevice(const std::string& path) const
 {
 	std::stack<Device*> stack;
 	stack.push(m_root);
@@ -237,9 +230,7 @@ Device* DeviceTree::GetDevice(const std::string& path)
 		stack.pop();
 
 		if (current->Path == path)
-		{
 			return current;
-		}
 
 		for (auto& child : current->GetChildren())
 			stack.push(child);

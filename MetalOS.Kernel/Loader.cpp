@@ -15,14 +15,14 @@ Handle Loader::LoadKernelLibrary(const std::string& path)
 
 	//Dos header
 	IMAGE_DOS_HEADER dosHeader;
-	Assert(kernel.ReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
+	Assert(kernel.ReadFile(*file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
 	Assert(read == sizeof(IMAGE_DOS_HEADER));
 	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 	//NT Header
 	IMAGE_NT_HEADERS peHeader;
-	Assert(kernel.SetFilePosition(file, dosHeader.e_lfanew));
-	Assert(kernel.ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
+	Assert(kernel.SetFilePosition(*file, dosHeader.e_lfanew));
+	Assert(kernel.ReadFile(*file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
 	Assert(read == sizeof(IMAGE_NT_HEADERS));
 
 	//Verify image
@@ -38,8 +38,8 @@ Handle Loader::LoadKernelLibrary(const std::string& path)
 	Assert(address);
 
 	//Read headers
-	Assert(kernel.SetFilePosition(file, 0));
-	Assert(kernel.ReadFile(file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
+	Assert(kernel.SetFilePosition(*file, 0));
+	Assert(kernel.ReadFile(*file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	Assert(read == peHeader.OptionalHeader.SizeOfHeaders);
 
 	PIMAGE_NT_HEADERS pNtHeader = MakePtr(PIMAGE_NT_HEADERS, address, dosHeader.e_lfanew);
@@ -54,8 +54,8 @@ Handle Loader::LoadKernelLibrary(const std::string& path)
 		DWORD rawSize = section[i].SizeOfRawData;
 		if (rawSize != 0)
 		{
-			Assert(kernel.SetFilePosition(file, section[i].PointerToRawData));
-			Assert(kernel.ReadFile(file, (void*)destination, rawSize, &read));
+			Assert(kernel.SetFilePosition(*file, section[i].PointerToRawData));
+			Assert(kernel.ReadFile(*file, (void*)destination, rawSize, &read));
 			Assert(read == section[i].SizeOfRawData);
 		}
 	}
@@ -78,14 +78,14 @@ Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 
 	//Dos header
 	IMAGE_DOS_HEADER dosHeader;
-	Assert(kernel.ReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
+	Assert(kernel.ReadFile(*file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
 	Assert(read == sizeof(IMAGE_DOS_HEADER));
 	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 	//NT Header
 	IMAGE_NT_HEADERS peHeader;
-	Assert(kernel.SetFilePosition(file, dosHeader.e_lfanew));
-	Assert(kernel.ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
+	Assert(kernel.SetFilePosition(*file, dosHeader.e_lfanew));
+	Assert(kernel.ReadFile(*file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
 	Assert(read == sizeof(IMAGE_NT_HEADERS));
 
 	//Verify image
@@ -101,8 +101,8 @@ Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 	Assert(address);
 	
 	//Read headers
-	Assert(kernel.SetFilePosition(file, 0));
-	Assert(kernel.ReadFile(file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
+	Assert(kernel.SetFilePosition(*file, 0));
+	Assert(kernel.ReadFile(*file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	Assert(read == peHeader.OptionalHeader.SizeOfHeaders);
 
 	Assert((uintptr_t)address == peHeader.OptionalHeader.ImageBase);
@@ -119,8 +119,8 @@ Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 		DWORD rawSize = section[i].SizeOfRawData;
 		if (rawSize != 0)
 		{
-			Assert(kernel.SetFilePosition(file, section[i].PointerToRawData));
-			Assert(kernel.ReadFile(file, (void*)destination, rawSize, &read));
+			Assert(kernel.SetFilePosition(*file, section[i].PointerToRawData));
+			Assert(kernel.ReadFile(*file, (void*)destination, rawSize, &read));
 			Assert(read == section[i].SizeOfRawData);
 		}
 	}

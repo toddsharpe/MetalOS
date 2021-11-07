@@ -820,6 +820,7 @@ bool Kernel::CreateProcess(const std::string& path)
 			Assert(read == section[i].SizeOfRawData);
 		}
 	}
+	CloseFile(file);
 
 	//Load KernelAPI
 	Handle api = Loader::LoadLibrary(*process, "mosrt.dll");

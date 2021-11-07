@@ -16,7 +16,7 @@ void SoftwareDevice::Initialize()
 
 const void* SoftwareDevice::GetResource(uint32_t type) const
 {
-	ResourceType t = (ResourceType)type;
+	const ResourceType t = (ResourceType)type;
 	switch (t)
 	{
 	case ResourceType::Context:

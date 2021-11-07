@@ -71,11 +71,6 @@ void Debugger::AddModule(KeLibrary& library)
 {
 	LDR_DATA_TABLE_ENTRY* entry = new LDR_DATA_TABLE_ENTRY();
 
-	entry->InMemoryOrderLinks.Blink = (LIST_ENTRY*)0x1000;
-	entry->InMemoryOrderLinks.Flink = (LIST_ENTRY*)0x1100;
-	entry->InInitializationOrderLinks.Flink = (LIST_ENTRY*)0x1100;
-	entry->InInitializationOrderLinks.Blink = (LIST_ENTRY*)0x1100;
-
 	entry->DllBase = (void*)library.Handle;
 	entry->EntryPoint = (void*)((uintptr_t)library.Handle + PortableExecutable::GetEntryPoint(library.Handle));
 	entry->SizeOfImage = PortableExecutable::GetSizeOfImage(library.Handle);

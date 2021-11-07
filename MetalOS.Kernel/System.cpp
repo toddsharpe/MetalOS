@@ -31,7 +31,7 @@ UINTN System::GetInstalledSystemRam()
 
 	while (header < end)
 	{
-		if (header->Type == 17)
+		if (header->Type == SMBIOS_TYPE_MEMORY_DEVICE)
 		{
 			UINT16 socketSize = ((SMBIOS_TABLE_TYPE17*)header)->Size;
 			if (socketSize == 0x7FFF)

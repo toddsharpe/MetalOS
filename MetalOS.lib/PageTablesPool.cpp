@@ -41,7 +41,7 @@ bool PageTablesPool::AllocatePage(uint64_t* addressOut)
 
 bool PageTablesPool::DeallocatePage(uint64_t address)
 {
-	uint32_t relative = (address - m_physicalAddress);
+	uint64_t relative = (address - m_physicalAddress);
 	if (relative % PAGE_SIZE != 0)
 		return false;
 	

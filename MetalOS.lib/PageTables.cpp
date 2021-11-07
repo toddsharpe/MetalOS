@@ -240,6 +240,8 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bo
 	l1[l1Index].ReadWrite = true;
 	l1[l1Index].UserSupervisor = !global;//TODO: make this false
 	l1[l1Index].Global = global;
+
+	return true;
 }
 
 uintptr_t PageTables::ResolveAddress(uintptr_t virtualAddress)

@@ -56,8 +56,8 @@ MsfFile::MsfFile(uintptr_t base) :
 	m_streams.reserve(numStreams);
 	for (const auto& stream : streams)
 	{
-		MsfStream stream(stream.BlockNumbers, stream.Size, *this);
-		m_streams.push_back(stream);
+		MsfStream msfStream(stream.BlockNumbers, stream.Size, *this);
+		m_streams.push_back(msfStream);
 	}
 }
 

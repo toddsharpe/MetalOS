@@ -3,6 +3,20 @@
 ## Introduction
 MetalOS is homebrew operating system for x86-64. It is 64-bit only and has only been tested in Hyper-V Gen2.
 
+## Building
+1. Open solution file in VS and build all
+2. Run ``.\scripts\build_vhd.cmd`` to build ``.\out\MetalOS.vhdx``
+3. Create a new VM in ``Hyper-V Manager``, Gen2, reference the build ``vhdx``, disable secure boot.
+4. Turn on Com ports:
+```
+Get-VMComPort -VMName MetalOS
+Set-VMComPort -VMName MetalOS -Path \\.\pipe\metalos_com1 -Number 1 
+Set-VMComPort -VMName MetalOS -Path \\.\pipe\metalos_com2 -Number 2 
+Get-VMComPort -VMName MetalOS
+```
+5. If theres a weird access error fix ``icacls`` in ``.\scripts\build_vhd.cmd``
+
+
 ### Project Goals
 * Run DOOM!
 * 48-bit canonical virtual address space (not identity paging)

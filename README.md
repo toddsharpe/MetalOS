@@ -4,7 +4,10 @@
 MetalOS is homebrew operating system for x86-64. It is 64-bit only and has only been tested in Hyper-V Gen2.
 
 ## Building
-1. Open solution file in VS and build all
+1. Open solution file in VS and build all or open VS 2022 Native x64 command promot and run
+```
+msbuild MetalOS.sln /p:Configuration=Debug /p:Platform=x64 -t:rebuild
+```
 2. Run ``.\scripts\build_vhd.cmd`` to build ``.\out\MetalOS.vhdx``
 3. Create a new VM in ``Hyper-V Manager``, Gen2, reference the build ``vhdx``, disable secure boot.
 4. Turn on Com ports:

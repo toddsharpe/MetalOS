@@ -1,5 +1,6 @@
 #include "crt_stdio.h"
 #include <stdint.h>
+#include "crt_string.h"
 
 //Internal protypes
 int kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int radix, va_list ap);
@@ -7,7 +8,6 @@ char* ksprintn(char* nbuf, uintmax_t num, int base, int* len, int upper);
 
 //TODO: convert/rewrite these routines, or at lease source them
 
-#define NULL 0
 #define NBBY    8               /* number of bits in a byte */
 /* Max number conversion buffer length: an unsigned long long int in base 2, plus NUL byte. */
 #define MAXNBUF	(sizeof(intmax_t) * NBBY + 1)
@@ -81,7 +81,7 @@ char* ksprintn(char* nbuf, uintmax_t num, int base, int* lenp, int upper)
 		*++p = upper ? toupper(c) : c;
 	} while (num /= base);
 	if (lenp)
-		* lenp = p - nbuf;
+		* lenp = (int)(p - nbuf);
 	return (p);
 }
 
@@ -289,7 +289,7 @@ int kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int radix, va
 		if (p == NULL)
 			p = "(null)";
 		if (!dot)
-			n = strlen(p);
+			n = (int)strlen(p);
 		else
 			for (n = 0; n < dwidth && p[n]; n++)
 				continue;
@@ -416,7 +416,7 @@ int kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int radix, va
 			tmp = retval;
 			while (*q) {
 				n = *q++;
-				if (num & (1 << (n - 1))) {
+				if (num & (1ll << ((uintmax_t)n - 1))) {
 					PCHAR(retval != tmp ?
 						',' : '<');
 					for (; (n = *q) > ' '; ++q)

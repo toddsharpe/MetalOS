@@ -11,11 +11,11 @@ int wcscmp(const CHAR16* str1, const CHAR16* str2)
 	return *(uint16_t*)str1 - *(uint16_t*)str2;
 }
 
-uint32_t wcscpy(CHAR16* dest, const CHAR16* source)
+CHAR16* wcscpy(CHAR16* dest, const CHAR16* source)
 {
 	size_t length = wcslen(source);
 	memcpy(dest, source, length * sizeof(CHAR16));
-	return length;
+	return dest;
 }
 
 size_t wcslen(const CHAR16* str)
@@ -54,7 +54,6 @@ CHAR16* kswprintn(CHAR16* nbuf, uintmax_t num, int base, int* len, int upper);
 
 //TODO: convert/rewrite these routines, or at lease source them
 
-#define NULL 0
 #define NBBY    8               /* number of bits in a byte */
 /* Max number conversion buffer length: an unsigned long long int in base 2, plus NUL byte. */
 #define MAXNBUF	(sizeof(intmax_t) * NBBY + 1)
@@ -109,7 +108,7 @@ CHAR16* kswprintn(CHAR16* nbuf, uintmax_t num, int base, int* lenp, int upper)
 		*++p = upper ? toupper(c) : c;
 	} while (num /= base);
 	if (lenp)
-		* lenp = p - nbuf;
+		* lenp = (int)(p - nbuf);
 	return (p);
 }
 
@@ -242,8 +241,8 @@ int kvwprintf(CHAR16 const* fmt, void (*func)(int, void*), void* arg, int radix,
 				PCHAR(padc);
 		break;
 	case L'D':
-		up = va_arg(ap, unsigned char*);
-		p = va_arg(ap, char*);
+		up = va_arg(ap, CHAR16*);
+		p = va_arg(ap, CHAR16*);
 		if (!width)
 			width = 16;
 		while (width--) {
@@ -317,7 +316,7 @@ int kvwprintf(CHAR16 const* fmt, void (*func)(int, void*), void* arg, int radix,
 		if (p == NULL)
 			p = L"(null)";
 		if (!dot)
-			n = wcslen(p);
+			n = (int)wcslen(p);
 		else
 			for (n = 0; n < dwidth && p[n]; n++)
 				continue;
@@ -444,7 +443,7 @@ int kvwprintf(CHAR16 const* fmt, void (*func)(int, void*), void* arg, int radix,
 			tmp = retval;
 			while (*q) {
 				n = *q++;
-				if (num & (1 << (n - 1))) {
+				if (num & (1ll << ((uintmax_t)n - 1))) {
 					PCHAR(retval != tmp ?
 						L',' : L'<');
 					for (; (n = *q) > L' '; ++q)

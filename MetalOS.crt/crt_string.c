@@ -90,7 +90,7 @@ void* memmove(void* _Dst, void const* _Src, size_t _Size)
 
 	uint8_t* dest_8 = (uint8_t*)_Dst;
 	const uint8_t* source_8 = (uint8_t*)_Src;
-	for (int i = _Size - 1; i >= 0; i--)
+	for (int i = (int)_Size - 1; i >= 0; i--)
 	{
 		dest_8[i] = source_8[i];
 	}
@@ -218,7 +218,7 @@ char* strncpy(char* _Destination, char const* _Source, size_t _Count)
 
 const char* strstr(char const* _String, char const* _SubString)
 {
-	char* s = _String;
+	const char* s = _String;
 	size_t length = strlen(_SubString);
 	if (!length)
 	{

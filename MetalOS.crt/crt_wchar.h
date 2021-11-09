@@ -14,7 +14,7 @@ typedef uint16_t CHAR16;
 
 //Wide String
 LIBRARY int wcscmp(const CHAR16* str1, const CHAR16* str2);
-LIBRARY uint32_t wcscpy(CHAR16* dest, const CHAR16* source);
+LIBRARY CHAR16* wcscpy(CHAR16* dest, const CHAR16* source);
 LIBRARY size_t wcslen(const CHAR16* str);
 LIBRARY uint32_t wcsncpy(CHAR16* dest, const CHAR16* source, uint32_t num);
 LIBRARY void wcsrev(CHAR16* str); //Bonus function not in crt

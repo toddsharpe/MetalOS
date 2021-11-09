@@ -31,6 +31,7 @@ xcopy %BUILD_OUT%\mosrt.dll X:\EFI\BOOT\
 
 @rem Copy Doom!!!
 xcopy %BUILD_OUT%\doom.exe X:\EFI\BOOT\
+@rem xcopy "C:\Program Files (x86)\Steam\steamapps\common\Doom 2\base\DOOM2.WAD" X:\EFI\BOOT\doom2.wad
 xcopy "C:\Program Files (x86)\Steam\steamapps\common\Ultimate Doom\base\DOOM.WAD" X:\EFI\BOOT\
 xcopy "C:\Program Files (x86)\Steam\steamapps\common\Ultimate Doom\base\DEFAULT.CFG" X:\EFI\BOOT\
 
@@ -47,4 +48,4 @@ diskpart /s %VHD_SCRIPT%
 
 @rem Fix Perms
 @rem Get-VM 'MetalOS' | Select-Object VMID
-icacls %VHD% /grant ee572dc7-71d5-4787-a3e2-91738eb43faa:F
+icacls %VHD% /grant d799fb2a-a645-4bdb-9087-52afc1dc2604:F

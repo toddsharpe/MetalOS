@@ -17,19 +17,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{4F1726A7-E0E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{35DFADE8-8138-4EAD-8722-B29DE8093465}"
 	ProjectSection(SolutionItems) = preProject
-		build_vhd.cmd = build_vhd.cmd
-		debug_com2.ps1 = debug_com2.ps1
-		mount_vhd.cmd = mount_vhd.cmd
-		read_com1.ps1 = read_com1.ps1
-		unmount_vhd.cmd = unmount_vhd.cmd
+		scripts\build_vhd.cmd = scripts\build_vhd.cmd
+		scripts\debug_com2.ps1 = scripts\debug_com2.ps1
+		scripts\mount_vhd.cmd = scripts\mount_vhd.cmd
+		scripts\read_com1.ps1 = scripts\read_com1.ps1
+		scripts\unmount_vhd.cmd = scripts\unmount_vhd.cmd
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Screenshots", "Screenshots", "{946995FC-A745-4A79-8C0E-DF7AD027EB94}"
 	ProjectSection(SolutionItems) = preProject
-		Screenshots\ConfigTables.PNG = Screenshots\ConfigTables.PNG
-		Screenshots\GDT_Dump.PNG = Screenshots\GDT_Dump.PNG
-		Screenshots\kernel_memory_map_kernelmode.PNG = Screenshots\kernel_memory_map_kernelmode.PNG
-		Screenshots\Kernel_MemoryMap.PNG = Screenshots\Kernel_MemoryMap.PNG
+		_Screenshots\ConfigTables.PNG = _Screenshots\ConfigTables.PNG
+		_Screenshots\GDT_Dump.PNG = _Screenshots\GDT_Dump.PNG
+		_Screenshots\kernel_memory_map_kernelmode.PNG = _Screenshots\kernel_memory_map_kernelmode.PNG
+		_Screenshots\Kernel_MemoryMap.PNG = _Screenshots\Kernel_MemoryMap.PNG
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MetalOS.Acpi", "MetalOS.Acpi\MetalOS.Acpi.vcxproj", "{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}"

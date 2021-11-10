@@ -57,7 +57,7 @@ int fseek(FILE* _Stream, long _Offset, int _Origin)
 	size_t newPos;
 
 	SystemCallResult result = (SystemCallResult)SetFilePointer(_Stream, _Offset, move, &newPos);
-	return newPos;
+	return (int)newPos;
 }
 
 LIBRARY int ftell(FILE* _Stream)
@@ -82,7 +82,7 @@ int fprintf(FILE* const _Stream, char const* const _Format, ...)
 	va_end(args);
 
 	DebugPrint(buffer);
-	return strlen(buffer);
+	return (int)strlen(buffer);
 }
 
 int rename(char const* _OldFileName, char const* _NewFileName)

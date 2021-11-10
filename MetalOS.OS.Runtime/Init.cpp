@@ -1,5 +1,5 @@
 #include <MetalOS.h>
-#include <string.h>
+#include "string.h"
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include "Runtime.h"

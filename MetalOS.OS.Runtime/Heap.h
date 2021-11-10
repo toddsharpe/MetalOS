@@ -23,6 +23,8 @@ private:
 	}
 
 	//TODO: double linked list implementation without size
+#pragma warning(push)
+#pragma warning(disable : 4200)
 	struct HeapBlock
 	{
 		HeapBlock* Next;
@@ -41,6 +43,7 @@ private:
 		}
 	};
 	static_assert(sizeof(HeapBlock) == 16, "Heap block has changed");
+#pragma warning(pop)
 
 	size_t m_size;
 	void* m_address;

@@ -25,7 +25,7 @@ PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name)
 	return nullptr;
 }
 
-extern "C" Handle LoadLibrary(const char* lpLibFileName)
+Handle LoadLibrary(const char* lpLibFileName)
 {
 	//Check if module is already loaded
 	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
@@ -199,7 +199,7 @@ extern "C" uintptr_t GetProcAddress(Handle hModule, const char* lpProcName)
 	PDWORD pFunctions = MakePtr(PDWORD, hModule, exportDirectory->AddressOfFunctions);
 
 	uintptr_t search = 0;
-	for (int i = 0; i < exportDirectory->NumberOfNames; i++)
+	for (DWORD i = 0; i < exportDirectory->NumberOfNames; i++)
 	{
 		char* name = MakePtr(char*, hModule, pNames[i]);
 		if (stricmp(lpProcName, name) == 0)

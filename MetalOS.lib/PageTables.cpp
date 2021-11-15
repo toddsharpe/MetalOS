@@ -136,19 +136,19 @@ void PageTables::LoadKernelMappings(PageTables* copyPt)
 	}
 }
 
-bool PageTables::MapUserPages(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count)
+bool PageTables::MapUserPages(uintptr_t virtualAddress, uintptr_t physicalAddress, size_t count)
 {
 	return MapPage(virtualAddress, physicalAddress, count, false);
 }
 
-bool PageTables::MapKernelPages(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count)
+bool PageTables::MapKernelPages(uintptr_t virtualAddress, uintptr_t physicalAddress, size_t count)
 {
 	return MapPage(virtualAddress, physicalAddress, count, true);
 }
 
 //This should be rewritten to map blocks instead of pages like this, but TODO etc
 //TODO: page attributes!
-bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count, bool global)
+bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, size_t count, bool global)
 {
 	LibPrint("V: 0x%016x P: 0x%016x C: 0x%x G: %d\r\n", virtualAddress, physicalAddress, count, global);
 	

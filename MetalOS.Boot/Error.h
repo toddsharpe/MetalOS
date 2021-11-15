@@ -66,7 +66,7 @@ public:
 	static EFI_STATUS DisplayError(const CHAR16* function, const CHAR16* file, const CHAR16* line, EFI_STATUS status);
 	
 private:
-	static void StatusToString(OUT CHAR16* buffer, IN EFI_STATUS status);
+	static const CHAR16* StatusToString(const EFI_STATUS status);
 };
 
 

@@ -11,7 +11,8 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 #define __packed 
 
-
+#pragma warning (push)
+#pragma warning(disable: 4200)
 
 static constexpr uint32_t HV_MESSAGE_SIZE = 256;
 static constexpr uint32_t HV_MESSAGE_PAYLOAD_BYTE_COUNT = 240;
@@ -183,7 +184,7 @@ static_assert(sizeof(HV_HYPERCALL_RESULT_VALUE) == sizeof(uint64_t), "HV_HYPERCA
 //VMBus Implementation - mostly borrowed from Linux since its not documented anywhere
 #pragma pack(push, 1)
 /* Version 1 messages */
-enum vmbus_channel_message_type : uint32_t
+enum class vmbus_channel_message_type : uint32_t
 {
 	CHANNELMSG_INVALID = 0,
 	CHANNELMSG_OFFERCHANNEL = 1,
@@ -744,4 +745,4 @@ static_assert(sizeof(HV_MONITOR_PAGE) == PAGE_SIZE, "Invalid monitor page");
 
 typedef volatile HV_MONITOR_PAGE* PVHV_MONITOR_PAGE;
 
-
+#pragma warning (pop)

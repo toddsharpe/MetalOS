@@ -101,7 +101,7 @@ void Debugger::DebuggerEvent(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	Assert(vector == InterruptVector::Breakpoint);
 	ExceptionRecord.ExceptionCode = STATUS_BREAKPOINT;
 	ExceptionRecord.NumberParameters = 3;
-	ExceptionRecord.ExceptionInformation[0] == BREAKPOINT_BREAK;
+	ExceptionRecord.ExceptionInformation[0] = BREAKPOINT_BREAK;
 	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)kernel.GetCurrentThread();
 	ExceptionRecord.ExceptionInformation[2] = 0;
 
@@ -152,11 +152,11 @@ uint32_t Debugger::ThreadLoop()
 
 void Debugger::ConvertToContext(PINTERRUPT_FRAME frame, PCONTEXT context)
 {
-	context->SegCs = frame->CS;
-	context->SegFs = frame->FS;
-	context->SegGs = frame->GS;
-	context->SegSs = frame->SS;
-	context->EFlags = frame->RFlags;
+	context->SegCs = (WORD)frame->CS;
+	context->SegFs = (WORD)frame->FS;
+	context->SegGs = (WORD)frame->GS;
+	context->SegSs = (WORD)frame->SS;
+	context->EFlags = (DWORD)frame->RFlags;
 	
 	context->Rip = frame->RIP;
 

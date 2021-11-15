@@ -17,8 +17,8 @@ public:
 	void ClearKernelEntries();
 
 	//TODO: attributes
-	bool MapUserPages(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count);
-	bool MapKernelPages(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count);
+	bool MapUserPages(uintptr_t virtualAddress, uintptr_t physicalAddress, size_t count);
+	bool MapKernelPages(uintptr_t virtualAddress, uintptr_t physicalAddress, size_t count);
 
 	uintptr_t GetCr3() const;
 	
@@ -207,7 +207,7 @@ private:
 	static_assert(sizeof(_PTE) == sizeof(uintptr_t), "Incorrect.");
 #pragma pack(pop)
 
-	bool MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, uint32_t count, bool global);
+	bool MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, size_t count, bool global);
 	bool MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bool global);
 
 	uintptr_t m_physicalAddress;

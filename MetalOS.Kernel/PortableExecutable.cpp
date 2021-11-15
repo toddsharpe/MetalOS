@@ -5,7 +5,7 @@
 
 #include "PortableExecutable.h"
 
-size_t PortableExecutable::GetSizeOfImage(const Handle hModule)
+DWORD PortableExecutable::GetSizeOfImage(const Handle hModule)
 {
 	//Headers
 	PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, hModule, 0);
@@ -19,7 +19,7 @@ size_t PortableExecutable::GetSizeOfImage(const Handle hModule)
 	return ntHeader->OptionalHeader.SizeOfImage;
 }
 
-uintptr_t PortableExecutable::GetEntryPoint(const Handle hModule)
+DWORD PortableExecutable::GetEntryPoint(const Handle hModule)
 {
 	//Headers
 	PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, hModule, 0);
@@ -87,7 +87,7 @@ uintptr_t PortableExecutable::GetProcAddress(Handle hModule, const char* lpProcN
 	PDWORD pFunctions = MakePtr(PDWORD, hModule, exportDirectory->AddressOfFunctions);
 
 	uintptr_t search = 0;
-	for (int i = 0; i < exportDirectory->NumberOfNames; i++)
+	for (DWORD i = 0; i < exportDirectory->NumberOfNames; i++)
 	{
 		char* name = MakePtr(char*, hModule, pNames[i]);
 		if (stricmp(lpProcName, name) == 0)

@@ -130,7 +130,7 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& e
 					break;
 
 				case IMAGE_REL_BASED_HIGHLOW:
-					*(DWORD*)(locationBase + offset) += delta;
+					*(DWORD*)(locationBase + offset) += (DWORD)delta;
 					break;
 
 				case IMAGE_REL_BASED_DIR64:

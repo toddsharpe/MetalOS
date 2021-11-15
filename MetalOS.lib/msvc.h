@@ -8,7 +8,10 @@ void __cdecl _invoke_watson(char const*, char const*, char const*, unsigned int,
 __declspec(noreturn) void __stdcall _CxxThrowException(void* pExceptionObject, void* pThrowInfo);
 
 //Disable exceptions in STL
+#ifndef _HAS_EXCEPTIONS
 #define _HAS_EXCEPTIONS 0
+#endif
+
 #define _KERNEL_MODE 1
 
 //Define X errors:

@@ -30,10 +30,10 @@ size_t wcslen(const CHAR16* str)
 	return length;
 }
 
-uint32_t wcsncpy(CHAR16* dest, const CHAR16* source, uint32_t num)
+CHAR16* wcsncpy(CHAR16* dest, const CHAR16* source, size_t num)
 {
 	memcpy(dest, source, num * sizeof(CHAR16));
-	return num;
+	return dest;
 }
 
 void wcsrev(CHAR16* str)

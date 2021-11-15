@@ -22,6 +22,8 @@ private:
 	void Grow(size_t pages);
 
 	//TODO: remove magic, use bit of address for free (min alloc = 2)
+#pragma warning (push)
+#pragma warning(disable: 4200)
 #pragma pack(push, 1)
 	struct HeapBlock
 	{
@@ -48,6 +50,7 @@ private:
 		}
 	};
 #pragma pack(pop)
+#pragma warning (pop)
 	static_assert(sizeof(HeapBlock) == 32, "Heap block has changed");
 
 	VirtualMemoryManager& m_memoryManager;

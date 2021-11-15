@@ -43,19 +43,20 @@ void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const 
 	const size_t msgsize = sizeof(vmbus_channel_gpadl_header) + sizeof(gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t);
 	vmbus_channel_gpadl_header* msg = (vmbus_channel_gpadl_header*)new uint8_t[msgsize];
 	memset(msg, 0, msgsize);
+	const uint16_t bodySize = (uint16_t)(sizeof(gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t));
 	msg->rangecount = 1;
-	msg->range_buflen = sizeof(gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t);
+	msg->range_buflen = bodySize;
 	msg->range[0].byte_offset = 0;
-	msg->range[0].byte_count = (pageCount << PAGE_SHIFT);
+	msg->range[0].byte_count = (uint32_t)(pageCount << PAGE_SHIFT);
 	for (size_t i = 0; i < pageCount; i++)
 		msg->range[0].pfn_array[i] = (m_address >> PAGE_SHIFT) + i;
 
-	msg->header.msgtype = CHANNELMSG_GPADL_HEADER;
+	msg->header.msgtype = vmbus_channel_message_type::CHANNELMSG_GPADL_HEADER;
 	msg->child_relid = m_channel->child_relid;
 	kernel.Printf("Rel_ID: %d\n", m_channel->child_relid);
 
 	VmBusResponse response;
-	HV_HYPERCALL_RESULT_VALUE result = m_vmbus->PostMessage(msgsize, msg, response);
+	HV_HYPERCALL_RESULT_VALUE result = m_vmbus->PostMessage((uint32_t)msgsize, msg, response);
 	m_gpadlHandle = response.gpadl_created.gpadl;
 
 	kernel.Printf("GPADL created\n");
@@ -63,11 +64,11 @@ void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const 
 	//Open channel
 	vmbus_channel_open_channel openChannel;
 	memset(&openChannel, 0, sizeof(vmbus_channel_open_channel));
-	openChannel.header.msgtype = CHANNELMSG_OPENCHANNEL;
+	openChannel.header.msgtype = vmbus_channel_message_type::CHANNELMSG_OPENCHANNEL;
 	openChannel.openid = m_channel->child_relid;
 	openChannel.child_relid = m_channel->child_relid;
 	openChannel.ringbuffer_gpadlhandle = m_gpadlHandle;
-	openChannel.downstream_ringbuffer_pageoffset = m_sendCount;
+	openChannel.downstream_ringbuffer_pageoffset = (uint32_t)m_sendCount;
 	if (buffer != nullptr)
 		memcpy(openChannel.userdata, buffer->Data, buffer->Length);
 	result = m_vmbus->PostMessage(sizeof(vmbus_channel_open_channel), &openChannel, response);

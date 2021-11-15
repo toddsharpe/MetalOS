@@ -6,7 +6,7 @@
 typedef struct
 {
 	UINTN FrameBufferBase;
-	UINT32 FrameBufferSize;
+	UINTN FrameBufferSize;
 	UINT32 HorizontalResolution;
 	UINT32 VerticalResolution;
 	UINT32 PixelsPerScanLine;

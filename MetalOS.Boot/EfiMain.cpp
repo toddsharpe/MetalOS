@@ -235,7 +235,7 @@ EFI_STATUS PrintCpuDetails()
 	*((UINT32*)(vendor + 4)) = (UINT32)registers[3];
 	*((UINT32*)(vendor + 8)) = (UINT32)registers[2];
 
-	mbstowcs(wideVendor, vendor, sizeof(wideVendor));
+	mbstowcs(wideVendor, vendor, sizeof(wideVendor) / sizeof(CHAR16));
 
 	ReturnIfNotSuccess(Print(L"CPU Vendor: %s,", wideVendor));
 

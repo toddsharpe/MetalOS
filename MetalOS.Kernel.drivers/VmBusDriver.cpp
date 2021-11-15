@@ -13,6 +13,7 @@ VmBusDriver::VmBusDriver(Device& device) :
 	m_threadSignal(),
 	m_connectSemaphore(),
 	m_queue(),
+	m_channelCallbacks(),
 	m_msg_conn_id(),
 	m_nextGpadlHandle(),
 	m_requests()
@@ -50,7 +51,7 @@ Result VmBusDriver::EnumerateChildren()
 	//Initiate connection
 	vmbus_channel_initiate_contact msg;
 	memset(&msg, 0, sizeof(vmbus_channel_initiate_contact));
-	msg.header.msgtype = CHANNELMSG_INITIATE_CONTACT;
+	msg.header.msgtype = vmbus_channel_message_type::CHANNELMSG_INITIATE_CONTACT;
 	msg.vmbus_version_requested = VERSION_WIN10_V5_2;
 	msg.msg_sint = VMBUS_MESSAGE_SINT;
 	msg.monitor_page1 = kernel.VirtualToPhysical((uintptr_t)& MonitorPage1);
@@ -66,7 +67,7 @@ Result VmBusDriver::EnumerateChildren()
 	//vmbus_request_offers
 	vmbus_channel_message_header header;
 	memset(&header, 0, sizeof(vmbus_channel_message_header));
-	header.msgtype = CHANNELMSG_REQUESTOFFERS;
+	header.msgtype = vmbus_channel_message_type::CHANNELMSG_REQUESTOFFERS;
 	result = HyperV::HvPostMessage(connectionId, (HV_MESSAGE_TYPE)1, sizeof(vmbus_channel_message_header), &header);
 	kernel.WaitForSemaphore(m_connectSemaphore, INT64_MAX);
 
@@ -95,7 +96,7 @@ HV_HYPERCALL_RESULT_VALUE VmBusDriver::PostMessage(const uint32_t size, const vo
 	vmbus_channel_message_header* hdr = (vmbus_channel_message_header*)message;
 	switch (hdr->msgtype)
 	{
-		case CHANNELMSG_GPADL_HEADER:
+		case vmbus_channel_message_type::CHANNELMSG_GPADL_HEADER:
 		{
 			vmbus_channel_gpadl_header* gpadlHeader = (vmbus_channel_gpadl_header*)message;
 			gpadlHeader->gpadl = _InterlockedIncrement((volatile long*)&m_nextGpadlHandle);
@@ -103,7 +104,7 @@ HV_HYPERCALL_RESULT_VALUE VmBusDriver::PostMessage(const uint32_t size, const vo
 		}
 		break;
 
-		case CHANNELMSG_OPENCHANNEL:
+		case vmbus_channel_message_type::CHANNELMSG_OPENCHANNEL:
 		{
 			vmbus_channel_open_channel* header = (vmbus_channel_open_channel*)message;
 			m_requests.push_back({ 0, header->child_relid, header->openid, semaphore, response });
@@ -163,7 +164,7 @@ uint32_t VmBusDriver::ThreadLoop()
 		vmbus_channel_message_header* header = (vmbus_channel_message_header*)message.Payload;
 		switch (header->msgtype)
 		{
-		case CHANNELMSG_VERSION_RESPONSE:
+		case vmbus_channel_message_type::CHANNELMSG_VERSION_RESPONSE:
 		{
 			vmbus_channel_version_response* response = (vmbus_channel_version_response*)message.Payload;
 			Assert(response->version_supported);
@@ -173,7 +174,7 @@ uint32_t VmBusDriver::ThreadLoop()
 			kernel.ReleaseSemaphore(m_connectSemaphore, 1);
 		}
 		break;
-		case CHANNELMSG_OFFERCHANNEL:
+		case vmbus_channel_message_type::CHANNELMSG_OFFERCHANNEL:
 		{
 			vmbus_channel_offer_channel* offer = (vmbus_channel_offer_channel*)message.Payload;
 			vmbus_channel_offer o = offer->offer;
@@ -190,13 +191,13 @@ uint32_t VmBusDriver::ThreadLoop()
 			m_device.GetChildren().push_back(child);
 		}
 		break;
-		case CHANNELMSG_ALLOFFERS_DELIVERED:
+		case vmbus_channel_message_type::CHANNELMSG_ALLOFFERS_DELIVERED:
 		{
 			//Let connect proceed
 			kernel.ReleaseSemaphore(m_connectSemaphore, 1);
 		}
 		break;
-		case CHANNELMSG_GPADL_CREATED:
+		case vmbus_channel_message_type::CHANNELMSG_GPADL_CREATED:
 		{
 			vmbus_channel_gpadl_created* created = (vmbus_channel_gpadl_created*)message.Payload;
 			BusRequest* request = FindRequest(created->gpadl);
@@ -207,7 +208,7 @@ uint32_t VmBusDriver::ThreadLoop()
 			kernel.ReleaseSemaphore(request->Semaphore, 1);
 		}
 		break;
-		case CHANNELMSG_OPENCHANNEL_RESULT:
+		case vmbus_channel_message_type::CHANNELMSG_OPENCHANNEL_RESULT:
 		{
 			vmbus_channel_open_result* result = (vmbus_channel_open_result*)message.Payload;
 			BusRequest* request = FindRequest(result->child_relid, result->openid);

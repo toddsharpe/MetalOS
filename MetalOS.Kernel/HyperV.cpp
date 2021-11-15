@@ -217,7 +217,7 @@ void HyperV::ProcessInterrupts(uint32_t sint, std::list<uint32_t>& channelIds, s
 
 	HV_MESSAGE* message = (HV_MESSAGE*)SynicMessages + sint;
 	Assert((message->Header.MessageType & HV_MESSAGE_TYPE_HYPERVISOR_MASK) == 0);
-	Assert(message->Header.MessageType < CHANNELMSG_COUNT);
+	Assert(message->Header.MessageType < (size_t)vmbus_channel_message_type::CHANNELMSG_COUNT);
 
 	if (message->Header.MessageType != HV_MESSAGE_TYPE::HvMessageTypeNone)
 	{

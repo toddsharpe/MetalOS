@@ -304,8 +304,9 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 			const KeLibrary* module = KeGetModule(context.Rip);
 			base = (uintptr_t)module->Handle;
 			Print("IP: 0x%016x Base: 0x%016x ", context.Rip, base);
+			const uint32_t rva = (uint32_t)(context.Rip - base);
 			if (module->Pdb != nullptr)
-				module->Pdb->PrintStack((uint32_t)context.Rip - base);
+				module->Pdb->PrintStack(rva);
 		}
 		
 		Print("\n");
@@ -372,14 +373,14 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* format, ..
 	context.Rbp = x64context->Rbp;
 
 	StackWalk sw(&context);
-	uint32_t rva = (uint32_t)context.Rip - KernelBaseAddress;
 	
 	this->Printf("Call Stack\n");
 	while (sw.HasNext())
 	{
 		this->Printf("IP: 0x%016x ", context.Rip);
+		const uint32_t rva = (uint32_t)(context.Rip - KernelBaseAddress);
 		if (m_pdb != nullptr && (context.Rip >= KernelBaseAddress))
-			m_pdb->PrintStack((uint32_t)context.Rip - KernelBaseAddress);
+			m_pdb->PrintStack(rva);
 		
 		this->Printf("\n");
 

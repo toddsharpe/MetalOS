@@ -213,16 +213,16 @@ ACPI_STATUS Kernel::AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Valu
 	switch (Width)
 	{
 	case 8:
-		*(UINT8*)Address = Value;
+		*(UINT8*)Address = (UINT8)Value;
 		break;
 	case 16:
-		*(UINT16*)Address = Value;
+		*(UINT16*)Address = (UINT16)Value;
 		break;
 	case 32:
-		*(UINT32*)Address = Value;
+		*(UINT32*)Address = (UINT32)Value;
 		break;
 	case 64:
-		*(UINT64*)Address = Value;
+		*(UINT64*)Address = (UINT64)Value;
 		break;
 	default:
 		return AE_BAD_VALUE;
@@ -238,7 +238,7 @@ ACPI_STATUS Kernel::AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32* Value, UINT3
 	case 8:
 	case 16:
 	case 32:
-		*Value = ArchReadPort(Address, Width);
+		*Value = ArchReadPort((uint32_t)Address, Width);
 		break;
 	default:
 		return AE_BAD_VALUE;
@@ -254,7 +254,7 @@ ACPI_STATUS Kernel::AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT3
 	case 8:
 	case 16:
 	case 32:
-		ArchWritePort(Address, Value, Width);
+		ArchWritePort((uint32_t)Address, Value, Width);
 		break;
 	default:
 		return AE_BAD_VALUE;

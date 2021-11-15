@@ -2,8 +2,13 @@
 
 #define ANYSIZE_ARRAY 1       
 
+#ifndef FALSE
 #define FALSE   0
+#endif
+
+#ifndef TRUE
 #define TRUE    1
+#endif
 
 #ifndef DECLSPEC_ALIGN
 #if (_MSC_VER >= 1300) && !defined(MIDL_PASS)

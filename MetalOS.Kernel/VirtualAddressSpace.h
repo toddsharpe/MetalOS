@@ -35,7 +35,7 @@ public:
 
 	struct Node
 	{
-		uint32_t PageCount;
+		size_t PageCount;
 		MemoryProtection Protection;
 	};
 

@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include "EfiMain.h"
 
+constexpr UINTN Stall = 1000 * 1000 * 60;//60 minute stall
+
 extern "C" void Bugcheck(const char* file, const char* line, const char* assert)
 {
 	static constexpr size_t MaxBuffer = 128;
@@ -23,23 +25,21 @@ extern "C" void Bugcheck(const char* file, const char* line, const char* assert)
 	Print(L"  %s\r\n", wideAssert);
 	Print(L"  %s\r\n", wideFile);
 	Print(L"  %s\r\n", wideLine);
-	BS->Stall(1000 * 1000 * 60 * 60);
+	BS->Stall(Stall);
 }
 
 EFI_STATUS Error::DisplayError(const CHAR16* function, const CHAR16* file, const CHAR16* line, EFI_STATUS status)
 {
-	CHAR16 statusString[64];
 	Print(L"Error:\r\n");
 	Print(L"  %s\r\n", function);
-	StatusToString(statusString, status);
-	Print(L"  Status: %d ( %s )\r\n", status, statusString);
+	Print(L"  Status: %d ( %s )\r\n", status, StatusToString(status));
 	Print(L"  %s\r\n", file);
 	Print(L"  %s\r\n", line);
-	BS->Stall(1000 * 1000 * 60 * 60);
+	BS->Stall(Stall);
 	return EFI_ABORTED;
 }
 
-void Error::StatusToString(OUT CHAR16* buffer, IN EFI_STATUS status)
+const CHAR16* Error::StatusToString(const EFI_STATUS status)
 {
 	UINTN index;
 
@@ -47,10 +47,9 @@ void Error::StatusToString(OUT CHAR16* buffer, IN EFI_STATUS status)
 	{
 		if (ErrorCodeTable[index].Code == status)
 		{
-			wcscpy(buffer, ErrorCodeTable[index].Desc);
-			return;
+			return ErrorCodeTable[index].Desc;
 		}
 	}
 
-	wcscpy(buffer, L"StatusNotFound");
+	return nullptr;
 }

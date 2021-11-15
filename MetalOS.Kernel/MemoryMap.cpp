@@ -82,7 +82,7 @@ void MemoryMap::MergeConventionalPages()
 	}
 
 	//Zero out remaining entries
-	UINT32 newSize = (UINT64)destination - (UINT64)this->m_memoryMap;
+	uintptr_t newSize = (uintptr_t)destination - (uintptr_t)this->m_memoryMap;
 	memset(destination, this->m_memoryMapSize - newSize, 0);
 
 	//Update size
@@ -106,11 +106,11 @@ EFI_PHYSICAL_ADDRESS MemoryMap::AllocatePages(UINT32 count)
 	{
 		Assert(m_memoryMapSize + m_memoryMapDescriptorSize <= m_memoryMapMaxSize);
 
-		UINT32 index = (UINTN)(m_memoryMap - current) / m_memoryMapDescriptorSize;
-		UINT32 length = m_memoryMapSize / m_memoryMapDescriptorSize;
+		UINTN index = (UINTN)(m_memoryMap - current) / m_memoryMapDescriptorSize;
+		UINTN length = m_memoryMapSize / m_memoryMapDescriptorSize;
 
 		//Copy all subsequent records down one
-		for (UINT32 i = length - 1; i >= index; i--)
+		for (UINTN i = length - 1; i >= index; i--)
 		{
 			memcpy(MakePtr(void*, m_memoryMap, m_memoryMapDescriptorSize * (i + 1)), MakePtr(void*, m_memoryMap, m_memoryMapDescriptorSize * i), m_memoryMapDescriptorSize);
 		}

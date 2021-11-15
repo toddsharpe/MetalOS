@@ -35,10 +35,10 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 		return (uint64_t)ResumeThread((Handle*)frame->Arg0, (size_t*)frame->Arg1);
 
 	case SystemCall::ExitProcess:
-		return (uint64_t)ExitProcess(frame->Arg0);
+		return (uint64_t)ExitProcess((uint32_t)frame->Arg0);
 
 	case SystemCall::ExitThread:
-		return (uint64_t)ExitThread(frame->Arg0);
+		return (uint64_t)ExitThread((uint32_t)frame->Arg0);
 
 	case SystemCall::CreateWindow:
 		return (uint64_t)CreateWindow((char*)frame->Arg0);
@@ -325,14 +325,13 @@ SystemCallResult Kernel::SetFilePointer(const Handle handle, const __int64 posit
 	}
 
 	bool result = this->SetFilePosition(*file, pos);
-	if (result)
-	{
-		if (newPosition != nullptr)
-			*newPosition = pos;
-		return SystemCallResult::Success;
-	}
-	
-	return SystemCallResult::Failed;
+	if (!result)
+		return SystemCallResult::Failed;
+
+	if (newPosition != nullptr)
+		*newPosition = pos;
+
+	return SystemCallResult::Success;
 }
 
 SystemCallResult Kernel::CloseFile(const Handle handle)

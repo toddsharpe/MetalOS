@@ -6,8 +6,9 @@
 
 HyperVMouseDriver::HyperVMouseDriver(Device& device) :
 	Driver(device),
-	m_semaphore(),
+	m_response(),
 	m_events(),
+	m_semaphore(),
 	m_channel(INPUTVSC_SEND_RING_BUFFER_SIZE, INPUTVSC_RECV_RING_BUFFER_SIZE, { &HyperVMouseDriver::Callback, this })
 {
 	m_semaphore = kernel.CreateSemaphore(0, 0, "HyperVMouseDriver");

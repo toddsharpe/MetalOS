@@ -21,7 +21,7 @@ Result HyperVScsiDriver::Initialize()
 
 	//Connect to channel
 	vmstorage_channel_properties properties = { 0 };
-	Buffer buffer = { &properties, sizeof(vmstorage_channel_properties) };
+	ReadOnlyBuffer buffer = { &properties, sizeof(vmstorage_channel_properties) };
 	m_channel.Initialize(offerChannel, &buffer);
 
 	Transaction transaction;
@@ -34,7 +34,7 @@ Result HyperVScsiDriver::Initialize()
 	//Query protocol
 	memset(&transaction, 0, sizeof(Transaction));
 	transaction.Request.operation = VSTOR_OPERATION_QUERY_PROTOCOL_VERSION;
-	transaction.Request.version.major_minor = VMSTOR_PROTO_VERSION_WIN10;
+	transaction.Request.version.major_minor = VMSTOR_PROTO_VERSION_WIN6;
 	transaction.Request.version.revision = 0;
 	Execute(&transaction, true);
 	m_sizeDelta = 0;
@@ -56,6 +56,8 @@ Result HyperVScsiDriver::Initialize()
 	memset(&transaction, 0, sizeof(Transaction));
 	transaction.Request.operation = VSTOR_OPERATION_END_INITIALIZATION;
 	Execute(&transaction, true);
+
+	//storvsc_do_io
 
 	return Result::Success;
 }
@@ -87,7 +89,7 @@ Result HyperVScsiDriver::EnumerateChildren()
 	return Result::NotImplemented;
 }
 
-void HyperVScsiDriver::OnCallback()
+void HyperVScsiDriver::OnCallback() //storvsc_on_channel_callback
 {
 	kernel.Printf("HyperVScsiDriver::OnCallback\n");
 
@@ -100,22 +102,23 @@ void HyperVScsiDriver::OnCallback()
 		Transaction* transaction = (Transaction*)packet->trans_id;
 		void* data = (void*)((uintptr_t)packet + (packet->offset8 << 3));
 
-		kernel.Printf("Rec: 0x%x Small: 0x%x Large: 0x%x\n", packet->len8 << 3, (sizeof(struct vstor_packet) - vmscsi_size_delta), sizeof(struct vstor_packet));
-		kernel.PrintBytes((char*)data, packet->len8 << 3);
+		//kernel.Printf("Rec: 0x%x Small: 0x%x Large: 0x%x\n", packet->len8 << 3, (sizeof(struct vstor_packet) - vmscsi_size_delta), sizeof(struct vstor_packet));
+		//kernel.PrintBytes((char*)data, packet->len8 << 3);
 
 		//Switch on request
 		if (transaction->Request.operation == VSTOR_OPERATION_BEGIN_INITIALIZATION ||
 			transaction->Request.operation == VSTOR_OPERATION_QUERY_PROTOCOL_VERSION ||
 			transaction->Request.operation == VSTOR_OPERATION_QUERY_PROPERTIES ||
-			transaction->Request.operation == VSTOR_OPERATION_FCHBA_DATA ||
 			transaction->Request.operation == VSTOR_OPERATION_END_INITIALIZATION)
 		{
+			//These are during init
 			memcpy(&transaction->Response, data, (sizeof(struct vstor_packet) - vmscsi_size_delta));
 			kernel.ReleaseSemaphore(transaction->Semaphore, 1);
 			kernel.CloseSemaphore(transaction->Semaphore);
 		}
 		else
 		{
+			//storvsc_on_receive
 			memcpy(&transaction->Response, data, sizeof(struct vstor_packet));
 
 			switch (transaction->Response.operation)
@@ -128,11 +131,11 @@ void HyperVScsiDriver::OnCallback()
 
 			case VSTOR_OPERATION_REMOVE_DEVICE:
 			case VSTOR_OPERATION_ENUMERATE_BUS:
-
+				Assert(false);
 				break;
 
 			case VSTOR_OPERATION_FCHBA_DATA:
-
+				Assert(false);
 				break;
 
 			default:
@@ -148,7 +151,7 @@ void HyperVScsiDriver::OnCallback()
 
 void HyperVScsiDriver::Execute(Transaction* transaction, bool status_check)
 {
-	kernel.Printf("Execute. Delta: 0x%x\n", m_sizeDelta);
+	//kernel.Printf("Execute. Delta: 0x%x\n", m_sizeDelta);
 
 	//Create semaphore
 	transaction->Semaphore = kernel.CreateSemaphore(0, 0, "HyperVScsiDriver");

@@ -38,7 +38,7 @@ Result HyperVMouseDriver::Initialize()
 	request.request.version_requested.version = SYNTHHID_INPUT_VERSION;
 
 	this->m_channel.SendPacket(&request, sizeof(struct pipe_prt_msg) - sizeof(unsigned char) + sizeof(struct synthhid_protocol_request),
-		(unsigned long)&request, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
+		(uint64_t)&request, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 
 	//Wait for SYNTH_HID_PROTOCOL_RESPONSE and SYNTH_HID_INITIAL_DEVICE_INFO
 	kernel.WaitForSemaphore(m_semaphore, INT64_MAX);
@@ -53,7 +53,7 @@ Result HyperVMouseDriver::Initialize()
 	ack.ack.reserved = 0;
 
 	this->m_channel.SendPacket(&ack, sizeof(struct pipe_prt_msg) - sizeof(unsigned char) + sizeof(struct synthhid_device_info_ack),
-		(unsigned long)&ack, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
+		(uint64_t)&ack, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 
 	return Result::Success;
 }

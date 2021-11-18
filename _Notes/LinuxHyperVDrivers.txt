@@ -1,0 +1,12 @@
+Searching linux for "Microsoft Hyper-V"
+Microsoft Hyper-V Synthetic HID Driver - drivers\hid\hid-hyperv.c (mouse?)
+Microsoft Hyper-V VMBus Driver - drivers\hv\vmbus_drv.c
+Microsoft Hyper-V Synthetic Keyboard Driver - drivers\input\serio\hyperv-keyboard.c
+Microsoft Hyper-V network driver - drivers\net\hyperv\netvsc_drv.c
+Microsoft Hyper-V virtual storage driver - DRIVERS\SCSI\STORVSC_DRV.C
+Microsoft Hyper-V Synthetic Video Frame Buffer Driver - drivers\video\fbdev\hyperv_fb.c
+Hyper-V Balloon - drivers\hv\hv_balloon.c
+
+
+SCSI - storvsc_queuecommand (include\scsi\scsi_cmnd.h)
+

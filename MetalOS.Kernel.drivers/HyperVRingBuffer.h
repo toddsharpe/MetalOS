@@ -8,7 +8,7 @@ class HyperVRingBuffer//TODO: inbound ring buffer, outbound ring buffer
 public:
 	HyperVRingBuffer(const paddr_t address, const size_t count, HyperVChannel& channel);
 
-	void Write(const struct kvec* kv_list, uint32_t kv_count);
+	void Write(const ReadOnlyBuffer* buffers, const size_t count);
 
 	void Increment(const uint32_t length);
 	void* Read(const uint32_t length);

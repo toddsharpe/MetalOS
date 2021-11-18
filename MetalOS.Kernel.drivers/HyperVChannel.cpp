@@ -24,7 +24,7 @@ HyperVChannel::HyperVChannel(size_t sendSize, size_t receiveSize, CallContext ca
 	m_vmbus = (VmBusDriver*)bus->GetDriver();
 }
 
-void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const Buffer* buffer)
+void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const ReadOnlyBuffer* buffer)
 {
 	if (buffer != nullptr)
 		Assert(buffer->Length <= MAX_USER_DEFINED_BYTES);
@@ -77,7 +77,7 @@ void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const 
 }
 
 //Format is vmpacket_descriptor followed by buffer, alignment if needed, and then old indexes
-void HyperVChannel::SendPacket(void* buffer, uint32_t length, uint64_t requestId, const vmbus_packet_type type, uint32_t flags)
+void HyperVChannel::SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const vmbus_packet_type type, const uint32_t flags)
 {
 	uint32_t packetlen = sizeof(vmpacket_descriptor) + length;
 	const uint32_t packetlen_aligned = AlignSize(packetlen, sizeof(uint64_t));
@@ -89,18 +89,22 @@ void HyperVChannel::SendPacket(void* buffer, uint32_t length, uint64_t requestId
 	desc.len8 = (uint16_t)(packetlen_aligned >> 3);
 	desc.trans_id = requestId;
 
-	struct kvec bufferlist[3];
 	u64 aligned_data = 0;
-	int num_vecs = ((length != 0) ? 3 : 1);
 
-	bufferlist[0].iov_base = &desc;
-	bufferlist[0].iov_len = sizeof(struct vmpacket_descriptor);
-	bufferlist[1].iov_base = buffer;
-	bufferlist[1].iov_len = length;
-	bufferlist[2].iov_base = &aligned_data;
-	bufferlist[2].iov_len = (packetlen_aligned - packetlen);
+	const size_t headerSize = 1;
+	const size_t fullSize = 3;
 
-	m_outbound.Write(bufferlist, num_vecs);
+	ReadOnlyBuffer buffers[fullSize];
+	buffers[0].Data = &desc;
+	buffers[0].Length = sizeof(struct vmpacket_descriptor);
+	buffers[1].Data = buffer;
+	buffers[1].Length = length;
+	buffers[2].Data = &aligned_data;
+	buffers[2].Length = (packetlen_aligned - packetlen);
+
+	int writeCount = ((length != 0) ? fullSize : headerSize);
+
+	m_outbound.Write(buffers, writeCount);
 }
 
 void* HyperVChannel::ReadPacket(const uint32_t length)

@@ -195,10 +195,6 @@ constexpr size_t ByteAlign(const size_t size, const size_t alignment)
 #endif
 
 #define AlignSize(x,a) (((x) + ((a) - 1)) & ~((a)-1))
-struct kvec {
-	void* iov_base; /* and that should *never* hold a userland pointer */
-	size_t iov_len;
-};
 
 typedef void (*MemberFunction)(void* arg);
 struct CallContext
@@ -207,10 +203,15 @@ struct CallContext
 	void* Context;
 };
 
-//TODO: delete data?
 struct Buffer
 {
 	void* Data;
+	size_t Length;
+};
+
+struct ReadOnlyBuffer
+{
+	const void* Data;
 	size_t Length;
 };
 

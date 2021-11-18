@@ -33,16 +33,16 @@ HyperVRingBuffer::HyperVRingBuffer(const paddr_t address, const size_t count, Hy
 	m_header->feature_bits.value = 1;
 }
 
-void HyperVRingBuffer::Write(const struct kvec* kv_list, uint32_t kv_count)
+void HyperVRingBuffer::Write(const ReadOnlyBuffer* buffers, const size_t count)
 {
 	//TODO: buffer full etc
 
 	//Copy into ring buffer
 	const uint32_t startIndex = m_header->write_index;
 	uint32_t index = startIndex;
-	for (size_t i = 0; i < kv_count; i++)
+	for (size_t i = 0; i < count; i++)
 	{
-		index = this->Copy(index, kv_list[i].iov_base, kv_list[i].iov_len);
+		index = this->Copy(index, buffers[i].Data, buffers[i].Length);
 	}
 
 	//Write new indexes

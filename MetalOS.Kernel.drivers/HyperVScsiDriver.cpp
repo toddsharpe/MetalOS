@@ -161,6 +161,8 @@ void HyperVScsiDriver::Execute(Transaction* transaction, bool status_check)
 	this->m_channel.SendPacket(&transaction->Request, sizeof(vstor_packet) - m_sizeDelta, (uint64_t)transaction, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 	kernel.WaitForSemaphore(transaction->Semaphore, INT64_MAX);
 
+	//TODO: close semaphore
+
 	if (!status_check)
 		return;
 

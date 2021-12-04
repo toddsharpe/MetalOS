@@ -33,12 +33,15 @@ private:
 
 	static const size_t StackPages = 8;
 
+	//Must be kept the first members of this struct, or insync with SystemCall.asm
+	void* m_context;
+	UserThread* m_userThread;
+
 	const uint32_t m_id;
 	std::string m_name;
 	const ThreadStart m_start;
 	void* m_arg;
 
-	void* m_context;
 	void* m_stackPointer; //Points to bottom of stack minus ArchStackReserve
 	void* m_stackAllocation;//Points to top of stack
 
@@ -48,7 +51,5 @@ private:
 	nano100_t m_sleepWake;
 	void* m_event;
 	size_t m_suspendCount;
-
-	UserThread* m_userThread;
 };
 

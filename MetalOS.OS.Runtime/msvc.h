@@ -20,6 +20,7 @@ namespace std
 	[[noreturn]] void __cdecl _Xout_of_range(const char*);
 	[[noreturn]] void __cdecl _Xoverflow_error(const char*);
 	[[noreturn]] void __cdecl _Xruntime_error(const char*);
+	[[noreturn]] void __cdecl _XGetLastError();
 }
 
 //ChkStk

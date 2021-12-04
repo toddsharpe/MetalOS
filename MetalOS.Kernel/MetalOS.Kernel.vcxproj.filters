@@ -153,13 +153,13 @@
     <ClCompile Include="KernelSystemCalls.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="UserWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Debugger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PortableExecutable.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowingSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -293,22 +293,25 @@
     <ClInclude Include="UserProcess.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="UserWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="KernelHeap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Debugger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RingBuffer.h">
+    <ClInclude Include="KRingBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PortableExecutable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Assert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UserRingBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowingSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

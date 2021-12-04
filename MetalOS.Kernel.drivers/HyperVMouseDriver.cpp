@@ -4,6 +4,8 @@
 #include "HyperVMouseDriver.h"
 #include "HyperVDevice.h"
 
+//TODO: could be refactored into HID + HyperV portions
+//For now it does both
 HyperVMouseDriver::HyperVMouseDriver(Device& device) :
 	Driver(device),
 	m_response(),
@@ -114,8 +116,6 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 		return;
 
 	synthhid_msg* message = (synthhid_msg*)msg->data;
-	kernel.Printf("Size: %d\n", msg->size);
-	kernel.Printf("ProcessMessage: %d Size: %d\n", message->header.type, message->header.size);
 	switch (message->header.type)
 	{
 	case SYNTH_HID_PROTOCOL_RESPONSE:
@@ -128,36 +128,70 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 	}
 	break;
 
+	//See: MouseHidReport.txt
 	case SYNTH_HID_INITIAL_DEVICE_INFO:
 	{
 		Assert(msg->size >= sizeof(struct hv_input_dev_info));
+		kernel.Printf("SYNTH_HID_INITIAL_DEVICE_INFO\n");
 
+		synthhid_device_info* info = (synthhid_device_info*)msg->data;
+		kernel.Printf("Vendor 0x%x Product: 0x%x Version 0x%x\n", info->hid_dev_info.vendor, info->hid_dev_info.product, info->hid_dev_info.version);
+
+		//HID 1.1 E.8 HID Descriptor (Mouse)
+		Assert(info->hid_descriptor.bLength = 0x9);
+		Assert(info->hid_descriptor.bDescriptorType == HID_DT_HID);
+		Assert(info->hid_descriptor.bcdHID == 0x101);
+		Assert(info->hid_descriptor.bNumDescriptors == 1); //Report descriptor
+
+		const uint32_t innerSize = msg->size + sizeof(struct pipe_prt_msg) - sizeof(unsigned char);
+		kernel.Printf("MsgSize 0x%x, Inner? 0x%x\n", msg->size, innerSize);
+		
+		//msg->size = sizeof(synthhid_device_info) + wDescriptorLength
+
+		kernel.Printf("Info 0x%x\n", sizeof(synthhid_device_info));
+
+		kernel.Printf("T: 0x%x, L: 0x%x\n", info->hid_descriptor.desc[0].bDescriptorType, info->hid_descriptor.desc[0].wDescriptorLength);
+
+		//TODO: actually parse the report
+		//char* start = (char*)&info->hid_descriptor + info->hid_descriptor.bLength;
+		//info->hid_descriptor.desc[0].wDescriptorLength
+		//kernel.PrintBytes(start, info->hid_descriptor.desc[0].wDescriptorLength);
+
+		//Ack device info
 		kernel.ReleaseSemaphore(m_semaphore, 1);
 	}
 	break;
 
 	case SYNTH_HID_INPUT_REPORT:
 	{
+		//TODO: wait for init?
+
 		synthhid_input_report* report = (synthhid_input_report*)msg->data;
+		
+		//From inspection
+		//off, len
+		//  0, 1 - Buttons
+		//  1, 2 - X position (0, 32767) - int16 pos
+		//  3, 2 - y position (0, 32767) - int16 pos
+		//  5, 2 - wheel (-32767, 32767) - int16 full range
+		Assert(report->header.size == 0x7);
 
-		kernel.Printf("Report: %d\n", report->header.size);
+		//Parse
+		bool leftClick = report->buffer[0] & 1;
+		bool rightClick = report->buffer[0] & 2;
+		uint16_t x = *(uint16_t*)&report->buffer[1];
+		uint16_t y = *(uint16_t*)&report->buffer[3];
+		uint16_t wheel = *(uint16_t*)&report->buffer[5];
+		//kernel.Printf("X: %d, Y: %d, Wheel: %d, L: %d R: %d\n", x, y, wheel, leftClick, rightClick);
 
-		const uint32_t innerSize = msg->size + sizeof(struct pipe_prt_msg) - sizeof(unsigned char);
-		kernel.Printf("innerSize %d struct %d\n", innerSize, sizeof(synthhid_input_report));
-		Assert(innerSize == sizeof(synthhid_input_report));
-
-		////TODO: wait for init?
-
-		//Assert(size >= sizeof(synth_kbd_keystroke));
-		//synth_kbd_keystroke key;
-		//memcpy(&key, header, sizeof(synth_kbd_keystroke));
-		////Print("Key: %d (%x) = %c Unicode: %d down: %d\n", key.make_code, key.make_code,(char)(key.make_code), key.info & IS_UNICODE, key.info & IS_BREAK);
-		//VirtualKey keyCode = GetKeycode(key.make_code);
-
-		//KeyEvent event = { 0 };
-		//event.Key = keyCode;
-		//event.Flags.Pressed = (key.make_code & IS_BREAK) != 0;
-		//m_events.push(event);
+		Message* message = new Message();
+		memset(message, 0, sizeof(Message));
+		message->Header.MessageType = MessageType::MouseEvent;
+		message->MouseEvent.Buttons.LeftPressed = leftClick;
+		message->MouseEvent.Buttons.RightPressed = rightClick;
+		message->MouseEvent.XPosition = x;
+		message->MouseEvent.YPosition = y;
+		kernel.PostMessage(message);
 		break;
 	}
 	break;

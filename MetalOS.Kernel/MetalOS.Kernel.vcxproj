@@ -159,7 +159,6 @@
     <ClCompile Include="StackWalk.cpp" />
     <ClCompile Include="StringPrinter.cpp" />
     <ClCompile Include="UserThread.cpp" />
-    <ClCompile Include="UserWindow.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
     <ClCompile Include="Bitvector.cpp" />
     <ClCompile Include="Display.cpp" />
@@ -171,6 +170,7 @@
     <ClCompile Include="PhysicalMemoryManager.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="VirtualMemoryManager.cpp" />
+    <ClCompile Include="WindowingSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Assert.h" />
@@ -188,7 +188,7 @@
     <ClInclude Include="KernelHeap.h" />
     <ClInclude Include="KObject.h" />
     <ClInclude Include="PortableExecutable.h" />
-    <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="KRingBuffer.h" />
     <ClInclude Include="UserProcess.h" />
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSpinLock.h" />
@@ -210,8 +210,8 @@
     <ClInclude Include="SoftwareDevice.h" />
     <ClInclude Include="StackWalk.h" />
     <ClInclude Include="StringPrinter.h" />
+    <ClInclude Include="UserRingBuffer.h" />
     <ClInclude Include="UserThread.h" />
-    <ClInclude Include="UserWindow.h" />
     <ClInclude Include="VirtualAddressSpace.h" />
     <ClInclude Include="Bitvector.h" />
     <ClInclude Include="Display.h" />
@@ -222,6 +222,7 @@
     <ClInclude Include="PhysicalMemoryManager.h" />
     <ClInclude Include="System.h" />
     <ClInclude Include="VirtualMemoryManager.h" />
+    <ClInclude Include="WindowingSystem.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MetalOS.Acpi\MetalOS.Acpi.vcxproj">

@@ -17,6 +17,7 @@ UserProcess::UserProcess(const std::string& name) :
 	m_heap(),
 	m_peb(),
 	m_threads(),
+	m_ringBuffers(),
 	InitProcess(),
 	InitThread(),
 	Delete()
@@ -107,11 +108,11 @@ VirtualAddressSpace& UserProcess::GetAddressSpace()
 void UserProcess::Display() const
 {
 	kernel.Printf("UserProcess::Display\n");
-	kernel.Printf("    ID: %d\n", m_id);
-	kernel.Printf("  Name: %s\n", m_name.c_str());
-	kernel.Printf("  Base: 0x%016x\n", m_imageBase);
-	kernel.Printf("    Ts: %d\n", m_threads.size());
-	kernel.Printf("   PEB: 0x%016x\n", m_peb);
+	kernel.Printf("     ID: %d\n", m_id);
+	kernel.Printf("   Name: %s\n", m_name.c_str());
+	kernel.Printf("   Base: 0x%016x\n", m_imageBase);
+	kernel.Printf("Threads: %d\n", m_threads.size());
+	kernel.Printf("    PEB: 0x%016x\n", m_peb);
 }
 
 void UserProcess::DisplayDetails() const
@@ -119,9 +120,9 @@ void UserProcess::DisplayDetails() const
 	Assert(GetCR3() == __readcr3());
 
 	kernel.Printf("DisplayPEB\n");
-	kernel.Printf("    ID: %d\n", m_peb->ProcessId);
-	kernel.Printf("  Base: 0x%016x\n", m_peb->BaseAddress);
-	kernel.Printf("  Mods: %d\n", m_peb->ModuleIndex);
+	kernel.Printf("     ID: %d\n", m_peb->ProcessId);
+	kernel.Printf("   Base: 0x%016x\n", m_peb->BaseAddress);
+	kernel.Printf("   Mods: %d\n", m_peb->ModuleIndex);
 	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
 		kernel.Printf("    %s: 0x%016x\n", m_peb->LoadedModules[i].Name, m_peb->LoadedModules[i].Address);
 }

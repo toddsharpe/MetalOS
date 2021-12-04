@@ -4,7 +4,7 @@
 #include <string>
 #include "Driver.h"
 #include "Device.h"
-#include "RingBuffer.h"
+#include "KRingBuffer.h"
 #include "StringPrinter.h"
 
 //PNP0501 - Generic 16550A-compatible COM port
@@ -212,6 +212,6 @@ private:
 
 	uint16_t m_port;
 	size_t m_index;
-	RingBuffer<uint8_t, 0x100> m_rxBuffer;
+	KRingBuffer<uint8_t, 0x100> m_rxBuffer;
 };
 

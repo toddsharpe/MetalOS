@@ -53,14 +53,11 @@ void TextScreen::WriteCharacter(const char c)
 		{
 			if ((line & mask) != 0)
 			{
-				Point2D origin;
-				origin.X = (m_position.X + (8 - x - 1)) * FontScale;
-				origin.Y = (m_position.Y + y) * FontScale;
-				
 				Rectangle rect;
-				rect.P1 = origin;
-				rect.P2.X = origin.X + FontScale;
-				rect.P2.Y = origin.Y + FontScale;
+				rect.X = (m_position.X + (8 - x - 1)) * FontScale;
+				rect.Y = (m_position.Y + y) * FontScale;
+				rect.Width = FontScale;
+				rect.Height = FontScale;
 				m_display.ColorRectangle(Colors::White, rect);
 			}
 

@@ -43,7 +43,7 @@ public:
 		return m_backing;
 	}
 
-	size_t Size()
+	const size_t Size() const
 	{
 		return m_height * m_width * sizeof(T);
 	}

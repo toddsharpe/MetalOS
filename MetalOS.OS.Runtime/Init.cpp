@@ -85,7 +85,7 @@ extern "C" __declspec(dllexport) void InitProcess()//Rename: init module?
 
 extern "C" __declspec(dllexport) void InitThread()
 {
-	DebugPrint("InitThread");
+	DebugPrint("InitThread\n");
 
 	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
 	teb->ThreadStart(teb->Arg);

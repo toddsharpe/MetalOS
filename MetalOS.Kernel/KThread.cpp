@@ -46,6 +46,7 @@ void KThread::InitContext(void* entry)
 	m_stackAllocation = kernel.AllocateStack(KThread::StackPages);
 	m_stackPointer = (void*)((uintptr_t)m_stackAllocation + (KThread::StackPages << PAGE_SHIFT) - ArchStackReserve());
 	
+	kernel.Printf("KThread::InitContext Id %d Start: 0x%016x, End: 0x%016x\n", m_id, m_stackAllocation, m_stackPointer);
 	ArchInitContext(m_context, entry, m_stackPointer);
 }
 
@@ -54,6 +55,7 @@ uint32_t KThread::GetId() const
 	return m_id;
 }
 
+//TODO: this returns the starting stack pointer, not where it currently is
 void* KThread::GetStackPointer() const
 {
 	return m_stackPointer;
@@ -67,7 +69,7 @@ UserThread* KThread::GetUserThread() const
 void KThread::Display() const
 {
 	kernel.Printf("KThread\n");
-	kernel.Printf("     Id: %d\n", m_id);
+	kernel.Printf("     Id: %x\n", m_id);
 	kernel.Printf("   Name: %s\n", m_name.c_str());
 	kernel.Printf("  Start: 0x%016x\n", m_start);
 	kernel.Printf("    Arg: 0x%016x\n", m_arg);
@@ -81,6 +83,7 @@ void KThread::Display() const
 		break;
 	}
 
+	//TODO: move to arch layer
 	x64_context* ctx = (x64_context*)m_context;
 	kernel.Printf("  Rbp: 0x%016x Rsp: 0x%016x Rip: 0x%016x RFlags:0x%08x\n", ctx->Rbp, ctx->Rsp, ctx->Rip, (uint32_t)ctx->Rflags);
 

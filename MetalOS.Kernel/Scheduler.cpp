@@ -4,6 +4,8 @@
 #include "Scheduler.h"
 #include "KSemaphore.h"
 #include <MetalOS.Arch.h>
+#include "StackWalk.h"
+#include "PortableExecutable.h"
 
 Scheduler::Scheduler(KThread& bootThread) :
 	Enabled(),
@@ -42,12 +44,14 @@ KThread* Scheduler::GetCurrentThread()
 UserThread* Scheduler::GetCurrentUserThread() const
 {
 	KThread* current = GetCurrentThread();
+	Assert(current);
 	return current->GetUserThread();
 }
 
 UserProcess& Scheduler::GetCurrentProcess() const
 {
 	KThread* current = GetCurrentThread();
+	Assert(current);
 	UserThread* user = current->GetUserThread();
 	Assert(user);
 
@@ -67,6 +71,7 @@ void Scheduler::Schedule()
 
 	const uint64_t tsc = m_hyperv.ReadTsc();
 	KThread* current = GetCurrentThread();
+	Assert(current);
 	
 	//Promote off sleep queue
 	if (m_sleepQueue.size() > 0)
@@ -74,7 +79,13 @@ void Scheduler::Schedule()
 		auto it = m_sleepQueue.begin();
 		while (it != m_sleepQueue.end())
 		{
+			for (const auto& i : m_sleepQueue)
+			{
+				Assert(i);
+			}
+			
 			KThread* item = *it;
+			Assert(item);
 			if (item->m_sleepWake > 0 && item->m_sleepWake <= tsc)
 			{
 				item->m_state = ThreadState::Ready;
@@ -96,6 +107,7 @@ void Scheduler::Schedule()
 		while (it != m_timeouts.end())
 		{
 			KThread* item = *it;
+			Assert(item);
 			if (item->m_sleepWake > 0 && item->m_sleepWake <= tsc)
 			{
 				//Move to ready queue
@@ -122,10 +134,13 @@ void Scheduler::Schedule()
 		while (it != m_messageWaits.end())
 		{
 			KThread* item = *it;
+			Assert(item);
 			UserThread* user = item->GetUserThread();
+			Assert(user);
 			if (user->HasMessage())
 			{
 				//Move to ready queue
+				//kernel.Printf("Moving %d to ready, messages: %d\n", item->GetId(), user->m_messages.size());
 				item->m_state = ThreadState::Ready;
 				m_readyQueue.push_back(item);
 				it = m_messageWaits.erase(it);
@@ -142,6 +157,9 @@ void Scheduler::Schedule()
 		//Save current context
 		if (ArchSaveContext(current->m_context) == 0)
 		{
+			//kernel.Printf("Current thread\n");
+			//current->Display();
+
 			//Queue current thread if it was preempted
 			if (current->m_state == ThreadState::Running)
 			{
@@ -151,19 +169,23 @@ void Scheduler::Schedule()
 
 			if (current->m_state == ThreadState::Terminated)
 			{
+				kernel.Printf("Deleting Thread\n");
 				delete current;
 			}
 
 			//Get next thread
 			KThread* next = m_readyQueue.front();
-			m_readyQueue.pop_front();
+			Assert(next->m_state == ThreadState::Ready);
+			m_readyQueue.remove(next);
 
 			while (next->IsSuspended())
 			{
+				kernel.Printf("-Suspended %x\n", next->GetId());
 				m_readyQueue.push_back(next);
 
 				next = m_readyQueue.front();
-				m_readyQueue.pop_front();
+				Assert(next->m_state == ThreadState::Ready);
+				m_readyQueue.remove(next);
 			}
 
 			//Switch cr3 if needed
@@ -174,9 +196,13 @@ void Scheduler::Schedule()
 				ArchSetPagingRoot(cr3);
 			}
 
+			//kernel.Printf("Next thread\n");
+			//next->Display();
+
 			//Switch to thread
 			next->m_state = ThreadState::Running;
 			SetCurrentThread(*next);
+			//TODO: this isnt the current stack pointer of the context struct
 			ArchSetInterruptStack(next->GetStackPointer());
 			ArchLoadContext(next->m_context);
 		}
@@ -185,6 +211,7 @@ void Scheduler::Schedule()
 
 void Scheduler::AddReady(KThread& thread)
 {
+	kernel.Printf("AddReady %x\n", thread.GetId());
 	thread.m_state = ThreadState::Ready;
 	m_readyQueue.push_back(&thread);
 }
@@ -192,6 +219,9 @@ void Scheduler::AddReady(KThread& thread)
 void Scheduler::Sleep(nano_t value)
 {
 	KThread* current = GetCurrentThread();
+	Assert(current);
+
+	//kernel.Printf("Sleep\n");
 	
 	const nano100_t value100 = value / 100;
 	const nano100_t tscStart = m_hyperv.ReadTsc();
@@ -205,6 +235,8 @@ void Scheduler::Sleep(nano_t value)
 void Scheduler::KillThread()
 {
 	KThread* current = GetCurrentThread();
+	Assert(current);
+	kernel.Printf("KillThread %x\n", current->GetId());
 	
 	//Mark thread deleted
 	current->m_state = ThreadState::Terminated;
@@ -237,14 +269,18 @@ void Scheduler::KillThread()
 //TODO: If more than 1 processor, reschedule to suspend
 size_t Scheduler::Suspend(KThread& thread)
 {
+	kernel.Printf("Suspend %x\n", thread.GetId());
+	
 	const size_t ret = thread.m_suspendCount;
 	
 	thread.m_suspendCount++;
 	return ret;
 }
-
+//What does this even do?
 size_t Scheduler::Resume(KThread& thread)
 {
+	kernel.Printf("Resume %x\n", thread.GetId());
+	
 	const size_t ret = thread.m_suspendCount;
 	
 	if (thread.m_suspendCount == 0)
@@ -257,6 +293,7 @@ size_t Scheduler::Resume(KThread& thread)
 WaitStatus Scheduler::SemaphoreWait(KSemaphore* semaphore, nano100_t timeout)
 {
 	KThread* current = GetCurrentThread();
+	Assert(current);
 
 	//If there is no contention return immediately
 	bool result = semaphore->TryWait(1);
@@ -283,6 +320,7 @@ WaitStatus Scheduler::SemaphoreWait(KSemaphore* semaphore, nano100_t timeout)
 void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
 {
 	KThread* current = GetCurrentThread();
+	Assert(current);
 
 	int64_t previous = semaphore->Signal(count);
 	const size_t scheduleCount = std::clamp(-1 * previous, 0LL, (int64_t)count);
@@ -310,6 +348,7 @@ void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
 Message* Scheduler::MessageWait()
 {
 	KThread* current = GetCurrentThread();
+	Assert(current);
 	UserThread* user = current->GetUserThread();
 	Assert(user);
 
@@ -333,6 +372,7 @@ Message* Scheduler::MessageWait()
 
 void Scheduler::Remove(KThread*& thread)
 {
+	kernel.Printf("Remove %x\n", thread->GetId());
 	switch (thread->m_state)
 	{
 	case ThreadState::Ready:
@@ -360,6 +400,8 @@ void Scheduler::Remove(KThread*& thread)
 
 void Scheduler::RemoveFromEvent(KThread*& thread)
 {
+	kernel.Printf("RemoveFromEvent %x\n", thread->GetId());
+	
 	const auto& it = m_events.find(thread->m_event);
 	Assert(it != m_events.end());
 
@@ -368,13 +410,14 @@ void Scheduler::RemoveFromEvent(KThread*& thread)
 
 void Scheduler::Display() const
 {
-	kernel.Printf("Scheduler::Schedule - Ready: %d, Sleep: %d, SemTimeout %d, SemWait %d\n", m_readyQueue.size(), m_sleepQueue.size(), m_timeouts.size(),
-		m_events.size());
+	kernel.Printf("Scheduler::Schedule - Ready: %d, Sleep: %d, SemTimeout %d, SemWait %d, MsgWait %d\n", m_readyQueue.size(), m_sleepQueue.size(), m_timeouts.size(),
+		m_events.size(), m_messageWaits.size());
 	if (!m_readyQueue.empty())
 	{
 		kernel.Printf("  Ready: ");
 		for (const auto& i : m_readyQueue)
 		{
+			kernel.Printf("i: 0x%016x - ", i);
 			kernel.Printf("%x ", i->GetId());
 		}
 		kernel.Printf("\n");
@@ -384,7 +427,11 @@ void Scheduler::Display() const
 		kernel.Printf("  Sleep: ");
 		for (const auto& i : m_sleepQueue)
 		{
-			kernel.Printf("%x(0x%016x) ", i->GetId(), i->m_sleepWake);
+			kernel.Printf("i: 0x%016x - ", i);
+			if (i != nullptr)
+				kernel.Printf("%x(0x%016x)\n", i->GetId(), i->m_sleepWake);
+			else
+				kernel.Printf("null\n");
 		}
 		kernel.Printf("\n");
 	}
@@ -408,6 +455,19 @@ void Scheduler::Display() const
 			{
 				kernel.Printf("%x ", j->GetId());
 			}
+		}
+		kernel.Printf("\n");
+	}
+	if (!m_messageWaits.empty())
+	{
+		kernel.Printf("  MsgWaits: ");
+		for (const auto& i : m_messageWaits)
+		{
+			kernel.Printf("i: 0x%016x\n", i);
+			if (i != nullptr)
+				kernel.Printf("%x ", i->GetId());
+			else
+				kernel.Printf("null\n");
 		}
 		kernel.Printf("\n");
 	}

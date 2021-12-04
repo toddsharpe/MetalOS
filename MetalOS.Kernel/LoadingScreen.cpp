@@ -96,7 +96,7 @@ void LoadingScreen::Draw()
 		}
 
 	//Copy to real buffer all at once
-	memcpy((void*)m_display.Buffer(), m_buffer.Buffer(), m_buffer.Size());
+	memcpy((void*)m_display.GetBuffer(), m_buffer.Buffer(), m_buffer.Size());
 }
 
 uint32_t LoadingScreen::ThreadLoop(void* arg)

@@ -1,11 +1,12 @@
 #include "Kernel.h"
 #include "Assert.h"
-#include "UserWindow.h"
+#include "UserRingBuffer.h"
 
 //TODO: Method to check handles
 
 uint64_t Kernel::Syscall(SystemCallFrame* frame)
 {
+	//Printf("Syscall - Call 0x%x, RSP: 0x%016x\n", frame->SystemCall, frame->RSP);
 	switch (frame->SystemCall)
 	{
 	case SystemCall::GetSystemInfo:
@@ -19,6 +20,12 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 
 	case SystemCall::CreateThread:
 		return (uint64_t)CreateThread((size_t)frame->Arg0, (ThreadStart)frame->Arg1, (void*)frame->Arg2);
+
+	case SystemCall::CreateProcess:
+		return (uintptr_t)CreateProcess((char*)frame->Arg0);
+
+	case SystemCall::GetThreadId:
+		return (uint64_t)GetThreadId((Handle)frame->Arg0);
 
 	case SystemCall::Sleep:
 		Sleep((uint32_t)frame->Arg0);
@@ -40,11 +47,17 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 	case SystemCall::ExitThread:
 		return (uint64_t)ExitThread((uint32_t)frame->Arg0);
 
-	case SystemCall::CreateWindow:
-		return (uint64_t)CreateWindow((char*)frame->Arg0);
+	case SystemCall::AllocWindow:
+		return (uint64_t)AllocWindow((HWindow*)frame->Arg0, (const char*)frame->Arg1, (Rectangle*)frame->Arg2);
+
+	case SystemCall::PaintWindow:
+		return (uint64_t)PaintWindow((HWindow*)frame->Arg0, (ReadOnlyBuffer*)frame->Arg1);
+
+	case SystemCall::MoveWindow:
+		return (uint64_t)MoveWindow((HWindow)frame->Arg0, (Rectangle*)frame->Arg1);
 
 	case SystemCall::GetWindowRect:
-		return (uint64_t)GetWindowRect((Handle)frame->Arg0, (Rectangle*)frame->Arg1);
+		return (uint64_t)GetWindowRect((HWindow)frame->Arg0, (Rectangle*)frame->Arg1);
 
 	case SystemCall::GetMessage:
 		return (uint64_t)GetMessage((Message*)frame->Arg0);
@@ -52,8 +65,8 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 	case SystemCall::PeekMessage:
 		return (uint64_t)PeekMessage((Message*)frame->Arg0);
 
-	case SystemCall::SetScreenBuffer:
-		return (uint64_t)SetScreenBuffer((void*)frame->Arg0);
+	case SystemCall::GetScreenRect:
+		return (uint64_t)GetScreenRect((Rectangle*)frame->Arg0);
 
 	case SystemCall::CreateFile:
 		return (uintptr_t)CreateFile((char*)frame->Arg0, (GenericAccess)frame->Arg1);
@@ -81,6 +94,18 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 
 	case SystemCall::VirtualAlloc:
 		return (uintptr_t)VirtualAlloc((void*)frame->Arg0, (size_t)frame->Arg1, (MemoryAllocationType)frame->Arg2, (MemoryProtection)frame->Arg3);
+
+	case SystemCall::CreateRingBuffer:
+		return (uintptr_t)CreateRingBuffer((char*)frame->Arg0, (size_t)frame->Arg1, (size_t)frame->Arg2);
+
+	case SystemCall::CreateSharedMemory:
+		return (uintptr_t)CreateSharedMemory((char*)frame->Arg0, (size_t)frame->Arg1);
+
+	case SystemCall::MapObject:
+		return (uintptr_t)MapObject((void*)frame->Arg0, (Handle)frame->Arg1);
+
+	case SystemCall::MapSharedObject:
+		return (uintptr_t)MapSharedObject((void*)frame->Arg0, (char*)frame->Arg1);
 
 	case SystemCall::DebugPrint:
 		return (uint64_t)DebugPrint((char*)frame->Arg0);
@@ -113,18 +138,63 @@ size_t Kernel::GetTickCount()
 	return (tsc * 100) / 1000000;
 }
 
-Handle Kernel::GetCurrentThread()
+SystemCallResult Kernel::GetSystemTime(SystemTime* time)
 {
-	return m_scheduler->GetCurrentThread();
+	if (!IsValidUserPointer(time))
+		return SystemCallResult::InvalidPointer;
+
+	KeGetSystemTime(*time);
+
+	return SystemCallResult::Success;
 }
 
-Handle Kernel::CreateThread(size_t stackSize, ThreadStart startAddress, void* arg)
+HThread Kernel::GetCurrentThread()
+{
+	KThread* current = m_scheduler->GetCurrentThread();
+	UserThread* userThread = current->GetUserThread();
+	Assert(userThread);
+	return userThread;
+}
+
+HThread Kernel::CreateThread(size_t stackSize, ThreadStart startAddress, void* arg)
 {
 	if (!startAddress || !arg)
 		return nullptr;
 
 	UserProcess& process = m_scheduler->GetCurrentProcess();
 	return CreateThread(process, stackSize, startAddress, arg, process.InitThread);
+}
+
+SystemCallResult Kernel::CreateProcess(const char* processName)
+{
+	if (!processName || !IsValidUserPointer(processName))
+		return SystemCallResult::InvalidPointer;
+
+	bool result = CreateProcess(std::string(processName));
+
+	//HACK: While we still switch contexts in CreateProcess, we need to switch it back
+	UserProcess& process = m_scheduler->GetCurrentProcess();
+	ArchSetPagingRoot(process.GetCR3());
+	kernel.Printf("NewCr3: 0x%016x\n", process.GetCR3());
+
+	kernel.Printf("Returning\n");
+	return SystemCallResult::Success;
+}
+
+uint32_t Kernel::GetThreadId(const Handle handle)
+{
+	if (!handle)
+		return UINT32_MAX;
+	
+	kernel.Printf("GetThreadId 0x%016x\n", handle);
+	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserThread* thread = (UserThread*)handle;
+
+	UserProcess& proc = thread->GetProcess();
+	if (proc.GetId() != process.GetId())
+		return UINT32_MAX;
+
+	return thread->GetId();
 }
 
 void Kernel::Sleep(const uint32_t milliseconds)
@@ -177,41 +247,50 @@ SystemCallResult Kernel::ExitThread(const uint32_t exitCode)
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::CreateWindow(const char* name)
+SystemCallResult Kernel::AllocWindow(HWindow* handle, const char* name, const Rectangle* bounds)
 {
-	if (!IsValidUserPointer(name))
-		return SystemCallResult::Failed;
-
-	//One window at at time
-	Assert(Window == nullptr);
-
-	Rectangle rect = { 0 };
-	rect.P1.X = 0;
-	rect.P1.Y = 0;
-	rect.P2.X = m_display->GetWidth();
-	rect.P2.Y = m_display->GetHeight();
+	if (!IsValidUserPointer(handle) || !IsValidUserPointer(bounds))
+		return SystemCallResult::InvalidPointer;
 
 	UserThread* user = m_scheduler->GetCurrentUserThread();
 	Assert(user);
 
-	UserWindow* window = new UserWindow(name, rect, *user);
-	user->Window = window;
-	this->Window = window;
+	if (m_windows->ThreadHasWindow(user->GetId()))
+		return SystemCallResult::Failed;
+
+	*handle = m_windows->AllocWindow(user, std::string(name), *bounds);
+	return SystemCallResult::Success;
+}
+
+SystemCallResult Kernel::PaintWindow(HWindow handle, const ReadOnlyBuffer* buffer)
+{
+	if (!IsValidUserPointer(buffer))
+		return SystemCallResult::InvalidPointer;
+
+	if (!m_windows->PaintWindow(handle, *buffer))
+		return SystemCallResult::Failed;
 
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::GetWindowRect(const Handle handle, Rectangle* rect)
+SystemCallResult Kernel::MoveWindow(HWindow handle, const Rectangle* rectangle)
 {
-	if (!IsValidUserPointer(rect))
+	if (!IsValidUserPointer(rectangle))
+		return SystemCallResult::InvalidPointer;
+
+	if (!m_windows->MoveWindow(handle, *rectangle))
 		return SystemCallResult::Failed;
 
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	if (!user->Window)
-		return SystemCallResult::Failed;
+	return SystemCallResult::Success;
+}
 
-	//Copy rectangle
-	*rect = user->Window->GetRectangle();
+SystemCallResult Kernel::GetWindowRect(HWindow handle, Rectangle* bounds)
+{
+	if (!IsValidUserPointer(bounds))
+		return SystemCallResult::InvalidPointer;
+
+	if (!m_windows->GetWindowRect(handle, *bounds))
+		return SystemCallResult::Failed;
 
 	return SystemCallResult::Success;
 }
@@ -223,9 +302,6 @@ SystemCallResult Kernel::GetMessage(Message* message)
 		return SystemCallResult::Failed;
 
 	UserThread* user = m_scheduler->GetCurrentUserThread();
-	if (!user->Window)
-		return SystemCallResult::Failed;
-
 	Message* msg = m_scheduler->MessageWait(); //Can block
 	*message = *msg;
 	return SystemCallResult::Success;
@@ -248,21 +324,15 @@ SystemCallResult Kernel::PeekMessage(Message* message)
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::SetScreenBuffer(void* buffer)
+SystemCallResult Kernel::GetScreenRect(Rectangle* rectangle)
 {
-	if (!IsValidUserPointer(buffer))
+	if (!IsValidUserPointer(rectangle))
 		return SystemCallResult::Failed;
 
-	//Display time
-	/*
-	EFI_TIME time = { 0 };
-	m_runtime.GetTime(&time, nullptr);
-	Print("  Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
-	*/
-
-	const size_t size = (size_t)m_display->GetHeight() * m_display->GetWidth();
-	//Printf("D: 0x%016x, S: 0x%016x\n", (void*)m_display->Buffer(), buffer);
-	memcpy((void*)m_display->Buffer(), buffer, sizeof(Color) * size);
+	rectangle->X = 0;
+	rectangle->Y = 0;
+	rectangle->Width = m_display->GetWidth();
+	rectangle->Height = m_display->GetHeight();
 
 	return SystemCallResult::Success;
 }
@@ -369,6 +439,104 @@ void* Kernel::VirtualAlloc(const void* address, const size_t size, const MemoryA
 	UserProcess& process = m_scheduler->GetCurrentProcess();
 	
 	return m_virtualMemory->Allocate((uintptr_t)address, SIZE_TO_PAGES(size), protect, process.GetAddressSpace());
+}
+
+HRingBuffer Kernel::CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize)
+{
+	if (indexSize == 0 || ringSize == 0)
+		return nullptr;
+
+	if (name != nullptr)
+	{
+		if (!IsValidUserPointer(name))
+			return nullptr;
+
+		if (strlen(name) == 0)
+			return nullptr;
+
+		const auto& it = m_objectsRingBuffers->find(std::string(name));
+		if (it != m_objectsRingBuffers->end())
+			return nullptr;
+	}
+	
+	const size_t indexCount = SIZE_TO_PAGES(indexSize);
+	const size_t ringCount = SIZE_TO_PAGES(ringSize);
+	const size_t count = indexCount + 2 * ringCount;
+	paddr_t address = AllocatePhysical(count);
+
+	std::vector<paddr_t> addresses;
+
+	//Add index pages
+	for (size_t i = 0; i < indexCount; i++)
+	{
+		addresses.push_back(address + (i << PAGE_SHIFT));
+	}
+
+	//Push physical addresses twice (for wraparound)
+	for (size_t i = 0; i < ringCount; i++)
+	{
+		addresses.push_back(address + ((i + indexCount) << PAGE_SHIFT));
+	}
+	for (size_t i = 0; i < ringCount; i++)
+	{
+		addresses.push_back(address + ((i + indexCount) << PAGE_SHIFT));
+	}
+	Assert(addresses.size() == count);
+
+	//Add to process
+	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserRingBuffer* ringBuffer = new UserRingBuffer("", addresses);
+	Assert(ringBuffer);
+	process.AddRingBuffer(*ringBuffer);
+
+	//if named, add to system (like FS on linux)
+	if ((name != nullptr) && (strlen(name) > 0))
+	{
+		m_objectsRingBuffers->insert({ std::string(name), ringBuffer });
+	}
+
+	return ringBuffer;
+}
+
+HSharedMemory Kernel::CreateSharedMemory(const char* name, const size_t size)
+{
+	return nullptr;
+}
+
+void* Kernel::MapObject(const void* address, Handle handle)
+{
+	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserRingBuffer* buffer = process.GetRingBuffer((HRingBuffer)handle);
+	if (!buffer)
+		return nullptr;
+
+	return kernel.VirtualMap(address, buffer->GetAddresses(), MemoryProtection::PageReadWrite);
+}
+
+void* Kernel::MapSharedObject(const void* address, const char* name)
+{
+	kernel.Printf("MapSharedObject: 0x%016x 0x%016x\n", address, name);
+	if (name == nullptr)
+		return nullptr;
+	
+	if (!IsValidUserPointer(name))
+		return nullptr;
+
+	if (strlen(name) == 0)
+		return nullptr;
+
+	kernel.Printf("MapSharedObject: %s %d\n", name, m_objectsRingBuffers->size());
+
+	const auto& it = m_objectsRingBuffers->find(std::string(name));
+	if (it == m_objectsRingBuffers->end())
+		return nullptr;
+
+	UserRingBuffer* buffer = (UserRingBuffer*)it->second;
+	Assert(buffer);
+
+	UserProcess& process = m_scheduler->GetCurrentProcess();
+
+	return kernel.VirtualMap(address, buffer->GetAddresses(), MemoryProtection::PageReadWrite);
 }
 
 SystemCallResult Kernel::DebugPrint(char* s)

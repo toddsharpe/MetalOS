@@ -16,6 +16,9 @@ public:
 	void ColorScreen(const Color color) const;
 	void ColorRectangle(const Color color, const Rectangle& region) const;
 
+	void WriteFrame(const Rectangle& rect, const Buffer& buffer);
+	void WriteFrameGrayscale(const Rectangle& rect, const Buffer& buffer);
+
 	void SetPixel(const Color color, const Point2D& position) const;
 	Color GetPixel(const Point2D& position) const;
 
@@ -29,7 +32,7 @@ public:
 		return m_device.VerticalResolution;
 	}
 
-	uintptr_t Buffer() const
+	uintptr_t GetBuffer() const
 	{
 		return m_address;
 	}

@@ -27,7 +27,8 @@ Result VmBusDriver::Initialize()
 	m_threadSignal = kernel.CreateSemaphore(0, 0, "HyperVThread");
 	kernel.Printf("m_threadSignal 0x%016x\n", m_threadSignal);
 	m_connectSemaphore = kernel.CreateSemaphore(0, 0, "HyperVConnect");
-	kernel.CreateKernelThread(VmBusDriver::ThreadLoop, this);
+	KThread* thread = kernel.CreateKernelThread(VmBusDriver::ThreadLoop, this);
+	thread->SetName("VmBus");
 
 	HyperV::SetSintVector(VMBUS_MESSAGE_SINT, (uint32_t)InterruptVector::HypervisorVmBus);
 	kernel.KeRegisterInterrupt(InterruptVector::HypervisorVmBus, { &VmBusDriver::OnInterrupt, this });

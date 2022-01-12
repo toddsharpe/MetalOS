@@ -1,0 +1,15 @@
+namespace std
+{
+	__thiscall _Lockit::_Lockit() noexcept
+	{
+
+	}
+	_Lockit::_Lockit(int) noexcept
+	{
+
+	}
+	__thiscall _Lockit::~_Lockit() noexcept
+	{
+
+	}
+}

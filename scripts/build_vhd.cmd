@@ -28,6 +28,9 @@ xcopy %BUILD_OUT%\kdcom.pdb X:\EFI\BOOT\
 xcopy %BUILD_OUT%\shell.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\fire.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\mosrt.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\mosui.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\desktop.exe X:\EFI\BOOT\
+xcopy %BUILD_OUT%\calc.exe X:\EFI\BOOT\
 
 @rem Copy Doom!!!
 xcopy %BUILD_OUT%\doom.exe X:\EFI\BOOT\

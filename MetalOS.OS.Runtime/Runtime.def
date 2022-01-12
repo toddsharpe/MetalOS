@@ -1,18 +1,31 @@
 EXPORTS
 	; Kernel API
 	GetSystemInfo
-	GetProcessInfo
 	GetTickCount
+	GetSystemTime
+
+	; Runtime
+	GetProcessInfo
+
+	GetThreadId
+	GetCurrentThread
+	GetCurrentThreadId
+	CreateThread
+	CreateProcess
+	SwitchToThread
 
 	Sleep
 	ExitProcess
 	ExitThread
 
-	CreateWindow
+	; Window API
+	AllocWindow
+	PaintWindow
+	MoveWindow
 	GetWindowRect
 	GetMessage
 	PeekMessage
-	SetScreenBuffer
+	GetScreenRect
 
 	CreateFile
 	ReadFile
@@ -24,6 +37,10 @@ EXPORTS
 	CreateDirectory
 
 	VirtualAlloc
+	CreateRingBuffer
+	CreateSharedMemory
+	MapObject
+	MapSharedObject
 
 	DebugPrint
 

@@ -9,6 +9,10 @@
 
 namespace
 {
+	
+#define USB_TYPE_CLASS			(0x01 << 5)	
+#define HID_DT_HID			(USB_TYPE_CLASS | 0x01)
+	
 	struct hv_input_dev_info {
 		unsigned int size;
 		unsigned short vendor;

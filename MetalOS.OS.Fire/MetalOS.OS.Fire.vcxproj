@@ -55,13 +55,14 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;CRT_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\MetalOS.OS.Runtime;..\inc;..\MetalOS.crt</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\inc;..\inc_user;..\MetalOS.crt;..\MetalOS.OS.Runtime</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <SupportJustMyCode>false</SupportJustMyCode>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/kernel %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -95,10 +96,12 @@
   <ItemGroup>
     <ClCompile Include="FireScreen.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="msvc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FireScreen.h" />
     <ClInclude Include="Matrix.h" />
+    <ClInclude Include="msvc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

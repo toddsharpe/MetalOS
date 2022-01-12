@@ -15,10 +15,17 @@ PRUNTIME_FUNCTION RuntimeSupport::LookupFunctionEntry(const uint64_t ControlPC, 
 	Assert(pdataHeader);
 
 	PRUNTIME_FUNCTION current = (PRUNTIME_FUNCTION)((uint64_t)ImageBase + pdataHeader->VirtualAddress);
-	while (current != nullptr && !(current->BeginAddress <= RVA && current->EndAddress >= RVA))
-		current++;
+	
+	//TODO: list is sorted, this can be faster
+	while (current->BeginAddress != 0)
+	{
+		if (current->BeginAddress <= RVA && current->EndAddress >= RVA)
+			return current;
 
-	return current;
+		current++;
+	}
+	
+	return nullptr;
 }
 
 PUNWIND_INFO RuntimeSupport::GetUnwindInfo(const uintptr_t address)
@@ -38,10 +45,9 @@ void RuntimeSupport::VirtualUnwind(DWORD HandlerType, ULONG64 ImageBase, ULONG64
 {
 	PUNWIND_INFO unwindInfo = GetUnwindInfo(ImageBase, FunctionEntry);
 	AssertEqual(unwindInfo->Version, 1);
-	AssertEqual(unwindInfo->Flags, UNW_FLAG_NHANDLER);
+	//AssertEqual(unwindInfo->Flags, UNW_FLAG_NHANDLER);
 
 	const uintptr_t PrologOffset = ContextRecord->Rip - (FunctionEntry->BeginAddress + ImageBase);
-	Assert(PrologOffset > unwindInfo->SizeOfProlog);
 
 	uintptr_t EstablisherFrame;
 	if (unwindInfo->FrameRegister == 0)
@@ -50,6 +56,7 @@ void RuntimeSupport::VirtualUnwind(DWORD HandlerType, ULONG64 ImageBase, ULONG64
 	}
 	else 
 	{
+		kernel.Printf("Using rbp\n");
 		AssertEqual(unwindInfo->FrameRegister, x64_NV_REG_NUM::Rbp);
 		EstablisherFrame = (&ContextRecord->Rax)[unwindInfo->FrameRegister];
 		EstablisherFrame -= (uintptr_t)unwindInfo->FrameOffset * 16;

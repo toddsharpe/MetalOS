@@ -18,6 +18,11 @@ public:
 		return m_buffer.Buffer();
 	}
 
+	const size_t GetSize() const
+	{
+		return m_buffer.Size();
+	}
+
 private:
 	static const uint32_t PixelSize = 4;
 	static const Color FireColors[];

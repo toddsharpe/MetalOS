@@ -8,7 +8,7 @@
 #include <PageTables.h>
 #include "BootHeap.h"
 #include "MetalOS.h"
-#include "UserWindow.h"
+#include "UserRingBuffer.h"
 
 class KThread;
 class UserProcess
@@ -44,6 +44,25 @@ public:
 		return m_name;
 	}
 
+	const uint32_t GetId() const
+	{
+		return m_id;
+	}
+
+	void AddRingBuffer(UserRingBuffer& buffer)
+	{
+		m_ringBuffers.insert({ &buffer, &buffer });
+	}
+
+	UserRingBuffer* GetRingBuffer(HRingBuffer buffer)
+	{
+		const auto& it = m_ringBuffers.find(buffer);
+		if (it == m_ringBuffers.end())
+			return nullptr;
+
+		return it->second;
+	}
+
 	bool Delete;
 
 	friend class Scheduler;
@@ -60,5 +79,6 @@ private:
 	BootHeap* m_heap;
 	ProcessEnvironmentBlock* m_peb;
 	std::list<KThread*> m_threads;
+	std::map<HRingBuffer, UserRingBuffer*> m_ringBuffers;
 };
 

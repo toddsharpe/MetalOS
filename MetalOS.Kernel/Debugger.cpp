@@ -58,8 +58,9 @@ void Debugger::Initialize()
 	NTSTATUS result = Kd64::m_dll.KdInitialize(2);
 	kernel.Printf("KdInitialized %d\n", result);
 
-	KThread* thread = kernel.CreateKernelThread(Debugger::ThreadLoop, this);
-	thread->SetName("DebuggerLoop");
+	//TODO: re-enable
+	//KThread* thread = kernel.CreateKernelThread(Debugger::ThreadLoop, this);
+	//thread->SetName("DebuggerLoop");
 
 	Kd64::KdInitSystem();
 	Kd64::KdDebuggerEnabled = TRUE;

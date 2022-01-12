@@ -14,7 +14,6 @@
     <ClInclude Include="Debug.h" />
     <ClInclude Include="Heap.h" />
     <ClInclude Include="MetalOS.OS.Runtime.h" />
-    <ClInclude Include="msvc.h" />
     <ClInclude Include="new" />
     <ClInclude Include="Runtime.h" />
     <ClInclude Include="stdio.h" />
@@ -27,7 +26,6 @@
     <ClCompile Include="Heap.cpp" />
     <ClCompile Include="Init.cpp" />
     <ClCompile Include="Loader.cpp" />
-    <ClCompile Include="msvc.cpp" />
     <ClCompile Include="Runtime.cpp" />
     <ClCompile Include="stdio.cpp" />
     <ClCompile Include="stdlib.cpp" />

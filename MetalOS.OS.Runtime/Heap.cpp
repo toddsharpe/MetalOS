@@ -3,8 +3,6 @@
 #include "Debug.h"
 #include <algorithm>
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-
 void Heap::Initialize(size_t size)
 {
 	//Allocate
@@ -61,7 +59,7 @@ void* Heap::Reallocate(void* address, size_t size)
 	void* ptr = this->Allocate(size);
 	if (address != nullptr)
 	{
-		const size_t copySize = MIN(size, current->Size);
+		const size_t copySize = std::min(size, current->Size);
 		memcpy(ptr, address, copySize);
 		this->Deallocate(address);
 	}

@@ -34,6 +34,10 @@ enum KernelAddress : uintptr_t
 	KernelRuntimeStart = KernelStackEnd,
 	KernelRuntimeEnd = 0xFFFF'8000'4000'0000,
 
+	//Window frames 0xFFFF'8000'4000'0000 (256MB)
+	KernelWindowsStart = KernelRuntimeEnd,
+	KernelWindowsEnd = 0xFFFF'8000'5000'0000,
+
 	//Hardware 0xFFFF'8010'0000'0000
 	KernelHardwareStart = KernelStart + KernelSectionLength,
 	KernelPageTablesPool = KernelHardwareStart, //32MB (512 pages used)
@@ -99,9 +103,12 @@ enum class SystemCall : size_t
 {
 	GetSystemInfo = 0x100,
 	GetTickCount,
+	GetSystemTime,
 
 	GetCurrentThread = 0x200,
+	CreateProcess,
 	CreateThread,
+	GetThreadId,
 	Sleep,
 	SwitchToThread,
 	SuspendThread,
@@ -109,11 +116,13 @@ enum class SystemCall : size_t
 	ExitProcess,
 	ExitThread,
 
-	CreateWindow = 0x300,
+	AllocWindow = 0x300,
+	PaintWindow,
+	MoveWindow,
 	GetWindowRect,
 	GetMessage,
 	PeekMessage,
-	SetScreenBuffer,
+	GetScreenRect,
 
 	CreateFile = 0x400,
 	ReadFile,
@@ -125,6 +134,10 @@ enum class SystemCall : size_t
 	CreateDirectory,
 
 	VirtualAlloc = 0x500,
+	CreateRingBuffer,
+	CreateSharedMemory,
+	MapObject,
+	MapSharedObject,
 
 	DebugPrint = 0x600,
 };

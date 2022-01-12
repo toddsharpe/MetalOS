@@ -32,9 +32,35 @@ POP_SYSTEMCALL_FRAME MACRO
 	pop R9
 ENDM
 
+PUSH_NONVOLATILE MACRO
+	push rbx
+ENDM
+
+POP_NONVOLATILE MACRO
+	pop rbx
+ENDM
+
+; https://stackoverflow.com/questions/62546189/where-i-should-use-swapgs-instruction
 x64_SYSTEMCALL PROC
 	swapgs ; Swap to KThread
-	PUSH_SYSTEMCALL_FRAME ; Push frame
+	PUSH_NONVOLATILE
+
+	; Save user stack
+	mov rbx, qword ptr gs:[0] ; Get CpuContext block
+	mov rbx, qword ptr [rbx+8] ; Get KThread
+	mov rbx, qword ptr [rbx+8] ; GetUserThread
+	mov qword ptr [rbx], rsp ; Write to SavedStack
+
+	; Load kernel stack
+	mov rbx, qword ptr gs:[0] ; Get CpuContext block
+	mov rbx, qword ptr [rbx+8] ; Get KThread
+	mov rbx, qword ptr [rbx] ; Get context
+	mov rbx, qword ptr [rbx+64] ; Get Stack pointer (8th item)
+	mov rsp, rbx ; Set stack
+
+	; Create new frame
+	PROLOG
+	PUSH_SYSTEMCALL_FRAME
 	
 	; Save pointer for arg
 	mov rcx, rsp
@@ -45,6 +71,21 @@ x64_SYSTEMCALL PROC
 
 	; Restore frame
 	POP_SYSTEMCALL_FRAME
+	EPILOG
+
+	; Save kernel stack
+	mov rbx, qword ptr gs:[0] ; Get CpuContext block
+	mov rbx, qword ptr [rbx+8] ; Get KThread
+	mov rbx, qword ptr [rbx] ; Get context
+	mov qword ptr [rbx+64], rsp ; Set stack
+
+	; Restore stack
+	mov rbx, qword ptr gs:[0] ; Get CpuContext block
+	mov rbx, qword ptr [rbx+8] ; Get KThread
+	mov rbx, qword ptr [rbx+8] ; GetUserThread
+	mov rsp, qword ptr [rbx] ; Restore user stack
+
+	POP_NONVOLATILE
 	swapgs ; Swap back to UserThread
 	sysretq
 x64_SYSTEMCALL ENDP

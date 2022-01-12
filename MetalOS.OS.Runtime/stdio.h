@@ -12,6 +12,7 @@
 
 #define printf DebugPrintf
 
+#define _FILE_DEFINED
 typedef void FILE;
 
 #ifdef __cplusplus

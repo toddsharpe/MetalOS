@@ -13,9 +13,9 @@
 class Pdb
 {
 public:
-	Pdb(uintptr_t address);
+	Pdb(uintptr_t address, void* imageAddress);
 	
-	bool PrintStack(const uint32_t rva);
+	bool ResolveFunction(const uint32_t rva, PdbFunctionLookup& lookup);
 
 private:
 	enum Streams

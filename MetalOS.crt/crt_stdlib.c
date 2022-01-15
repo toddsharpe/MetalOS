@@ -33,9 +33,9 @@ int atoi(const char* str)
 
 size_t mbstowcs(CHAR16* _Dest, char const* _Source, size_t _MaxCount)
 {
-	const size_t len = strlen(_Source);
-	if (_MaxCount < len * sizeof(CHAR16))
-		return (size_t)-1;
+	size_t len = strlen(_Source);
+	if (_MaxCount < len)
+		len = _MaxCount;
 
 	for (size_t i = 0; i < len; i++)
 	{

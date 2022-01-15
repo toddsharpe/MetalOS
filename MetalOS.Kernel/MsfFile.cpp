@@ -47,7 +47,6 @@ MsfFile::MsfFile(uintptr_t base) :
 		for (size_t i = 0; i < stream.BlockNumbers.size(); i++)
 		{
 			const uint32_t blockNumber = directory.Read<uint32_t>();
-			kernel.Printf("block 0x%x\n", blockNumber);
 			Assert(blockNumber != 0);
 			stream.BlockNumbers[i] = blockNumber;
 		}

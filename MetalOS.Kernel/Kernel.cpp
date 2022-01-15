@@ -165,7 +165,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_heapInitialized = true;
 
 	//PDB
-	//m_pdb = new Pdb(KernelKernelPdb);
+	m_pdb = new Pdb(KernelKernelPdb, (void*)KernelBaseAddress);
 
 	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();
@@ -302,24 +302,31 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	while (sw.HasNext())
 	{
 		uintptr_t base;
-		if ((user != nullptr) && (context.Rip < KernelStart))
+		if (context.Rip < KernelStart)
 		{
+			//User process
 			base = user->GetProcess().GetModuleBase(context.Rip);
-			Print("IP: 0x%016x Base: 0x%016x", context.Rip, base);
+			Print("IP: 0x%016x Base: 0x%016x\n", context.Rip, base);
 		}
 		else
 		{
-			Assert(context.Rip >= KernelStart);
-			//Kernel address
 			const KeLibrary* module = KeGetModule(context.Rip);
+			Assert(module);
 			base = (uintptr_t)module->Handle;
-			Print("IP: 0x%016x Base: 0x%016x ", context.Rip, base);
 			const uint32_t rva = (uint32_t)(context.Rip - base);
-			if (module->Pdb != nullptr)
-				module->Pdb->PrintStack(rva);
+
+			if (module->Pdb == nullptr)
+			{
+				kernel.Printf("IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", context.Rip, base, rva);
+			}
+			else
+			{
+				PdbFunctionLookup lookup = {};
+				module->Pdb->ResolveFunction(rva, lookup);
+				kernel.Printf("%s (%d)\n", lookup.Name, lookup.LineNumber);
+			}
 		}
-		
-		Print("\n");
+
 		sw.Next(base);
 	}
 
@@ -387,14 +394,23 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* format, ..
 	this->Printf("Call Stack\n");
 	while (sw.HasNext())
 	{
-		this->Printf("IP: 0x%016x ", context.Rip);
-		const uint32_t rva = (uint32_t)(context.Rip - KernelBaseAddress);
-		if (m_pdb != nullptr && (context.Rip >= KernelBaseAddress))
-			m_pdb->PrintStack(rva);
-		
-		this->Printf("\n");
+		const KeLibrary* module = KeGetModule(context.Rip);
+		Assert(module);
+		const uintptr_t base = (uintptr_t)module->Handle;
+		const uint32_t rva = (uint32_t)(context.Rip - base);
 
-		sw.Next(KernelBaseAddress);
+		if (module->Pdb == nullptr)
+		{
+			kernel.Printf("IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", context.Rip, base, rva);
+		}
+		else
+		{
+			PdbFunctionLookup lookup = {};
+			module->Pdb->ResolveFunction(rva, lookup);
+			kernel.Printf("%s (%d)\n", lookup.Name.c_str(), lookup.LineNumber);
+		}
+
+		sw.Next(base);
 	}
 
 	while (true)
@@ -518,9 +534,10 @@ Handle Kernel::KeLoadLibrary(const std::string& path)
 	const char* fullPath = PortableExecutable::GetPdbName(library);
 	Assert(fullPath);
 	const char* pdbName = GetFileName(fullPath);
+	Assert(pdbName);
 
 	const void* address = KeLoadPdb(pdbName);
-	Pdb* pdb = new Pdb((uintptr_t)address);
+	Pdb* pdb = new Pdb((uintptr_t)address, (void*)library);
 	this->Printf("KeLoadLibrary %s (0x%016x), %s (0x%016x)\n", path.c_str(), (uintptr_t)library, pdbName, address);
 
 	KeLibrary keLibrary = { path, library, pdb };

@@ -226,9 +226,9 @@ EFI_STATUS PrintCpuDetails()
 {
 	EFI_STATUS status;
 
-	int registers[4] = { -1 };
-	char vendor[13] = { 0 };
-	CHAR16 wideVendor[13] = { 0 };
+	int registers[4] = { };
+	char vendor[13] = { };
+	CHAR16 wideVendor[13] = { };
 
 	__cpuid(registers, 0);
 	*((UINT32*)vendor) = (UINT32)registers[1];

@@ -49,7 +49,7 @@ void UserProcess::Init(void* address)
 void UserProcess::AddModule(const char* name, void* address)
 {
 	//Has to be called within context of process for now
-	Assert(__readcr3() == m_pageTables->GetCr3());
+	AssertEqual(__readcr3(), m_pageTables->GetCr3());
 
 	//TODO: check name length
 

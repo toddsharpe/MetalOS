@@ -244,3 +244,9 @@ struct KeLibrary
 	Handle Handle;
 	Pdb* Pdb;
 };
+
+struct PdbFunctionLookup
+{
+	std::string Name;
+	size_t LineNumber;
+};

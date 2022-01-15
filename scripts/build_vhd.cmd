@@ -19,17 +19,20 @@ echo exit
 
 diskpart /s %VHD_SCRIPT%
 
-@rem Copy files to VHD
+@rem Copy bootloader to VHD
 xcopy %BUILD_OUT%\BOOTX64.EFI X:\EFI\BOOT\
+
+@rem Copy kernel and kernel libraries
 xcopy %BUILD_OUT%\moskrnl.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\moskrnl.pdb X:\EFI\BOOT\
 xcopy %BUILD_OUT%\kdcom.dll X:\EFI\BOOT\
 xcopy %BUILD_OUT%\kdcom.pdb X:\EFI\BOOT\
-xcopy %BUILD_OUT%\shell.exe X:\EFI\BOOT\
-xcopy %BUILD_OUT%\fire.exe X:\EFI\BOOT\
+
+@rem Copy runtime libraries
 xcopy %BUILD_OUT%\mosrt.dll X:\EFI\BOOT\
-xcopy %BUILD_OUT%\mosui.dll X:\EFI\BOOT\
-xcopy %BUILD_OUT%\desktop.exe X:\EFI\BOOT\
+
+@rem Copy apps
+xcopy %BUILD_OUT%\fire.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\calc.exe X:\EFI\BOOT\
 
 @rem Copy Doom!!!

@@ -3,9 +3,9 @@
 #include <windows/winnt.h>
 #include "Pdb.h"
 
-Pdb::Pdb(uintptr_t address) :
+Pdb::Pdb(uintptr_t address, void* imageAddress) :
 	m_msfFile(address),
-	m_dbi(m_msfFile.GetStream(PDB_STREAM_DBI), m_msfFile),
+	m_dbi(m_msfFile.GetStream(PDB_STREAM_DBI), m_msfFile, imageAddress),
 	m_pdb(m_msfFile.GetStream(PDB_STREAM_PDB))
 {
 	//uint32_t index;
@@ -16,7 +16,7 @@ Pdb::Pdb(uintptr_t address) :
 	//names.Display();
 }
 
-bool Pdb::PrintStack(const uint32_t rva)
+bool Pdb::ResolveFunction(const uint32_t rva, PdbFunctionLookup& lookup)
 {
-	return m_dbi.PrintStack(rva);
+	return m_dbi.ResolveFunction(rva, lookup);
 }

@@ -5,34 +5,36 @@
 #include "PdbDbi.h"
 #include "PortableExecutable.h"
 
-PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file) :
+PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file, void* loadedAddress) :
 	m_stream(stream),
 	m_file(file),
 	m_publics(),
 	m_header(),
-	m_kernelText()
+	m_textSection()
 {
 	Assert(m_stream.Read(&m_header));
 	Assert(m_header.VersionSignature == -1);
 	Assert(m_header.VersionHeader == DbiStreamVersion::V70);
 	Assert(m_header.Machine == 0x8664);
 
-	m_kernelText = PortableExecutable::GetPESection(TextSection - 1, KernelBaseAddress);
-	Assert(strcmp((char*)m_kernelText->Name, ".text") == 0);
+	m_textSection = PortableExecutable::GetPESection(TextSection - 1, (uintptr_t)loadedAddress);
+	Assert(strcmp((char*)m_textSection->Name, ".text") == 0);
 
 	m_publics.Load(m_file.GetStream(m_header.SymRecordStreamIndex));
 }
 
 #define MAXPATH 255
-bool PdbDbi::PrintStack(const uint32_t rva)
+bool PdbDbi::ResolveFunction(const uint32_t rva, PdbFunctionLookup& lookup)
 {
-	const uint32_t offset = rva - m_kernelText->VirtualAddress;
+	const uint32_t offset = rva - m_textSection->VirtualAddress;
+	//kernel.Printf("Text VA: 0x%016x, Off: 0x%016x\n", m_textSection->VirtualAddress, offset);
 
-	SectionContribEntry2 contribution;
-	Assert(GetSectionContribution(TextSection, offset, contribution));
+	uint16_t moduleIndex;
+	Assert(GetModuleIndex(TextSection, offset, moduleIndex));
+	//kernel.Printf("ModuleIndex: %d\n", moduleIndex);
 
 	ModInfo info;
-	Assert(GetModuleInfo(contribution.SC.ModuleIndex, info));
+	Assert(GetModuleInfo(moduleIndex, info));
 	Assert(info.C11ByteSize == 0);
 	Assert(info.C13ByteSize != 0);
 
@@ -63,18 +65,18 @@ bool PdbDbi::PrintStack(const uint32_t rva)
 		{
 			CV_DebugSSubsectionHeader_t subHeader;
 			Assert(moduleStream.Read(&subHeader));
+			//AssertEqual(subHeader.type, DEBUG_S_SUBSECTION_TYPE::DEBUG_S_LINES);
+			if (subHeader.type != DEBUG_S_SUBSECTION_TYPE::DEBUG_S_LINES)
+			{
+				lookup.Name = "<unknown type>";
+				lookup.LineNumber = subHeader.type;
+				return false;
+			}
 
-			//if (subHeader.type != DEBUG_S_SUBSECTION_TYPE::DEBUG_S_LINES)
-			//{
-			//	kernel.Printf("Unexpected subHeader type: 0x%x\n", subHeader.type);
-			//	Assert(false);
-			//}
-			
 			CV_DebugSLinesHeader_t linesHeader;
 			Assert(moduleStream.Read(&linesHeader));
 
-			//Print("%04x:%08x-%08x\n", 1, linesHeader.offCon,
-				//(linesHeader.offCon + linesHeader.cbCon));
+			//kernel.Printf("%04x:%08x-%08x\n", 1, linesHeader.offCon, (linesHeader.offCon + linesHeader.cbCon));
 			if (offset < linesHeader.offCon || offset >= (linesHeader.offCon + linesHeader.cbCon))
 			{
 				moduleStream.Skip(subHeader.cbLen - sizeof(CV_DebugSLinesHeader_t));
@@ -86,7 +88,7 @@ bool PdbDbi::PrintStack(const uint32_t rva)
 
 				const uint32_t functionOffset = offset - linesHeader.offCon;
 
-				CV_Line_t prev = { 0 };
+				CV_Line_t prev = { };
 				for (size_t i = 0; fileHeader.nLines; i++)
 				{
 					CV_Line_t line;
@@ -94,10 +96,9 @@ bool PdbDbi::PrintStack(const uint32_t rva)
 
 					if (functionOffset >= prev.offset && functionOffset < line.offset)
 					{
-						std::string& function = m_publics.GetFunction(linesHeader.offCon);
+						lookup.Name = m_publics.GetFunction(linesHeader.offCon);
+						lookup.LineNumber = line.linenumStart;
 
-						kernel.Printf("Function: %s Line: %d", function.c_str(), line.linenumStart);
-						//Print("  Obj: %s\n", buffer);
 						found = true;
 						break;
 					}
@@ -111,10 +112,10 @@ bool PdbDbi::PrintStack(const uint32_t rva)
 		}
 	}
 
-	return true;
+	return false;
 }
 
-bool PdbDbi::GetSectionContribution(const uint32_t section, const uint32_t offset, SectionContribEntry2& entry)
+bool PdbDbi::GetModuleIndex(const uint32_t section, const uint32_t offset, uint16_t& moduleIndex)
 {
 	//Seek to start of section contribution stream
 	m_stream.Seek(sizeof(DbiStreamHeader) + m_header.ModInfoSize);
@@ -123,19 +124,25 @@ bool PdbDbi::GetSectionContribution(const uint32_t section, const uint32_t offse
 	//Reassert this here
 	SectionContrSubstreamVersion version;
 	Assert(m_stream.Read(&version));
-	Assert(version == SectionContrSubstreamVersion::V2);
+	AssertEqual(version, SectionContrSubstreamVersion::Ver60); //V2 uses SectionContribEntry2
+	SectionContribEntry entry;
 
 	while (m_stream.Position() < endPosition)
 	{
-		Assert(m_stream.Read<SectionContribEntry2>(&entry));
+		Assert(m_stream.Read<SectionContribEntry>(&entry));
 
-		if (entry.SC.Section != section)
+		if (entry.Section != section)
 			continue;
 
-		if (entry.SC.Offset <= offset && (entry.SC.Offset + entry.SC.Size) > offset)
+		if (entry.Offset <= offset && (entry.Offset + entry.Size) > offset)
+		{
+			//kernel.PrintBytes((char*)&entry, sizeof(SectionContribEntry));
+			moduleIndex = entry.ModuleIndex;
 			return true;
+		}
 	}
 	
+	//kernel.Printf("Section: %d Offset: 0x%08x. start: 0x%08x, end: 0x%08x\n", section, offset, m_stream.Position(), endPosition);
 	Assert(false);
 	return false;
 }

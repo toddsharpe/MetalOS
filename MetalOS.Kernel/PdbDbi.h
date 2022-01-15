@@ -5,6 +5,7 @@
 
 #include "MsfStream.h"
 #include "PdbPublicsStream.h"
+#include "MetalOS.Kernel.h"
 
 //https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/dbi.h
 //https://llvm.org/docs/PDB/DbiStream.html
@@ -21,9 +22,9 @@
 class PdbDbi
 {
 public:
-	PdbDbi(MsfStream& stream, MsfFile& file);
+	PdbDbi(MsfStream& stream, MsfFile& file, void* loadedAddress);
 
-	bool PrintStack(const uint32_t rva);
+	bool ResolveFunction(const uint32_t rva, PdbFunctionLookup& lookup);
 
 private:
 	static const uint32_t TextSection = 1;
@@ -167,13 +168,13 @@ private:
 	//	uint8_t GlobalRefs[GlobalRefsSize]; //0
 	//};
 
-	bool GetSectionContribution(const uint32_t section, const uint32_t offset, SectionContribEntry2& entry);
+	bool GetModuleIndex(const uint32_t section, const uint32_t offset, uint16_t& moduleIndex);
 	bool GetModuleInfo(const uint32_t index, ModInfo& info);
 
 	MsfStream& m_stream;
 	MsfFile& m_file;
 	PdbPublicsStream m_publics;
 	DbiStreamHeader m_header;
-	PIMAGE_SECTION_HEADER m_kernelText;
+	PIMAGE_SECTION_HEADER m_textSection;
 };
 

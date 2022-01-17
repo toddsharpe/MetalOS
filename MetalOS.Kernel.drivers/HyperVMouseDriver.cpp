@@ -13,7 +13,7 @@ HyperVMouseDriver::HyperVMouseDriver(Device& device) :
 	m_semaphore(),
 	m_channel(INPUTVSC_SEND_RING_BUFFER_SIZE, INPUTVSC_RECV_RING_BUFFER_SIZE, { &HyperVMouseDriver::Callback, this })
 {
-	m_semaphore = kernel.CreateSemaphore(0, 0, "HyperVMouseDriver");
+	m_semaphore = kernel.KeCreateSemaphore(0, 0, "HyperVMouseDriver");
 }
 
 Result HyperVMouseDriver::Initialize()
@@ -43,7 +43,7 @@ Result HyperVMouseDriver::Initialize()
 		(uint64_t)&request, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 
 	//Wait for SYNTH_HID_PROTOCOL_RESPONSE and SYNTH_HID_INITIAL_DEVICE_INFO
-	kernel.WaitForSemaphore(m_semaphore, INT64_MAX);
+	kernel.KeWaitForSemaphore(*m_semaphore, INT64_MAX);
 
 	//Send info ack
 	mousevsc_prt_msg ack;
@@ -158,7 +158,7 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 		//kernel.PrintBytes(start, info->hid_descriptor.desc[0].wDescriptorLength);
 
 		//Ack device info
-		kernel.ReleaseSemaphore(m_semaphore, 1);
+		kernel.KeReleaseSemaphore(*m_semaphore, 1);
 	}
 	break;
 
@@ -191,7 +191,7 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 		message->MouseEvent.Buttons.RightPressed = rightClick;
 		message->MouseEvent.XPosition = x;
 		message->MouseEvent.YPosition = y;
-		kernel.PostMessage(message);
+		kernel.KePostMessage(message);
 		break;
 	}
 	break;

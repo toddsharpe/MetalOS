@@ -10,7 +10,7 @@ HyperVKeyboardDriver::HyperVKeyboardDriver(Device& device) :
 	m_semaphore(),
 	m_channel(KBD_VSC_SEND_RING_BUFFER_SIZE, KBD_VSC_RECV_RING_BUFFER_SIZE, { &HyperVKeyboardDriver::Callback, this })
 {
-	m_semaphore = kernel.CreateSemaphore(0, 0, "HyperVKeyboardDriver");
+	m_semaphore = kernel.KeCreateSemaphore(0, 0, "HyperVKeyboardDriver");
 }
 
 Result HyperVKeyboardDriver::Initialize()
@@ -33,7 +33,7 @@ Result HyperVKeyboardDriver::Initialize()
 	request.version_requested.version = SYNTH_KBD_VERSION;
 
 	this->m_channel.SendPacket(&request, sizeof(synth_kbd_protocol_request), (uint64_t)&request, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
-	kernel.WaitForSemaphore(m_semaphore, INT64_MAX);
+	kernel.KeWaitForSemaphore(*m_semaphore, INT64_MAX);
 	Assert(m_response.proto_status & PROTOCOL_ACCEPTED);
 
 	return Result::Success;
@@ -96,7 +96,7 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 		Assert(size >= sizeof(synth_kbd_protocol_response));
 		memcpy(&m_response, header, sizeof(synth_kbd_protocol_response));
 		kernel.Printf("Keyboard Connected: %d\n", m_response.proto_status);
-		kernel.ReleaseSemaphore(m_semaphore, 1);
+		kernel.KeReleaseSemaphore(*m_semaphore, 1);
 	}
 	break;
 
@@ -113,7 +113,7 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 		msg->Header.MessageType = MessageType::KeyEvent;
 		msg->KeyEvent.Key = keyCode;
 		msg->KeyEvent.Flags.Pressed = (key.info & IS_BREAK) == 0;
-		kernel.PostMessage(msg);
+		kernel.KePostMessage(msg);
 		break;
 	}
 	break;

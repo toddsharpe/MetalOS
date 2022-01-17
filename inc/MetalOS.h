@@ -50,7 +50,7 @@ struct Rectangle
 	size_t Width;
 	size_t Height;
 
-	bool Contains(Point2D& p)
+	bool Contains(const Point2D& p) const
 	{
 		if (p.X < X || p.X > (X + Width))
 			return false;
@@ -133,7 +133,7 @@ typedef void* Handle;
 typedef void* HThread;
 typedef void* HSharedMemory;
 typedef void* HRingBuffer;
-typedef uint32_t (*ThreadStart)(void* parameter);
+typedef size_t (*ThreadStart)(void* parameter);
 
 typedef uint16_t VirtualKey;
 //Virtual Keys from Windows

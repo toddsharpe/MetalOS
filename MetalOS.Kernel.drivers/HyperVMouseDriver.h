@@ -166,7 +166,7 @@ private:
 
 	std::queue<KeyEvent> m_events;
 
-	Handle m_semaphore;
+	KSemaphore* m_semaphore;
 	HyperVChannel m_channel;
 };
 

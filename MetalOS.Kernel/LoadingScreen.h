@@ -13,7 +13,7 @@ private:
 	static const uint32_t PixelSize = 4;
 	static const Color FireColors[];
 	static const size_t FireColorsCount = 37;
-	static uint32_t ThreadLoop(void* arg);
+	static size_t ThreadLoop(void* arg);
 
 	void Draw();
 	void Update();

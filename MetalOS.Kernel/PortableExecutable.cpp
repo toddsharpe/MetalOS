@@ -8,13 +8,11 @@
 DWORD PortableExecutable::GetSizeOfImage(const Handle hModule)
 {
 	//Headers
-	PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, hModule, 0);
-	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-		return NULL;
+	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(hModule);
+	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
 
-	PIMAGE_NT_HEADERS64 ntHeader = MakePtr(PIMAGE_NT_HEADERS64, hModule, dosHeader->e_lfanew);
-	if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
-		return NULL;
+	PIMAGE_NT_HEADERS64 ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS64>((char*)hModule + dosHeader->e_lfanew);
+	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
 
 	return ntHeader->OptionalHeader.SizeOfImage;
 }
@@ -22,25 +20,27 @@ DWORD PortableExecutable::GetSizeOfImage(const Handle hModule)
 DWORD PortableExecutable::GetEntryPoint(const Handle hModule)
 {
 	//Headers
-	PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, hModule, 0);
-	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-		return NULL;
+	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(hModule);
+	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
 
-	PIMAGE_NT_HEADERS64 ntHeader = MakePtr(PIMAGE_NT_HEADERS64, hModule, dosHeader->e_lfanew);
-	if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
-		return NULL;
+	PIMAGE_NT_HEADERS64 ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS64>((char*)hModule + dosHeader->e_lfanew);
+	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
 
 	return ntHeader->OptionalHeader.AddressOfEntryPoint;
 }
 
-PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(const std::string& name, const uintptr_t ImageBase)
+PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(const Handle hModule, const std::string& name)
 {
-	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ImageBase;
-	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)((uint64_t)ImageBase + dosHeader->e_lfanew);
+	//Headers
+	PIMAGE_DOS_HEADER dosHeader = reinterpret_cast<PIMAGE_DOS_HEADER>(hModule);
+	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
+
+	PIMAGE_NT_HEADERS64 ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS64>((char*)hModule + dosHeader->e_lfanew);
+	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
 
 	//Find section
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
-	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(ntHeader);
+	for (WORD i = 0; i < ntHeader->FileHeader.NumberOfSections; i++)
 	{
 		if ((char*)&section[i].Name == name)
 			return &section[i];
@@ -50,31 +50,32 @@ PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(const std::string& name, 
 	return nullptr;
 }
 
-PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(const uint32_t index, const uintptr_t ImageBase)
+PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(const Handle hModule, const uint32_t index)
 {
-	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)ImageBase;
-	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)((uint64_t)ImageBase + dosHeader->e_lfanew);
+	//Headers
+	PIMAGE_DOS_HEADER dosHeader = reinterpret_cast<PIMAGE_DOS_HEADER>(hModule);
+	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
 
-	Assert(index < pNtHeader->FileHeader.NumberOfSections);
+	PIMAGE_NT_HEADERS64 ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS64>((char*)hModule + dosHeader->e_lfanew);
+	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
+
+	Assert(index < ntHeader->FileHeader.NumberOfSections);
 
 	//Find section
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
+	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(ntHeader);
 	return &section[index];
 }
 
-uintptr_t PortableExecutable::GetProcAddress(Handle hModule, const char* lpProcName)
+uintptr_t PortableExecutable::GetProcAddress(const Handle hModule, const char* lpProcName)
 {
 	//Headers
-	PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, hModule, 0);
-	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-		return NULL;
+	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(hModule);
+	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
 
-	PIMAGE_NT_HEADERS64 ntHeader = MakePtr(PIMAGE_NT_HEADERS64, hModule, dosHeader->e_lfanew);
-	if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
-		return NULL;
+	PIMAGE_NT_HEADERS64 ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS64>((char*)hModule + dosHeader->e_lfanew);
+	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
 
-	if (ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size == 0)
-		return NULL;
+	Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
 
 	PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
 	if ((directory->Size == 0) || (directory->VirtualAddress == 0))
@@ -124,29 +125,26 @@ uintptr_t PortableExecutable::GetProcAddress(Handle hModule, const char* lpProcN
 //ReactOS::reactos\dll\win32\dbghelp\msc.c
 #define MAKESIG(a,b,c,d)        ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
 #define CODEVIEW_RSDS_SIG       MAKESIG('R','S','D','S')
-const char* PortableExecutable::GetPdbName(Handle hModule)
+const char* PortableExecutable::GetPdbName(const Handle hModule)
 {
 	//Headers
-	PIMAGE_DOS_HEADER dosHeader = MakePtr(PIMAGE_DOS_HEADER, hModule, 0);
-	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-		return nullptr;
+	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(hModule);
+	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
 
-	PIMAGE_NT_HEADERS64 ntHeader = MakePtr(PIMAGE_NT_HEADERS64, hModule, dosHeader->e_lfanew);
-	if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
-		return nullptr;
+	PIMAGE_NT_HEADERS64 ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS64>((char*)hModule + dosHeader->e_lfanew);
+	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
 
-	if (ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size == 0)
-		return nullptr;
+	Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
 
 	PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
 	if ((directory->Size == 0) || (directory->VirtualAddress == 0))
 		return nullptr;
 
 	PIMAGE_DEBUG_DIRECTORY debugDirectory = MakePtr(PIMAGE_DEBUG_DIRECTORY, hModule, directory->VirtualAddress);
-	Assert(debugDirectory->Type == IMAGE_DEBUG_TYPE_CODEVIEW);
+	AssertEqual(debugDirectory->Type, IMAGE_DEBUG_TYPE_CODEVIEW);
 	
 	void* address = MakePtr(void*, hModule, debugDirectory->AddressOfRawData);
-	Assert(*(DWORD*)address == CODEVIEW_RSDS_SIG);
+	AssertEqual(*(DWORD*)address, CODEVIEW_RSDS_SIG);
 
 	const OMFSignatureRSDS* rsds = (const OMFSignatureRSDS*)address;
 	return rsds->name;

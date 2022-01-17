@@ -17,7 +17,7 @@ PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file, void* loadedAddress) :
 	Assert(m_header.VersionHeader == DbiStreamVersion::V70);
 	Assert(m_header.Machine == 0x8664);
 
-	m_textSection = PortableExecutable::GetPESection(TextSection - 1, (uintptr_t)loadedAddress);
+	m_textSection = PortableExecutable::GetPESection(loadedAddress, TextSection - 1);
 	Assert(strcmp((char*)m_textSection->Name, ".text") == 0);
 
 	m_publics.Load(m_file.GetStream(m_header.SymRecordStreamIndex));

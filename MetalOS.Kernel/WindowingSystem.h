@@ -13,34 +13,34 @@ public:
 	void Initialize();
 
 	HWindow AllocWindow(UserThread* thread, const std::string& name, const Rectangle& bounds);
-	bool PaintWindow(HWindow handle, const ReadOnlyBuffer& buffer);
-	bool MoveWindow(HWindow handle, const Rectangle& bounds);
-	bool GetWindowRect(HWindow handle, Rectangle& bounds);
-	bool ThreadHasWindow(size_t threadId);
+	bool PaintWindow(const HWindow handle, const ReadOnlyBuffer& buffer);
+	bool MoveWindow(const HWindow handle, const Rectangle& bounds);
+	bool GetWindowRect(const HWindow handle, Rectangle& bounds);
+	bool ThreadHasWindow(const size_t threadId) const;
 
 	void PostMessage(Message* message);
 
 private:
-	static uint32_t ThreadLoop(void* arg) { return ((WindowingSystem*)arg)->ThreadLoop(); };
-	uint32_t ThreadLoop();
+	static size_t ThreadLoop(void* arg);
+	size_t ThreadLoop() const;
 
 	struct Window
 	{
-		Window(const std::string& title) : Title(title) {};
+		Window(const std::string& title) :
+			Bounds(),
+			FrameBuffer(),
+			Title(title),
+			Thread()
+		{};
 		
 		Rectangle Bounds;
 		Buffer FrameBuffer;
 		const std::string& Title;
 		UserThread* Thread;
-		int ZIndex;
 	};
 
-	Window* GetWindow(size_t threadId)
-	{
-
-	}
-
-	Window* GetWindow(Point2D point);
+	Window* GetWindow(const Point2D& point) const;
+	bool HandleValid(const HWindow handle) const;
 
 	std::list<Window*> m_windows;
 	Display* m_display;

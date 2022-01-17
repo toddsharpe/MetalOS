@@ -93,14 +93,14 @@ void main(LOADER_PARAMS* loader)
 	//Load process
 	//kernel.CreateProcess(std::string("fire.exe"));
 
-	kernel.CreateProcess(std::string("calc.exe"));
-	kernel.CreateProcess(std::string("calc.exe"));
-	kernel.CreateProcess(std::string("calc.exe"));
+	kernel.KeCreateProcess(std::string("calc.exe"));
+	kernel.KeCreateProcess(std::string("calc.exe"));
+	kernel.KeCreateProcess(std::string("calc.exe"));
 
 	//kernel.CreateProcess(std::string("doom.exe"));
 
 	//Exit init thread
-	kernel.ExitKernelThread();
+	kernel.KeExitThread();
 
 	Assert(false);
 }

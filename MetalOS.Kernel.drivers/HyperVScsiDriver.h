@@ -469,7 +469,7 @@ struct Transaction
 {
 	vstor_packet Request;
 	vstor_packet Response;
-	Handle Semaphore;
+	KSemaphore* Semaphore;
 };
 
 class HyperVScsiDriver : public Driver
@@ -490,7 +490,7 @@ private:
 	void OnCallback();
 	void Execute(Transaction* transaction, bool status_check);
 
-	Handle m_semaphore;
+	KSemaphore* m_semaphore;
 	HyperVChannel m_channel;
 };
 

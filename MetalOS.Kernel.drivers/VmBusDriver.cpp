@@ -12,6 +12,7 @@ VmBusDriver::VmBusDriver(Device& device) :
 	Driver(device),
 	m_threadSignal(),
 	m_connectSemaphore(),
+	m_thread(),
 	m_queue(),
 	m_channelCallbacks(),
 	m_msg_conn_id(),
@@ -24,10 +25,9 @@ VmBusDriver::VmBusDriver(Device& device) :
 Result VmBusDriver::Initialize()
 {
 	//Initialize
-	m_threadSignal = kernel.CreateSemaphore(0, 0, "HyperVThread");
-	kernel.Printf("m_threadSignal 0x%016x\n", m_threadSignal);
-	m_connectSemaphore = kernel.CreateSemaphore(0, 0, "HyperVConnect");
-	KThread* thread = kernel.CreateKernelThread(VmBusDriver::ThreadLoop, this);
+	m_threadSignal = kernel.KeCreateSemaphore(0, 0, "HyperVThread");
+	m_connectSemaphore = kernel.KeCreateSemaphore(0, 0, "HyperVConnect");
+	KThread* thread = kernel.KeCreateThread(VmBusDriver::ThreadLoop, this);
 	thread->SetName("VmBus");
 
 	HyperV::SetSintVector(VMBUS_MESSAGE_SINT, (uint32_t)InterruptVector::HypervisorVmBus);
@@ -62,7 +62,7 @@ Result VmBusDriver::EnumerateChildren()
 	HV_CONNECTION_ID connectionId = { 0 };
 	connectionId.Id = VMBUS_MESSAGE_CONNECTION_ID_4;
 	HV_HYPERCALL_RESULT_VALUE result = HyperV::HvPostMessage(connectionId, (HV_MESSAGE_TYPE)1, sizeof(vmbus_channel_initiate_contact), &msg);
-	kernel.WaitForSemaphore(m_connectSemaphore, INT64_MAX);
+	kernel.KeWaitForSemaphore(*m_connectSemaphore, INT64_MAX);
 	connectionId.Id = m_msg_conn_id;
 
 	//vmbus_request_offers
@@ -70,7 +70,7 @@ Result VmBusDriver::EnumerateChildren()
 	memset(&header, 0, sizeof(vmbus_channel_message_header));
 	header.msgtype = vmbus_channel_message_type::CHANNELMSG_REQUESTOFFERS;
 	result = HyperV::HvPostMessage(connectionId, (HV_MESSAGE_TYPE)1, sizeof(vmbus_channel_message_header), &header);
-	kernel.WaitForSemaphore(m_connectSemaphore, INT64_MAX);
+	kernel.KeWaitForSemaphore(*m_connectSemaphore, INT64_MAX);
 
 	return Result::Success;
 }
@@ -92,7 +92,7 @@ HV_HYPERCALL_RESULT_VALUE VmBusDriver::PostMessage(const uint32_t size, const vo
 	connectionId.Id = m_msg_conn_id;
 
 	//Create wait event (currently a semaphore)
-	Handle semaphore = kernel.CreateSemaphore(0, 0, "");
+	KSemaphore* semaphore = kernel.KeCreateSemaphore(0, 0, "");
 
 	vmbus_channel_message_header* hdr = (vmbus_channel_message_header*)message;
 	switch (hdr->msgtype)
@@ -121,8 +121,8 @@ HV_HYPERCALL_RESULT_VALUE VmBusDriver::PostMessage(const uint32_t size, const vo
 	HV_HYPERCALL_RESULT_VALUE result = HyperV::HvPostMessage(connectionId, (HV_MESSAGE_TYPE)1, size, message);
 	Assert(HV_SUCCESS(result.Status));
 
-	kernel.WaitForSemaphore(semaphore, INT64_MAX);
-	kernel.CloseSemaphore(semaphore);
+	kernel.KeWaitForSemaphore(*semaphore, INT64_MAX);
+	kernel.KeCloseSemaphore(semaphore);
 	return result;
 }
 
@@ -143,7 +143,7 @@ void VmBusDriver::OnInterrupt()
 
 	//Start processing thread
 	if (!m_queue.empty())
-		kernel.ReleaseSemaphore(this->m_threadSignal, 1);
+		kernel.KeReleaseSemaphore(*this->m_threadSignal, 1);
 }
 
 void VmBusDriver::SetCallback(uint32_t id, const CallContext& context)
@@ -156,7 +156,7 @@ uint32_t VmBusDriver::ThreadLoop()
 {
 	while (true)
 	{
-		kernel.WaitForSemaphore(m_threadSignal, INT64_MAX);
+		kernel.KeWaitForSemaphore(*m_threadSignal, INT64_MAX);
 		Assert(!m_queue.empty());
 
 		const HV_MESSAGE message = m_queue.front();
@@ -172,7 +172,7 @@ uint32_t VmBusDriver::ThreadLoop()
 			m_msg_conn_id = response->msg_conn_id;
 
 			//Let connect proceed
-			kernel.ReleaseSemaphore(m_connectSemaphore, 1);
+			kernel.KeReleaseSemaphore(*m_connectSemaphore, 1);
 		}
 		break;
 		case vmbus_channel_message_type::CHANNELMSG_OFFERCHANNEL:
@@ -195,7 +195,7 @@ uint32_t VmBusDriver::ThreadLoop()
 		case vmbus_channel_message_type::CHANNELMSG_ALLOFFERS_DELIVERED:
 		{
 			//Let connect proceed
-			kernel.ReleaseSemaphore(m_connectSemaphore, 1);
+			kernel.KeReleaseSemaphore(*m_connectSemaphore, 1);
 		}
 		break;
 		case vmbus_channel_message_type::CHANNELMSG_GPADL_CREATED:
@@ -206,7 +206,7 @@ uint32_t VmBusDriver::ThreadLoop()
 
 			//Save response to caller and signal
 			request->Response.gpadl_created = *created;
-			kernel.ReleaseSemaphore(request->Semaphore, 1);
+			kernel.KeReleaseSemaphore(*request->Semaphore, 1);
 		}
 		break;
 		case vmbus_channel_message_type::CHANNELMSG_OPENCHANNEL_RESULT:
@@ -217,7 +217,7 @@ uint32_t VmBusDriver::ThreadLoop()
 
 			//Save response to caller and signal
 			request->Response.open_result = *result;
-			kernel.ReleaseSemaphore(request->Semaphore, 1);
+			kernel.KeReleaseSemaphore(*request->Semaphore, 1);
 		}
 		break;
 		default:

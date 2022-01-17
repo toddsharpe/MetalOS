@@ -14,7 +14,7 @@ public:
 	Result EnumerateChildren() override;
 
 	static void OnInterrupt(void* arg) { ((VmBusDriver*)arg)->OnInterrupt(); };
-	static uint32_t ThreadLoop(void* arg) { return ((VmBusDriver*)arg)->ThreadLoop(); };
+	static size_t ThreadLoop(void* arg) { return ((VmBusDriver*)arg)->ThreadLoop(); };
 
 	HV_HYPERCALL_RESULT_VALUE PostMessage(const uint32_t size, const void* message, VmBusResponse& response);
 
@@ -28,7 +28,7 @@ private:
 		uint32_t Gpadl;
 		uint32_t child_relid;
 		uint32_t openid;
-		Handle Semaphore;
+		KSemaphore* Semaphore;
 		VmBusResponse& Response;
 	};
 
@@ -56,8 +56,9 @@ private:
 	static KERNEL_PAGE_ALIGN volatile uint8_t MonitorPage2[PAGE_SIZE];
 
 
-	Handle m_threadSignal;
-	Handle m_connectSemaphore;
+	KSemaphore* m_threadSignal;
+	KSemaphore* m_connectSemaphore;
+	KThread* m_thread;
 	std::list<HV_MESSAGE> m_queue;
 
 	//Channel callbacks

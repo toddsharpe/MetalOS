@@ -170,7 +170,7 @@ SystemCallResult Kernel::CreateProcess(const char* processName)
 	if (!processName || !IsValidUserPointer(processName))
 		return SystemCallResult::InvalidPointer;
 
-	bool result = CreateProcess(std::string(processName));
+	bool result = KeCreateProcess(std::string(processName));
 
 	//HACK: While we still switch contexts in CreateProcess, we need to switch it back
 	UserProcess& process = m_scheduler->GetCurrentProcess();
@@ -202,7 +202,7 @@ void Kernel::Sleep(const uint32_t milliseconds)
 	if (!milliseconds)
 		return;
 
-	KernelThreadSleep((nano_t)milliseconds * 1000 * 1000);
+	KeSleepThread((nano_t)milliseconds * 1000 * 1000);
 }
 
 void Kernel::SwitchToThread()
@@ -344,7 +344,7 @@ Handle Kernel::CreateFile(const char* name, const GenericAccess access)
 
 	kernel.Printf("CreateFile: %s Access: %d\n", name, access);
 
-	return this->CreateFile(std::string(name), access);
+	return this->KeCreateFile(std::string(name), access);
 }
 
 SystemCallResult Kernel::ReadFile(const Handle handle, void* buffer, const size_t bufferSize, size_t* bytesRead)
@@ -357,7 +357,7 @@ SystemCallResult Kernel::ReadFile(const Handle handle, void* buffer, const size_
 
 	FileHandle* file = (FileHandle*)handle;
 
-	bool result = this->ReadFile(*file, buffer, bufferSize, bytesRead);
+	bool result = this->KeReadFile(*file, buffer, bufferSize, bytesRead);
 	return result ? SystemCallResult::Success : SystemCallResult::Failed;
 }
 
@@ -394,7 +394,7 @@ SystemCallResult Kernel::SetFilePointer(const Handle handle, const __int64 posit
 		return SystemCallResult::Failed;
 	}
 
-	bool result = this->SetFilePosition(*file, pos);
+	bool result = this->KeSetFilePosition(*file, pos);
 	if (!result)
 		return SystemCallResult::Failed;
 
@@ -409,7 +409,7 @@ SystemCallResult Kernel::CloseFile(const Handle handle)
 	if (!handle)
 		return SystemCallResult::Failed;
 
-	CloseFile((FileHandle*)handle);
+	KeCloseFile((FileHandle*)handle);
 	return SystemCallResult::Success;
 }
 

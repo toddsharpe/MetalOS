@@ -19,9 +19,9 @@ HyperVChannel::HyperVChannel(size_t sendSize, size_t receiveSize, CallContext ca
 	Assert((m_address & PAGE_MASK) == 0);
 	kernel.Printf("Send: 0x%x Receive: 0x%x\n", sendSize, receiveSize);
 
-	Device* bus = kernel.GetDevice("\\_SB_\\VMOD\\VMBS");
+	Device* bus = kernel.KeGetDevice("\\_SB_\\VMOD\\VMBS");
 	Assert(bus);
-	m_vmbus = (VmBusDriver*)bus->GetDriver();
+	m_vmbus = static_cast<VmBusDriver*>(bus->GetDriver());
 }
 
 void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const ReadOnlyBuffer* buffer)

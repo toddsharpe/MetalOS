@@ -4,25 +4,29 @@
 #include "Assert.h"
 #include <limits>
 
+size_t WindowingSystem::ThreadLoop(void* arg)
+{
+	return static_cast<WindowingSystem*>(arg)->ThreadLoop();
+};
+
 WindowingSystem::WindowingSystem(Display* display) :
 	m_windows(),
 	m_display(display),
 	m_mousePos(),
-	m_prevMouseButtons()
+	m_prevMouseButtons(),
+	m_dragWindow()
 {
 
 }
 
 void WindowingSystem::Initialize()
 {
-	//TODO: right place for background image?
-	
 	//Create thread
-	KThread* thread = kernel.CreateKernelThread(&WindowingSystem::ThreadLoop, this);
+	KThread* thread = kernel.KeCreateThread(&WindowingSystem::ThreadLoop, this);
 	thread->SetName("WindowingSystem::ThreadLoop");
 }
 
-uint32_t WindowingSystem::ThreadLoop()
+size_t WindowingSystem::ThreadLoop() const
 {
 	while (true)
 	{
@@ -58,7 +62,7 @@ uint32_t WindowingSystem::ThreadLoop()
 			window->Thread->EnqueueMessage(&message);
 		}
 
-		kernel.KernelThreadSleep(SECOND / 30);
+		kernel.KeSleepThread(SECOND / 30);
 	}
 }
 
@@ -81,7 +85,10 @@ HWindow WindowingSystem::AllocWindow(UserThread* thread, const std::string& name
 
 bool WindowingSystem::PaintWindow(HWindow handle, const ReadOnlyBuffer& buffer)
 {
-	Window* window = (Window*)handle;
+	if (!HandleValid(handle))
+		return false;
+	
+	Window* window = static_cast<Window*>(handle);
 	if (window->FrameBuffer.Length != buffer.Length)
 		return false;
 
@@ -91,7 +98,10 @@ bool WindowingSystem::PaintWindow(HWindow handle, const ReadOnlyBuffer& buffer)
 
 bool WindowingSystem::MoveWindow(HWindow handle, const Rectangle& bounds)
 {
-	Window* window = (Window*)handle;
+	if (!HandleValid(handle))
+		return false;
+	
+	Window* window = static_cast<Window*>(handle);
 	
 	//We can't deallocate the old buffer yet :D
 	Assert(bounds.Height == window->Bounds.Height);
@@ -104,12 +114,15 @@ bool WindowingSystem::MoveWindow(HWindow handle, const Rectangle& bounds)
 
 bool WindowingSystem::GetWindowRect(HWindow handle, Rectangle& bounds)
 {
-	Window* window = (Window*)handle;
+	if (!HandleValid(handle))
+		return false;
+	
+	Window* window = static_cast<Window*>(handle);
 	bounds = window->Bounds;
 	return true;
 }
 
-bool WindowingSystem::ThreadHasWindow(size_t threadId)
+bool WindowingSystem::ThreadHasWindow(const size_t threadId) const
 {
 	for (const auto& window : m_windows)
 	{
@@ -186,7 +199,7 @@ void WindowingSystem::PostMessage(Message* message)
 	top->Thread->EnqueueMessage(message);
 }
 
-WindowingSystem::Window* WindowingSystem::GetWindow(Point2D point)
+WindowingSystem::Window* WindowingSystem::GetWindow(const Point2D& point) const
 {
 	//Loop through in reverse, finding first window inside bounds
 	auto it = m_windows.rbegin();
@@ -199,4 +212,18 @@ WindowingSystem::Window* WindowingSystem::GetWindow(Point2D point)
 		it++;
 	}
 	return nullptr;
+}
+
+bool WindowingSystem::HandleValid(const HWindow handle) const
+{
+	auto it = m_windows.rbegin();
+	while (it != m_windows.rend())
+	{
+		Window* window = *it;
+		if (window == handle)
+			return true;
+
+		it++;
+	}
+	return false;
 }

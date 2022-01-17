@@ -190,7 +190,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_modules->push_back(keLibrary);
 
 	//Create idle thread
-	KThread* idle = CreateKernelThread(&Kernel::IdleThread, this);
+	KThread* idle = KeCreateThread(&Kernel::IdleThread, this);
 	idle->SetName("idle");
 
 	//Initialize Platform
@@ -507,7 +507,7 @@ void Kernel::OnTimer0()
 		m_scheduler->Schedule();
 }
 
-KThread* Kernel::CreateKernelThread(const ThreadStart start, void* arg, UserThread* userThread)
+KThread* Kernel::KeCreateThread(const ThreadStart start, void* arg, UserThread* userThread)
 {
 	//Current thread
 	const KThread* current = m_scheduler->GetCurrentThread();
@@ -520,9 +520,9 @@ KThread* Kernel::CreateKernelThread(const ThreadStart start, void* arg, UserThre
 	return thread;
 }
 
-void Kernel::ExitKernelThread()
+void Kernel::KeExitThread()
 {
-	Print("Kernel::ExitKernelThread\n");
+	Print("Kernel::KeThreadExit\n");
 
 	m_scheduler->KillThread();
 }
@@ -542,25 +542,27 @@ Handle Kernel::KeLoadLibrary(const std::string& path)
 
 	KeLibrary keLibrary = { path, library, pdb };
 	m_modules->push_back(keLibrary);
-	m_debugger->AddModule(keLibrary);
+
+	if (m_debugger != nullptr)
+		m_debugger->AddModule(keLibrary);
 
 	return library;
 }
 
-const KeLibrary* Kernel::KeGetModule(const uintptr_t address)
+const KeLibrary* Kernel::KeGetModule(const uintptr_t address) const
 {
 	for (const auto& module : *m_modules)
 	{
 		const uintptr_t imageBase = (uintptr_t)module.Handle;
 		const size_t imageSize = PortableExecutable::GetSizeOfImage(module.Handle);
 
-		if ((address > imageBase) && (address < imageBase + imageSize))
+		if ((address >= imageBase) && (address < imageBase + imageSize))
 			return &module;
 	}
 	return nullptr;
 }
 
-const KeLibrary* Kernel::KeGetModule(const std::string& path)
+const KeLibrary* Kernel::KeGetModule(const std::string& path) const
 {
 	for (const auto& module : *m_modules)
 	{
@@ -581,11 +583,11 @@ void Kernel::KernelThreadInitThunk()
 	kernel.Printf("Kill thread: %d\n", current->GetId());
 
 	//Exit thread TODO
-	kernel.ExitKernelThread();
+	kernel.KeExitThread();
 	Assert(false);
 }
 
-uint32_t Kernel::UserThreadInitThunk(void* unused)
+size_t Kernel::UserThreadInitThunk(void* unused)
 {
 	kernel.Printf("Kernel::UserThreadInitThunk\n");
 	KThread* current = kernel.m_scheduler->GetCurrentThread();
@@ -601,12 +603,12 @@ uint32_t Kernel::UserThreadInitThunk(void* unused)
 	Assert(false);
 }
 
-void Kernel::KernelThreadSleep(const nano_t value) const
+void Kernel::KeSleepThread(const nano_t value) const
 {
 	m_scheduler->Sleep(value);
 }
 
-void Kernel::KeGetSystemTime(SystemTime& time)
+void Kernel::KeGetSystemTime(SystemTime& time) const
 {
 	EFI_TIME efiTime = { 0 };
 	Assert(!EFI_ERROR(m_runtime.GetTime(&efiTime, nullptr)));
@@ -656,62 +658,57 @@ void* Kernel::AllocateKernelPage(uintptr_t address, const size_t count, const Me
 	return m_virtualMemory->Allocate(address, count, protection, *m_heapSpace);
 }
 
-Handle Kernel::CreateSemaphore(const size_t initial, const size_t maximum, const std::string& name)
+KSemaphore* Kernel::KeCreateSemaphore(const size_t initial, const size_t maximum, const std::string& name)
 {
 	KSemaphore* semaphore = new KSemaphore(initial, maximum, name);
 	return semaphore;
 }
 
-bool Kernel::ReleaseSemaphore(Handle handle, const size_t releaseCount)
+bool Kernel::KeReleaseSemaphore(KSemaphore& semaphore, const size_t releaseCount)
 {
-	KSemaphore* semaphore = GetSemaphore(handle);
-
 	if (m_scheduler->Enabled)
 	{
 		cpu_flags_t flags = ArchDisableInterrupts();
 
-		m_scheduler->SemaphoreRelease(semaphore, releaseCount);
+		m_scheduler->SemaphoreRelease(&semaphore, releaseCount);
 
 		ArchRestoreFlags(flags);
 	}
 	else
 	{
-		semaphore->Signal(releaseCount);
+		semaphore.Signal(releaseCount);
 	}
 	
 	return true;
 }
 
-bool Kernel::CloseSemaphore(Handle handle)
+WaitStatus Kernel::KeWaitForSemaphore(KSemaphore& semaphore, size_t timeoutMs, size_t units)
 {
-	KSemaphore* semaphore = GetSemaphore(handle);
-	semaphore->DecRefCount();
-
-	if (semaphore->IsClosed())
-		delete semaphore;
-
-	return true;
-}
-
-WaitStatus Kernel::WaitForSemaphore(Handle handle, size_t timeoutMs, size_t units)
-{
-	KSemaphore* semaphore = GetSemaphore(handle);
-
 	if (m_scheduler->Enabled)
 	{
 		cpu_flags_t flags = ArchDisableInterrupts();
 
 		const nano100_t timeout = timeoutMs * 1000000 / 100;
-		WaitStatus status = m_scheduler->SemaphoreWait(semaphore, timeout);
+		WaitStatus status = m_scheduler->SemaphoreWait(&semaphore, timeout);
 
 		ArchRestoreFlags(flags);
 		return status;
 	}
 	else
 	{
-		semaphore->Wait(units, timeoutMs);
+		semaphore.Wait(units, timeoutMs);
 		return WaitStatus::Signaled;
 	}
+}
+
+bool Kernel::KeCloseSemaphore(KSemaphore* semaphore)
+{
+	semaphore->DecRefCount();
+
+	if (semaphore->IsClosed())
+		delete semaphore;
+
+	return true;
 }
 
 void Kernel::KeRegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context)
@@ -737,25 +734,25 @@ void* Kernel::VirtualMap(UserProcess& process, const void* address, const std::v
 	return m_virtualMemory->VirtualMap((uintptr_t)address, addresses, protection, process.GetAddressSpace());
 }
 
-Device* Kernel::GetDevice(const std::string path) const
+Device* Kernel::KeGetDevice(const std::string& path) const
 {
 	return m_deviceTree.GetDevice(path);
 }
 
 void* Kernel::KeLoadPdb(const std::string& path)
 {
-	FileHandle* file = CreateFile(path, GenericAccess::Read);
+	FileHandle* file = KeCreateFile(path, GenericAccess::Read);
 	Assert(file);
 	
 	void* address = AllocatePdb(SIZE_TO_PAGES(file->Length));
-	bool success = ReadFile(*file, address, file->Length, nullptr);
+	bool success = KeReadFile(*file, address, file->Length, nullptr);
 	Assert(success);
-	CloseFile(file);
+	KeCloseFile(file);
 
 	return address;
 }
 
-FileHandle* Kernel::CreateFile(const std::string& path, const GenericAccess access) const
+FileHandle* Kernel::KeCreateFile(const std::string& path, const GenericAccess access) const
 {
 	const Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
 	const RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
@@ -764,7 +761,7 @@ FileHandle* Kernel::CreateFile(const std::string& path, const GenericAccess acce
 	return handle;
 }
 
-bool Kernel::ReadFile(FileHandle& file, void* buffer, size_t bufferSize, size_t* bytesRead)
+bool Kernel::KeReadFile(FileHandle& file, void* buffer, const size_t bufferSize, size_t* bytesRead) const
 {
 	const Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
 	const RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
@@ -777,7 +774,7 @@ bool Kernel::ReadFile(FileHandle& file, void* buffer, size_t bufferSize, size_t*
 	return true;
 }
 
-bool Kernel::SetFilePosition(FileHandle& file, const size_t position)
+bool Kernel::KeSetFilePosition(FileHandle& file, const size_t position) const
 {
 	if (position >= file.Length)
 		return false;
@@ -786,29 +783,29 @@ bool Kernel::SetFilePosition(FileHandle& file, const size_t position)
 	return true;
 }
 
-void Kernel::CloseFile(FileHandle* file)
+void Kernel::KeCloseFile(FileHandle* file) const
 {
 	delete file;
 }
 
-bool Kernel::CreateProcess(const std::string& path)
+bool Kernel::KeCreateProcess(const std::string& path)
 {
 	Print("CreateProcess %s\n", path);
-	FileHandle* file = CreateFile(path, GenericAccess::Read);
+	FileHandle* file = KeCreateFile(path, GenericAccess::Read);
 	Assert(file);
 
 	size_t read;
 
 	//Dos header
 	IMAGE_DOS_HEADER dosHeader;
-	Assert(ReadFile(*file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
+	Assert(KeReadFile(*file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
 	Assert(read == sizeof(IMAGE_DOS_HEADER));
 	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 	//NT Header
 	IMAGE_NT_HEADERS64 peHeader;
-	Assert(SetFilePosition(*file, dosHeader.e_lfanew));
-	Assert(ReadFile(*file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
+	Assert(KeSetFilePosition(*file, dosHeader.e_lfanew));
+	Assert(KeReadFile(*file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
 	Assert(read == sizeof(IMAGE_NT_HEADERS64));
 
 	//Verify image
@@ -833,8 +830,8 @@ bool Kernel::CreateProcess(const std::string& path)
 	process->AddModule(path.c_str(), address);
 
 	//Read headers
-	Assert(SetFilePosition(*file, 0));
-	Assert(ReadFile(*file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
+	Assert(KeSetFilePosition(*file, 0));
+	Assert(KeReadFile(*file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	Assert(read == peHeader.OptionalHeader.SizeOfHeaders);
 
 	PIMAGE_NT_HEADERS64 pNtHeader = MakePtr(PIMAGE_NT_HEADERS64, address, dosHeader.e_lfanew);
@@ -849,12 +846,12 @@ bool Kernel::CreateProcess(const std::string& path)
 		DWORD rawSize = section[i].SizeOfRawData;
 		if (rawSize != 0)
 		{
-			Assert(SetFilePosition(*file, section[i].PointerToRawData));
-			Assert(ReadFile(*file, (void*)destination, rawSize, &read));
+			Assert(KeSetFilePosition(*file, section[i].PointerToRawData));
+			Assert(KeReadFile(*file, (void*)destination, rawSize, &read));
 			Assert(read == section[i].SizeOfRawData);
 		}
 	}
-	CloseFile(file);
+	KeCloseFile(file);
 
 	//Load KernelAPI
 	Handle api = Loader::LoadLibrary(*process, "mosrt.dll");
@@ -882,7 +879,7 @@ KThread* Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStar
 	UserThread* userThread = new UserThread(startAddress, arg, entry, stackSize, process);
 
 	//Create kernel thread
-	KThread* thread = CreateKernelThread(&Kernel::UserThreadInitThunk, nullptr, userThread);
+	KThread* thread = KeCreateThread(&Kernel::UserThreadInitThunk, nullptr, userThread);
 	
 	char name[32] = {};
 	sprintf(name, "%s[%d]", process.GetName().c_str(), userThread->GetId());
@@ -899,7 +896,7 @@ void* Kernel::VirtualAlloc(UserProcess& process, const void* address, const size
 	return allocated;
 }
 
-void Kernel::PostMessage(Message* msg)
+void Kernel::KePostMessage(Message* msg)
 {
 	if (m_windows != nullptr)
 		m_windows->PostMessage(msg);

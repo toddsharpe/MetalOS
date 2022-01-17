@@ -10,7 +10,7 @@ HyperVScsiDriver::HyperVScsiDriver(Device& device) :
 	m_semaphore(),
 	m_channel(SCSI_VSC_SEND_RING_BUFFER_SIZE, SCSI_VSC_RECV_RING_BUFFER_SIZE, { &HyperVScsiDriver::Callback, this })
 {
-	m_semaphore = kernel.CreateSemaphore(0, 0, "HyperVScsiDriver");
+	m_semaphore = kernel.KeCreateSemaphore(0, 0, "HyperVScsiDriver");
 
 }
 
@@ -113,8 +113,8 @@ void HyperVScsiDriver::OnCallback() //storvsc_on_channel_callback
 		{
 			//These are during init
 			memcpy(&transaction->Response, data, (sizeof(struct vstor_packet) - vmscsi_size_delta));
-			kernel.ReleaseSemaphore(transaction->Semaphore, 1);
-			kernel.CloseSemaphore(transaction->Semaphore);
+			kernel.KeReleaseSemaphore(*transaction->Semaphore, 1);
+			kernel.KeCloseSemaphore(transaction->Semaphore);
 		}
 		else
 		{
@@ -125,8 +125,8 @@ void HyperVScsiDriver::OnCallback() //storvsc_on_channel_callback
 			{
 			case VSTOR_OPERATION_COMPLETE_IO:
 				Assert(transaction->Response.vm_srb.scsi_status == 0 && transaction->Response.vm_srb.srb_status == SRB_STATUS_SUCCESS);
-				kernel.ReleaseSemaphore(transaction->Semaphore, 1);
-				kernel.CloseSemaphore(transaction->Semaphore);
+				kernel.KeReleaseSemaphore(*transaction->Semaphore, 1);
+				kernel.KeCloseSemaphore(transaction->Semaphore);
 				break;
 
 			case VSTOR_OPERATION_REMOVE_DEVICE:
@@ -154,12 +154,12 @@ void HyperVScsiDriver::Execute(Transaction* transaction, bool status_check)
 	//kernel.Printf("Execute. Delta: 0x%x\n", m_sizeDelta);
 
 	//Create semaphore
-	transaction->Semaphore = kernel.CreateSemaphore(0, 0, "HyperVScsiDriver");
+	transaction->Semaphore = kernel.KeCreateSemaphore(0, 0, "HyperVScsiDriver");
 
 	transaction->Request.flags = REQUEST_COMPLETION_FLAG;
 
 	this->m_channel.SendPacket(&transaction->Request, sizeof(vstor_packet) - m_sizeDelta, (uint64_t)transaction, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
-	kernel.WaitForSemaphore(transaction->Semaphore, INT64_MAX);
+	kernel.KeWaitForSemaphore(*transaction->Semaphore, INT64_MAX);
 
 	//TODO: close semaphore
 

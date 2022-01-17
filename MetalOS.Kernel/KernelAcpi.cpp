@@ -109,7 +109,7 @@ void Kernel::AcpiOsStall(UINT32 Microseconds)
 
 ACPI_STATUS Kernel::AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEMAPHORE* OutHandle)
 {
-	*OutHandle = this->CreateSemaphore(InitialUnits, MaxUnits, "AcpiSemaphore");
+	*OutHandle = this->KeCreateSemaphore(InitialUnits, MaxUnits, "AcpiSemaphore");
 	return AE_OK;
 }
 
@@ -118,7 +118,8 @@ ACPI_STATUS Kernel::AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle)
 	if (!Handle)
 		return AE_BAD_PARAMETER;
 
-	this->CloseSemaphore(Handle);
+	KSemaphore* semaphore = static_cast<KSemaphore*>(Handle);
+	this->KeCloseSemaphore(semaphore);
 	return AE_OK;
 }
 
@@ -135,7 +136,8 @@ ACPI_STATUS Kernel::AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UIN
 
 	Assert(Units == 1);
 
-	WaitStatus status = this->WaitForSemaphore(Handle, Timeout, Units);
+	KSemaphore* semaphore = static_cast<KSemaphore*>(Handle);
+	WaitStatus status = this->KeWaitForSemaphore(*semaphore, Timeout, Units);
 	if (status == WaitStatus::Signaled)
 		return AE_OK;
 	else if (status == WaitStatus::Timeout)
@@ -147,7 +149,8 @@ ACPI_STATUS Kernel::AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units)
 	if (!Handle)
 		return AE_BAD_PARAMETER;
 	
-	if (!this->ReleaseSemaphore(Handle, Units))
+	KSemaphore* semaphore = static_cast<KSemaphore*>(Handle);
+	if (!this->KeReleaseSemaphore(*semaphore, Units))
 		return AE_BAD_PARAMETER;
 	
 	return AE_OK;

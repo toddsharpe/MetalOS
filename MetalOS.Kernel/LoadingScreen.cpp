@@ -73,7 +73,7 @@ void LoadingScreen::Initialize()
 	Draw();
 
 	//Create thread
-	kernel.CreateKernelThread(&LoadingScreen::ThreadLoop, this);
+	kernel.KeCreateThread(&LoadingScreen::ThreadLoop, this);
 }
 
 void LoadingScreen::Update()
@@ -99,7 +99,7 @@ void LoadingScreen::Draw()
 	memcpy((void*)m_display.GetBuffer(), m_buffer.Buffer(), m_buffer.Size());
 }
 
-uint32_t LoadingScreen::ThreadLoop(void* arg)
+size_t LoadingScreen::ThreadLoop(void* arg)
 {
 	LoadingScreen* screen = (LoadingScreen*)arg;
 	while (true)
@@ -107,7 +107,7 @@ uint32_t LoadingScreen::ThreadLoop(void* arg)
 		screen->Update();
 		screen->Draw();
 
-		kernel.KernelThreadSleep(SECOND / 16);
+		kernel.KeSleepThread(SECOND / 16);
 	}
 }
 

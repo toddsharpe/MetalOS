@@ -120,7 +120,7 @@ private:
 
 	synth_kbd_protocol_response m_response;
 
-	Handle m_semaphore;
+	KSemaphore* m_semaphore;
 	HyperVChannel m_channel;
 };
 

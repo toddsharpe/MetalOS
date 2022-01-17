@@ -131,7 +131,7 @@ public:
 
 #pragma region ThreadStarts
 	__declspec(noreturn) static void KernelThreadInitThunk();
-	__declspec(noreturn) static uint32_t UserThreadInitThunk(void* unused);
+	__declspec(noreturn) static size_t UserThreadInitThunk(void* unused);
 #pragma endregion
 
 #pragma region Kernel Debugger
@@ -139,42 +139,45 @@ public:
 	void KeResumeSystem() const;
 #pragma endregion
 
-#pragma region Kernel Interface
-	KThread* CreateKernelThread(const ThreadStart start, void* arg, UserThread* userThread = nullptr);
-	void KernelThreadSleep(const nano_t value) const;
-	void ExitKernelThread();
+#pragma region Internal Interface
+	//Processes
+	bool KeCreateProcess(const std::string& path);
+	
+	//Threads
+	KThread* KeCreateThread(const ThreadStart start, void* arg, UserThread* userThread = nullptr);
+	void KeSleepThread(const nano_t value) const;
+	void KeExitThread();
 
+	//Libraries
 	Handle KeLoadLibrary(const std::string& path);
 	void* KeLoadPdb(const std::string& path);
-	const  KeLibrary* KeGetModule(const std::string& path);
-	const KeLibrary* KeGetModule(const uintptr_t address);
+	const  KeLibrary* KeGetModule(const std::string& path) const;
+	const KeLibrary* KeGetModule(const uintptr_t address) const;
 
-	bool CreateProcess(const std::string& path);
-	KThread* CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
+	//Files
+	FileHandle* KeCreateFile(const std::string& path, const GenericAccess access) const;
+	bool KeReadFile(FileHandle& file, void* buffer, const size_t bufferSize, size_t* bytesRead) const;
+	bool KeSetFilePosition(FileHandle& file, const size_t position) const;
+	void KeCloseFile(FileHandle* file) const;
 
-	void KeGetSystemTime(SystemTime& time);
+	//Semaphore
+	KSemaphore* KeCreateSemaphore(const size_t initial, const size_t maximum, const std::string& name);
+	bool KeReleaseSemaphore(KSemaphore& semaphore, const size_t releaseCount);
+	WaitStatus KeWaitForSemaphore(KSemaphore& semaphore, size_t timeoutMs, size_t units = 1);
+	bool KeCloseSemaphore(KSemaphore* semaphore);
+
+	void KeGetSystemTime(SystemTime& time) const;
 
 	void KeRegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
 
-	Device* GetDevice(const std::string path) const;
+	Device* KeGetDevice(const std::string& path) const;
 
 	uint64_t Syscall(SystemCallFrame* frame);
 	bool IsValidUserPointer(const void* p);
-	void PostMessage(Message* msg);
-#pragma endregion
+	void KePostMessage(Message* msg);
 
-#pragma region File Interface
-	FileHandle* CreateFile(const std::string& path, const GenericAccess access) const;
-	bool ReadFile(FileHandle& file, void* buffer, size_t bufferSize, size_t* bytesRead);
-	bool SetFilePosition(FileHandle& file, const size_t position);
-	void CloseFile(FileHandle* file);
-#pragma endregion
+	KThread* CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
 
-#pragma region Semaphore Interface
-	Handle CreateSemaphore(const size_t initial, const size_t maximum, const std::string& name);
-	bool ReleaseSemaphore(Handle handle, const size_t releaseCount);
-	WaitStatus WaitForSemaphore(Handle handle, size_t timeoutMs, size_t units = 1);
-	bool CloseSemaphore(Handle handle);
 #pragma endregion
 
 #pragma region System Calls
@@ -220,7 +223,7 @@ public:
 #pragma endregion
 
 private:
-	static uint32_t IdleThread(void* arg)
+	static size_t IdleThread(void* arg)
 	{
 		while (true)
 			ArchWait();

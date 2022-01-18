@@ -66,7 +66,7 @@ size_t WindowingSystem::ThreadLoop() const
 	}
 }
 
-HWindow WindowingSystem::AllocWindow(UserThread* thread, const std::string& name, const Rectangle& bounds)
+HWindow WindowingSystem::AllocWindow(UserThread* thread, const Rectangle& bounds)
 {
 	//Allocate framebuffer on page boundaries
 	//Map into process directly one day?
@@ -74,7 +74,7 @@ HWindow WindowingSystem::AllocWindow(UserThread* thread, const std::string& name
 	const size_t count = SIZE_TO_PAGES(bytes);
 	void* buffer = kernel.AllocateWindows(count);
 	
-	Window* window = new Window(name);
+	Window* window = new Window();
 	window->Bounds = bounds;
 	window->FrameBuffer = { buffer, bytes };
 	window->Thread = thread;

@@ -196,7 +196,7 @@ public:
 	SystemCallResult ExitProcess(const uint32_t exitCode);
 	SystemCallResult ExitThread(const uint32_t exitCode);
 
-	SystemCallResult AllocWindow(HWindow* handle, const char* name, const Rectangle* bounds);
+	SystemCallResult AllocWindow(HWindow* handle, const Rectangle* bounds);
 	SystemCallResult PaintWindow(HWindow handle, const ReadOnlyBuffer* buffer);
 	SystemCallResult MoveWindow(HWindow handle, const Rectangle* bounds);
 	SystemCallResult GetWindowRect(HWindow handle, Rectangle* bounds);

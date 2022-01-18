@@ -399,7 +399,7 @@ public:
 
 	void Initialize()
 	{
-		SystemCallResult r = AllocWindow(m_handle, m_title, m_rect);
+		SystemCallResult r = AllocWindow(m_handle, m_rect);
 		m_frame.Initialize();
 	}
 

@@ -48,7 +48,7 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 		return (uint64_t)ExitThread((uint32_t)frame->Arg0);
 
 	case SystemCall::AllocWindow:
-		return (uint64_t)AllocWindow((HWindow*)frame->Arg0, (const char*)frame->Arg1, (Rectangle*)frame->Arg2);
+		return (uint64_t)AllocWindow((HWindow*)frame->Arg0, (Rectangle*)frame->Arg1);
 
 	case SystemCall::PaintWindow:
 		return (uint64_t)PaintWindow((HWindow*)frame->Arg0, (ReadOnlyBuffer*)frame->Arg1);
@@ -247,7 +247,7 @@ SystemCallResult Kernel::ExitThread(const uint32_t exitCode)
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::AllocWindow(HWindow* handle, const char* name, const Rectangle* bounds)
+SystemCallResult Kernel::AllocWindow(HWindow* handle, const Rectangle* bounds)
 {
 	if (!IsValidUserPointer(handle) || !IsValidUserPointer(bounds))
 		return SystemCallResult::InvalidPointer;
@@ -258,7 +258,7 @@ SystemCallResult Kernel::AllocWindow(HWindow* handle, const char* name, const Re
 	if (m_windows->ThreadHasWindow(user->GetId()))
 		return SystemCallResult::Failed;
 
-	*handle = m_windows->AllocWindow(user, std::string(name), *bounds);
+	*handle = m_windows->AllocWindow(user, *bounds);
 	return SystemCallResult::Success;
 }
 

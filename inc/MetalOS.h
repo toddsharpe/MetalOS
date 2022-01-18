@@ -629,7 +629,7 @@ RUNTIMECALL(void) SetLastError(uint32_t errorCode);
 typedef void* HWindow;
 
 //Windows
-SYSTEMCALL(SystemCallResult) AllocWindow(HWindow& handle, const char* name, const Rectangle& frame);
+SYSTEMCALL(SystemCallResult) AllocWindow(HWindow& handle, const Rectangle& frame);
 //SYSTEMCALL(SystemCallResult) GetWindowInfo(HWindow handle, Rectangle& frame, WindowStyle& style);
 SYSTEMCALL(SystemCallResult) PaintWindow(HWindow handle, const ReadOnlyBuffer& buffer);
 SYSTEMCALL(SystemCallResult) MoveWindow(HWindow handle, const Rectangle& frame);

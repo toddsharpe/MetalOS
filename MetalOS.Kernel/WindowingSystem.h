@@ -12,7 +12,7 @@ public:
 	WindowingSystem(Display* display);
 	void Initialize();
 
-	HWindow AllocWindow(UserThread* thread, const std::string& name, const Rectangle& bounds);
+	HWindow AllocWindow(UserThread* thread, const Rectangle& bounds);
 	bool PaintWindow(const HWindow handle, const ReadOnlyBuffer& buffer);
 	bool MoveWindow(const HWindow handle, const Rectangle& bounds);
 	bool GetWindowRect(const HWindow handle, Rectangle& bounds);
@@ -26,16 +26,14 @@ private:
 
 	struct Window
 	{
-		Window(const std::string& title) :
+		Window() :
 			Bounds(),
 			FrameBuffer(),
-			Title(title),
 			Thread()
 		{};
 		
 		Rectangle Bounds;
 		Buffer FrameBuffer;
-		const std::string& Title;
 		UserThread* Thread;
 	};
 

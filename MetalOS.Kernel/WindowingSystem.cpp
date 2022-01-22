@@ -14,7 +14,8 @@ WindowingSystem::WindowingSystem(Display* display) :
 	m_display(display),
 	m_mousePos(),
 	m_prevMouseButtons(),
-	m_dragWindow()
+	m_dragWindow(),
+	m_focusWindow()
 {
 
 }
@@ -34,16 +35,15 @@ size_t WindowingSystem::ThreadLoop() const
 		m_display->ColorScreen(Colors::Black);
 		
 		//Draw windows
-		for (auto it = m_windows.begin(); it != m_windows.end(); it++)
+		for (auto& window : m_windows)
 		{
-			const Window* window = *it;
-			if (std::next(it) != m_windows.end())
+			if (window != m_focusWindow)
 			{
 				m_display->WriteFrameGrayscale(window->Bounds, window->FrameBuffer);
 			}
 			else
 			{
-				//Top window gets color
+				//Focus window gets color
 				m_display->WriteFrame(window->Bounds, window->FrameBuffer);
 			}
 		}
@@ -78,6 +78,9 @@ HWindow WindowingSystem::AllocWindow(UserThread* thread, const Rectangle& bounds
 	window->Bounds = bounds;
 	window->FrameBuffer = { buffer, bytes };
 	window->Thread = thread;
+
+	//Focus new windows
+	m_focusWindow = window;
 
 	m_windows.push_back(window);
 	return (HWindow)window;
@@ -164,6 +167,10 @@ void WindowingSystem::PostMessage(Message* message)
 		//Detect drag
 		if (message->MouseEvent.Buttons.LeftPressed)
 		{
+			//Focus window
+			Window* selected = GetWindow(mousePos);
+			m_focusWindow = selected;
+			
 			if (m_dragWindow == nullptr)
 			{
 				m_dragWindow = GetWindow(mousePos);
@@ -191,12 +198,11 @@ void WindowingSystem::PostMessage(Message* message)
 		break;
 	}
 	
-	if (m_windows.size() == 0)
-		return;
-
-	Window* top = m_windows.back();
-	Assert(top->Thread);
-	top->Thread->EnqueueMessage(message);
+	if (m_focusWindow != nullptr)
+	{
+		Assert(m_focusWindow->Thread);
+		m_focusWindow->Thread->EnqueueMessage(message);
+	}
 }
 
 WindowingSystem::Window* WindowingSystem::GetWindow(const Point2D& point) const

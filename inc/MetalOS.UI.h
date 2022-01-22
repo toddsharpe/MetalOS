@@ -2,7 +2,9 @@
 
 #include <MetalOS.h>
 #include <Debug.h>
+#include <algorithm>
 #include <vector>
+#include <string>
 
 /*********************************/
 /*MetalOS UI Public Facing Header*/
@@ -206,11 +208,6 @@ public:
 		setpixels(m_frameBuffer.Data, color, m_rect.Height * m_rect.Width);
 	}
 
-//#define MAX(x, y) (x > y ? x : y)
-#define MIN(x, y) (x < y ? x : y)
-#define ABS(N) ((N<0)?(-N):(N))
-
-
 	void DrawRectangle(const Color color, const Rectangle& region)
 	{
 		for (size_t y = 0; y < region.Height; y++)
@@ -220,7 +217,7 @@ public:
 
 			//Write row
 			uint32_t* dst = (uint32_t*)m_frameBuffer.Data + (region.Y + y) * m_rect.Width + region.X;
-			size_t count = MIN(region.Width, m_rect.Width - region.X);
+			size_t count = std::min(region.Width, m_rect.Width - region.X);
 			setpixels(dst, color, count);
 		}
 	}
@@ -360,10 +357,10 @@ typedef void(*ButtonClick)(Button& button);
 class Button : public Control
 {
 public:
-	Button(const char* text, const Rectangle& rect) :
+	Button(const std::string& text, const Rectangle& bounds) :
 		Control(),
-		m_text(text),
-		m_rect(rect),
+		Bounds(bounds),
+		Text(text),
 		Click()
 	{
 
@@ -371,28 +368,47 @@ public:
 
 	virtual void Draw(Frame& frame) override
 	{
-		frame.DrawBorder(Foreground, m_rect, 3);
-		frame.DrawText({ m_rect.X + 5, m_rect.Y + 5 }, m_text);
+		frame.DrawBorder(Foreground, Bounds, 3);
+		frame.DrawText({ Bounds.X + 5, Bounds.Y + 5 }, Text.c_str());
 	}
 
+	Rectangle Bounds;
+	std::string Text;
 	ButtonClick Click;
+};
 
-private:
-	const char* m_text;
-	const Rectangle& m_rect;
+class Label : public Control
+{
+public:
+	Label(const std::string& text, const Rectangle& bounds) :
+		Control(),
+		Bounds(bounds),
+		Text(text)
+	{
+
+	}
+
+	virtual void Draw(Frame& frame) override
+	{
+		frame.DrawText({ Bounds.X + 5, Bounds.Y + 5 }, Text.c_str());
+	}
+
+	Rectangle Bounds;
+	std::string Text;
 };
 
 class Window
 {
 public:
-	Window(const char* name, const Rectangle& rect, WindowStyle& style, const MessageCallback& callback) :
-		m_title(name),
+	Window(const std::string& title, const Rectangle& rect, WindowStyle& style, const MessageCallback& callback) :
+		m_title(title),
+		m_frame(rect),
 		m_rect(rect),
 		m_style(style),
-		Children(),
+		m_prevMouseButtons(),
 		m_callback(callback),
-		m_frame(rect),
-		m_handle()
+		m_handle(),
+		Children()
 	{
 
 	}
@@ -421,7 +437,7 @@ public:
 	void DrawBorder()
 	{
 		m_frame.DrawFrameBorder(Colors::Blue, 3);
-		m_frame.DrawText({ 9, 9 }, m_title);
+		m_frame.DrawText({ 9, 9 }, m_title.c_str());
 		m_frame.DrawRectangle(Colors::Blue, { 0, 20, m_rect.Width, 3 });
 	}
 
@@ -445,7 +461,10 @@ public:
 			break;
 		case MessageType::MouseEvent:
 			//todo: clicked?
+			if (message.MouseEvent.Buttons.LeftPressed && !m_prevMouseButtons.LeftPressed)
+				DebugPrintf("Mouse clicked\n");
 
+			m_prevMouseButtons = message.MouseEvent.Buttons;
 			break;
 		}
 	}
@@ -474,11 +493,13 @@ public:
 	std::vector<Control*> Children;
 
 private:
+	std::string m_title;
 	Frame m_frame;
 	Rectangle m_rect;//TODO: keep? or use GetWindowRect?
 	WindowStyle m_style;
 
-	const char* m_title;
+	MouseButtonState m_prevMouseButtons;
+
 	const MessageCallback& m_callback;
 	HWindow m_handle;
 };

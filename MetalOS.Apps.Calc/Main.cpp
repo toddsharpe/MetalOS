@@ -1,5 +1,6 @@
 #include <msvc.h>
 #include "new"
+#include <string>
 
 #include <MetalOS.h>
 #include <MetalOS.UI.h>
@@ -7,6 +8,7 @@
 #include <vector>
 #include <lockit>
 #include <msvc.cpp>
+
 
 bool UICallback(Window& window, Message& message)
 {
@@ -79,6 +81,9 @@ int main(int argc, char** argv)
 
 	Button b3("3", { 55, 75, 20, 20 });
 	window.Children.push_back(&b3);
+
+	Label l1("HI!", {5, 175, 20, 20});
+	window.Children.push_back(&l1);
 
 	//CreateThread(0, ResizeThread, (void*)&window);
 	window.Run();

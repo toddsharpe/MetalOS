@@ -10,10 +10,14 @@
 #define stdout 1
 #define stderr 2
 
+#define EOF    (-1)
+
 #define printf DebugPrintf
 
 #define _FILE_DEFINED
 typedef void FILE;
+
+typedef __int64 fpos_t;
 
 #ifdef __cplusplus
 extern "C"
@@ -31,6 +35,9 @@ LIBRARY int fprintf(FILE* const _Stream, char const* const _Format, ...);
 
 LIBRARY int __cdecl rename(char const* _OldFileName, char const* _NewFileName);
 LIBRARY int __cdecl remove(char const* _FileName);
+
+int __cdecl _scprintf(char const* const _Format, ...);
+int __cdecl sprintf_s(char* const _Buffer, size_t const _BufferCount, char const* const _Format, ...);
 
 #ifdef __cplusplus
 }

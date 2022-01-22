@@ -15,7 +15,8 @@ public:
 	HWindow AllocWindow(UserThread* thread, const Rectangle& bounds);
 	bool PaintWindow(const HWindow handle, const ReadOnlyBuffer& buffer);
 	bool MoveWindow(const HWindow handle, const Rectangle& bounds);
-	bool GetWindowRect(const HWindow handle, Rectangle& bounds);
+	bool GetWindowRect(const HWindow handle, 
+		Rectangle& bounds);
 	bool ThreadHasWindow(const size_t threadId) const;
 
 	void PostMessage(Message* message);
@@ -47,5 +48,6 @@ private:
 
 	//Drag
 	Window* m_dragWindow;
+	Window* m_focusWindow;
 };
 

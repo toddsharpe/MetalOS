@@ -13,6 +13,7 @@ extern "C" void __cdecl _Throw_bad_array_new_length();
 //Disable exceptions in STL
 #define _HAS_EXCEPTIONS 0
 #define _KERNEL_MODE 1
+#define _NO_CRT_STDIO_INLINE 1
 
 //Define X errors:
 namespace std

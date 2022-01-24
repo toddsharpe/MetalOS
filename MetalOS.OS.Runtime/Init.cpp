@@ -3,6 +3,7 @@
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include "Runtime.h"
+#include "MetalOS.OS.Runtime.h"
 
 typedef int (*ProcessEntry)(int argc, char** argv);
 typedef void (*CrtInitializer)();

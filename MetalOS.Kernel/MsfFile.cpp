@@ -4,13 +4,17 @@
 #include <array>
 
 #include "MsfFile.h"
+#include "MsfStream.h"
 
 const char MsfFile::Magic[0x1e] = "Microsoft C/C++ MSF 7.00\r\n\x1a\x44\x53";
 
-MsfFile::MsfFile(uintptr_t base) :
-	m_header((Header*)base),
+MsfFile::MsfFile(const void* base) :
+	m_header(),
 	m_streams()
 {
+	//Set header
+	m_header = static_cast<const Header*>(base);
+	
 	Assert(memcmp((void*)base, &Magic, sizeof(Magic)) == 0);
 	Assert(m_header->BlockSize == PAGE_SIZE);
 
@@ -73,7 +77,7 @@ void* MsfFile::GetBlock(const uint32_t blockNumber) const
 	return (void*)(((uintptr_t)m_header) + ((uintptr_t)blockNumber << PAGE_SHIFT));
 }
 
-void MsfFile::Display()
+void MsfFile::Display() const
 {
 	kernel.Printf("MsfFile::Display\n");
 	kernel.Printf("  Header:\n");

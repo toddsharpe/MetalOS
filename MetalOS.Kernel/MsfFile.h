@@ -12,10 +12,9 @@ class MsfStream;
 class MsfFile
 {
 public:
-	MsfFile(uintptr_t base);
+	MsfFile(const void* base);
 
 	MsfStream& GetStream(const uint32_t index);
-
 	void* GetBlock(const uint32_t blockNumber) const;
 
 	uint32_t BlockSize() const
@@ -52,9 +51,9 @@ private:
 		std::vector<uint32_t> BlockNumbers;
 	};
 
-	void Display();
+	void Display() const;
 
-	Header* m_header;
+	const Header* m_header;
 	std::vector<MsfStream> m_streams;
 };
 

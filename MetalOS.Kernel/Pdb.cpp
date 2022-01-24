@@ -3,9 +3,9 @@
 #include <windows/winnt.h>
 #include "Pdb.h"
 
-Pdb::Pdb(uintptr_t address, void* imageAddress) :
-	m_msfFile(address),
-	m_dbi(m_msfFile.GetStream(PDB_STREAM_DBI), m_msfFile, imageAddress),
+Pdb::Pdb(const void* pdbAddress, const Handle image) :
+	m_msfFile(pdbAddress),
+	m_dbi(m_msfFile.GetStream(PDB_STREAM_DBI), m_msfFile, image),
 	m_pdb(m_msfFile.GetStream(PDB_STREAM_PDB))
 {
 	//uint32_t index;

@@ -10,7 +10,6 @@
 #include "MetalOS.Internal.h"
 
 #define NO_COPY_OR_ASSIGN(X) X(const X&) = delete; X& operator = (const X&) = delete;
-#define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
 
 //Paging Structures - https://gist.github.com/mvankuipers/
 //https://queazan.wordpress.com/2013/12/21/paging-under-amd64/
@@ -78,30 +77,20 @@ struct SystemCallFrame
 #define SIZE_TO_PAGES(a)  \
     ( ((a) >> PAGE_SHIFT) + ((a) & PAGE_MASK ? 1 : 0) )
 
-//4mb reserved space
-#define BootloaderPagePoolCount 256
-#define ReservedPageTablePages 512
-
 //User space starts at   0x00000000 00000000
 //User space stops at    0x00007FFF FFFFFFFF
 //Kernel space starts at 0xFFFF8000 00000000
 //Kernel space stops at  0xFFFFFFFF FFFFFFFF
 
-#define KernelHeapSize 0x1000000
-
 #define MemoryMapReservedSize PAGE_SIZE
 
 #define KernelStop UINT64_MAX
-
-#define ISR_HANDLER(x) x64_interrupt_handler_ ## x
-#define DEF_ISR_HANDLER(x) void ISR_HANDLER(x) ## ()
 
 #define QWordHigh(x) (((uint64_t)x) >> 32)
 #define QWordLow(x) ((uint32_t)((uint64_t)x))
 
 #define KERNEL_GLOBAL_ALIGN __declspec(align(64))
 #define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
-
 
 typedef uint64_t nano_t;//Time in nanoseconds
 typedef uint64_t nano100_t;//Time in 100 nanoseconds
@@ -175,8 +164,16 @@ constexpr size_t ByteAlign(const size_t size, const size_t alignment)
 	return ((size + mask) & ~(mask));
 }
 
-#define BYTE_ALIGN(x, alignment) ((x + (alignment - 1)) & ~(alignment - 1))
-#define PAGE_ALIGN(x) BYTE_ALIGN(x, PAGE_SIZE)
+constexpr size_t PageAlign(const size_t size)
+{
+	return ByteAlign(size, PAGE_SIZE);
+}
+
+template<typename T>
+constexpr T MakePointer(const void* base, size_t offset = 0)
+{
+	return reinterpret_cast<T>((char*)base + offset);
+}
 
 #ifndef DECLSPEC_ALIGN
 #if (_MSC_VER >= 1300) && !defined(MIDL_PASS)

@@ -22,7 +22,7 @@
 class PdbDbi
 {
 public:
-	PdbDbi(MsfStream& stream, MsfFile& file, void* loadedAddress);
+	PdbDbi(MsfStream& stream, MsfFile& file, const Handle image);
 
 	bool ResolveFunction(const uint32_t rva, PdbFunctionLookup& lookup);
 

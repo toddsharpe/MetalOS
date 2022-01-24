@@ -19,7 +19,7 @@ UserThread::UserThread(ThreadStart startAddress, void* arg, void* entry, size_t 
 	
 	//Allocate user stack
 	m_stackAllocation = kernel.VirtualAlloc(process, nullptr, stackSize, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWrite);
-	void* stackPointer = (void*)((uintptr_t)m_stackAllocation + PAGE_ALIGN(stackSize) - ArchStackReserve());
+	void* stackPointer = (void*)((uintptr_t)m_stackAllocation + PageAlign(stackSize) - ArchStackReserve());
 	
 	//Create user thread context
 	const size_t size = ArchContextSize();

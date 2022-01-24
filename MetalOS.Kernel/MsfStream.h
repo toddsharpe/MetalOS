@@ -34,62 +34,10 @@ public:
 		return value;
 	}
 
-	bool ReadString(std::string& value)
-	{
-		char* blockPointer = (char*)GetPointer();
-		while ((*blockPointer) != '\0')
-		{
-			value.append(1, *blockPointer);
-
-			m_position++;
-			blockPointer = (char*)GetPointer();
-		}
-		
-		m_position++;
-		return true;
-	}
-
-	void Read(char* buffer, size_t length)
-	{
-		char* blockPointer = (char*)GetPointer();
-		for (size_t i = 0; i < length; i++)
-		{
-			*buffer = *blockPointer;
-		
-			buffer++;
-			m_position++;
-			blockPointer = (char*)GetPointer();
-		}
-	}
-
-	bool ReadString(char* str)
-	{
-		char* blockPointer = (char*)GetPointer();
-		while ((*blockPointer) != '\0')
-		{
-			*str = *blockPointer;
-
-			m_position++;
-			str++;
-			blockPointer = (char*)GetPointer();
-		}
-		*str = '\0';
-
-		m_position++;
-		return true;
-	}
-
-	void SkipString()
-	{
-		char* blockPointer = (char*)GetPointer();
-		while ((*blockPointer) != '\0')
-		{
-			m_position++;
-			blockPointer = (char*)GetPointer();
-		}
-
-		m_position++;
-	}
+	bool ReadString(std::string& value);
+	void Read(char* buffer, size_t length);
+	bool ReadString(char* str);
+	void SkipString();
 
 	template<typename T>
 	bool Read(T* value)
@@ -160,14 +108,7 @@ public:
 	}
 
 private:
-	void* GetPointer() const
-	{
-		const size_t blockNumber = m_position / m_file.BlockSize();
-		const size_t blockIndex = m_position % m_file.BlockSize();
-
-		const void* block = m_file.GetBlock(m_blockNumbers[blockNumber]);
-		return (void*)((uintptr_t)block + blockIndex);
-	}
+	void* GetPointer() const;
 
 	std::vector<uint32_t> m_blockNumbers;
 	const uint32_t m_size;

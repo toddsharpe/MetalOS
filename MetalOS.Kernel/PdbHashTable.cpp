@@ -1,6 +1,10 @@
 #include "PdbHashTable.h"
 
-PdbHashTable::PdbHashTable()
+PdbHashTable::PdbHashTable() :
+	m_size(),
+	m_capacity(),
+	m_vectorLength(),
+	m_items()
 {
 
 }
@@ -18,14 +22,12 @@ void PdbHashTable::Load(MsfStream& stream)
 	{
 		const uint32_t key = stream.Read<uint32_t>();
 		const uint32_t value = stream.Read<uint32_t>();
-		std::pair<uint32_t, uint32_t> pair(key, value);
-
-		m_items.push_back(pair);
+		m_items.push_back({ key, value });
 	}
 	stream.SkipAlign<uint16_t>();
 }
 
-bool PdbHashTable::GetValue(const uint32_t key, uint32_t& value)
+bool PdbHashTable::GetValue(const uint32_t key, uint32_t& value) const
 {
 	for (const auto& item : m_items)
 	{

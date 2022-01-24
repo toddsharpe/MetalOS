@@ -13,7 +13,7 @@
 class Pdb
 {
 public:
-	Pdb(uintptr_t address, void* imageAddress);
+	Pdb(const void* pdbAddress, const Handle image);
 	
 	bool ResolveFunction(const uint32_t rva, PdbFunctionLookup& lookup);
 

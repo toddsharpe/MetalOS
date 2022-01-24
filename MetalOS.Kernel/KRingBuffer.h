@@ -7,7 +7,11 @@ template<class T, size_t N>
 class KRingBuffer
 {
 public:
-	KRingBuffer() : m_head(), m_tail(N - 1), m_count(), m_buffer()
+	KRingBuffer() :
+		m_head(),
+		m_tail(N - 1),
+		m_count(),
+		m_buffer()
 	{
 
 	}
@@ -43,7 +47,7 @@ public:
 		return true;
 	}
 
-	bool Write(T item)
+	bool Write(const T item)
 	{
 		if (m_count == m_buffer.size())
 			return false;

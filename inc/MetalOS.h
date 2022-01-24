@@ -697,8 +697,6 @@ private:
 	Handle m_thread;
 };
 
-#define MakePtr( cast, ptr, addValue ) (cast)( (uintptr_t)(ptr) + (uintptr_t)(addValue))
-
 enum class DllEntryReason
 {
 	ProcessAttach,

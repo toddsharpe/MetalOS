@@ -31,8 +31,7 @@ public:
 
 	EFI_MEMORY_DESCRIPTOR* Get(size_t index)
 	{
-		//Assert(index < Length());
-		return MakePtr(EFI_MEMORY_DESCRIPTOR*, m_memoryMap, index * m_memoryMapDescriptorSize);
+		return MakePointer<EFI_MEMORY_DESCRIPTOR*>(m_memoryMap, index * m_memoryMapDescriptorSize);
 	}
 
 private:

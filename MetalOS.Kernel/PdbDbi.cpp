@@ -5,7 +5,7 @@
 #include "PdbDbi.h"
 #include "PortableExecutable.h"
 
-PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file, void* loadedAddress) :
+PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file, const Handle image) :
 	m_stream(stream),
 	m_file(file),
 	m_publics(),
@@ -17,7 +17,7 @@ PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file, void* loadedAddress) :
 	Assert(m_header.VersionHeader == DbiStreamVersion::V70);
 	Assert(m_header.Machine == 0x8664);
 
-	m_textSection = PortableExecutable::GetPESection(loadedAddress, TextSection - 1);
+	m_textSection = PortableExecutable::GetPESection(image, TextSection - 1);
 	Assert(strcmp((char*)m_textSection->Name, ".text") == 0);
 
 	m_publics.Load(m_file.GetStream(m_header.SymRecordStreamIndex));

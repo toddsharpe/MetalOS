@@ -70,7 +70,7 @@ size_t RamDriveDriver::ReadFile(const FileHandle& handle, void* const buffer, co
 	Assert(handle.Position < handle.Length);
 
 	const size_t read = std::min(bytesToRead, handle.Length - handle.Position);
-	const void* source = MakePtr(void*, handle.Context, handle.Position);
+	const void* source = MakePointer<void*>(handle.Context, handle.Position);
 	memcpy(buffer, source, read);
 	return read;
 }

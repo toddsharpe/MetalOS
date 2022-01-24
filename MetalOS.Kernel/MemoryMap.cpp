@@ -112,7 +112,9 @@ EFI_PHYSICAL_ADDRESS MemoryMap::AllocatePages(UINT32 count)
 		//Copy all subsequent records down one
 		for (UINTN i = length - 1; i >= index; i--)
 		{
-			memcpy(MakePtr(void*, m_memoryMap, m_memoryMapDescriptorSize * (i + 1)), MakePtr(void*, m_memoryMap, m_memoryMapDescriptorSize * i), m_memoryMapDescriptorSize);
+			void* destination = MakePointer<void*>(m_memoryMap, m_memoryMapDescriptorSize * (i + 1));
+			void* source = MakePointer<void*>(m_memoryMap, m_memoryMapDescriptorSize * i);
+			memcpy(destination, source, m_memoryMapDescriptorSize);
 		}
 		m_memoryMapSize += m_memoryMapDescriptorSize;
 		

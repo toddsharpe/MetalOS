@@ -18,7 +18,7 @@ public:
 	static DWORD GetSizeOfImage(const Handle hModule);
 	static PIMAGE_SECTION_HEADER GetPESection(const Handle hModule, const std::string& name);
 	static PIMAGE_SECTION_HEADER GetPESection(const Handle hModule, const uint32_t index);
-	static uintptr_t GetProcAddress(const Handle hModule, const char* lpProcName);
+	static void* GetProcAddress(const Handle hModule, const char* lpProcName);
 	static const char* GetPdbName(const Handle hModule);
 
 private:

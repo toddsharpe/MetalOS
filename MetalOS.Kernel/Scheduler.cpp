@@ -175,7 +175,7 @@ void Scheduler::Schedule()
 
 			//Get next thread
 			KThread* next = m_readyQueue.front();
-			Assert(next->m_state == ThreadState::Ready);
+			AssertEqual(next->m_state, ThreadState::Ready);
 			m_readyQueue.remove(next);
 
 			while (next->IsSuspended())
@@ -184,7 +184,7 @@ void Scheduler::Schedule()
 				m_readyQueue.push_back(next);
 
 				next = m_readyQueue.front();
-				Assert(next->m_state == ThreadState::Ready);
+				AssertEqual(next->m_state, ThreadState::Ready);
 				m_readyQueue.remove(next);
 			}
 

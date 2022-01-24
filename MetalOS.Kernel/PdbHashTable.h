@@ -10,7 +10,7 @@ class PdbHashTable
 public:
 	PdbHashTable();
 	void Load(MsfStream& stream);
-	bool GetValue(const uint32_t key, uint32_t& value);
+	bool GetValue(const uint32_t key, uint32_t& value) const;
 
 private:
 	/*

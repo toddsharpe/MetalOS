@@ -165,7 +165,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_heapInitialized = true;
 
 	//PDB
-	m_pdb = new Pdb(KernelKernelPdb, (void*)KernelBaseAddress);
+	m_pdb = new Pdb((void*)KernelKernelPdb, (Handle*)KernelBaseAddress);
 
 	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();
@@ -529,7 +529,7 @@ void Kernel::KeExitThread()
 
 Handle Kernel::KeLoadLibrary(const std::string& path)
 {
-	Handle library = Loader::LoadKernelLibrary(path);
+	const Handle library = Loader::LoadKernelLibrary(path);
 
 	const char* fullPath = PortableExecutable::GetPdbName(library);
 	Assert(fullPath);
@@ -537,7 +537,7 @@ Handle Kernel::KeLoadLibrary(const std::string& path)
 	Assert(pdbName);
 
 	const void* address = KeLoadPdb(pdbName);
-	Pdb* pdb = new Pdb((uintptr_t)address, (void*)library);
+	Pdb* pdb = new Pdb(address, (void*)library);
 	this->Printf("KeLoadLibrary %s (0x%016x), %s (0x%016x)\n", path.c_str(), (uintptr_t)library, pdbName, address);
 
 	KeLibrary keLibrary = { path, library, pdb };
@@ -610,7 +610,7 @@ void Kernel::KeSleepThread(const nano_t value) const
 
 void Kernel::KeGetSystemTime(SystemTime& time) const
 {
-	EFI_TIME efiTime = { 0 };
+	EFI_TIME efiTime = { };
 	Assert(!EFI_ERROR(m_runtime.GetTime(&efiTime, nullptr)));
 
 	time.Year = efiTime.Year;
@@ -834,7 +834,7 @@ bool Kernel::KeCreateProcess(const std::string& path)
 	Assert(KeReadFile(*file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	Assert(read == peHeader.OptionalHeader.SizeOfHeaders);
 
-	PIMAGE_NT_HEADERS64 pNtHeader = MakePtr(PIMAGE_NT_HEADERS64, address, dosHeader.e_lfanew);
+	PIMAGE_NT_HEADERS64 pNtHeader = MakePointer<PIMAGE_NT_HEADERS64>(address, dosHeader.e_lfanew);
 
 	//Write sections into memory
 	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
@@ -858,12 +858,12 @@ bool Kernel::KeCreateProcess(const std::string& path)
 	Print("mosrt loaded at 0x%016x\n", api);
 
 	//Save init pointers in library
-	process->InitProcess = (void*)PortableExecutable::GetProcAddress(api, "InitProcess");
-	process->InitThread = (void*)PortableExecutable::GetProcAddress(api, "InitThread");
+	process->InitProcess = PortableExecutable::GetProcAddress(api, "InitProcess");
+	process->InitThread = PortableExecutable::GetProcAddress(api, "InitThread");
 	Print("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
 
 	//Patch imports of process for just mosrt
-	Loader::KernelExports(address, api);
+	Loader::KernelExports(address, api, "mosrt.dll");
 
 	//Create thread TODO: reserve vs commit stack size
 	CreateThread(*process, pNtHeader->OptionalHeader.SizeOfStackReserve, nullptr, nullptr, process->InitProcess);

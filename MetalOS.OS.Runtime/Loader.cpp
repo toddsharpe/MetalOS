@@ -5,6 +5,7 @@
 #include "Runtime.h"
 #include <MetalOS.Internal.h>
 #include "Debug.h"
+#include "MetalOS.OS.Runtime.h"
 
 #define ReturnNullIfNot(x) if (!(x)) return nullptr;
 #define RetNullIfFailed(x) if ((x) != SystemCallResult::Success) return nullptr;

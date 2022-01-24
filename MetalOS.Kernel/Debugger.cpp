@@ -47,9 +47,9 @@ void Debugger::Initialize()
 	Handle kddll = kernel.KeLoadLibrary("kdcom.dll");
 
 	//Load pointers
-	Kd64::m_dll.KdInitialize = (OnKdInitialize)PortableExecutable::GetProcAddress(kddll, "KdInitialize");
-	Kd64::m_dll.KdReceivePacket = (OnKdReceivePacket)PortableExecutable::GetProcAddress(kddll, "KdReceivePacket");
-	Kd64::m_dll.KdSendPacket = (OnKdSendPacket)PortableExecutable::GetProcAddress(kddll, "KdSendPacket");
+	Kd64::m_dll.KdInitialize = static_cast<OnKdInitialize>(PortableExecutable::GetProcAddress(kddll, "KdInitialize"));
+	Kd64::m_dll.KdReceivePacket = static_cast<OnKdReceivePacket>(PortableExecutable::GetProcAddress(kddll, "KdReceivePacket"));
+	Kd64::m_dll.KdSendPacket = static_cast<OnKdSendPacket>(PortableExecutable::GetProcAddress(kddll, "KdSendPacket"));
 
 	kernel.Printf("KdInitialize loaded at 0x%016x\n", Kd64::m_dll.KdInitialize);
 	kernel.Printf("KdReceivePacket loaded at 0x%016x\n", Kd64::m_dll.KdReceivePacket);

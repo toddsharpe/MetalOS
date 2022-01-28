@@ -56,6 +56,11 @@ ULONG64 KeGetCurrentThread()
 	return (ULONG64)(LONG_PTR)Scheduler::GetCurrentThread();
 }
 
+bool IsValidKernelPointer(const void* address)
+{
+	return kernel.IsValidKernelPointer(address);
+}
+
 BOOLEAN
 NTAPI
 KeFreezeExecution(IN PKTRAP_FRAME TrapFrame, IN PKEXCEPTION_FRAME ExceptionFrame)

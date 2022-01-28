@@ -5,6 +5,7 @@
 
 void KeBugCheck();
 ULONG64 KeGetCurrentThread();
+bool IsValidKernelPointer(const void* address);
 
 BOOLEAN
 NTAPI

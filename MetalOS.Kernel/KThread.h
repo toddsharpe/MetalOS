@@ -7,9 +7,12 @@ class KThread
 {
 	friend class Scheduler;
 
-public:
+private:
+	static size_t LastId;
+	static const size_t StackPages = 8;
 
-	KThread(ThreadStart start, void* arg, UserThread* userThread = nullptr);
+public:
+	KThread(const ThreadStart start, void* arg, UserThread* userThread = nullptr);
 	~KThread();
 
 	void Run();
@@ -21,27 +24,16 @@ public:
 
 	void Display() const;
 
-	void SetName(const std::string& name)
-	{
-		m_name = name;
-	}
-
 private:
-	static uint32_t LastId;
-
 	bool IsSuspended() { return m_suspendCount != 0; }
-
-	static const size_t StackPages = 8;
 
 	//Must be kept the first members of this struct, or insync with SystemCall.asm
 	void* m_context;
 	UserThread* m_userThread;
 
-	const uint32_t m_id;
-	std::string m_name;
-	const ThreadStart m_start;
+	ThreadStart m_start;
 	void* m_arg;
-
+	const size_t m_id;
 	void* m_stackPointer; //Points to bottom of stack minus ArchStackReserve
 	void* m_stackAllocation;//Points to top of stack
 
@@ -51,5 +43,8 @@ private:
 	nano100_t m_sleepWake;
 	void* m_event;
 	size_t m_suspendCount;
+
+public:
+	std::string Name;
 };
 

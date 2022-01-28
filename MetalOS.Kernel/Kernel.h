@@ -174,6 +174,7 @@ public:
 
 	uint64_t Syscall(SystemCallFrame* frame);
 	bool IsValidUserPointer(const void* p);
+	bool IsValidKernelPointer(const void* p);
 	void KePostMessage(Message* msg);
 
 	KThread* CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);

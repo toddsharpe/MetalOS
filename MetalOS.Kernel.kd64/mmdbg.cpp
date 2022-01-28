@@ -12,6 +12,7 @@
 #include <kddll.h>
 #include <reactos/amd64/ke.h>
 #include "kd64.h"
+#include "MetalOSkd.h"
 
 #define DEFAULT_UNREACHABLE default: __assume(0)
 
@@ -77,7 +78,7 @@ MmDbgCopyMemory(IN ULONG64 Address,
 		TargetAddress = (PVOID)(ULONG_PTR)Address;
 
 		/* Make sure address is valid */
-		if (false /*!MmIsAddressValid(TargetAddress)*/)
+		if (!IsValidKernelPointer(TargetAddress) /*!MmIsAddressValid(TargetAddress)*/)
 		{
 			/* Fail */
 			KdpDprintf("MmDbgCopyMemory: Failing %s for invalid Virtual Address 0x%p\n",

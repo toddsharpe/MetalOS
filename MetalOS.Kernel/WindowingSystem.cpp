@@ -24,7 +24,7 @@ void WindowingSystem::Initialize()
 {
 	//Create thread
 	KThread* thread = kernel.KeCreateThread(&WindowingSystem::ThreadLoop, this);
-	thread->SetName("WindowingSystem::ThreadLoop");
+	thread->Name = "WindowingSystem::ThreadLoop";
 }
 
 size_t WindowingSystem::ThreadLoop() const

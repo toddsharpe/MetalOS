@@ -23,6 +23,11 @@ namespace Kd64
 #include "Loader.h"
 #include "PortableExecutable.h"
 
+size_t Debugger::ThreadLoop(void* arg)
+{
+	return static_cast<Debugger*>(arg)->ThreadLoop();
+};
+
 Debugger::Debugger()
 {
 	/* Fill out the KD Version Block */
@@ -58,9 +63,8 @@ void Debugger::Initialize()
 	NTSTATUS result = Kd64::m_dll.KdInitialize(2);
 	kernel.Printf("KdInitialized %d\n", result);
 
-	//TODO: re-enable
-	//KThread* thread = kernel.KeCreateThread(Debugger::ThreadLoop, this);
-	//thread->SetName("DebuggerLoop");
+	KThread* thread = kernel.KeCreateThread(Debugger::ThreadLoop, this);
+	thread->Name = "Debugger::ThreadLoop";
 
 	Kd64::KdInitSystem();
 	Kd64::KdDebuggerEnabled = TRUE;
@@ -103,7 +107,7 @@ void Debugger::DebuggerEvent(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	ExceptionRecord.ExceptionCode = STATUS_BREAKPOINT;
 	ExceptionRecord.NumberParameters = 3;
 	ExceptionRecord.ExceptionInformation[0] = BREAKPOINT_BREAK;
-	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)kernel.GetCurrentThread();
+	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)kernel.m_scheduler->GetCurrentThread();
 	ExceptionRecord.ExceptionInformation[2] = 0;
 
 	ConvertToContext(pFrame, &ContextRecord);
@@ -122,7 +126,7 @@ bool Debugger::Enabled()
 	return Kd64::KdDebuggerEnabled;
 }
 
-uint32_t Debugger::ThreadLoop()
+size_t Debugger::ThreadLoop()
 {
 	while (true)
 	{

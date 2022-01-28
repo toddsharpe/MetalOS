@@ -19,7 +19,6 @@ public:
 	Debugger();
 	void Initialize();
 
-	static uint32_t ThreadLoop(void* arg) { return ((Debugger*)arg)->ThreadLoop(); };
 
 	void AddModule(KeLibrary& library);
 
@@ -28,7 +27,9 @@ public:
 	bool Enabled();
 
 private:
-	uint32_t ThreadLoop();
+	static size_t ThreadLoop(void* arg);
+	size_t ThreadLoop();
+
 	void ConvertToContext(PINTERRUPT_FRAME frame, PCONTEXT context);
 
 	LIST_ENTRY PsLoadedModuleList;

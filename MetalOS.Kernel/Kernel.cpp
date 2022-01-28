@@ -177,7 +177,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Create boot thread
 	KThread* bootThread = new KThread(nullptr, nullptr);
-	bootThread->SetName("boot");
+	bootThread->Name = "boot";
 
 	//Process and thread containers
 	m_processes = new std::map<uint32_t, UserProcess*>();
@@ -191,7 +191,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Create idle thread
 	KThread* idle = KeCreateThread(&Kernel::IdleThread, this);
-	idle->SetName("idle");
+	idle->Name = "idle";
 
 	//Initialize Platform
 	m_hyperV = new HyperV();
@@ -883,7 +883,7 @@ KThread* Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStar
 	
 	char name[32] = {};
 	sprintf(name, "%s[%d]", process.GetName().c_str(), userThread->GetId());
-	thread->SetName(name);
+	thread->Name = name;
 	process.AddThread(*thread);
 	
 	return thread;
@@ -911,6 +911,31 @@ bool Kernel::IsValidUserPointer(const void* p)
 	//Make sure pointer is User's address space
 	UserProcess& process = m_scheduler->GetCurrentProcess();
 	return process.GetAddressSpace().IsValidPointer(p);
+}
+
+bool Kernel::IsValidKernelPointer(const void* p)
+{
+	//Make sure pointer is in Kernel's space
+	if ((uintptr_t)p < KernelStart)
+		return false;
+
+	std::vector<VirtualAddressSpace*> addressSpaces = {
+		m_librarySpace,
+		m_pdbSpace,
+		m_stackSpace,
+		m_heapSpace,
+		m_runtimeSpace,
+		m_windowsSpace
+	};
+
+	//Check every address space
+	for (auto& space : addressSpaces)
+	{
+		if (space->IsValidPointer(p))
+			return true;
+	}
+
+	return false;
 }
 
 void Kernel::KePauseSystem() const

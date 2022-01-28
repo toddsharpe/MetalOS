@@ -4,21 +4,25 @@
 #include "KThread.h"
 #include <MetalOS.Arch.h>
 
-uint32_t KThread::LastId = 0;
+size_t KThread::LastId = 0;
 
-KThread::KThread(ThreadStart start, void* arg, UserThread* userThread) :
-	m_id(++LastId),
+KThread::KThread(const ThreadStart start, void* arg, UserThread* userThread) :
+	m_context(),
+	m_userThread(userThread),
+
 	m_start(start),
 	m_arg(arg),
-	m_context(),
+	m_id(++LastId),
 	m_stackPointer(),
 	m_stackAllocation(),
+
 	m_state(ThreadState::Ready),
 	m_waitStatus(WaitStatus::None),
 	m_sleepWake(),
 	m_event(),
 	m_suspendCount(),
-	m_userThread(userThread)
+
+	Name()
 {
 	const size_t size = ArchContextSize();
 	m_context = new uint8_t[size];
@@ -70,7 +74,7 @@ void KThread::Display() const
 {
 	kernel.Printf("KThread\n");
 	kernel.Printf("     Id: %x\n", m_id);
-	kernel.Printf("   Name: %s\n", m_name.c_str());
+	kernel.Printf("   Name: %s\n", Name.c_str());
 	kernel.Printf("  Start: 0x%016x\n", m_start);
 	kernel.Printf("    Arg: 0x%016x\n", m_arg);
 	kernel.Printf("  State: %d\n", m_state);

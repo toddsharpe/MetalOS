@@ -4,10 +4,7 @@
 MetalOS is homebrew operating system for x86-64. It is 64-bit only and has only been tested in Hyper-V Gen2.
 
 ## Building
-1. Open solution file in VS and build all or open VS 2022 Native x64 command promot and run
-```
-msbuild MetalOS.sln /p:Configuration=Debug /p:Platform=x64 -t:rebuild
-```
+1. Open solution file in VS and build all or open VS 2022 Native x64 command promot and run ``.\scripts\build_solution.cmd``
 2. Run ``.\scripts\build_vhd.cmd`` to build ``.\out\MetalOS.vhdx``
 3. Create a new VM in ``Hyper-V Manager``, Gen2, reference the build ``vhdx``, disable secure boot.
 4. Turn on Com ports:
@@ -30,6 +27,7 @@ Get-VMComPort -VMName MetalOS
 
 ### Non-Goals
 * 32-bit compatibility
+* Additional architectures
 * Support for bios
 
 ## Project dependencies
@@ -85,11 +83,21 @@ These are the starting entry points for the first thread in a process and subseq
 | Process/Thread | Sleep |
 | | ExitProcess  |
 | | ExitThread |
-| UI  | CreateWindow |
+| File/IO | CreateFile|
+| | ReadFile |
+| UI  | AllocWindow |
+| | PaintWindow |
+| | MoveWindow |
 | | GetWindowRect |
 | | GetMessage |
 | | PeekMessage |
-| | SetScreenBuffer |
+| | GetScreenRect |
+
+### Windowing System
+Windowing system is implemented in kernel mode, handles composing windows to frame buffer and handling input events.
+Currently supports
+* Tracking which window has focus
+* Click and drag moving of windows
 
 ### Features
 * Kernel Call Stack (virtual unwind + PDB support) for Assertions/Bugchecks
@@ -99,6 +107,7 @@ These are the starting entry points for the first thread in a process and subseq
     IP: 0xffff800001015383 Function: ?Syscall@Kernel@@QEAA_KPEAUSystemcallFrame@@@Z Line: 899  
     IP: 0xffff80000102e87f Function: SYSTEMCALL_HANDLER Line: 56  
     IP: 0xffff800001039c9c Function: x64_SYSTEMCALL Line: 50  
+* Kernel debugging using WinDbg
 
 ### 3rd Party code
 * ACPCIA
@@ -110,14 +119,20 @@ Gen2 Hyper-V was chosen early into development for its 64-bit UEFI environment (
 
 - [x] VMBus
 - [x] Keyboard
-- [ ] Mouse (50%)
+- [x] Mouse (Basics)
 - [ ] Video Adapter
 - [ ] SCSI
 - [ ] Network
 
 ## Screenshots
 
-## Doom
+### Doom
 ![Doom](_Screenshots/Doom2.png)
 
 ![Doom](_Screenshots/Doom3.png)
+
+### Window System
+![Calc Windows](_Screenshots/CalcWindows.png)
+
+### WinDBG
+![WinDBG](_Screenshots/WinDbgFull.png)

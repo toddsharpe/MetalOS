@@ -304,6 +304,7 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 		uintptr_t base;
 		if (context.Rip < KernelStart)
 		{
+			Assert(user);
 			//User process
 			base = user->GetProcess().GetModuleBase(context.Rip);
 			Print("IP: 0x%016x Base: 0x%016x\n", context.Rip, base);

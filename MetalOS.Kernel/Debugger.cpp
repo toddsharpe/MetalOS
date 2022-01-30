@@ -132,21 +132,6 @@ size_t Debugger::ThreadLoop()
 	{
 		if (Kd64::KdPollBreakIn())
 		{
-			PLIST_ENTRY NextEntry;
-			PLDR_DATA_TABLE_ENTRY LdrEntry;
-			for (NextEntry = PsLoadedModuleList.Flink;
-				NextEntry != &PsLoadedModuleList;
-				NextEntry = NextEntry->Flink)
-			{
-				LdrEntry = CONTAINING_RECORD(NextEntry,
-					LDR_DATA_TABLE_ENTRY,
-					InLoadOrderLinks);
-
-				char buffer[256] = { 0 };
-				wcstombs(buffer, LdrEntry->BaseDllName.Buffer, 256);
-				kernel.Printf("Dll: %s\n", &buffer);
-			}
-			
 			__debugbreak();
 		}
 		kernel.Sleep(50);

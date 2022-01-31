@@ -41,7 +41,6 @@ public:
 	void* SavedStack;
 	//void* SavedUserRBP;
 
-
 private:
 	uint32_t m_id;
 	UserProcess& m_process;

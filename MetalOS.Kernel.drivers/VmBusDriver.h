@@ -2,6 +2,7 @@
 
 #include "Driver.h"
 #include <linux/hyperv.h>
+//#include "KEvent.h"
 
 class VmBusDriver : public Driver
 {
@@ -28,7 +29,7 @@ private:
 		uint32_t Gpadl;
 		uint32_t child_relid;
 		uint32_t openid;
-		KSemaphore* Semaphore;
+		KEvent* Event;
 		VmBusResponse& Response;
 	};
 
@@ -56,8 +57,8 @@ private:
 	static KERNEL_PAGE_ALIGN volatile uint8_t MonitorPage2[PAGE_SIZE];
 
 
-	KSemaphore* m_threadSignal;
-	KSemaphore* m_connectSemaphore;
+	KEvent m_threadEvent;
+	KEvent m_connectEvent;
 	KThread* m_thread;
 	std::list<HV_MESSAGE> m_queue;
 

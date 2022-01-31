@@ -28,6 +28,7 @@ EXPORTS
 	GetScreenRect
 
 	CreateFile
+	CreatePipe
 	ReadFile
 	WriteFile
 	SetFilePointer
@@ -35,6 +36,12 @@ EXPORTS
 	MoveFile
 	DeleteFile
 	CreateDirectory
+	WaitForSingleObject
+	GetPipeInfo
+	CloseHandle
+	CreateEvent
+	ResetEvent
+	SetEvent
 
 	VirtualAlloc
 	CreateRingBuffer
@@ -50,6 +57,7 @@ EXPORTS
 
 	; Debug
 	DebugPrintf
+	DebugPrintBytes
 	Bugcheck
 
 	;stdio
@@ -64,6 +72,8 @@ EXPORTS
 	fseek
 	ftell
 	fprintf
+	vfprintf
+	printf
 	rename
 	remove
 

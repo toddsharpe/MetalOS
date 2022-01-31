@@ -9,9 +9,11 @@
 #include "BootHeap.h"
 #include "MetalOS.h"
 #include "UserRingBuffer.h"
+#include "UObject.h"
+#include "KSignalObject.h"
 
 class KThread;
-class UserProcess
+class UserProcess : public KSignalObject
 {
 public:
 	static uint32_t LastId;
@@ -63,11 +65,21 @@ public:
 		return it->second;
 	}
 
+	virtual bool IsSignalled() const override;
+
+	void SetStandardHandle(const StandardHandle handle, UObject* object);
+	Handle AddObject(UObject* object);
+	UObject* GetObject(Handle handle);
+	bool CloseObject(Handle handle);
+
 	bool Delete;
+	bool IsConsole;
 
 	friend class Scheduler;
 private:
 	void* HeapAlloc(size_t size);
+	typedef size_t handle_t;
+	static constexpr handle_t StartingHandle = 0x10;
 
 	uintptr_t m_imageBase;
 	uint32_t m_id;
@@ -80,5 +92,8 @@ private:
 	ProcessEnvironmentBlock* m_peb;
 	std::list<KThread*> m_threads;
 	std::map<HRingBuffer, UserRingBuffer*> m_ringBuffers;
+
+	handle_t m_lastHandle;
+	std::map<handle_t, UObject*> m_objects;
 };
 

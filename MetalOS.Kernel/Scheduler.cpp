@@ -12,9 +12,10 @@ Scheduler::Scheduler(KThread& bootThread) :
 	m_hyperv(),
 	m_readyQueue(),
 	m_sleepQueue(),
-	m_timeouts(),
-	m_events(),
-	m_messageWaits()
+	m_pipeReadWaits(),
+	m_pipeWriteWaits(),
+	m_signalWaits(),
+	m_predicates()
 {
 	//Set boot thread as running
 	bootThread.m_state = ThreadState::Running;
@@ -79,18 +80,12 @@ void Scheduler::Schedule()
 		auto it = m_sleepQueue.begin();
 		while (it != m_sleepQueue.end())
 		{
-			for (const auto& i : m_sleepQueue)
-			{
-				Assert(i);
-			}
-			
 			KThread* item = *it;
 			Assert(item);
 			if (item->m_sleepWake > 0 && item->m_sleepWake <= tsc)
 			{
-				item->m_state = ThreadState::Ready;
 				item->m_sleepWake = 0;
-				m_readyQueue.push_back(item);
+				AddReady(item);
 				it = m_sleepQueue.erase(it);
 			}
 			else
@@ -100,50 +95,45 @@ void Scheduler::Schedule()
 		}
 	}
 
-	//Promote off timeout queue
-	if (m_timeouts.size() > 0)
+	//Promote timeouts off queue
+	if (!m_signalWaits.empty())
 	{
-		auto it = m_timeouts.begin();
-		while (it != m_timeouts.end())
+		for (auto& pair : m_signalWaits)
 		{
-			KThread* item = *it;
-			Assert(item);
-			if (item->m_sleepWake > 0 && item->m_sleepWake <= tsc)
+			//Loop through waits
+			auto it = pair.second.begin();
+			while (it != pair.second.end())
 			{
-				//Move to ready queue
-				item->m_state = ThreadState::Ready;
-				item->m_sleepWake = 0;
-				item->m_waitStatus = WaitStatus::Timeout;
-				m_readyQueue.push_back(item);
-				it = m_timeouts.erase(it);
-
-				//Move from event list
-				RemoveFromEvent(item);
-			}
-			else
-			{
-				it++;
+				Wait& item = *it;
+				if (item.Deadline <= tsc)
+				{
+					kernel.Printf("Deadline: %llu tsc %llu, %s\n", item.Deadline, tsc, item.Thread->Name.c_str());
+					KThread* thread = item.Thread;
+					Assert(thread);
+					thread->m_waitStatus = WaitStatus::Timeout;
+					AddReady(thread);
+					it = pair.second.erase(it);
+				}
+				else
+				{
+					it++;
+				}
 			}
 		}
 	}
 
-	//Promote off message wait queue
-	if (!m_messageWaits.empty())
+	//Evaluate predicates
+	if (!m_predicates.empty())
 	{
-		auto it = m_messageWaits.begin();
-		while (it != m_messageWaits.end())
+		auto it = m_predicates.begin();
+		while (it != m_predicates.end())
 		{
-			KThread* item = *it;
+			const KPredicate* item = it->first;
 			Assert(item);
-			UserThread* user = item->GetUserThread();
-			Assert(user);
-			if (user->HasMessage())
+			if (item->IsSignalled())
 			{
-				//Move to ready queue
-				//kernel.Printf("Moving %d to ready, messages: %d\n", item->GetId(), user->m_messages.size());
-				item->m_state = ThreadState::Ready;
-				m_readyQueue.push_back(item);
-				it = m_messageWaits.erase(it);
+				AddReady(it->second);
+				it = m_predicates.erase(it);
 			}
 			else
 			{
@@ -163,30 +153,13 @@ void Scheduler::Schedule()
 			//Queue current thread if it was preempted
 			if (current->m_state == ThreadState::Running)
 			{
-				current->m_state = ThreadState::Ready;
-				m_readyQueue.push_back(current);
-			}
-
-			if (current->m_state == ThreadState::Terminated)
-			{
-				kernel.Printf("Deleting Thread\n");
-				delete current;
+				AddReady(current);
 			}
 
 			//Get next thread
 			KThread* next = m_readyQueue.front();
 			AssertEqual(next->m_state, ThreadState::Ready);
 			m_readyQueue.remove(next);
-
-			while (next->IsSuspended())
-			{
-				kernel.Printf("-Suspended %x\n", next->GetId());
-				m_readyQueue.push_back(next);
-
-				next = m_readyQueue.front();
-				AssertEqual(next->m_state, ThreadState::Ready);
-				m_readyQueue.remove(next);
-			}
 
 			//Switch cr3 if needed
 			UserThread* userThread = next->GetUserThread();
@@ -209,11 +182,11 @@ void Scheduler::Schedule()
 	}
 }
 
-void Scheduler::AddReady(KThread& thread)
+void Scheduler::AddReady(KThread* thread)
 {
-	kernel.Printf("AddReady %x\n", thread.GetId());
-	thread.m_state = ThreadState::Ready;
-	m_readyQueue.push_back(&thread);
+	Assert(thread);
+	thread->m_state = ThreadState::Ready;
+	m_readyQueue.push_back(thread);
 }
 
 void Scheduler::Sleep(nano_t value)
@@ -221,8 +194,6 @@ void Scheduler::Sleep(nano_t value)
 	KThread* current = GetCurrentThread();
 	Assert(current);
 
-	//kernel.Printf("Sleep\n");
-	
 	const nano100_t value100 = value / 100;
 	const nano100_t tscStart = m_hyperv.ReadTsc();
 	current->m_sleepWake = tscStart + value100;
@@ -232,116 +203,114 @@ void Scheduler::Sleep(nano_t value)
 	this->Schedule();
 }
 
-void Scheduler::KillThread()
+void Scheduler::KillCurrentThread()
 {
 	KThread* current = GetCurrentThread();
 	Assert(current);
-	kernel.Printf("KillThread %x\n", current->GetId());
-	
-	//Mark thread deleted
-	current->m_state = ThreadState::Terminated;
 
-	UserThread* user = current->GetUserThread();
+	this->KillThread(current);
+
+	this->Schedule();
+
+	kernel.Printf("Schedule\n");
+}
+
+void Scheduler::KillThread(KThread* thread)
+{
+	kernel.Printf("KillThread %x\n", thread->GetId());
+
+	//Mark thread deleted
+	thread->m_state = ThreadState::Terminated;
+	thread->Dispose();
+
+	UserThread* user = thread->GetUserThread();
 	if (user)
 	{
-		UserProcess& process = user->GetProcess();
-
-		//Check if process is being deleted
-		if (process.Delete)
-		{
-			for (auto& t : process.m_threads)
-			{
-				if (t->GetId() == current->GetId())
-					continue;
-				
-				Remove(t);
-				delete t->GetUserThread();
-				delete t;
-			}
-		}
-
-		delete &process;
+		//todo: dispose user thread
 	}
 
-	this->Schedule();
+	//TODO: determine if process needs to be cleaned
+
+	this->ObjectSignalled(*thread);
+
+	kernel.Printf("End\n");
 }
 
-//TODO: If more than 1 processor, reschedule to suspend
-size_t Scheduler::Suspend(KThread& thread)
+void Scheduler::KillCurrentProcess()
 {
-	kernel.Printf("Suspend %x\n", thread.GetId());
-	
-	const size_t ret = thread.m_suspendCount;
-	
-	thread.m_suspendCount++;
-	return ret;
-}
-//What does this even do?
-size_t Scheduler::Resume(KThread& thread)
-{
-	kernel.Printf("Resume %x\n", thread.GetId());
-	
-	const size_t ret = thread.m_suspendCount;
-	
-	if (thread.m_suspendCount == 0)
-		return ret;
+	UserThread* thread = GetCurrentUserThread();
+	UserProcess& process = thread->GetProcess();
 
-	thread.m_suspendCount--;
-	return ret;
-}
-
-WaitStatus Scheduler::SemaphoreWait(KSemaphore* semaphore, nano100_t timeout)
-{
-	KThread* current = GetCurrentThread();
-	Assert(current);
-
-	//If there is no contention return immediately
-	bool result = semaphore->TryWait(1);
-	if (result)
-		return WaitStatus::Signaled;
-
-	//Add to event wait queue
-	current->m_event = semaphore;
-	m_events[semaphore].push_back(current);
-
-	//Add timeout
-	const nano100_t tscStart = m_hyperv.ReadTsc();
-	m_timeouts.push_back(current);
-	current->m_state = ThreadState::Waiting;
-	current->m_sleepWake = tscStart + timeout;
-
-	//Context switch
-	this->Schedule();
-
-	//Return result of wait
-	return current->m_waitStatus;
-}
-
-void Scheduler::SemaphoreRelease(KSemaphore* semaphore, size_t count)
-{
-	KThread* current = GetCurrentThread();
-	Assert(current);
-
-	int64_t previous = semaphore->Signal(count);
-	const size_t scheduleCount = std::clamp(-1 * previous, 0LL, (int64_t)count);
-
-	for (size_t i = 0; i < scheduleCount; i++)
+	//Kill threads
+	for (auto& thread : process.m_threads)
 	{
-		if (m_events[semaphore].empty())
-			break;
-
-		KThread* thread = m_events[semaphore].front();
-		Assert(thread);
-		m_events[semaphore].pop_front();
-
-		thread->m_state = ThreadState::Ready;
-		thread->m_sleepWake = 0;
-		thread->m_waitStatus = WaitStatus::Signaled;
-		m_readyQueue.push_back(thread);
-
-		//Remove from timeout
-		m_timeouts.remove(thread);
+		this->KillThread(thread);
 	}
+
+	//Clean up objects
+	for (auto& item : process.m_objects)
+	{
+		UObject* userObject = item.second;
+		KObject& obj = userObject->GetObject();
+		
+		if (userObject->IsPipe())
+		{
+			UserPipe& pipe = (UserPipe&)obj;
+			if (userObject->GetType() == UserObjectType::ReadPipe)
+			{
+				pipe.ReaderCount--;
+				if (pipe.ReaderCount == 0)
+					this->PipeSignal(pipe, true);
+			}
+			else if (userObject->GetType() == UserObjectType::WritePipe)
+			{
+				pipe.WriterCount--;
+				if (pipe.WriterCount == 0)
+					this->PipeSignal(pipe, false);
+			}
+			else
+				Assert(false);
+		}
+		
+		delete userObject;
+
+		//todo: signal?
+		if (obj.IsClosed())
+			obj.Dispose();
+	}
+	process.m_objects.clear();
+
+	//TODO: clean up process
+	process.Delete = true;
+	this->ObjectSignalled(process);
+
+	this->Schedule();
+}
+
+void Scheduler::SemaphoreRelease(KSemaphore& semaphore)
+{
+	KThread* current = GetCurrentThread();
+	Assert(current);
+
+	semaphore.Signal(1);
+
+	if (!m_signalWaits[&semaphore].size())
+		return;
+
+	this->ObjectSignalledOne(semaphore);
+}
+
+WaitStatus Scheduler::SemaphoreWait(KSemaphore& semaphore, nano100_t timeout)
+{
+	KThread* current = GetCurrentThread();
+	Assert(current);
+
+	bool wasSignaled = semaphore.IsSignalled();
+	semaphore.Wait(1);
+	
+	if (wasSignaled)
+		return WaitStatus::Signaled;
+	return this->ObjectWait(semaphore, timeout * 100);
 }
 
 //If there is a message, return immediately
@@ -359,7 +328,8 @@ Message* Scheduler::MessageWait()
 
 	//Block
 	current->m_state = ThreadState::MessageWait;
-	m_messageWaits.push_back(current);
+	KPredicate messageWait(&Scheduler::MessageReceived, current);
+	m_predicates.insert({ &messageWait, current });
 
 	//Context switch
 	this->Schedule();
@@ -370,48 +340,202 @@ Message* Scheduler::MessageWait()
 	return msg;
 }
 
-void Scheduler::Remove(KThread*& thread)
+//todo we never drain the pipe wait
+
+//Blocks until write operation completes or number of bytes requested has been read
+WaitStatus Scheduler::PipeReadWait(UserPipe& pipe, void* buffer, const size_t size)
 {
-	kernel.Printf("Remove %x\n", thread->GetId());
-	switch (thread->m_state)
+	KThread* current = GetCurrentThread();
+	Assert(current);
+
+	//If there is enough data, return immediately
+	if (pipe.Read(buffer, size))
 	{
-	case ThreadState::Ready:
-		m_readyQueue.remove(thread);
-		break;
+		//If a writer is waiting, schedule it
+		if (m_pipeWriteWaits.find(&pipe) != m_pipeWriteWaits.end())
+		{
+			PipeWaitEvent& wait = m_pipeWriteWaits[&pipe];
+			if (wait.Count <= pipe.FreeSpace())
+			{
+				AddReady(wait.Thread);
+				m_pipeWriteWaits.erase(&pipe);
+			}
+		}
 
-	case ThreadState::Sleeping:
-		m_sleepQueue.remove(thread);
-		break;
+		return WaitStatus::None;
+	}
 
-	case ThreadState::Waiting:
-		m_timeouts.remove(thread);
-		RemoveFromEvent(thread);
-		break;
+	//Block waiting for write. We only support one waiter
+	Assert(m_pipeReadWaits.find(&pipe) == m_pipeReadWaits.end());
+	current->m_state = ThreadState::PipeWait;
+	m_pipeReadWaits[&pipe] = { current, size };
 
-	case ThreadState::Terminated:
-		//Do nothing
-		break;
+	//Context switch
+	this->Schedule();
+	kernel.Printf("Restored\n");
 
-	default:
-		kernel.Printf("ThreadState: 0x%x\n", thread->m_state);
-		Assert(false);
+	if (current->m_waitStatus == WaitStatus::BrokenPipe)
+		return current->m_waitStatus;
+
+	//Return message
+	Assert(pipe.Read(buffer, size));
+	return WaitStatus::Signaled;
+}
+
+//Blocks until buffer space is available
+WaitStatus Scheduler::PipeWriteWait(UserPipe& pipe, const void* buffer, const size_t size)
+{
+	KThread* current = GetCurrentThread();
+	Assert(current);
+
+	if (pipe.Write(buffer, size))
+	{
+		//If a reader is waiting, schedule it
+		if (m_pipeReadWaits.find(&pipe) != m_pipeReadWaits.end())
+		{
+			PipeWaitEvent& wait = m_pipeReadWaits[&pipe];
+			if (wait.Count >= pipe.Count())
+			{
+				AddReady(wait.Thread);
+				m_pipeWriteWaits.erase(&pipe);
+			}
+		}
+
+		return WaitStatus::None;
+	}
+
+	kernel.Printf("Blocking\n");
+
+	//Block waiting for read. We only support one reader
+	Assert(m_pipeWriteWaits.find(&pipe) == m_pipeWriteWaits.end());
+	current->m_waitStatus = WaitStatus::None;
+	current->m_state = ThreadState::PipeWait;
+	m_pipeWriteWaits[&pipe] = { current, size };
+
+	//Context switch
+	this->Schedule();
+	kernel.Printf("Restored\n");
+
+	if (current->m_waitStatus == WaitStatus::BrokenPipe)
+		return current->m_waitStatus;
+
+	//Return message
+	Assert(pipe.Write(buffer, size));
+	return WaitStatus::Signaled;
+}
+
+void Scheduler::PipeWait(UserPipe& pipe, bool read)
+{
+	KThread* current = GetCurrentThread();
+	Assert(current);
+	
+	kernel.Printf("PipeWait %d\n", read);
+
+	WaitEvent event = {};
+	event.Context = &pipe;
+	event.Op = read ? Operation::Read : Operation::Write;
+
+	if (read)
+	{
+		Assert(m_pipeReadWaits.find(&pipe) == m_pipeReadWaits.end());
+		current->m_state = ThreadState::PipeWait;
+		m_pipeReadWaits[&pipe] = { current, 0 };
+	}
+	else
+	{
+		Assert(m_pipeWriteWaits.find(&pipe) == m_pipeWriteWaits.end());
+		current->m_state = ThreadState::PipeWait;
+		m_pipeWriteWaits[&pipe] = { current, 0 };
+	}
+
+	this->Schedule();
+}
+
+//Read means signal a writer
+//!Read means signal a reader
+void Scheduler::PipeSignal(UserPipe& pipe, bool read)
+{
+	if (read)
+	{
+		auto it = m_pipeWriteWaits.find(&pipe);
+		if (it != m_pipeWriteWaits.end())
+		{
+			const PipeWaitEvent event = it->second;
+			event.Thread->m_waitStatus = WaitStatus::BrokenPipe;
+			AddReady(event.Thread);
+			m_pipeWriteWaits.erase(&pipe);
+		}
+	}
+	else
+	{
+		auto it = m_pipeReadWaits.find(&pipe);
+		if (it != m_pipeReadWaits.end())
+		{
+			const PipeWaitEvent event = it->second;
+			event.Thread->m_waitStatus = WaitStatus::BrokenPipe;
+			AddReady(event.Thread);
+			m_pipeReadWaits.erase(&pipe);
+		}
 	}
 }
 
-void Scheduler::RemoveFromEvent(KThread*& thread)
+void Scheduler::ObjectSignalled(KSignalObject& object)
 {
-	kernel.Printf("RemoveFromEvent %x\n", thread->GetId());
-	
-	const auto& it = m_events.find(thread->m_event);
-	Assert(it != m_events.end());
+	Assert(object.IsSignalled());
 
-	it->second.remove(thread);
+	if (!m_signalWaits[&object].size())
+		return;
+
+	//Ready threads waiting on object
+	for (auto& wait : m_signalWaits[&object])
+	{
+		KThread* thread = wait.Thread;
+		thread->m_waitStatus = WaitStatus::Signaled;
+		AddReady(thread);
+	}
+	m_signalWaits[&object].clear();
+	m_signalWaits.erase(&object);
+}
+
+//Schedule one thread
+bool Scheduler::ObjectSignalledOne(KSignalObject& object)
+{
+	if (object.GetType() != KObjectType::Semaphore)
+		Assert(object.IsSignalled());
+
+	if (!m_signalWaits[&object].size())
+		return false;
+
+	const Wait& wait = m_signalWaits[&object].front();
+	m_signalWaits[&object].pop_front();
+	KThread* thread = wait.Thread;
+	thread->m_waitStatus = WaitStatus::Signaled;
+	AddReady(thread);
+	return true;
+}
+
+WaitStatus Scheduler::ObjectWait(KSignalObject& object, const nano_t timeout)
+{
+	KThread* current = GetCurrentThread();
+	Assert(current);
+
+	if (object.IsSignalled())
+		return WaitStatus::Signaled;
+
+	//Calculate deadline
+	const nano100_t tscStart = m_hyperv.ReadTsc();
+	const nano_t deadline = tscStart + timeout / 100;
+
+	current->m_state = ThreadState::SignalWait;
+	m_signalWaits[&object].push_back({ current, deadline });
+
+	this->Schedule();
+	return current->m_waitStatus;
 }
 
 void Scheduler::Display() const
 {
-	kernel.Printf("Scheduler::Schedule - Ready: %d, Sleep: %d, SemTimeout %d, SemWait %d, MsgWait %d\n", m_readyQueue.size(), m_sleepQueue.size(), m_timeouts.size(),
-		m_events.size(), m_messageWaits.size());
+	kernel.Printf("Scheduler::Schedule - Ready: %d, Sleep: %d, Predicates %d\n", m_readyQueue.size(), m_sleepQueue.size(), m_predicates.size());
 	if (!m_readyQueue.empty())
 	{
 		kernel.Printf("  Ready: ");
@@ -428,47 +552,29 @@ void Scheduler::Display() const
 		for (const auto& i : m_sleepQueue)
 		{
 			kernel.Printf("i: 0x%016x - ", i);
-			if (i != nullptr)
-				kernel.Printf("%x(0x%016x)\n", i->GetId(), i->m_sleepWake);
-			else
-				kernel.Printf("null\n");
+			kernel.Printf("%x(0x%016x)\n", i->GetId(), i->m_sleepWake);
 		}
 		kernel.Printf("\n");
 	}
-	if (!m_timeouts.empty())
+	
+	if (!m_predicates.empty())
 	{
-		kernel.Printf("  Timeouts: ");
-		for (const auto& i : m_timeouts)
+		kernel.Printf("  Predicates: ");
+		for (const auto& i : m_predicates)
 		{
-			kernel.Printf("%x(0x%016x) ", i->GetId(), i->m_sleepWake);
-		}
-		kernel.Printf("\n");
-	}
-	if (!m_events.empty())
-	{
-		kernel.Printf("  Events: ");
-		for (const auto& i : m_events)
-		{
-			KSemaphore* s = (KSemaphore*)i.first;
-			kernel.Printf("0x%016x - ", s);
-			for (const auto& j : i.second)
-			{
-				kernel.Printf("%x ", j->GetId());
-			}
-		}
-		kernel.Printf("\n");
-	}
-	if (!m_messageWaits.empty())
-	{
-		kernel.Printf("  MsgWaits: ");
-		for (const auto& i : m_messageWaits)
-		{
-			kernel.Printf("i: 0x%016x\n", i);
-			if (i != nullptr)
-				kernel.Printf("%x ", i->GetId());
-			else
-				kernel.Printf("null\n");
+			kernel.Printf("i: 0x%016x\n", i.second);
+			kernel.Printf("%x ", i.second->GetId());
 		}
 		kernel.Printf("\n");
 	}
 }
+
+bool Scheduler::MessageReceived(void* arg)
+{
+	KThread* item = (KThread*)arg;
+	Assert(item);
+	UserThread* user = item->GetUserThread();
+	Assert(user);
+	return user->HasMessage();
+}
+

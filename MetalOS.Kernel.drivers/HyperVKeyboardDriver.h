@@ -4,6 +4,7 @@
 #include "Driver.h"
 #include "HyperVChannel.h"
 #include "MetalOS.h"
+#include "KEvent.h"
 
 #include <queue>
 
@@ -16,7 +17,7 @@ static const VirtualKey ScancodeSet1[] =
 	/* 0x18 */ 'O', 'P', VK_OEM_4, VK_OEM_6, VK_RETURN, VK_CONTROL, 'A', 'S',
 	/* 0x20 */ 'D', 'F', 'G', 'H', 'J', 'K', 'L', VK_OEM_1,
 	/* 0x28 */ VK_OEM_7, VK_OEM_3, VK_LSHIFT, VK_OEM_5, 'Z', 'X', 'C', 'V',
-	/* 0x30 */ 'B', 'N', 'M', VK_OEM_COMMA, VK_OEM_PERIOD, VK_OEM_2, VK_RSHIFT, VK_MULTIPLY,
+	/* 0x30 */ 'B', 'N', 'M', ',', '.', VK_OEM_2, VK_RSHIFT, VK_MULTIPLY,
 	/* 0x38 */ VK_MENU, VK_SPACE, VK_CAPITAL, VK_F1, VK_F2, VK_F3, VK_F4, VK_F5,
 	/* 0x40 */ VK_F6, VK_F7, VK_F8, VK_F9, VK_F10, VK_NUMLOCK, VK_SCROLL, VK_HOME,
 	/* 0x48 */ VK_UP, VK_PRIOR, VK_SUBTRACT, VK_LEFT, VK_NUMPAD5, VK_RIGHT, VK_ADD, VK_NUMPAD1,
@@ -120,7 +121,7 @@ private:
 
 	synth_kbd_protocol_response m_response;
 
-	KSemaphore* m_semaphore;
+	KEvent m_event;
 	HyperVChannel m_channel;
 };
 

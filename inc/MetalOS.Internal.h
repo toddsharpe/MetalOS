@@ -125,6 +125,7 @@ enum class SystemCall : size_t
 	GetScreenRect,
 
 	CreateFile = 0x400,
+	CreatePipe,
 	ReadFile,
 	WriteFile,
 	SetFilePointer,
@@ -132,6 +133,12 @@ enum class SystemCall : size_t
 	MoveFile,
 	DeleteFile,
 	CreateDirectory,
+	WaitForSingleObject,
+	GetPipeInfo,
+	CloseHandle,
+	CreateEvent,
+	ResetEvent,
+	SetEvent,
 
 	VirtualAlloc = 0x500,
 	CreateRingBuffer,
@@ -140,5 +147,6 @@ enum class SystemCall : size_t
 	MapSharedObject,
 
 	DebugPrint = 0x600,
+	DebugPrintBytes = 0x601,
 };
 

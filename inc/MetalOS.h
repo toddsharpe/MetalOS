@@ -127,12 +127,34 @@ enum class GenericAccess
 {
 	Read = (1 << 0),
 	Write = (1 << 1),
+	ReadWrite = Read | Write
+};
+
+constexpr bool CanRead(GenericAccess access)
+{
+	return access == GenericAccess::Read || access == GenericAccess::ReadWrite;
+}
+
+constexpr bool CanWrite(GenericAccess access)
+{
+	return access == GenericAccess::Write || access == GenericAccess::ReadWrite;
+}
+
+enum class StandardHandle
+{
+	Input,
+	Output,
+	Error
 };
 
 typedef void* Handle;
 typedef void* HThread;
+typedef void* HProcess;
 typedef void* HSharedMemory;
 typedef void* HRingBuffer;
+typedef void* HWindow;
+typedef void* HFile;
+typedef void* HEvent;
 typedef size_t (*ThreadStart)(void* parameter);
 
 typedef uint16_t VirtualKey;
@@ -536,6 +558,7 @@ enum class WaitStatus
 	Signaled,
 	Timeout,
 	Abandoned,
+	BrokenPipe,
 	//Failed conflicts with macro
 };
 
@@ -555,7 +578,6 @@ enum class MemoryProtection
 	PageReadExecute = PageRead | PageExecute,
 	PageReadWriteExecute = PageRead | PageWrite | PageExecute
 };
-
 
 constexpr size_t MaxModuleName = 16;
 struct Module
@@ -595,7 +617,29 @@ enum class SystemCallResult
 {
 	Success = 0,
 	InvalidPointer,
-	Failed
+	InvalidHandle,
+	InvalidObject,
+	BrokenPipe,
+	Failed,
+	NotImplemented
+};
+
+struct CreateProcessArgs
+{
+	HFile StdInput;
+	HFile StdOutput;
+	HFile StdError;
+};
+
+struct CreateProcessResult
+{
+	HProcess Process;
+};
+
+struct PipeInfo
+{
+	size_t BytesAvailable;
+	bool IsBroken;
 };
 
 //Info
@@ -607,15 +651,13 @@ RUNTIMECALL(SystemCallResult) GetProcessInfo(ProcessInfo& info);
 
 
 //Process/Thread
-SYSTEMCALL(SystemCallResult) CreateProcess(const char* processName);
-SYSTEMCALL(uint32_t) GetThreadId(Handle thread);
+SYSTEMCALL(SystemCallResult) CreateProcess(const char* processName, const CreateProcessArgs* args, CreateProcessResult* result);
+SYSTEMCALL(uint32_t) GetThreadId(HThread thread);
 SYSTEMCALL(HThread) GetCurrentThread();
 RUNTIMECALL(uint64_t) GetCurrentThreadId();
 SYSTEMCALL(HThread) CreateThread(size_t stackSize, ThreadStart startAddress, void* arg);
 SYSTEMCALL(void) Sleep(const uint32_t milliseconds);
 SYSTEMCALL(void) SwitchToThread();
-SYSTEMCALL(SystemCallResult) SuspendThread(Handle thread, size_t& prevCount);
-SYSTEMCALL(SystemCallResult) ResumeThread(Handle thread, size_t& prevCount);
 SYSTEMCALL(SystemCallResult) ExitProcess(const uint32_t exitCode);
 SYSTEMCALL(SystemCallResult) ExitThread(const uint32_t exitCode);
 
@@ -625,8 +667,6 @@ RUNTIMECALL(void) SetLastError(uint32_t errorCode);
 //Semaphores
 //Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
 //SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t* previousCount);
-
-typedef void* HWindow;
 
 //Windows
 SYSTEMCALL(SystemCallResult) AllocWindow(HWindow& handle, const Rectangle& frame);
@@ -638,14 +678,23 @@ SYSTEMCALL(SystemCallResult) GetMessage(Message& message);
 SYSTEMCALL(SystemCallResult) PeekMessage(Message& message);
 SYSTEMCALL(SystemCallResult) GetScreenRect(Rectangle& rect);
 
-SYSTEMCALL(Handle) CreateFile(const char* path, const GenericAccess access);
-SYSTEMCALL(SystemCallResult) ReadFile(const Handle handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
-SYSTEMCALL(SystemCallResult) WriteFile(const Handle handle, const void* buffer, const size_t bufferSize, size_t* bytesWritten);
-SYSTEMCALL(SystemCallResult) SetFilePointer(const Handle handle, const __int64 position, const FilePointerMove moveType, size_t* newPosition);
-SYSTEMCALL(SystemCallResult) CloseFile(const Handle handle);
+//Files, Pipes
+SYSTEMCALL(HFile) CreateFile(const char* path, const GenericAccess access);
+SYSTEMCALL(SystemCallResult) CreatePipe(HFile& readHandle, HFile& writeHandle);
+SYSTEMCALL(SystemCallResult) ReadFile(const HFile handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
+SYSTEMCALL(SystemCallResult) WriteFile(const HFile handle, const void* buffer, const size_t bufferSize, size_t* bytesWritten);
+SYSTEMCALL(SystemCallResult) SetFilePointer(const HFile handle, const size_t position, const FilePointerMove moveType, size_t* newPosition);
+SYSTEMCALL(SystemCallResult) CloseFile(const HFile handle);
 SYSTEMCALL(SystemCallResult) MoveFile(const char* existingFileName, const char* newFileName);
 SYSTEMCALL(SystemCallResult) DeleteFile(const char* fileName);
 SYSTEMCALL(SystemCallResult) CreateDirectory(const char* path);
+SYSTEMCALL(SystemCallResult) WaitForSingleObject(const Handle handle, const uint32_t milliseconds, WaitStatus& status);
+SYSTEMCALL(SystemCallResult) GetPipeInfo(const HFile handle, PipeInfo& info);
+SYSTEMCALL(SystemCallResult) CloseHandle(const Handle handle);
+
+SYSTEMCALL(SystemCallResult) CreateEvent(HEvent& event, const bool manual, const bool initial);
+SYSTEMCALL(SystemCallResult) SetEvent(const HEvent event);
+SYSTEMCALL(SystemCallResult) ResetEvent(const HEvent event);
 
 SYSTEMCALL(void*) VirtualAlloc(const void* address, const size_t size, const MemoryAllocationType allocationType, const MemoryProtection protect);
 SYSTEMCALL(HRingBuffer) CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize);
@@ -654,6 +703,7 @@ SYSTEMCALL(void*) MapObject(const void* address, Handle handle);
 SYSTEMCALL(void*) MapSharedObject(const void* address, const char* name);
 
 SYSTEMCALL(SystemCallResult) DebugPrint(const char* s);
+SYSTEMCALL(SystemCallResult) DebugPrintBytes(const char* s, const size_t length);
 
 RUNTIMECALL(Handle) LoadLibrary(const char* lpLibFileName);
 RUNTIMECALL(uintptr_t) GetProcAddress(Handle hModule, const char* lpProcName);
@@ -688,13 +738,13 @@ public:
 	}
 
 private:
-	Thread(Handle thread) :
+	Thread(HThread thread) :
 		m_thread(thread)
 	{
 
 	}
 
-	Handle m_thread;
+	HThread m_thread;
 };
 
 enum class DllEntryReason

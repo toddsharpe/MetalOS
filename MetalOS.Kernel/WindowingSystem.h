@@ -17,7 +17,8 @@ public:
 	bool MoveWindow(const HWindow handle, const Rectangle& bounds);
 	bool GetWindowRect(const HWindow handle, 
 		Rectangle& bounds);
-	bool ThreadHasWindow(const size_t threadId) const;
+	bool ThreadHasWindow(const UserThread* thread) const;
+	void FreeWindow(UserThread* thread);
 
 	void PostMessage(Message* message);
 

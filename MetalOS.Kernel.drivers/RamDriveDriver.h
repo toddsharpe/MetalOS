@@ -16,8 +16,8 @@ public:
 	Result Write(const char* buffer, size_t length) override;
 	Result EnumerateChildren() override;
 
-	FileHandle* OpenFile(const std::string& path, const GenericAccess access) const override;
-	size_t ReadFile(const FileHandle& handle, void* const buffer, const size_t bytesToRead) const override;
+	KFile* OpenFile(const std::string& path, const GenericAccess access) const override;
+	size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const override;
 
 private:
 	RamDrive* m_ramDrive;

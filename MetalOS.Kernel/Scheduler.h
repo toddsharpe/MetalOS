@@ -7,6 +7,10 @@
 #include "HyperV.h"
 #include "KSemaphore.h"
 #include "KThread.h"
+#include "UserPipe.h"
+#include "KSignalObject.h"
+#include "KPredicate.h"
+#include <unordered_map>
 
 class Debugger;
 class Scheduler
@@ -20,41 +24,81 @@ public:
 	UserThread* GetCurrentUserThread() const;
 	UserProcess& GetCurrentProcess() const;
 
-	void AddReady(KThread& thread);
+	void AddReady(KThread* thread);
 	void Sleep(nano_t value);
-	void KillThread();
+	void KillCurrentThread();
+	void KillThread(KThread* thread);
+	void KillCurrentProcess();
 
-	size_t Suspend(KThread& thread);
-	size_t Resume(KThread& thread);
+	//Semaphores
+	WaitStatus SemaphoreWait(KSemaphore& semaphore, nano100_t timeout);
+	void SemaphoreRelease(KSemaphore& semaphore);
 
-	WaitStatus SemaphoreWait(KSemaphore* semaphore, nano100_t timeout);
-	void SemaphoreRelease(KSemaphore* semaphore, size_t count);
+	WaitStatus PipeReadWait(UserPipe& pipe, void* buffer, const size_t size);
+	WaitStatus PipeWriteWait(UserPipe& pipe, const void* buffer, const size_t size);
+	void PipeWait(UserPipe& pipe, bool read);
+	void PipeSignal(UserPipe& pipe, bool read);
 
+	//Messages
 	Message* MessageWait();
+
+	bool ObjectSignalledOne(KSignalObject& object);
+	void ObjectSignalled(KSignalObject& object);
+	WaitStatus ObjectWait(KSignalObject& object, const nano_t timeout);
 
 	void Display() const;
 
 	bool Enabled;
 
 private:
+	static bool MessageReceived(void* arg);
+
 	struct CpuContext
 	{
 		CpuContext* SelfPointer;
 		KThread* Thread;
 	};
 
+	enum class Operation
+	{
+		Read,
+		Write
+	};
+
+	//todo: work on this
+	typedef bool(*ReadyPredicate)(void* arg);
+	struct WaitEvent
+	{
+		void* Context;
+		union
+		{
+			size_t Count;
+		};
+		Operation Op;
+	};
+
 	static CpuContext* GetCpuContext();
 	void SetCurrentThread(KThread& thread);
-	void Remove(KThread*& thread);
-	void RemoveFromEvent(KThread*& thread);
 
 	HyperV m_hyperv; //TODO: Clock TSC interface
 	std::list<KThread*> m_readyQueue;
 	std::list<KThread*> m_sleepQueue;
-	std::list<KThread*> m_timeouts;
-	std::map<void*, std::list<KThread*>> m_events;
 
-	//Message waits (should be part of event framework)
-	std::list<KThread*> m_messageWaits;
+	struct PipeWaitEvent
+	{
+		KThread* Thread;
+		size_t Count;
+	};
+
+	struct Wait
+	{
+		KThread* Thread;
+		nano100_t Deadline;
+	};
+
+	std::map<UserPipe*, PipeWaitEvent> m_pipeReadWaits;
+	std::map<UserPipe*, PipeWaitEvent> m_pipeWriteWaits;
+
+	std::map<KSignalObject*, std::list<Wait>> m_signalWaits;
+	std::map<KPredicate*, KThread*> m_predicates;
 };
-

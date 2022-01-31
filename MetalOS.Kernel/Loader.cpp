@@ -6,9 +6,9 @@
 
 #include "PortableExecutable.h"
 
-Handle Loader::LoadKernelLibrary(const std::string& path)
+void* Loader::LoadKernelLibrary(const std::string& path)
 {
-	FileHandle* file = kernel.KeCreateFile(path, GenericAccess::Read);
+	KFile* file = kernel.KeCreateFile(path, GenericAccess::Read);
 	Assert(file);
 
 	size_t read;
@@ -70,7 +70,7 @@ Handle Loader::LoadKernelLibrary(const std::string& path)
 //TODO: this is very similar to KernelAPI's loader, as well as create process
 Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 {
-	FileHandle* file = kernel.KeCreateFile(std::string(path), GenericAccess::Read);
+	KFile* file = kernel.KeCreateFile(std::string(path), GenericAccess::Read);
 	Assert(file);
 
 	size_t read;

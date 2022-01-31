@@ -92,8 +92,17 @@ struct SystemCallFrame
 #define KERNEL_GLOBAL_ALIGN __declspec(align(64))
 #define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
 
+#define SECOND 1000000000 //1billion nano seconds
+#define SECOND100NS (SECOND / 100) //# of 100ns segments in a second
+
+typedef uint64_t milli_t;//Time in milliseconds
 typedef uint64_t nano_t;//Time in nanoseconds
 typedef uint64_t nano100_t;//Time in 100 nanoseconds
+
+constexpr nano_t ToNano(const milli_t time)
+{
+	return time * SECOND / 1000;
+}
 
 enum class ThreadState
 {
@@ -101,10 +110,11 @@ enum class ThreadState
 	Running,
 	Sleeping,
 	Waiting,
-	Suspended,
 	MessageWait,
+	PipeWait,
 	Terminated,
-	Initialized
+	Initialized,
+	SignalWait
 };
 
 typedef uintptr_t paddr_t;
@@ -150,8 +160,7 @@ struct InterruptContext
 	void* Context;
 };
 
-#define SECOND 1000000000 //1billion nano seconds
-#define SECOND100NS (SECOND / 100) //# of 100ns segments in a second
+
 #define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))
 
 #define HEAP_ALIGNMENT 16 //Bytes
@@ -175,21 +184,8 @@ constexpr T MakePointer(const void* base, size_t offset = 0)
 	return reinterpret_cast<T>((char*)base + offset);
 }
 
-#ifndef DECLSPEC_ALIGN
-#if (_MSC_VER >= 1300) && !defined(MIDL_PASS)
 #define DECLSPEC_ALIGN(x)   __declspec(align(x))
-#else
-#define DECLSPEC_ALIGN(x)
-#endif
-#endif
-
-#ifndef DECLSPEC_NOINITALL
-#if (_MSC_VER >= 1915) && !defined(MIDL_PASS)
 #define DECLSPEC_NOINITALL __declspec(no_init_all)
-#else
-#define DECLSPEC_NOINITALL
-#endif
-#endif
 
 #define AlignSize(x,a) (((x) + ((a) - 1)) & ~((a)-1))
 
@@ -201,21 +197,6 @@ struct CallContext
 };
 
 #define COUNT_OF( arr) (sizeof(arr)/sizeof(0[arr]))
-
-//To avoid heap allocations, pointers point inside pdb
-struct StackEntry
-{
-	char* Function;
-	uint32_t Line;
-};
-
-struct FileHandle
-{
-	void* Context;
-	size_t Position;
-	size_t Length;
-	GenericAccess Access;
-};
 
 //TODO: somehow export struct from asm
 //This is just for thread init
@@ -238,7 +219,7 @@ class Pdb;
 struct KeLibrary
 {
 	std::string Name;
-	Handle Handle;
+	void* ImageBase;
 	Pdb* Pdb;
 };
 

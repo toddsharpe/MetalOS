@@ -90,3 +90,4 @@ void UserThread::DisplayDetails()
 	kernel.Printf(" Handle: 0x%016x\n", m_teb->Handle);
 	kernel.Printf("    Arg: 0x%016x\n", m_teb->Arg);
 }
+

@@ -2,7 +2,7 @@
 #include <MetalOS.Arch.h>
 
 KSemaphore::KSemaphore(const uint32_t initial, const uint32_t maximum, const std::string& name) :
-	KObject(),
+	KSignalObject(KObjectType::Semaphore),
 	m_value(initial),
 	m_limit(maximum),
 	m_spinlock(),
@@ -11,7 +11,7 @@ KSemaphore::KSemaphore(const uint32_t initial, const uint32_t maximum, const std
 
 }
 
-bool KSemaphore::Wait(size_t count, size_t timeout)
+bool KSemaphore::BlockWait(const size_t count)
 {
 	//Acquire semaphore
 	cpu_flags_t flags = m_spinlock.Acquire();
@@ -32,27 +32,21 @@ bool KSemaphore::Wait(size_t count, size_t timeout)
 	return true;
 }
 
-bool KSemaphore::TryWait(size_t count)
+//Returns post-decrement value
+int64_t KSemaphore::Wait(const size_t count)
 {
 	//Acquire semaphore
 	cpu_flags_t flags = m_spinlock.Acquire();
 
 	//Decrement
 	m_value -= count;
+	m_spinlock.Release(flags);
 
-	if (m_value < 0)
-	{
-		m_spinlock.Release(flags);
-		return false;
-	}
-	else
-	{
-		m_spinlock.Release(flags);
-		return true;
-	}
+	return m_value;
 }
 
-int64_t KSemaphore::Signal(size_t count)
+//Returns pre-increment value
+int64_t KSemaphore::Signal(const size_t count)
 {
 	//Acquire semaphore
 	cpu_flags_t flags = m_spinlock.Acquire();
@@ -63,4 +57,9 @@ int64_t KSemaphore::Signal(size_t count)
 	m_spinlock.Release(flags);
 
 	return ret;
+}
+
+bool KSemaphore::IsSignalled() const
+{
+	return m_value > 0;
 }

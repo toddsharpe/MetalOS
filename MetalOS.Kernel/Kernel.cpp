@@ -151,7 +151,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_pfnDb = new PhysicalMemoryManager(*m_memoryMap);
 	Assert(m_pfnDb->GetSize() == pfnDbSize);
 	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb);
-
+	Print("1\n");
 	//Initialize address spaces (TODO: condense with split method)
 	m_librarySpace = new VirtualAddressSpace(KernelLibraryStart, KernelLibraryEnd, true);
 	m_pdbSpace = new VirtualAddressSpace(KernelPdbStart, KernelPdbEnd, true);
@@ -159,19 +159,19 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_heapSpace = new VirtualAddressSpace(KernelHeapStart, KernelHeapEnd, true);
 	m_runtimeSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
 	m_windowsSpace = new VirtualAddressSpace(KernelWindowsStart, KernelWindowsEnd, true);
-
+	Print("2\n");
 	//Initialize Heap
 	m_heap = new KernelHeap(*m_virtualMemory, *m_heapSpace);
 	m_heapInitialized = true;
-
+	Print("3\n");
 	//PDB
-	m_pdb = new Pdb((void*)KernelKernelPdb, (Handle*)KernelBaseAddress);
-
+	//m_pdb = new Pdb((void*)KernelKernelPdb, (Handle*)KernelBaseAddress);
+	Print("4\n");
 	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();
 	m_interruptHandlers->insert({ InterruptVector::Timer0, { &Kernel::OnTimer0, this} });
 	m_interruptHandlers->insert({ InterruptVector::Breakpoint, { [](void* arg) { ((Kernel*)arg)->Printf("Debug Breakpoint Exception\n"); }, this} });
-
+	Print("5\n");
 	//Test interrupts
 	__debugbreak();
 
@@ -261,6 +261,12 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
+	if (vector == InterruptVector::DoubleFault)
+	{
+		KePauseSystem();
+		__halt();
+	}
+	
 	if (m_debugger != nullptr && m_debugger->Enabled() && vector == InterruptVector::Breakpoint)
 	{
 		m_debugger->DebuggerEvent(vector, pFrame);
@@ -313,19 +319,17 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 		{
 			const KeLibrary* module = KeGetModule(context.Rip);
 			Assert(module);
-			base = (uintptr_t)module->Handle;
+			base = (uintptr_t)module->ImageBase;
 			const uint32_t rva = (uint32_t)(context.Rip - base);
 
-			if (module->Pdb == nullptr)
-			{
-				kernel.Printf("IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", context.Rip, base, rva);
-			}
-			else
+			if (module->Pdb != nullptr)
 			{
 				PdbFunctionLookup lookup = {};
 				module->Pdb->ResolveFunction(rva, lookup);
 				kernel.Printf("%s (%d)\n", lookup.Name, lookup.LineNumber);
 			}
+			kernel.Printf("  IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", context.Rip, base, rva);
+
 		}
 
 		sw.Next(base);
@@ -397,19 +401,17 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* format, ..
 	{
 		const KeLibrary* module = KeGetModule(context.Rip);
 		Assert(module);
-		const uintptr_t base = (uintptr_t)module->Handle;
+		const uintptr_t base = (uintptr_t)module->ImageBase;
 		const uint32_t rva = (uint32_t)(context.Rip - base);
 
-		if (module->Pdb == nullptr)
-		{
-			kernel.Printf("IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", context.Rip, base, rva);
-		}
-		else
+		if (module->Pdb != nullptr)
 		{
 			PdbFunctionLookup lookup = {};
 			module->Pdb->ResolveFunction(rva, lookup);
 			kernel.Printf("%s (%d)\n", lookup.Name.c_str(), lookup.LineNumber);
 		}
+		kernel.Printf("    IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", context.Rip, base, rva);
+
 
 		sw.Next(base);
 	}
@@ -517,7 +519,7 @@ KThread* Kernel::KeCreateThread(const ThreadStart start, void* arg, UserThread* 
 	//Add kernel thread
 	KThread* thread = new KThread(start, arg, userThread);
 	thread->InitContext(&Kernel::KernelThreadInitThunk);
-	m_scheduler->AddReady(*thread);
+	m_scheduler->AddReady(thread);
 	return thread;
 }
 
@@ -525,12 +527,12 @@ void Kernel::KeExitThread()
 {
 	Print("Kernel::KeThreadExit\n");
 
-	m_scheduler->KillThread();
+	m_scheduler->KillCurrentThread();
 }
 
-Handle Kernel::KeLoadLibrary(const std::string& path)
+KeLibrary& Kernel::KeLoadLibrary(const std::string& path)
 {
-	const Handle library = Loader::LoadKernelLibrary(path);
+	void* library = Loader::LoadKernelLibrary(path);
 
 	const char* fullPath = PortableExecutable::GetPdbName(library);
 	Assert(fullPath);
@@ -547,15 +549,15 @@ Handle Kernel::KeLoadLibrary(const std::string& path)
 	if (m_debugger != nullptr)
 		m_debugger->AddModule(keLibrary);
 
-	return library;
+	return m_modules->back();
 }
 
 const KeLibrary* Kernel::KeGetModule(const uintptr_t address) const
 {
 	for (const auto& module : *m_modules)
 	{
-		const uintptr_t imageBase = (uintptr_t)module.Handle;
-		const size_t imageSize = PortableExecutable::GetSizeOfImage(module.Handle);
+		const uintptr_t imageBase = (uintptr_t)module.ImageBase;
+		const size_t imageSize = PortableExecutable::GetSizeOfImage(module.ImageBase);
 
 		if ((address >= imageBase) && (address < imageBase + imageSize))
 			return &module;
@@ -671,7 +673,7 @@ bool Kernel::KeReleaseSemaphore(KSemaphore& semaphore, const size_t releaseCount
 	{
 		cpu_flags_t flags = ArchDisableInterrupts();
 
-		m_scheduler->SemaphoreRelease(&semaphore, releaseCount);
+		m_scheduler->SemaphoreRelease(semaphore);
 
 		ArchRestoreFlags(flags);
 	}
@@ -689,16 +691,50 @@ WaitStatus Kernel::KeWaitForSemaphore(KSemaphore& semaphore, size_t timeoutMs, s
 	{
 		cpu_flags_t flags = ArchDisableInterrupts();
 
-		const nano100_t timeout = timeoutMs * 1000000 / 100;
-		WaitStatus status = m_scheduler->SemaphoreWait(&semaphore, timeout);
-
+		const nano100_t timeout = timeoutMs * 1'000'000;
+		WaitStatus status = m_scheduler->SemaphoreWait(semaphore, timeout);
 		ArchRestoreFlags(flags);
 		return status;
 	}
 	else
 	{
-		semaphore.Wait(units, timeoutMs);
+		semaphore.BlockWait(units);
 		return WaitStatus::Signaled;
+	}
+}
+
+WaitStatus Kernel::KeWait(KSignalObject& obj)
+{
+	return this->KeWait(obj, std::numeric_limits<milli_t>::max());
+}
+
+WaitStatus Kernel::KeWait(KSignalObject& obj, const milli_t timeout)
+{
+	WaitStatus status = m_scheduler->ObjectWait(obj, ToNano(timeout));
+	
+	switch (obj.GetType())
+	{
+	case KObjectType::Event:
+		KEvent& event = (KEvent&)obj;
+		if (!event.IsManual())
+			event.Reset();
+		break;
+	}
+	
+	return status;
+}
+
+void Kernel::KeSignal(KEvent& event)
+{
+	event.Set();
+	if (event.IsManual())
+	{
+		m_scheduler->ObjectSignalled(event);
+	}
+	else
+	{
+		if (m_scheduler->ObjectSignalledOne(event))
+			event.Reset();
 	}
 }
 
@@ -742,7 +778,7 @@ Device* Kernel::KeGetDevice(const std::string& path) const
 
 void* Kernel::KeLoadPdb(const std::string& path)
 {
-	FileHandle* file = KeCreateFile(path, GenericAccess::Read);
+	KFile* file = KeCreateFile(path, GenericAccess::Read);
 	Assert(file);
 	
 	void* address = AllocatePdb(SIZE_TO_PAGES(file->Length));
@@ -753,16 +789,16 @@ void* Kernel::KeLoadPdb(const std::string& path)
 	return address;
 }
 
-FileHandle* Kernel::KeCreateFile(const std::string& path, const GenericAccess access) const
+KFile* Kernel::KeCreateFile(const std::string& path, const GenericAccess access) const
 {
 	const Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
 	const RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
 
-	FileHandle* handle = hdd->OpenFile(path, access);
+	KFile* handle = hdd->OpenFile(path, access);
 	return handle;
 }
 
-bool Kernel::KeReadFile(FileHandle& file, void* buffer, const size_t bufferSize, size_t* bytesRead) const
+bool Kernel::KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead) const
 {
 	const Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
 	const RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver(); //TODO: figure out why HardDriveDriver didnt work
@@ -775,7 +811,7 @@ bool Kernel::KeReadFile(FileHandle& file, void* buffer, const size_t bufferSize,
 	return true;
 }
 
-bool Kernel::KeSetFilePosition(FileHandle& file, const size_t position) const
+bool Kernel::KeSetFilePosition(KFile& file, const size_t position) const
 {
 	if (position >= file.Length)
 		return false;
@@ -784,15 +820,15 @@ bool Kernel::KeSetFilePosition(FileHandle& file, const size_t position) const
 	return true;
 }
 
-void Kernel::KeCloseFile(FileHandle* file) const
+void Kernel::KeCloseFile(KFile* file) const
 {
 	delete file;
 }
 
-bool Kernel::KeCreateProcess(const std::string& path)
+UserProcess* Kernel::KeCreateProcess(const std::string& path)
 {
 	Print("CreateProcess %s\n", path);
-	FileHandle* file = KeCreateFile(path, GenericAccess::Read);
+	KFile* file = KeCreateFile(path, GenericAccess::Read);
 	Assert(file);
 
 	size_t read;
@@ -816,11 +852,12 @@ bool Kernel::KeCreateProcess(const std::string& path)
 	
 	//Create new process to create new address space
 	UserProcess* process = new UserProcess(path);
+	process->IsConsole = peHeader.OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI;
 
 	//Swap to new process address space to load file
 	//TODO: page into kernel, load, then remove and page into process so we dont switch address space
 	ArchSetPagingRoot(process->GetCR3());
-	Print("NewCr3: 0x%016x\n", process->GetCR3());
+	this->Printf("NewCr3: 0x%016x\n", process->GetCR3());
 
 	//Allocate pages
 	void* address = VirtualAlloc(*process, (void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWriteExecute);
@@ -856,12 +893,12 @@ bool Kernel::KeCreateProcess(const std::string& path)
 
 	//Load KernelAPI
 	Handle api = Loader::LoadLibrary(*process, "mosrt.dll");
-	Print("mosrt loaded at 0x%016x\n", api);
+	this->Printf("mosrt loaded at 0x%016x\n", api);
 
 	//Save init pointers in library
 	process->InitProcess = PortableExecutable::GetProcAddress(api, "InitProcess");
 	process->InitThread = PortableExecutable::GetProcAddress(api, "InitThread");
-	Print("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
+	this->Printf("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
 
 	//Patch imports of process for just mosrt
 	Loader::KernelExports(address, api, "mosrt.dll");
@@ -869,7 +906,7 @@ bool Kernel::KeCreateProcess(const std::string& path)
 	//Create thread TODO: reserve vs commit stack size
 	CreateThread(*process, pNtHeader->OptionalHeader.SizeOfStackReserve, nullptr, nullptr, process->InitProcess);
 
-	return true;
+	return process;
 }
 
 KThread* Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry)
@@ -905,6 +942,9 @@ void Kernel::KePostMessage(Message* msg)
 
 bool Kernel::IsValidUserPointer(const void* p)
 {
+	if (!p)
+		return false;
+	
 	//Make sure pointer is in User's address half
 	if ((uintptr_t)p > UserStop)
 		return false;
@@ -916,6 +956,9 @@ bool Kernel::IsValidUserPointer(const void* p)
 
 bool Kernel::IsValidKernelPointer(const void* p)
 {
+	if (!p)
+		return false;
+	
 	//Make sure pointer is in Kernel's space
 	if ((uintptr_t)p < KernelStart)
 		return false;

@@ -32,6 +32,7 @@ extern "C"
 #include "UserProcess.h"
 #include "MetalOS.Arch.h"
 #include "WindowingSystem.h"
+#include "KEvent.h"
 
 class Kernel
 {
@@ -141,7 +142,7 @@ public:
 
 #pragma region Internal Interface
 	//Processes
-	bool KeCreateProcess(const std::string& path);
+	UserProcess* KeCreateProcess(const std::string& path);
 	
 	//Threads
 	KThread* KeCreateThread(const ThreadStart start, void* arg, UserThread* userThread = nullptr);
@@ -149,22 +150,27 @@ public:
 	void KeExitThread();
 
 	//Libraries
-	Handle KeLoadLibrary(const std::string& path);
+	KeLibrary& KeLoadLibrary(const std::string& path);
 	void* KeLoadPdb(const std::string& path);
-	const  KeLibrary* KeGetModule(const std::string& path) const;
+	const KeLibrary* KeGetModule(const std::string& path) const;
 	const KeLibrary* KeGetModule(const uintptr_t address) const;
 
 	//Files
-	FileHandle* KeCreateFile(const std::string& path, const GenericAccess access) const;
-	bool KeReadFile(FileHandle& file, void* buffer, const size_t bufferSize, size_t* bytesRead) const;
-	bool KeSetFilePosition(FileHandle& file, const size_t position) const;
-	void KeCloseFile(FileHandle* file) const;
+	KFile* KeCreateFile(const std::string& path, const GenericAccess access) const;
+	bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead) const;
+	bool KeSetFilePosition(KFile& file, const size_t position) const;
+	void KeCloseFile(KFile* file) const;
 
 	//Semaphore
 	KSemaphore* KeCreateSemaphore(const size_t initial, const size_t maximum, const std::string& name);
 	bool KeReleaseSemaphore(KSemaphore& semaphore, const size_t releaseCount);
 	WaitStatus KeWaitForSemaphore(KSemaphore& semaphore, size_t timeoutMs, size_t units = 1);
 	bool KeCloseSemaphore(KSemaphore* semaphore);
+
+	//New wait events
+	WaitStatus KeWait(KSignalObject& obj);
+	WaitStatus KeWait(KSignalObject& obj, const milli_t timeout);
+	void KeSignal(KEvent& event);
 
 	void KeGetSystemTime(SystemTime& time) const;
 
@@ -187,13 +193,11 @@ public:
 	SystemCallResult GetSystemTime(SystemTime* time);
 
 	HThread GetCurrentThread();
-	SystemCallResult CreateProcess(const char* processName);
+	SystemCallResult CreateProcess(const char* processName, const CreateProcessArgs* args, CreateProcessResult* result);
 	HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg);
 	uint32_t GetThreadId(const Handle handle);
 	void Sleep(const uint32_t milliseconds);
 	void SwitchToThread();
-	SystemCallResult SuspendThread(Handle thread, size_t* prevCount);
-	SystemCallResult ResumeThread(Handle thread, size_t* prevCount);
 	SystemCallResult ExitProcess(const uint32_t exitCode);
 	SystemCallResult ExitThread(const uint32_t exitCode);
 
@@ -205,14 +209,21 @@ public:
 	SystemCallResult PeekMessage(Message* message);
 	SystemCallResult GetScreenRect(Rectangle* rect);
 
-	Handle CreateFile(const char* name, const GenericAccess access);
-	SystemCallResult ReadFile(const Handle handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
-	SystemCallResult WriteFile(const Handle handle, const void* lpBuffer, const size_t bufferSize, size_t* bytesWritten);
-	SystemCallResult SetFilePointer(const Handle handle, const __int64 position, const FilePointerMove moveType, size_t* newPosition);
-	SystemCallResult CloseFile(const Handle handle);
+	HFile CreateFile(const char* name, const GenericAccess access);
+	SystemCallResult CreatePipe(HFile* readHandle, HFile* writeHandle);
+	SystemCallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
+	SystemCallResult WriteFile(const HFile handle, const void* lpBuffer, const size_t bufferSize, size_t* bytesWritten);
+	SystemCallResult SetFilePointer(const HFile handle, const size_t position, const FilePointerMove moveType, size_t* newPosition);
+	SystemCallResult CloseFile(const HFile handle);
 	SystemCallResult MoveFile(const char* existingFileName, const char* newFileName);
 	SystemCallResult DeleteFile(const char* fileName);
 	SystemCallResult CreateDirectory(const char* path);
+	SystemCallResult WaitForSingleObject(const Handle handle, const uint32_t milliseconds, WaitStatus* status);
+	SystemCallResult GetPipeInfo(const HFile handle, PipeInfo* info);
+	SystemCallResult CloseHandle(const Handle handle);
+	SystemCallResult CreateEvent(HEvent* event, const bool manual, const bool initial);
+	SystemCallResult SetEvent(const HEvent event);
+	SystemCallResult ResetEvent(const HEvent event);
 
 	void* VirtualAlloc(const void* address, const size_t size, const MemoryAllocationType allocationType, const MemoryProtection protect);
 	HRingBuffer CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize);
@@ -220,7 +231,8 @@ public:
 	void* MapObject(const void* address, Handle handle);
 	void* MapSharedObject(const void* address, const char* name);
 
-	SystemCallResult DebugPrint(char* s);
+	SystemCallResult DebugPrint(const char* s);
+	SystemCallResult DebugPrintBytes(const char* buffer, const size_t length);
 #pragma endregion
 
 private:

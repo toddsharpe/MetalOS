@@ -47,14 +47,14 @@ x64_SYSTEMCALL PROC
 
 	; Save user stack
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block
-	mov rbx, qword ptr [rbx+8] ; Get KThread
-	mov rbx, qword ptr [rbx+8] ; GetUserThread
-	mov qword ptr [rbx], rsp ; Write to SavedStack
+	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
+	mov rbx, qword ptr [rbx+40] ; offsetof(KThread, m_userThread)
+	mov qword ptr [rbx], rsp ; offsetof(UserThread, SavedStack)
 
 	; Load kernel stack
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block
-	mov rbx, qword ptr [rbx+8] ; Get KThread
-	mov rbx, qword ptr [rbx] ; Get context
+	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
+	mov rbx, qword ptr [rbx+32] ; offsetof(KThread, m_context)
 	mov rbx, qword ptr [rbx+64] ; Get Stack pointer (8th item)
 	mov rsp, rbx ; Set stack
 
@@ -75,15 +75,15 @@ x64_SYSTEMCALL PROC
 
 	; Save kernel stack
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block
-	mov rbx, qword ptr [rbx+8] ; Get KThread
-	mov rbx, qword ptr [rbx] ; Get context
+	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
+	mov rbx, qword ptr [rbx+32] ; offsetof(KThread, m_context)
 	mov qword ptr [rbx+64], rsp ; Set stack
 
 	; Restore stack
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block
-	mov rbx, qword ptr [rbx+8] ; Get KThread
-	mov rbx, qword ptr [rbx+8] ; GetUserThread
-	mov rsp, qword ptr [rbx] ; Restore user stack
+	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
+	mov rbx, qword ptr [rbx+40] ; offsetof(KThread, m_userThread)
+	mov rsp, qword ptr [rbx] ; offsetof(UserThread, SavedStack)
 
 	POP_NONVOLATILE
 	swapgs ; Swap back to UserThread

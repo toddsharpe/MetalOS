@@ -94,11 +94,11 @@ void* KernelHeap::Allocate(const size_t size, const uintptr_t callerAddress)
 
 void KernelHeap::Deallocate(const void* address)
 {
-	Assert((uintptr_t)address >= m_address + sizeof(HeapBlock));
-	Assert((uintptr_t)address < m_end);
+	AssertOp((uintptr_t)address, >=, m_address + sizeof(HeapBlock));
+	AssertOp((uintptr_t)address, <, m_end);
 
 	HeapBlock* block = (HeapBlock*)((uintptr_t)address - sizeof(HeapBlock));
-	Assert(block->Magic == Magic);
+	AssertEqual(block->Magic, Magic);
 	
 	block->Free = true;
 

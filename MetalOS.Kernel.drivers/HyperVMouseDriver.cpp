@@ -9,11 +9,10 @@
 HyperVMouseDriver::HyperVMouseDriver(Device& device) :
 	Driver(device),
 	m_response(),
-	m_events(),
-	m_semaphore(),
+	m_event(false, false),
 	m_channel(INPUTVSC_SEND_RING_BUFFER_SIZE, INPUTVSC_RECV_RING_BUFFER_SIZE, { &HyperVMouseDriver::Callback, this })
 {
-	m_semaphore = kernel.KeCreateSemaphore(0, 0, "HyperVMouseDriver");
+
 }
 
 Result HyperVMouseDriver::Initialize()
@@ -43,7 +42,7 @@ Result HyperVMouseDriver::Initialize()
 		(uint64_t)&request, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 
 	//Wait for SYNTH_HID_PROTOCOL_RESPONSE and SYNTH_HID_INITIAL_DEVICE_INFO
-	kernel.KeWaitForSemaphore(*m_semaphore, INT64_MAX);
+	kernel.KeWait(m_event);
 
 	//Send info ack
 	mousevsc_prt_msg ack;
@@ -158,7 +157,7 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 		//kernel.PrintBytes(start, info->hid_descriptor.desc[0].wDescriptorLength);
 
 		//Ack device info
-		kernel.KeReleaseSemaphore(*m_semaphore, 1);
+		kernel.KeSignal(m_event);
 	}
 	break;
 

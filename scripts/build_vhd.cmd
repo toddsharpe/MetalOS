@@ -35,6 +35,7 @@ xcopy %BUILD_OUT%\mosrt.dll X:\EFI\BOOT\
 xcopy %BUILD_OUT%\fire.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\calc.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\term.exe X:\EFI\BOOT\
+echo f | xcopy %CD%\apps\rust-hi\target\debug\rust-hi.exe X:\EFI\BOOT\rusthi.exe
 
 @rem Copy bins
 xcopy %BUILD_OUT%\hello.exe X:\EFI\BOOT\

@@ -70,19 +70,25 @@ int fclose(FILE* _Stream)
 	return static_cast<int>(CloseFile(_Stream));
 }
 
-//TODO: make this real, it just prints to debug stream
 int fprintf(FILE* const _Stream, char const* const _Format, ...)
 {
 	va_list args;
 	va_start(args, _Format);
-
-	char buffer[255];
-	int retval = vsprintf(buffer, _Format, args);
-	buffer[retval] = '\0';
+	int result = vfprintf(_Stream, _Format, args);
 	va_end(args);
+	return result;
+}
 
-	DebugPrint(buffer);
-	return (int)strlen(buffer);
+//TODO: make this real, it just prints to debug stream
+//TODO: buffering?
+int vfprintf(FILE* const _Stream, char const* const _Format, va_list _ArgList)
+{
+	char buffer[BUFSIZ];
+	int retval = vsprintf(buffer, _Format, _ArgList);
+	buffer[retval] = '\0';
+
+	AssertSuccess(WriteFile((HFile)_Stream, buffer, retval + 1, nullptr));
+	return retval + 1;
 }
 
 int rename(char const* _OldFileName, char const* _NewFileName)
@@ -93,4 +99,13 @@ int rename(char const* _OldFileName, char const* _NewFileName)
 int remove(char const* _FileName)
 {
 	return static_cast<int>(DeleteFile(_FileName));
+}
+
+int printf(char const* const _Format, ...)
+{
+	va_list args;
+	va_start(args, _Format);
+	int result = vfprintf((FILE*)stdout, _Format, args);
+	va_end(args);
+	return result;
 }

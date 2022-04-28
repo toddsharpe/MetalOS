@@ -7,6 +7,7 @@
 uint32_t UserProcess::LastId = 0;
 
 UserProcess::UserProcess(const std::string& name) : 
+	KSignalObject(KObjectType::Process),
 	m_imageBase(),
 	m_id(++LastId),
 	m_name(name),
@@ -20,7 +21,10 @@ UserProcess::UserProcess(const std::string& name) :
 	m_ringBuffers(),
 	InitProcess(),
 	InitThread(),
-	Delete()
+	Delete(),
+	IsConsole(),
+	m_lastHandle(StartingHandle),
+	m_objects()
 {
 	//Create new page tables, using current top level kernel mappings
 	m_pageTables = new PageTables();
@@ -127,3 +131,50 @@ void UserProcess::DisplayDetails() const
 		kernel.Printf("    %s: 0x%016x\n", m_peb->LoadedModules[i].Name, m_peb->LoadedModules[i].Address);
 }
 
+void UserProcess::SetStandardHandle(const StandardHandle handle, UObject* object)
+{
+	Assert(m_objects.find((handle_t)handle) == m_objects.end());
+
+	if (handle == StandardHandle::Input)
+		Assert(object->IsReadable());
+
+	if (handle == StandardHandle::Error || handle == StandardHandle::Output)
+		Assert(object->IsWriteable());
+
+	m_objects.insert({ (handle_t)handle, object });
+}
+
+Handle UserProcess::AddObject(UObject* object)
+{
+	m_lastHandle++;
+
+	kernel.Printf("ObjHandle: %d, Name: %s, Type: %d\n", m_lastHandle, m_name.c_str(), object->GetType());
+
+	m_objects.insert({ m_lastHandle , object });
+	return (Handle)m_lastHandle;
+}
+
+UObject* UserProcess::GetObject(Handle handle)
+{
+	const auto& it = m_objects.find((handle_t)handle);
+	if (it == m_objects.end())
+		return nullptr;
+
+	return it->second;
+}
+
+bool UserProcess::CloseObject(Handle handle)
+{
+	UObject* object = GetObject(handle);
+	if (!object)
+		return false;
+
+	m_objects.erase((handle_t)handle);
+	delete object;
+	return true;
+}
+
+bool UserProcess::IsSignalled() const
+{
+	return Delete;
+}

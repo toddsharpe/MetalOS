@@ -262,26 +262,27 @@ public:
 
 	//void DrawTitle
 
-	void DrawText(Point2D position, const char* text)
+	void DrawText(Point2D position, const char* text, const Color color)
 	{
+		Point2D pos = position;
 		while (*text != '\0')
 		{
 			if (*text == '\n')
 			{
-				position.Y = (position.Y += PixelScale);
-				position.X = 0;
+				pos.Y = (pos.Y += PixelScale);
+				pos.X = position.X;
 			}
 			else if (*text != '\r')
 			{
-				DrawCharacter(position, *text);
-				position.X = (position.X += PixelScale);
+				DrawCharacter(pos, *text, color);
+				pos.X = (pos.X += PixelScale);
 			}
 
 			text++;
 		}
 	}
 
-	void DrawCharacter(Point2D position, const char c)
+	void DrawCharacter(Point2D position, const char c, const Color color)
 	{
 		const char* map = m_font.GetCharacterMap(c);
 		uint8_t size = 8; // TODO: get from font
@@ -302,7 +303,7 @@ public:
 					rect.Y = (position.Y + y) * FontScale;
 					rect.Width = FontScale;
 					rect.Height = FontScale;
-					DrawRectangle(Colors::Red, rect);
+					DrawRectangle(color, rect);
 				}
 
 				mask = mask >> 1;
@@ -342,8 +343,8 @@ class Control
 {
 public:
 	Control() :
-		Foreground(),
-		Background()
+		Foreground(Colors::Red),
+		Background(Colors::White)
 	{ }
 	virtual void Draw(Frame& frame) = 0;
 
@@ -369,7 +370,7 @@ public:
 	virtual void Draw(Frame& frame) override
 	{
 		frame.DrawBorder(Foreground, Bounds, 3);
-		frame.DrawText({ Bounds.X + 5, Bounds.Y + 5 }, Text.c_str());
+		frame.DrawText({ Bounds.X + 5, Bounds.Y + 5 }, Text.c_str(), Foreground);
 	}
 
 	Rectangle Bounds;
@@ -390,7 +391,8 @@ public:
 
 	virtual void Draw(Frame& frame) override
 	{
-		frame.DrawText({ Bounds.X + 5, Bounds.Y + 5 }, Text.c_str());
+		frame.DrawRectangle(Background, Bounds);
+		frame.DrawText({ Bounds.X + 5, Bounds.Y + 5 }, Text.c_str(), Foreground);
 	}
 
 	Rectangle Bounds;
@@ -399,6 +401,9 @@ public:
 
 class Window
 {
+private:
+	static constexpr Color BorderColor = Colors::Blue;
+
 public:
 	Window(const std::string& title, const Rectangle& rect, WindowStyle& style, const MessageCallback& callback) :
 		m_title(title),
@@ -436,9 +441,9 @@ public:
 
 	void DrawBorder()
 	{
-		m_frame.DrawFrameBorder(Colors::Blue, 3);
-		m_frame.DrawText({ 9, 9 }, m_title.c_str());
-		m_frame.DrawRectangle(Colors::Blue, { 0, 20, m_rect.Width, 3 });
+		m_frame.DrawFrameBorder(BorderColor, 3);
+		m_frame.DrawText({ 9, 9 }, m_title.c_str(), BorderColor);
+		m_frame.DrawRectangle(BorderColor, { 0, 20, m_rect.Width, 3 });
 	}
 
 	void Run()

@@ -7,10 +7,9 @@
 HyperVScsiDriver::HyperVScsiDriver(Device& device) :
 	Driver(device),
 	m_sizeDelta(sizeof(struct vmscsi_win8_extension)),
-	m_semaphore(),
+	m_event(false, false),
 	m_channel(SCSI_VSC_SEND_RING_BUFFER_SIZE, SCSI_VSC_RECV_RING_BUFFER_SIZE, { &HyperVScsiDriver::Callback, this })
 {
-	m_semaphore = kernel.KeCreateSemaphore(0, 0, "HyperVScsiDriver");
 
 }
 
@@ -113,8 +112,7 @@ void HyperVScsiDriver::OnCallback() //storvsc_on_channel_callback
 		{
 			//These are during init
 			memcpy(&transaction->Response, data, (sizeof(struct vstor_packet) - vmscsi_size_delta));
-			kernel.KeReleaseSemaphore(*transaction->Semaphore, 1);
-			kernel.KeCloseSemaphore(transaction->Semaphore);
+			kernel.KeSignal(*transaction->Event);
 		}
 		else
 		{
@@ -125,8 +123,7 @@ void HyperVScsiDriver::OnCallback() //storvsc_on_channel_callback
 			{
 			case VSTOR_OPERATION_COMPLETE_IO:
 				Assert(transaction->Response.vm_srb.scsi_status == 0 && transaction->Response.vm_srb.srb_status == SRB_STATUS_SUCCESS);
-				kernel.KeReleaseSemaphore(*transaction->Semaphore, 1);
-				kernel.KeCloseSemaphore(transaction->Semaphore);
+				kernel.KeSignal(*transaction->Event);
 				break;
 
 			case VSTOR_OPERATION_REMOVE_DEVICE:
@@ -154,14 +151,13 @@ void HyperVScsiDriver::Execute(Transaction* transaction, bool status_check)
 	//kernel.Printf("Execute. Delta: 0x%x\n", m_sizeDelta);
 
 	//Create semaphore
-	transaction->Semaphore = kernel.KeCreateSemaphore(0, 0, "HyperVScsiDriver");
+	transaction->Event = new KEvent(false, false);
 
 	transaction->Request.flags = REQUEST_COMPLETION_FLAG;
 
 	this->m_channel.SendPacket(&transaction->Request, sizeof(vstor_packet) - m_sizeDelta, (uint64_t)transaction, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
-	kernel.KeWaitForSemaphore(*transaction->Semaphore, INT64_MAX);
-
-	//TODO: close semaphore
+	kernel.KeWait(*transaction->Event);
+	delete transaction->Event;
 
 	if (!status_check)
 		return;

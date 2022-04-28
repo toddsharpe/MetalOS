@@ -4,6 +4,7 @@
 #include "Driver.h"
 #include "HyperVChannel.h"
 #include "MetalOS.h"
+#include "KEvent.h"
 
 /* SCSI Definitions*/
 #define SCAN_WILD_CARD	~0
@@ -469,7 +470,7 @@ struct Transaction
 {
 	vstor_packet Request;
 	vstor_packet Response;
-	KSemaphore* Semaphore;
+	KEvent* Event;
 };
 
 class HyperVScsiDriver : public Driver
@@ -490,7 +491,7 @@ private:
 	void OnCallback();
 	void Execute(Transaction* transaction, bool status_check);
 
-	KSemaphore* m_semaphore;
+	KEvent m_event;
 	HyperVChannel m_channel;
 };
 

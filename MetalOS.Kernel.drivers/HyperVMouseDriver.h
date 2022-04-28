@@ -3,6 +3,7 @@
 #include "Driver.h"
 #include "HyperVChannel.h"
 #include "MetalOS.h"
+#include "KEvent.h"
 
 #include <queue>
 
@@ -164,9 +165,7 @@ private:
 
 	mousevsc_prt_msg m_response;
 
-	std::queue<KeyEvent> m_events;
-
-	KSemaphore* m_semaphore;
+	KEvent m_event;
 	HyperVChannel m_channel;
 };
 

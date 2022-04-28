@@ -49,12 +49,12 @@ Debugger::Debugger()
 
 void Debugger::Initialize()
 {
-	Handle kddll = kernel.KeLoadLibrary("kdcom.dll");
+	KeLibrary& kddll = kernel.KeLoadLibrary("kdcom.dll");
 
 	//Load pointers
-	Kd64::m_dll.KdInitialize = static_cast<OnKdInitialize>(PortableExecutable::GetProcAddress(kddll, "KdInitialize"));
-	Kd64::m_dll.KdReceivePacket = static_cast<OnKdReceivePacket>(PortableExecutable::GetProcAddress(kddll, "KdReceivePacket"));
-	Kd64::m_dll.KdSendPacket = static_cast<OnKdSendPacket>(PortableExecutable::GetProcAddress(kddll, "KdSendPacket"));
+	Kd64::m_dll.KdInitialize = static_cast<OnKdInitialize>(PortableExecutable::GetProcAddress(kddll.ImageBase, "KdInitialize"));
+	Kd64::m_dll.KdReceivePacket = static_cast<OnKdReceivePacket>(PortableExecutable::GetProcAddress(kddll.ImageBase, "KdReceivePacket"));
+	Kd64::m_dll.KdSendPacket = static_cast<OnKdSendPacket>(PortableExecutable::GetProcAddress(kddll.ImageBase, "KdSendPacket"));
 
 	kernel.Printf("KdInitialize loaded at 0x%016x\n", Kd64::m_dll.KdInitialize);
 	kernel.Printf("KdReceivePacket loaded at 0x%016x\n", Kd64::m_dll.KdReceivePacket);
@@ -76,9 +76,9 @@ void Debugger::AddModule(KeLibrary& library)
 {
 	LDR_DATA_TABLE_ENTRY* entry = new LDR_DATA_TABLE_ENTRY();
 
-	entry->DllBase = (void*)library.Handle;
-	entry->EntryPoint = (void*)((uintptr_t)library.Handle + PortableExecutable::GetEntryPoint(library.Handle));
-	entry->SizeOfImage = PortableExecutable::GetSizeOfImage(library.Handle);
+	entry->DllBase = (void*)library.ImageBase;
+	entry->EntryPoint = (void*)((uintptr_t)library.ImageBase + PortableExecutable::GetEntryPoint(library.ImageBase));
+	entry->SizeOfImage = PortableExecutable::GetSizeOfImage(library.ImageBase);
 	entry->LoadCount = 1;
 
 	//Allocate name unicode strings

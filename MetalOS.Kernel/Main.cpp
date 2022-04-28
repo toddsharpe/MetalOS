@@ -93,9 +93,11 @@ void main(LOADER_PARAMS* loader)
 	//Load process
 	//kernel.CreateProcess(std::string("fire.exe"));
 
-	kernel.KeCreateProcess(std::string("calc.exe"));
-	kernel.KeCreateProcess(std::string("calc.exe"));
-	kernel.KeCreateProcess(std::string("calc.exe"));
+	//kernel.KeCreateProcess(std::string("calc.exe"));
+	//kernel.KeCreateProcess(std::string("calc.exe"));
+	//kernel.KeCreateProcess(std::string("calc.exe"));
+
+	kernel.KeCreateProcess(std::string("term.exe"));
 
 	//kernel.CreateProcess(std::string("doom.exe"));
 

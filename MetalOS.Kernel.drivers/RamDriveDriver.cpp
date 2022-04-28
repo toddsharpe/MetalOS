@@ -47,7 +47,7 @@ Result RamDriveDriver::EnumerateChildren()
 	return Result::NotImplemented;
 }
 
-FileHandle* RamDriveDriver::OpenFile(const std::string& path, const GenericAccess access) const
+KFile* RamDriveDriver::OpenFile(const std::string& path, const GenericAccess access) const
 {
 	Assert(access == GenericAccess::Read);
 	
@@ -57,7 +57,7 @@ FileHandle* RamDriveDriver::OpenFile(const std::string& path, const GenericAcces
 	if (!result)
 		return nullptr;
 	
-	FileHandle* handle = new FileHandle();
+	KFile* handle = new KFile();
 	handle->Context = address;
 	handle->Length = length;
 	handle->Access = access;
@@ -65,7 +65,7 @@ FileHandle* RamDriveDriver::OpenFile(const std::string& path, const GenericAcces
 	return handle;
 }
 
-size_t RamDriveDriver::ReadFile(const FileHandle& handle, void* const buffer, const size_t bytesToRead) const
+size_t RamDriveDriver::ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const
 {
 	Assert(handle.Position < handle.Length);
 

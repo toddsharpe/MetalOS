@@ -49,11 +49,17 @@ __declspec(noreturn) void __stdcall _CxxThrowException(void* pExceptionObject, v
 
 void __cdecl _invoke_watson(char const*, char const*, char const*, unsigned int, int)
 {
-
+	Assert(false);
 }
 
-void __cdecl _invalid_parameter(char const*, char const*, char const*, unsigned int, int)
+void __cdecl _invalid_parameter(char const* expression, char const* function, char const* file, unsigned int line, int reserved)
 {
+	kernel.Printf("_invalid_parameter\n");
+	kernel.Printf("  Expr: %s\n", expression);
+	kernel.Printf("  Func: %s\n", function);
+	kernel.Printf("  File: %s\n", file);
+	kernel.Printf("  Line: %d\n", line);
+	kernel.Printf("  Rsvd: %d\n", reserved);
 	Assert(false);
 }
 

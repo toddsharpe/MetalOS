@@ -7,6 +7,7 @@
 size_t KThread::LastId = 0;
 
 KThread::KThread(const ThreadStart start, void* arg, UserThread* userThread) :
+	KSignalObject(KObjectType::Thread),
 	m_context(),
 	m_userThread(userThread),
 
@@ -19,8 +20,6 @@ KThread::KThread(const ThreadStart start, void* arg, UserThread* userThread) :
 	m_state(ThreadState::Ready),
 	m_waitStatus(WaitStatus::None),
 	m_sleepWake(),
-	m_event(),
-	m_suspendCount(),
 
 	Name()
 {
@@ -29,15 +28,11 @@ KThread::KThread(const ThreadStart start, void* arg, UserThread* userThread) :
 	memset(m_context, 0, size);
 }
 
+//Should never be deleting the object (todo: refcount)
 KThread::~KThread()
 {
-	Assert(m_context);
-	delete m_context;
-
-	//TODO: delete stack if not null
-
-	if (m_userThread != nullptr)
-		delete m_userThread;
+	
+	Assert(false);
 }
 
 void KThread::Run()
@@ -47,6 +42,14 @@ void KThread::Run()
 
 void KThread::InitContext(void* entry)
 {
+	//KThread* t = this;
+	//auto i = t->m_userThread;
+	//auto s = i->SavedStack;
+	size_t s1 = offsetof(KThread, m_context);
+	size_t s2 = offsetof(KThread, m_userThread);
+
+	kernel.Printf("%x\n", s1, s2);
+
 	m_stackAllocation = kernel.AllocateStack(KThread::StackPages);
 	m_stackPointer = (void*)((uintptr_t)m_stackAllocation + (KThread::StackPages << PAGE_SHIFT) - ArchStackReserve());
 	
@@ -93,4 +96,19 @@ void KThread::Display() const
 
 	if (m_userThread != nullptr)
 		m_userThread->Display();
+}
+
+bool KThread::IsSignalled() const
+{
+	return m_state == ThreadState::Terminated;
+}
+
+//We want to keep the object around, but free up its resources here
+void KThread::Dispose()
+{
+	delete m_context;
+	//todo: free m_stackAllocation
+
+	if (m_userThread != nullptr)
+		delete m_userThread;
 }

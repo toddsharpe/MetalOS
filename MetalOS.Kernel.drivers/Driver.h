@@ -3,6 +3,7 @@
 //#include "Device.h"
 #include <string>
 #include "MetalOS.Kernel.h"
+#include "KFile.h"
 
 class Device;
 class Driver
@@ -22,7 +23,7 @@ protected:
 class HardDriveDriver
 {
 public:
-	virtual FileHandle* OpenFile(const std::string& path, const GenericAccess access) const = 0;
-	virtual size_t ReadFile(const FileHandle& handle, void* const buffer, const size_t bytesToRead) const = 0;
+	virtual KFile* OpenFile(const std::string& path, const GenericAccess access) const = 0;
+	virtual size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const = 0;
 };
 

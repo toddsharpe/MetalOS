@@ -22,11 +22,19 @@ extern "C" void DebugPrintf(const char* format, ...)
 	DebugPrint(buffer);
 }
 
-extern "C" void Bugcheck(const char* file, const char* line, const char* assert)
+extern "C" void Bugcheck(const char* file, const char* line, const char* format, ...)
 {
+	va_list args;
+	va_start(args, format);
+
+	char buffer[512];
+	int retval = vsprintf(buffer, format, args);
+	buffer[retval] = '\0';
+	va_end(args);
+	
 	DebugPrintf("Usermode Bugcheck\n");
 	DebugPrintf("%s\n", file);
 	DebugPrintf("%s\n", line);
-	DebugPrintf("%s\n", assert);
+	DebugPrintf("%s\n", buffer);
 	ExitProcess(-1);
 }

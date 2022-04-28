@@ -125,11 +125,11 @@ bool WindowingSystem::GetWindowRect(HWindow handle, Rectangle& bounds)
 	return true;
 }
 
-bool WindowingSystem::ThreadHasWindow(const size_t threadId) const
+bool WindowingSystem::ThreadHasWindow(const UserThread* thread) const
 {
 	for (const auto& window : m_windows)
 	{
-		if (window->Thread->GetId() == threadId)
+		if (window->Thread == thread)
 			return true;
 	}
 
@@ -232,4 +232,21 @@ bool WindowingSystem::HandleValid(const HWindow handle) const
 		it++;
 	}
 	return false;
+}
+
+void WindowingSystem::FreeWindow(UserThread* thread)
+{
+	Window* current = nullptr;
+	
+	auto it = m_windows.begin();
+	while (it != m_windows.end())
+	{
+		current = *it;
+		if (current->Thread == thread)
+			break;
+		it++;
+	}
+
+	Assert(current);
+	m_windows.remove(current);
 }

@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 
 	DebugPrint("Hi From calc!\n");
 	
-	size_t pos = 25 + 150 * (procInfo.Id - 1);
+	size_t pos = 25 + 50 * (procInfo.Id - 1);
 	Rectangle rectangle = { pos, pos, 100, 200 };
 	
 	WindowStyle style = {};

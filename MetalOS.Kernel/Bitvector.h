@@ -3,6 +3,7 @@
 #include <memory>
 
 //TODO: make sure everything gets inlined sinces its so simple
+//Shouldnt this just be bitset?
 class Bitvector
 {
 public:

@@ -12,7 +12,7 @@ ENDM
 ; This needs to be kept consistent with SystemCall in MetalOS.Internal.h. Figure out how
 x64SysCall <GetSystemInfo>, 100h
 x64SysCall <GetTickCount>, 101h
-x64SysCall <GetSystemTime>, 101h
+x64SysCall <GetSystemTime>, 102h
 
 x64SysCall <GetCurrentThread>, 200h
 x64SysCall <CreateProcess>, 201h
@@ -34,13 +34,20 @@ x64SysCall <PeekMessage>, 305h
 x64SysCall <GetScreenRect>, 306h
 
 x64SysCall <CreateFile>, 400h
-x64SysCall <ReadFile>, 401h
-x64SysCall <WriteFile>, 402h
-x64SysCall <SetFilePointer>, 403h
-x64SysCall <CloseFile>, 404h
-x64SysCall <MoveFile>, 405h
-x64SysCall <DeleteFile>, 406h
-x64SysCall <CreateDirectory>, 407h
+x64SysCall <CreatePipe>, 401h
+x64SysCall <ReadFile>, 402h
+x64SysCall <WriteFile>, 403h
+x64SysCall <SetFilePointer>, 404h
+x64SysCall <CloseFile>, 405h
+x64SysCall <MoveFile>, 406h
+x64SysCall <DeleteFile>, 407h
+x64SysCall <CreateDirectory>, 408h
+x64SysCall <WaitForSingleObject>, 409h
+x64SysCall <GetPipeInfo>, 40Ah
+x64SysCall <CloseHandle>, 40Bh
+x64SysCall <CreateEvent>, 40Ch
+x64SysCall <ResetEvent>, 40Dh
+x64SysCall <SetEvent>, 40Eh
 
 x64SysCall <VirtualAlloc>, 500h
 x64SysCall <CreateRingBuffer>, 501h
@@ -49,5 +56,6 @@ x64SysCall <MapObject>, 503h
 x64SysCall <MapSharedObject>, 504h
 
 x64SysCall <DebugPrint>, 600h
+x64SysCall <DebugPrintBytes>, 601h
 
 end

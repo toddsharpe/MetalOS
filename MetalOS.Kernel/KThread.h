@@ -2,8 +2,9 @@
 #include <cstdint>
 #include "MetalOS.Kernel.h"
 #include "UserThread.h"
+#include "KSignalObject.h"
 
-class KThread
+class KThread : public KSignalObject
 {
 	friend class Scheduler;
 
@@ -24,9 +25,11 @@ public:
 
 	void Display() const;
 
-private:
-	bool IsSuspended() { return m_suspendCount != 0; }
+	virtual bool IsSignalled() const override;
 
+	virtual void Dispose() override;
+
+private:
 	//Must be kept the first members of this struct, or insync with SystemCall.asm
 	void* m_context;
 	UserThread* m_userThread;
@@ -41,8 +44,6 @@ private:
 	ThreadState m_state;
 	WaitStatus m_waitStatus;
 	nano100_t m_sleepWake;
-	void* m_event;
-	size_t m_suspendCount;
 
 public:
 	std::string Name;

@@ -43,7 +43,7 @@ void StringPrinter::PrintBytes(const char* buffer, const size_t length)
 			this->Printf(" | ");
 			for (const auto c : line)
 			{
-				this->Printf("%c", c == 0 ? '.' : c);
+				this->Printf("%c", isprint(c) ? c : '.');
 			}
 
 			memset(line, 0, width);
@@ -66,9 +66,11 @@ void StringPrinter::PrintBytes(const char* buffer, const size_t length)
 
 	//Print characters
 	this->Printf(" | ");
-	for (const auto c : line)
+	for (size_t i = 0; i < (length % width); i++)
 	{
-		this->Printf("%c", c == 0 ? '.' : c);
+		char c = line[i];
+		this->Printf("%c", isprint(c) ? c : '.');
 	}
+
 	this->Printf("\n");
 }

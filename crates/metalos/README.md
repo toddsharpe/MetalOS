@@ -1,7 +1,7 @@
 Generate bindings with Bindgen https://rust-lang.github.io/rust-bindgen/command-line-usage.html
 
 ```
-bindgen metalos.h -o src/bindings.rs --use-core --ctypes-prefix=c_types
+ bindgen ..\..\inc\metalos.h -o src/metalos_bindings.rs --use-core --ctypes-prefix=c_types -- -x c++
 ```
 
 binding generation can be automated but that requires target to have clang (which we dont want).

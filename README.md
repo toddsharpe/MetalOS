@@ -94,7 +94,7 @@ These are the starting entry points for the first thread in a process and subseq
 | | GetScreenRect |
 
 ### Windowing System
-Windowing system is implemented in kernel mode, handles composing windows to frame buffer and handling input events.
+Windowing system is implemented in kernel, provided by ``MetalOS.UI.h``, and handles composing windows to frame buffer and handling input events.
 Currently supports
 * Tracking which window has focus
 * Click and drag moving of windows

@@ -14,5 +14,6 @@ pub extern "C" fn _start() {
 }
 
 fn main() {
-    metalos::_print("Hi from Rust!");
+    metalos::print("Hi from Rust!\n");
+    metalos::print("Its working!\n");
 }

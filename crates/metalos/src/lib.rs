@@ -14,9 +14,29 @@ pub mod c_types {
     pub type c_uint = u32;
     pub type c_longlong = i64;
     pub type c_ulonglong = u64;
+    pub type c_long = i64;
 
     pub type c_void = *const u8;
 }
 
-include!("metalos_bindings.rs");
+#[used]
+#[no_mangle]
+pub static _fltused: i32 = 0;
 
+#[no_mangle]
+pub fn __CxxFrameHandler3()
+{
+
+}
+
+include!("metalos_bindings.rs");
+include!("stdio_bindings.rs");
+
+// Rust bindings
+pub fn print(s: &str)
+{
+    unsafe
+    {
+        printf(s.as_ptr());
+    }
+}

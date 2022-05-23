@@ -102,7 +102,6 @@ typedef struct _KI_INTERRUPT_DISPATCH_ENTRY
 	ULONG RelativeAddress;
 } KI_INTERRUPT_DISPATCH_ENTRY, * PKI_INTERRUPT_DISPATCH_ENTRY;
 #include <poppack.h>
-#include <MetalOS.Internal.h>
 
 extern ULONG KeI386NpxPresent;
 extern ULONG KeI386XMMIPresent;

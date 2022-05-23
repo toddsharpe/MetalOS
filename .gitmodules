@@ -1,9 +1,7 @@
 [submodule "acpica"]
-	path = acpica
+	path = external/acpica
 	url = https://github.com/toddsharpe/acpica.git
-[submodule "MetalOS.Apps.Doom"]
-	path = MetalOS.Apps.Doom
-	url = https://github.com/toddsharpe/MetalOS.Apps.Doom
-[submodule "runtimelab"]
-	path = runtimelab
-	url = https://github.com/toddsharpe/runtimelab/
+
+[submodule "external/doom"]
+	path = external/doom
+	url = https://github.com/toddsharpe/MetalOS.Apps.Doom.git

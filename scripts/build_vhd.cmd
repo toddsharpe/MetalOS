@@ -1,6 +1,6 @@
-@set VHD=%CD%\out\MetalOS.vhdx
-@set VHD_SCRIPT=%CD%\out\diskpart.txt
-@set BUILD_OUT=%CD%\x64\Debug
+@set VHD=%CD%\build\MetalOS.vhdx
+@set VHD_SCRIPT=%CD%\build\diskpart.txt
+@set BUILD_OUT=%CD%\build\x64\Debug
 @del %VHD% >nul 2>&1
 @del %VHD_SCRIPT% >nul 2>&1
 

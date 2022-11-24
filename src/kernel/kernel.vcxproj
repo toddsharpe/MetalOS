@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}</ProjectGuid>
+    <RootNamespace>MetalOSKernel</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <TargetName>moskrnl</TargetName>
+    <GenerateManifest>false</GenerateManifest>
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)obj\$(MSBuildProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>false</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir)inc;$(ProjectDir);$(SolutionDir)src\arch;$(SolutionDir)external\acpica\source\include\platform;$(SolutionDir)external\acpica\source\include;$(SolutionDir)external;$(SolutionDir)external\tianocore-edk2;$(SolutionDir)external\gnu-efi;$(SolutionDir)external\gnu-efi\x86_64;$(SolutionDir)src\;$(SolutionDir)src\lib\;$(SolutionDir)src\lib\boot;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;CRT_STATIC;GNU_EFI_SETJMP_H;_NO_CRT_STDIO_INLINE;_AMD64_;_CRT_SECURE_NO_WARNINGS;_CONTAINER_DEBUG_LEVEL;_HAS_EXCEPTIONS=0;_KERNEL_MODE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <OmitFramePointers>false</OmitFramePointers>
+      <PreprocessToFile>false</PreprocessToFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ErrorReporting>
+      </ErrorReporting>
+    </ClCompile>
+    <Link>
+      <SubSystem>Native</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <FixedBaseAddress>false</FixedBaseAddress>
+      <BaseAddress>0xFFFF800001000000</BaseAddress>
+      <EntryPointSymbol>ArchMain</EntryPointSymbol>
+      <LinkErrorReporting>PromptImmediately</LinkErrorReporting>
+      <EnableUAC>true</EnableUAC>
+      <DataExecutionPrevention>false</DataExecutionPrevention>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <ModuleDefinitionFile>Kernel.def</ModuleDefinitionFile>
+      <AdditionalOptions>/FORCE:MULTIPLE %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\gnu-efi\inc;..\inc;..\tianocore-edk2\MdePkg\Include;..\gnu-efi\inc\x86_64;..\MetalOS.lib;..\MetalOS.STL;..\tianocore-edk2\MdePkg\Include\IndustryStandard;..\acpica\source\include\platform;..\acpica\source\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ExceptionHandling>false</ExceptionHandling>
+      <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;GNU_EFI_SETJMP_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <OmitFramePointers>false</OmitFramePointers>
+      <PreprocessToFile>false</PreprocessToFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Native</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <BaseAddress>0xFFFF800001000000</BaseAddress>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <EntryPointSymbol>x64_main</EntryPointSymbol>
+      <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <ModuleDefinitionFile>Kernel.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\acpi\acpi.vcxproj">
+      <Project>{48e6f78a-5c2b-4c66-8767-df5be189bd2c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\arch\x64\x64.vcxproj">
+      <Project>{b240a22c-2efc-487b-936f-b516812f1751}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\kernel.drivers\kernel.drivers.vcxproj">
+      <Project>{d3cc8150-2a10-47c1-aab8-db988d580530}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\kernel.kd64\kernel.kd64.vcxproj">
+      <Project>{c400a5b4-3d23-405d-95cf-33ac891cbd91}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\lib\boot\boot.vcxproj">
+      <Project>{e8d87899-feb9-411c-aefd-4581d7302bc2}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\lib\core_crt\core_crt.vcxproj">
+      <Project>{e2867f5b-2a93-4d4b-b71f-b65736436bc3}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\lib\msvc\msvc.vcxproj">
+      <Project>{b1d3909c-1a5b-4356-b593-0b74cd59ac6b}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">
+      <Project>{e8d87899-feb9-411c-aefd-4581d7302bc2}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Kernel.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AcpiDevice.cpp" />
+    <ClCompile Include="AcpiOSL.cpp" />
+    <ClCompile Include="Bitvector.cpp" />
+    <ClCompile Include="BootHeap.cpp" />
+    <ClCompile Include="ConfigTables.cpp" />
+    <ClCompile Include="Cpuid.cpp" />
+    <ClCompile Include="Debugger.cpp" />
+    <ClCompile Include="Device.cpp" />
+    <ClCompile Include="DeviceTree.cpp" />
+    <ClCompile Include="Display.cpp" />
+    <ClCompile Include="Driver.cpp" />
+    <ClCompile Include="Font.cpp" />
+    <ClCompile Include="HyperV.cpp" />
+    <ClCompile Include="HyperVDevice.cpp" />
+    <ClCompile Include="HyperVTimer.cpp" />
+    <ClCompile Include="Kernel.cpp" />
+    <ClCompile Include="KernelAcpi.cpp" />
+    <ClCompile Include="KernelDriverInterface.cpp" />
+    <ClCompile Include="KernelHeap.cpp" />
+    <ClCompile Include="KernelSystemCalls.cpp" />
+    <ClCompile Include="KEvent.cpp" />
+    <ClCompile Include="KObject.cpp" />
+    <ClCompile Include="KPredicate.cpp" />
+    <ClCompile Include="KSemaphore.cpp" />
+    <ClCompile Include="KSignalObject.cpp" />
+    <ClCompile Include="KSpinLock.cpp" />
+    <ClCompile Include="KThread.cpp" />
+    <ClCompile Include="Loader.cpp" />
+    <ClCompile Include="LoadingScreen.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MemoryMap.cpp" />
+    <ClCompile Include="MsfFile.cpp" />
+    <ClCompile Include="MsfStream.cpp" />
+    <ClCompile Include="Pdb.cpp" />
+    <ClCompile Include="PdbDbi.cpp" />
+    <ClCompile Include="PdbHashTable.cpp" />
+    <ClCompile Include="PdbPdb.cpp" />
+    <ClCompile Include="PdbPublicsStream.cpp" />
+    <ClCompile Include="PhysicalMemoryManager.cpp" />
+    <ClCompile Include="PortableExecutable.cpp" />
+    <ClCompile Include="RuntimeSupport.cpp" />
+    <ClCompile Include="Scheduler.cpp" />
+    <ClCompile Include="SoftwareDevice.cpp" />
+    <ClCompile Include="StackWalk.cpp" />
+    <ClCompile Include="StringPrinter.cpp" />
+    <ClCompile Include="System.cpp" />
+    <ClCompile Include="TextScreen.cpp" />
+    <ClCompile Include="UObject.cpp" />
+    <ClCompile Include="UserPipe.cpp" />
+    <ClCompile Include="UserProcess.cpp" />
+    <ClCompile Include="UserThread.cpp" />
+    <ClCompile Include="VirtualAddressSpace.cpp" />
+    <ClCompile Include="VirtualMemoryManager.cpp" />
+    <ClCompile Include="WindowingSystem.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AcpiDevice.h" />
+    <ClInclude Include="Assert.h" />
+    <ClInclude Include="Bitvector.h" />
+    <ClInclude Include="BootHeap.h" />
+    <ClInclude Include="ConfigTables.h" />
+    <ClInclude Include="Cpuid.h" />
+    <ClInclude Include="Debugger.h" />
+    <ClInclude Include="Device.h" />
+    <ClInclude Include="DeviceTree.h" />
+    <ClInclude Include="Display.h" />
+    <ClInclude Include="Driver.h" />
+    <ClInclude Include="Font.h" />
+    <ClInclude Include="HyperV.h" />
+    <ClInclude Include="HyperVDevice.h" />
+    <ClInclude Include="HyperVTimer.h" />
+    <ClInclude Include="Kernel.h" />
+    <ClInclude Include="KernelHeap.h" />
+    <ClInclude Include="KEvent.h" />
+    <ClInclude Include="KFile.h" />
+    <ClInclude Include="KObject.h" />
+    <ClInclude Include="KPredicate.h" />
+    <ClInclude Include="KRingBuffer.h" />
+    <ClInclude Include="KSemaphore.h" />
+    <ClInclude Include="KSignalObject.h" />
+    <ClInclude Include="KSpinLock.h" />
+    <ClInclude Include="KThread.h" />
+    <ClInclude Include="Loader.h" />
+    <ClInclude Include="LoadingScreen.h" />
+    <ClInclude Include="Main.h" />
+    <ClInclude Include="Matrix.h" />
+    <ClInclude Include="MemoryMap.h" />
+    <ClInclude Include="MetalOS.Kernel.h" />
+    <ClInclude Include="MsfFile.h" />
+    <ClInclude Include="MsfStream.h" />
+    <ClInclude Include="Pdb.h" />
+    <ClInclude Include="PdbDbi.h" />
+    <ClInclude Include="PdbHashTable.h" />
+    <ClInclude Include="PdbPdb.h" />
+    <ClInclude Include="PdbPublicsStream.h" />
+    <ClInclude Include="PhysicalMemoryManager.h" />
+    <ClInclude Include="PortableExecutable.h" />
+    <ClInclude Include="RuntimeSupport.h" />
+    <ClInclude Include="Scheduler.h" />
+    <ClInclude Include="SoftwareDevice.h" />
+    <ClInclude Include="StackWalk.h" />
+    <ClInclude Include="StringPrinter.h" />
+    <ClInclude Include="System.h" />
+    <ClInclude Include="TextScreen.h" />
+    <ClInclude Include="UObject.h" />
+    <ClInclude Include="UserObjectType.h" />
+    <ClInclude Include="UserPipe.h" />
+    <ClInclude Include="UserProcess.h" />
+    <ClInclude Include="UserRingBuffer.h" />
+    <ClInclude Include="UserThread.h" />
+    <ClInclude Include="VirtualAddressSpace.h" />
+    <ClInclude Include="VirtualMemoryManager.h" />
+    <ClInclude Include="WindowingSystem.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

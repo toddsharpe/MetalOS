@@ -1,0 +1,61 @@
+EXPORTS
+	; Kernel API
+	GetSystemInfo
+	GetTickCount
+	GetSystemTime
+
+	; Runtime
+	GetProcessInfo
+
+	GetThreadId
+	GetCurrentThread
+	GetCurrentThreadId
+	CreateThread
+	CreateProcess
+	SwitchToThread
+
+	Sleep
+	ExitProcess
+	ExitThread
+
+	; Window API
+	AllocWindow
+	PaintWindow
+	MoveWindow
+	GetWindowRect
+	GetMessage
+	PeekMessage
+	GetScreenRect
+
+	CreateFile
+	CreatePipe
+	ReadFile
+	WriteFile
+	SetFilePointer
+	CloseFile
+	MoveFile
+	DeleteFile
+	CreateDirectory
+	WaitForSingleObject
+	GetPipeInfo
+	CloseHandle
+	CreateEvent
+	ResetEvent
+	SetEvent
+
+	VirtualAlloc
+	CreateRingBuffer
+	CreateSharedMemory
+	MapObject
+	MapSharedObject
+
+	DebugPrint
+
+	; Loader
+	LoadLibrary
+	GetProcAddress
+
+	; Debug
+	DebugPrintf
+	DebugPrintBytes
+	Bugcheck

@@ -74,6 +74,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ErrorReporting>
       </ErrorReporting>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -86,9 +87,9 @@
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>
-      </IgnoreAllDefaultLibraries>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <ModuleDefinitionFile>Kernel.def</ModuleDefinitionFile>
       <AdditionalOptions>/FORCE:MULTIPLE %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -147,9 +148,6 @@
     <ProjectReference Include="..\lib\msvc\msvc.vcxproj">
       <Project>{b1d3909c-1a5b-4356-b593-0b74cd59ac6b}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\MetalOS.lib\MetalOS.lib.vcxproj">
-      <Project>{e8d87899-feb9-411c-aefd-4581d7302bc2}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="Kernel.def" />
@@ -164,9 +162,8 @@
     <ClCompile Include="Debugger.cpp" />
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="DeviceTree.cpp" />
-    <ClCompile Include="Display.cpp" />
     <ClCompile Include="Driver.cpp" />
-    <ClCompile Include="Font.cpp" />
+    <ClCompile Include="EfiDisplay.cpp" />
     <ClCompile Include="HyperV.cpp" />
     <ClCompile Include="HyperVDevice.cpp" />
     <ClCompile Include="HyperVTimer.cpp" />
@@ -177,7 +174,6 @@
     <ClCompile Include="KernelSystemCalls.cpp" />
     <ClCompile Include="KEvent.cpp" />
     <ClCompile Include="KObject.cpp" />
-    <ClCompile Include="KPredicate.cpp" />
     <ClCompile Include="KSemaphore.cpp" />
     <ClCompile Include="KSignalObject.cpp" />
     <ClCompile Include="KSpinLock.cpp" />
@@ -201,7 +197,6 @@
     <ClCompile Include="StackWalk.cpp" />
     <ClCompile Include="StringPrinter.cpp" />
     <ClCompile Include="System.cpp" />
-    <ClCompile Include="TextScreen.cpp" />
     <ClCompile Include="UObject.cpp" />
     <ClCompile Include="UserPipe.cpp" />
     <ClCompile Include="UserProcess.cpp" />
@@ -220,9 +215,8 @@
     <ClInclude Include="Debugger.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="DeviceTree.h" />
-    <ClInclude Include="Display.h" />
     <ClInclude Include="Driver.h" />
-    <ClInclude Include="Font.h" />
+    <ClInclude Include="EfiDisplay.h" />
     <ClInclude Include="HyperV.h" />
     <ClInclude Include="HyperVDevice.h" />
     <ClInclude Include="HyperVTimer.h" />
@@ -231,7 +225,6 @@
     <ClInclude Include="KEvent.h" />
     <ClInclude Include="KFile.h" />
     <ClInclude Include="KObject.h" />
-    <ClInclude Include="KPredicate.h" />
     <ClInclude Include="KRingBuffer.h" />
     <ClInclude Include="KSemaphore.h" />
     <ClInclude Include="KSignalObject.h" />
@@ -240,7 +233,6 @@
     <ClInclude Include="Loader.h" />
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Main.h" />
-    <ClInclude Include="Matrix.h" />
     <ClInclude Include="MemoryMap.h" />
     <ClInclude Include="MetalOS.Kernel.h" />
     <ClInclude Include="MsfFile.h" />
@@ -258,7 +250,6 @@
     <ClInclude Include="StackWalk.h" />
     <ClInclude Include="StringPrinter.h" />
     <ClInclude Include="System.h" />
-    <ClInclude Include="TextScreen.h" />
     <ClInclude Include="UObject.h" />
     <ClInclude Include="UserObjectType.h" />
     <ClInclude Include="UserPipe.h" />

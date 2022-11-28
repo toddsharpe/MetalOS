@@ -1,6 +1,6 @@
 #include "KObject.h"
 
-KObject::KObject(const KObjectType type) : m_refCount(1), m_spinLock(), m_type(type)
+KObject::KObject(const KObjectType type, const bool isSyncObj) : Type(type), IsSyncObj(isSyncObj), m_refCount(1)
 {
 
 }
@@ -24,12 +24,7 @@ bool KObject::IsClosed() const
 	return m_refCount == 0;
 }
 
-bool KObject::IsSyncObj() const
-{
-	return false;
-}
-
 void KObject::Dispose()
 {
-
+	//Empty
 }

@@ -47,16 +47,16 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 		return (uint64_t)ExitThread((uint32_t)frame->Arg0);
 
 	case SystemCall::AllocWindow:
-		return (uint64_t)AllocWindow((HWindow*)frame->Arg0, (Rectangle*)frame->Arg1);
+		return (uint64_t)AllocWindow((HWindow*)frame->Arg0, (Graphics::Rectangle*)frame->Arg1);
 
 	case SystemCall::PaintWindow:
 		return (uint64_t)PaintWindow((HWindow*)frame->Arg0, (ReadOnlyBuffer*)frame->Arg1);
 
 	case SystemCall::MoveWindow:
-		return (uint64_t)MoveWindow((HWindow)frame->Arg0, (Rectangle*)frame->Arg1);
+		return (uint64_t)MoveWindow((HWindow)frame->Arg0, (Graphics::Rectangle*)frame->Arg1);
 
 	case SystemCall::GetWindowRect:
-		return (uint64_t)GetWindowRect((HWindow)frame->Arg0, (Rectangle*)frame->Arg1);
+		return (uint64_t)GetWindowRect((HWindow)frame->Arg0, (Graphics::Rectangle*)frame->Arg1);
 
 	case SystemCall::GetMessage:
 		return (uint64_t)GetMessage((Message*)frame->Arg0);
@@ -65,7 +65,7 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 		return (uint64_t)PeekMessage((Message*)frame->Arg0);
 
 	case SystemCall::GetScreenRect:
-		return (uint64_t)GetScreenRect((Rectangle*)frame->Arg0);
+		return (uint64_t)GetScreenRect((Graphics::Rectangle*)frame->Arg0);
 
 	case SystemCall::CreateFile:
 		return (uintptr_t)CreateFile((char*)frame->Arg0, (GenericAccess)frame->Arg1);
@@ -157,7 +157,7 @@ SystemCallResult Kernel::GetSystemInfo(SystemInfo* info)
 //Milliseconds
 size_t Kernel::GetTickCount()
 {
-	const nano100_t tsc = m_hyperV->ReadTsc();
+	const nano100_t tsc = m_hyperV.ReadTsc();
 	return (tsc * 100) / 1000000;
 }
 
@@ -210,6 +210,7 @@ SystemCallResult Kernel::CreateProcess(const char* processName, const CreateProc
 		result->Process = (HProcess)process.AddObject(procObj);
 	}
 
+	kernel.Printf("Console: %d\n", newProcess->IsConsole);
 	if (newProcess->IsConsole)
 	{
 		Assert(args);
@@ -250,10 +251,9 @@ SystemCallResult Kernel::CreateProcess(const char* processName, const CreateProc
 		UserPipe* pipe = new UserPipe();
 
 		UObject* debugObj = new UObject(*pipe, UserObjectType::Debug);
-		HFile output = (HFile)process.AddObject(debugObj);
+		HFile output = (HFile)newProcess->AddObject(debugObj);
 
 		newProcess->SetStandardHandle(StandardHandle::Output, debugObj);
-
 	}
 
 	kernel.Printf("Returning\n");
@@ -296,8 +296,8 @@ SystemCallResult Kernel::ExitProcess(const uint32_t exitCode)
 	kernel.Printf("Process: %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
 
 	//Free all windows
-	if (m_windows->ThreadHasWindow(thread))
-		m_windows->FreeWindow(thread);
+	if (m_windows.ThreadHasWindow(*thread))
+		m_windows.FreeWindow(*thread);
 
 
 	m_scheduler->KillCurrentProcess();
@@ -313,14 +313,14 @@ SystemCallResult Kernel::ExitThread(const uint32_t exitCode)
 	//TODO: Check if anybody has handle to this thread and clear
 
 	//Remove window from thread
-	if (m_windows->ThreadHasWindow(thread))
-		m_windows->FreeWindow(thread);
+	if (m_windows.ThreadHasWindow(*thread))
+		m_windows.FreeWindow(*thread);
 
 	m_scheduler->KillCurrentThread();
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::AllocWindow(HWindow* handle, const Rectangle* bounds)
+SystemCallResult Kernel::AllocWindow(HWindow* handle, const Graphics::Rectangle* bounds)
 {
 	if (!IsValidUserPointer(handle) || !IsValidUserPointer(bounds))
 		return SystemCallResult::InvalidPointer;
@@ -328,10 +328,10 @@ SystemCallResult Kernel::AllocWindow(HWindow* handle, const Rectangle* bounds)
 	UserThread* user = m_scheduler->GetCurrentUserThread();
 	Assert(user);
 
-	if (m_windows->ThreadHasWindow(user))
+	if (m_windows.ThreadHasWindow(*user))
 		return SystemCallResult::Failed;
 
-	*handle = m_windows->AllocWindow(user, *bounds);
+	*handle = m_windows.AllocWindow(*user, *bounds);
 	return SystemCallResult::Success;
 }
 
@@ -340,29 +340,29 @@ SystemCallResult Kernel::PaintWindow(HWindow handle, const ReadOnlyBuffer* buffe
 	if (!IsValidUserPointer(buffer))
 		return SystemCallResult::InvalidPointer;
 
-	if (!m_windows->PaintWindow(handle, *buffer))
+	if (!m_windows.PaintWindow(handle, *buffer))
 		return SystemCallResult::Failed;
 
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::MoveWindow(HWindow handle, const Rectangle* rectangle)
+SystemCallResult Kernel::MoveWindow(HWindow handle, const Graphics::Rectangle* rectangle)
 {
 	if (!IsValidUserPointer(rectangle))
 		return SystemCallResult::InvalidPointer;
 
-	if (!m_windows->MoveWindow(handle, *rectangle))
+	if (!m_windows.MoveWindow(handle, *rectangle))
 		return SystemCallResult::Failed;
 
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::GetWindowRect(HWindow handle, Rectangle* bounds)
+SystemCallResult Kernel::GetWindowRect(HWindow handle, Graphics::Rectangle* bounds)
 {
 	if (!IsValidUserPointer(bounds))
 		return SystemCallResult::InvalidPointer;
 
-	if (!m_windows->GetWindowRect(handle, *bounds))
+	if (!m_windows.GetWindowRect(handle, *bounds))
 		return SystemCallResult::Failed;
 
 	return SystemCallResult::Success;
@@ -397,15 +397,15 @@ SystemCallResult Kernel::PeekMessage(Message* message)
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::GetScreenRect(Rectangle* rectangle)
+SystemCallResult Kernel::GetScreenRect(Graphics::Rectangle* rectangle)
 {
 	if (!IsValidUserPointer(rectangle))
 		return SystemCallResult::Failed;
 
 	rectangle->X = 0;
 	rectangle->Y = 0;
-	rectangle->Width = m_display->GetWidth();
-	rectangle->Height = m_display->GetHeight();
+	rectangle->Width = m_display.GetWidth();
+	rectangle->Height = m_display.GetHeight();
 
 	return SystemCallResult::Success;
 }
@@ -529,6 +529,7 @@ SystemCallResult Kernel::WriteFile(const HFile handle, const void* buffer, size_
 	Assert(user);
 	UserProcess& process = user->GetProcess();
 
+	kernel.Printf("WriteFile: 0x%x\n", handle);
 	UObject* userObject = process.GetObject((Handle)handle);
 	if (!userObject)
 		return SystemCallResult::InvalidHandle;
@@ -536,7 +537,6 @@ SystemCallResult Kernel::WriteFile(const HFile handle, const void* buffer, size_
 	if (!userObject->IsWriteable())
 		return SystemCallResult::InvalidObject;
 
-	kernel.Printf("WriteFile:\n");
 	kernel.PrintBytes((char*)buffer, bufferSize);
 
 	switch (userObject->GetType())
@@ -664,7 +664,7 @@ SystemCallResult Kernel::WaitForSingleObject(const Handle handle, const uint32_t
 		return SystemCallResult::InvalidHandle;
 
 	KObject& kObj = (KObject&)userObject->GetObject();
-	if (!kObj.IsSyncObj())
+	if (!kObj.IsSyncObj)
 		return SystemCallResult::InvalidObject;
 
 	*status = this->KeWait((KSignalObject&)kObj, milliseconds);

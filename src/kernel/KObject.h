@@ -9,30 +9,26 @@ enum class KObjectType
 	Predicate,
 	File,
 	Pipe,
-	Event
+	Event,
+	Sleep
 };
 
 class KObject
 {
 public:
-	KObject(const KObjectType type);
+	KObject(const KObjectType type, const bool isSyncObj);
 
 	void IncRefCount();
 	void DecRefCount();
-
 	bool IsClosed() const;
 
-	KObjectType GetType() const
-	{
-		return m_type;
-	}
-
-	virtual bool IsSyncObj() const;
 	virtual void Dispose();
+
+	const KObjectType Type;
+	const bool IsSyncObj;
 
 private:
 	size_t m_refCount;
-	KSpinLock m_spinLock;
-	KObjectType m_type;
+	KSpinLock m_spinLock; //TODO(tsharpe): remove?
 };
 

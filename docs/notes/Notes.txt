@@ -394,3 +394,6 @@ http://www.nynaeve.net/?p=171
 
 PDB:
 http://www.godevtool.com/Other/pdb.htm
+
+Ideas:
+Kernel interfaces representing API space (threading, drivers, etc) to remove access to global "kernel"

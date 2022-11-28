@@ -15,7 +15,7 @@
 class HyperVChannel
 {
 public:
-	HyperVChannel(size_t sendSize, size_t receiveSize, CallContext callback);
+	HyperVChannel(uint32_t sendSize, uint32_t receiveSize, CallContext callback);
 
 	void Initialize(vmbus_channel_offer_channel* offerChannel, const ReadOnlyBuffer* buffer = nullptr);
 
@@ -32,8 +32,8 @@ public:
 
 
 private:
-	size_t m_sendCount;
-	size_t m_receiveCount;
+	uint32_t m_sendCount;
+	uint32_t m_receiveCount;
 	paddr_t m_address;
 	CallContext m_callback;
 

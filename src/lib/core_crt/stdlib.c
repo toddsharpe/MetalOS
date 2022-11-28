@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 //https://wiki.osdev.org/Random_Number_Generator
 static unsigned long int next = 1;

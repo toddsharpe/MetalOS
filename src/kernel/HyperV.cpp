@@ -1,10 +1,11 @@
+//TLFS: Hypervisor Top Level Functional Specification v6.0b.pdf
+
 #include "Kernel.h"
 #include "Assert.h"
 
 #include "HyperV.h"
 
 #include "Cpuid.h"
-#include "Main.h"
 #include <intrin.h>
 
 #define EAX 0
@@ -24,16 +25,25 @@ HyperV::HyperV() :
 	m_vendor(),
 	m_isPresent()
 {
-	//Verify we are in a hypervisor
+	
+}
+
+//TLFS: 3.13
+void HyperV::Initialize()
+{
+	Printf("HyperV::Initialize\n");
+	
+	//1. Verify we are in a hypervisor
 	Cpuid cpu;
 	Assert(cpu.IsHypervisor());
 
 	int registers[4] = { 0 };
 
-	//Vendor
+	//2. Read highest leaf and interface signature
 	__cpuid(registers, HV_CPUID::VENDOR);
 	m_highestLeaf = registers[EAX];
 
+	//2.1 Vendor name
 	char vendor[13] = { 0 };
 	*((uint32_t*)vendor) = (uint32_t)registers[EBX];
 	*((uint32_t*)(vendor + sizeof(uint32_t))) = (uint32_t)registers[ECX];
@@ -42,7 +52,7 @@ HyperV::HyperV() :
 	if (m_vendor == "Microsoft Hv")
 		m_isPresent = true;
 
-	//Interface
+	//2.2 Interface
 	__cpuid(registers, HV_CPUID::INTERFACE);
 	char interface[5] = { 0 };
 	*((uint32_t*)interface) = (uint32_t)registers[EAX];
@@ -57,23 +67,13 @@ HyperV::HyperV() :
 	//Recommendation
 	__cpuid(registers, HV_CPUID::PERF_RECOMMENDATIONS);
 	m_recommendationsEax = registers[EAX];
-}
-
-//HV TLFS 3.13
-void HyperV::Initialize()
-{
-	Printf("HyperV::Initialize\n");
-
+	
+	//Assert settings
 	Assert(this->IsPresent());
 	Assert(this->DirectSyntheticTimers());
 	Assert(this->AccessPartitionReferenceCounter());
+	Assert(!this->DeprecateAutoEOI());
 	
-	//TODO: Allocate resources - synic pages
-
-	//1. Asserted by CpuId
-
-	//2. Asserted by HyperV()
-
 	//3. Write identity
 	GUEST_OS_ID_REG guestId = { 0 };
 	guestId.BuildNumber = 0x02;

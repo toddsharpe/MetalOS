@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include <stdarg.h>
+#include <string.h>
+#include <wchar.h>
 
 int wcscmp(const wchar_t* str1, const wchar_t* str2)
 {
@@ -34,18 +36,6 @@ wchar_t* wcsncpy(wchar_t* dest, const wchar_t* source, size_t num)
 {
 	memcpy(dest, source, num * sizeof(wchar_t));
 	return dest;
-}
-
-void wcsrev(wchar_t* str)
-{
-	size_t length = wcslen(str);
-
-	for (size_t i = 0; i < length / 2; i++)
-	{
-		wchar_t temp = str[i];
-		str[i] = str[length - i - 1];
-		str[length - i - 1] = temp;
-	}
 }
 
 //Internal protypes

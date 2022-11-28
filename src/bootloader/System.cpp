@@ -47,7 +47,7 @@ EFI_STATUS DumpAllProtocols(EFI_HANDLE ImageHandle)
 	CHAR16 writeBuffer[255];
 	memset(writeBuffer, 0, sizeof(writeBuffer));
 
-	swprintf(writeBuffer, 255, L"HandleCount %d\r\n", HandleCount);
+	swprintf(writeBuffer, 255, L"HandleCount %lld\r\n", HandleCount);
 	bufferSize = wcslen(writeBuffer) * 2;
 	ReturnIfNotSuccess(outputFile->Write(outputFile, &bufferSize, writeBuffer));
 
@@ -63,8 +63,9 @@ EFI_STATUS DumpAllProtocols(EFI_HANDLE ImageHandle)
 			EFI_GUID* guid = pProtocolBuffer[ProtocolIndex];
 			if (0 == ProtocolIndex)
 			{
-				swprintf(writeBuffer, 255, L"Handle 0x%016x (%d):\r\n    {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}\r\n",
-					pHandleBuffer[i], ProtocolCount,
+				swprintf(writeBuffer, 255, L"Handle 0x%016llx (%lld):\r\n    {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}\r\n",
+					(uintptr_t)pHandleBuffer[i],
+					ProtocolCount,
 					guid->Data1,
 					guid->Data2, guid->Data3,
 					guid->Data4[0], guid->Data4[1], guid->Data4[2], guid->Data4[3],

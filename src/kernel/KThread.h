@@ -5,6 +5,17 @@
 #include "KSignalObject.h"
 #include <shared/MetalOS.Types.h>
 
+enum class ThreadState
+{
+	Ready,
+	Running,
+	SignalWait,
+	MessageWait,
+	PipeWait,
+	Terminated,
+	Sleeping
+};
+
 class KThread : public KSignalObject
 {
 	friend class Scheduler;

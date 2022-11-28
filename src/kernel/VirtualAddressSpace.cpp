@@ -14,6 +14,11 @@ VirtualAddressSpace::VirtualAddressSpace(const uintptr_t start, const uintptr_t 
 		m_watermark = 0x140000000;
 }
 
+void VirtualAddressSpace::Init()
+{
+	//m_nodes = new std::map<uintptr_t, Node>();
+}
+
 bool VirtualAddressSpace::IsFree(const uintptr_t address, const size_t count)
 {
 	Assert((address & PAGE_MASK) == 0);

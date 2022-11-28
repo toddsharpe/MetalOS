@@ -73,6 +73,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "user", "user", "{B4A70932-4
 		inc\user\cstdlib = inc\user\cstdlib
 		inc\user\cstring = inc\user\cstring
 		inc\user\Debug.h = inc\user\Debug.h
+		inc\user\GUI.h = inc\user\GUI.h
 		inc\user\lockit = inc\user\lockit
 		inc\user\MetalOS.h = inc\user\MetalOS.h
 		inc\user\MetalOS.UI.h = inc\user\MetalOS.UI.h
@@ -89,6 +90,24 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kernel.kd64", "src\kernel.kd64\kernel.kd64.vcxproj", "{C400A5B4-3D23-405D-95CF-33AC891CBD91}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kernel", "src\kernel\kernel.vcxproj", "{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Graphics", "Graphics", "{0F27C3C1-5AEF-428B-9B90-C80957319DEE}"
+	ProjectSection(SolutionItems) = preProject
+		inc\Graphics\Color.h = inc\Graphics\Color.h
+		inc\Graphics\Font.h = inc\Graphics\Font.h
+		inc\Graphics\FrameBuffer.h = inc\Graphics\FrameBuffer.h
+		inc\Graphics\Types.h = inc\Graphics\Types.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UI", "UI", "{45C7BBE6-271F-4E0A-BE77-10CB24BA24CB}"
+	ProjectSection(SolutionItems) = preProject
+		inc\UI\Button.h = inc\UI\Button.h
+		inc\UI\Control.h = inc\UI\Control.h
+		inc\UI\Label.h = inc\UI\Label.h
+		inc\UI\Window.h = inc\UI\Window.h
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "init", "src\apps\init\init.vcxproj", "{49FE1385-2E9A-4DB7-A56A-4F15408588C1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -242,6 +261,14 @@ Global
 		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x64.Build.0 = Release|x64
 		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x86.ActiveCfg = Release|x64
 		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42}.Release|x86.Build.0 = Release|x64
+		{49FE1385-2E9A-4DB7-A56A-4F15408588C1}.Debug|x64.ActiveCfg = Debug|x64
+		{49FE1385-2E9A-4DB7-A56A-4F15408588C1}.Debug|x64.Build.0 = Debug|x64
+		{49FE1385-2E9A-4DB7-A56A-4F15408588C1}.Debug|x86.ActiveCfg = Debug|Win32
+		{49FE1385-2E9A-4DB7-A56A-4F15408588C1}.Debug|x86.Build.0 = Debug|Win32
+		{49FE1385-2E9A-4DB7-A56A-4F15408588C1}.Release|x64.ActiveCfg = Release|x64
+		{49FE1385-2E9A-4DB7-A56A-4F15408588C1}.Release|x64.Build.0 = Release|x64
+		{49FE1385-2E9A-4DB7-A56A-4F15408588C1}.Release|x86.ActiveCfg = Release|Win32
+		{49FE1385-2E9A-4DB7-A56A-4F15408588C1}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -273,6 +300,9 @@ Global
 		{D3CC8150-2A10-47C1-AAB8-DB988D580530} = {F90AF3CB-764E-4DC7-9B34-AD212471FC70}
 		{C400A5B4-3D23-405D-95CF-33AC891CBD91} = {F90AF3CB-764E-4DC7-9B34-AD212471FC70}
 		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42} = {F90AF3CB-764E-4DC7-9B34-AD212471FC70}
+		{0F27C3C1-5AEF-428B-9B90-C80957319DEE} = {96536529-C45D-475B-A264-0CB727D5DBC0}
+		{45C7BBE6-271F-4E0A-BE77-10CB24BA24CB} = {96536529-C45D-475B-A264-0CB727D5DBC0}
+		{49FE1385-2E9A-4DB7-A56A-4F15408588C1} = {4FDCCD4B-45BC-4177-8A6C-B3B7179C1533}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B94B6B2F-6567-499E-8AAF-9C6A07CD5852}

@@ -1,6 +1,5 @@
-#include "Kernel.h"
-
 #include "SoftwareDevice.h"
+#include "Assert.h"
 
 SoftwareDevice::SoftwareDevice(const std::string& hid, void* context) :
 	Device(),
@@ -28,5 +27,5 @@ const void* SoftwareDevice::GetResource(uint32_t type) const
 
 void SoftwareDevice::DisplayDetails() const
 {
-	kernel.Printf("    Context: 0x%016x\n", m_context);
+	Printf("    Context: 0x%016x\n", m_context);
 }

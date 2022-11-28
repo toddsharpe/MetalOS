@@ -103,19 +103,6 @@ constexpr nano_t ToNano(const milli_t time)
 	return time * SECOND / 1000;
 }
 
-enum class ThreadState
-{
-	Ready,
-	Running,
-	Sleeping,
-	Waiting,
-	MessageWait,
-	PipeWait,
-	Terminated,
-	Initialized,
-	SignalWait
-};
-
 typedef uintptr_t paddr_t;
 
 enum class InterruptVector : uint8_t

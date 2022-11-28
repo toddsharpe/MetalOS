@@ -4,6 +4,9 @@
 #include <shared\MetalOS.Types.h>
 #include <kernel\MetalOS.Internal.h>
 #include <KFile.h>
+#include <Graphics/FrameBuffer.h>
+
+//TODO(tsharpe): Refactor
 
 class Device;
 class Driver
@@ -27,3 +30,13 @@ public:
 	virtual size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const = 0;
 };
 
+class GraphicsDriver : public Driver
+{
+public:
+	virtual Result Initialize() {}
+	virtual Result Read(char* buffer, size_t length, size_t* bytesRead = nullptr) {}
+	virtual Result Write(const char* buffer, size_t length) {}
+	virtual Result EnumerateChildren() {}
+
+	virtual bool Write(Graphics::FrameBuffer& framebuffer) = 0;
+};

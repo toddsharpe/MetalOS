@@ -20,8 +20,9 @@ void* BootHeap::Allocate(const size_t size)
 	return (void*)level;
 }
 
-//Don't deallocate
+//Don't deallocate.
+//Some temporary objects will get instantiated during boot (std::string).
 void BootHeap::Deallocate(void* const address)
 {
-	Assert(false);
+
 }

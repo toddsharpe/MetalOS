@@ -63,6 +63,7 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -302,11 +303,6 @@
     <ClCompile Include="..\..\external\acpica\source\components\utilities\utxferror.c" />
     <ClCompile Include="..\..\external\acpica\source\components\utilities\utxfinit.c" />
     <ClCompile Include="..\..\external\acpica\source\components\utilities\utxfmutex.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MetalOS.crt\MetalOS.crt.vcxproj">
-      <Project>{e2867f5b-2a93-4d4b-b71f-b65736436bc3}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

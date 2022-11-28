@@ -208,7 +208,7 @@ extern "C" uintptr_t GetProcAddress(Handle hModule, const char* lpProcName)
 	for (DWORD i = 0; i < exportDirectory->NumberOfNames; i++)
 	{
 		char* name = MakePointer<char*>(hModule, pNames[i]);
-		if (stricmp(lpProcName, name) == 0)
+		if (_stricmp(lpProcName, name) == 0)
 		{
 			WORD ordinal = pOrdinals[i];
 			search = MakePointer<uintptr_t>(hModule, pFunctions[ordinal]);

@@ -22,7 +22,7 @@ public:
 
 	static void OnInterrupt(void* arg) { ((UartDriver*)arg)->OnInterrupt(); };
 
-	void Write(const char* string);
+	virtual void Write(const std::string& string) override;
 
 private:
 	enum class Reg

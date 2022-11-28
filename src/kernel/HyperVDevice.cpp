@@ -1,7 +1,5 @@
-#include "Kernel.h"
-#include "Assert.h"
-
 #include "HyperVDevice.h"
+#include "Assert.h"
 
 HyperVDevice::HyperVDevice(vmbus_channel_offer_channel& channel, uint32_t conn_id) :
 	Device(),
@@ -48,11 +46,11 @@ const void* HyperVDevice::GetResource(uint32_t type) const
 
 void HyperVDevice::DisplayDetails() const
 {
-	kernel.Printf("    RelId: %d\n", m_channel.child_relid);
-	kernel.Printf("    MonitorId: %d\n", m_channel.monitorid);
-	kernel.Printf("    Monitored: %d\n", m_channel.monitor_allocated);
-	kernel.Printf("    Connection: %d\n", m_channel.connection_id);
-	kernel.Printf("    IsDedicated: %d\n", m_channel.is_dedicated_interrupt);
+	Printf("    RelId: %d\n", m_channel.child_relid);
+	Printf("    MonitorId: %d\n", m_channel.monitorid);
+	Printf("    Monitored: %d\n", m_channel.monitor_allocated);
+	Printf("    Connection: %d\n", m_channel.connection_id);
+	Printf("    IsDedicated: %d\n", m_channel.is_dedicated_interrupt);
 }
 
 const bool HyperVDevice::GetDeviceName(const std::string& hid, std::string& name)

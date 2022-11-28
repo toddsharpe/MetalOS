@@ -1,8 +1,7 @@
 #pragma once
 
 #include <efi.h>
-#include "Display.h"
-#include "TextScreen.h"
+#include "EfiDisplay.h"
 #include "MemoryMap.h"
 #include "ConfigTables.h"
 extern "C"
@@ -30,6 +29,7 @@ extern "C"
 #include <kernel/MetalOS.Arch.h>
 #include <shared/MetalOS.Types.h>
 #include <user/MetalOS.h>
+#include <LoadingScreen.h>
 
 
 class Kernel
@@ -200,13 +200,13 @@ public:
 	SystemCallResult ExitProcess(const uint32_t exitCode);
 	SystemCallResult ExitThread(const uint32_t exitCode);
 
-	SystemCallResult AllocWindow(HWindow* handle, const Rectangle* bounds);
+	SystemCallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* bounds);
 	SystemCallResult PaintWindow(HWindow handle, const ReadOnlyBuffer* buffer);
-	SystemCallResult MoveWindow(HWindow handle, const Rectangle* bounds);
-	SystemCallResult GetWindowRect(HWindow handle, Rectangle* bounds);
+	SystemCallResult MoveWindow(HWindow handle, const Graphics::Rectangle* bounds);
+	SystemCallResult GetWindowRect(HWindow handle, Graphics::Rectangle* bounds);
 	SystemCallResult GetMessage(Message* message);
 	SystemCallResult PeekMessage(Message* message);
-	SystemCallResult GetScreenRect(Rectangle* rect);
+	SystemCallResult GetScreenRect(Graphics::Rectangle* rect);
 
 	HFile CreateFile(const char* name, const GenericAccess access);
 	SystemCallResult CreatePipe(HFile* readHandle, HFile* writeHandle);
@@ -260,8 +260,8 @@ private:
 	size_t m_pdbSize;
 
 	//Basic output drivers
-	Display* m_display;
-	TextScreen* m_textScreen;
+	EfiDisplay m_display;
+	LoadingScreen m_loadingScreen;
 	StringPrinter* m_printer;
 
 	//Initialize before PT switch
@@ -289,7 +289,6 @@ private:
 	std::map<InterruptVector, InterruptContext>* m_interruptHandlers;
 
 	//Process and Thread management
-	std::map<uint32_t, UserProcess*>* m_processes;
 	Scheduler* m_scheduler;
 	std::map<std::string, UserRingBuffer*> *m_objectsRingBuffers;
 
@@ -297,21 +296,19 @@ private:
 	std::list<KeLibrary>* m_modules;
 
 	//Platform
-	HyperV* m_hyperV;
+	HyperV m_hyperV;
 
 	//IO
 	DeviceTree m_deviceTree;
-
-	//TODO: should be an interface
-	HyperVTimer* m_timer;
+	HyperVTimer m_timer;
 
 	//PDB
 	Pdb* m_pdb;
 
 	//UI
-	WindowingSystem* m_windows;
+	WindowingSystem m_windows;
 
-	Debugger* m_debugger;
+	Debugger m_debugger;
 };
 extern Kernel kernel;
 

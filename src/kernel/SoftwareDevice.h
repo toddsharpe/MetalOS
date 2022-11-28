@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "Device.h"
 
 class SoftwareDevice : public Device

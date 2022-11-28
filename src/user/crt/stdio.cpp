@@ -8,7 +8,7 @@
 
 extern "C" FILE* __acrt_iob_func(unsigned index)
 {
-	return (FILE*)index;
+	return (FILE*)(size_t)index;
 }
 
 FILE* fopen(char const* _FileName, char const* _Mode)

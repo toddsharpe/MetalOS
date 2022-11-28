@@ -6,7 +6,7 @@ class KFile : public KObject
 {
 public:
 	KFile() :
-		KObject(KObjectType::File),
+		KObject(KObjectType::File, false),
 		Context(),
 		Position(),
 		Length(),

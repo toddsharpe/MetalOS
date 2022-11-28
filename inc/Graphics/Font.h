@@ -1,11 +1,10 @@
 #pragma once
 
+#include <cstdint>
+
 // Constant: font8x8_basic
 // Contains an 8x8 font map for unicode points U+0000 - U+007F (basic latin)
-#pragma warning(push)
-#pragma warning(disable: 4838)
-#pragma warning(disable: 4309)
-const char font8x8_basic[128][8] = {
+const uint8_t font8x8_basic[128][8] = {
 	{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0000 (nul)
 	{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0001
 	{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0002
@@ -135,14 +134,18 @@ const char font8x8_basic[128][8] = {
 	{ 0x6E, 0x3B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+007E (~)
 	{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}    // U+007F
 };
-#pragma warning(pop)
 
-class Font
+namespace Graphics
 {
-public:
-	const char* GetCharacterMap(const char c) const;
+	class Font
+	{
+	public:
+		const uint8_t* GetCharacterMap(const char c) const
+		{
+			return (*this->FontMap)[(uint8_t)c];
+		}
 
-private:
-	const char(*FontMap)[128][8] = &font8x8_basic;
-};
-
+	private:
+		const uint8_t(*FontMap)[128][8] = &font8x8_basic;
+	};
+}

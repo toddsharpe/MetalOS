@@ -61,7 +61,7 @@ extern "C" __declspec(dllexport) void InitProcess()//Rename: init module?
 			if (hModule == nullptr)
 				ExitProcess(-1);
 
-			if (stricmp(module, "mosrt.dll") != 0)
+			if (_stricmp(module, "mosrt.dll") != 0)
 			{
 				PIMAGE_THUNK_DATA pThunkData = MakePointer<PIMAGE_THUNK_DATA>((void*)baseAddress, importDescriptor->FirstThunk);
 				while (pThunkData->u1.AddressOfData)

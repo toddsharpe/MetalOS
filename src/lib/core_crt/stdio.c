@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
 
 //Internal protypes
 int kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int radix, va_list ap);
@@ -452,15 +454,3 @@ int kvprintf(char const* fmt, void (*func)(int, void*), void* arg, int radix, va
 #undef PCHAR
 }
 
-typedef void* _locale_t;
-int __stdio_common_vsprintf(
-	unsigned __int64 const options,
-	char* const buffer,
-	size_t           const buffer_count,
-	char const* const format,
-	_locale_t        const locale,
-	va_list          const arglist
-)
-{
-	return vsprintf(buffer, format, arglist);
-}

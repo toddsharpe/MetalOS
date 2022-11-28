@@ -1,6 +1,7 @@
+#include "DeviceTree.h"
+
 #include <map>
 #include <stack>
-#include "Kernel.h"
 #include "Assert.h"
 #include "Cpuid.h"
 #include "HyperV.h"
@@ -11,8 +12,6 @@
 #include "kernel.drivers/RamDriveDriver.h"
 #include "kernel.drivers/IoApicDriver.h"
 #include "kernel.drivers/UartDriver.h"
-
-#include "DeviceTree.h"
 
 DeviceTree::DeviceTree() :
 	m_root()
@@ -89,7 +88,7 @@ ACPI_STATUS DeviceTree::PopulateAcpi()
 	status = AcpiGetDevices(NULL, DeviceTree::AddAcpiDevice, &devices, NULL);
 	if (ACPI_FAILURE(status))
 	{
-		kernel.Printf("Could not AcpiGetDevices: %s(%d)\n", AcpiFormatException(status), status);
+		Printf("Could not AcpiGetDevices: %s(%d)\n", AcpiFormatException(status), status);
 		Assert(false);
 	}
 

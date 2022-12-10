@@ -49,7 +49,7 @@ public:
 		case MessageType::MouseEvent:
 			//todo: clicked?
 			if (message.MouseEvent.Buttons.LeftPressed && !m_prevMouseButtons.LeftPressed)
-				DebugPrintf("Mouse clicked\n");
+				DebugPrintf("%s: Mouse clicked\n", Title.c_str());
 
 			m_prevMouseButtons = message.MouseEvent.Buttons;
 			break;

@@ -27,7 +27,7 @@ namespace UI
 		Window(const std::string& title, const WindowStyle& style = Default) :
 			Background(Colors::White),
 			Children(),
-			m_title(title),
+			Title(title),
 			m_style(style)
 		{
 
@@ -42,7 +42,7 @@ namespace UI
 			if (m_style.IsBordered)
 			{
 				frame.DrawFrameBorder(BorderColor, 3);
-				frame.DrawText({ 9, 9 }, m_title, BorderColor);
+				frame.DrawText({ 9, 9 }, Title, BorderColor);
 				frame.DrawRectangle(BorderColor, { 0, 20, frame.GetWidth(), 3 });
 			}
 
@@ -55,9 +55,9 @@ namespace UI
 
 		Color Background;
 		std::vector<Control*> Children;
+		std::string Title;
 
 	private:
-		std::string m_title;
 		WindowStyle m_style;
 	};
 }

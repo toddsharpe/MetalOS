@@ -31,7 +31,7 @@ Get-VMComPort -VMName MetalOS
 * Support for bios
 
 ## Project dependencies
-![Dependencies](_Documents/Dependencies.png)
+![Dependencies](docs/images/Dependencies.png)
 
 | Project | Type | File | Description |
 | - | - | - | - |
@@ -43,7 +43,7 @@ Get-VMComPort -VMName MetalOS
 
 ## Architecture
 MetalOS is a monolithic kernel that uses a custom UEFI bootloader:  
-![Architecture](_Documents/Architecture.png)
+![Architecture](docs/images/Architecture.png)
 
 Note: All executable formats (``Kernel``, ``Doom``, ``Runtime``, and even ``Boot``) are Microsoft PE files. Boot contains a loader for the Kernel, the Kernel contains a loader for the usermode process (as well as the Runtime) and the Runtime contains a loader for subsequent DLLs the usermode process may desire.
 
@@ -66,7 +66,7 @@ Quick Notes:
 
 #### Usermode Interface
 Usermode interface is provided by MetalOS.h, a required Init static library, and a single runtime dll.  
-![DoomArchitecture](_Documents/DoomArchitecture.png)  
+![DoomArchitecture](docs/images/DoomArchitecture.png)  
 This dll contains the MetalOS native interface as well as the expected CRT interfaces (stdio, stdlib, string, ctype).
 
 The init library provides two exports for use by the kernel:
@@ -127,12 +127,12 @@ Gen2 Hyper-V was chosen early into development for its 64-bit UEFI environment (
 ## Screenshots
 
 ### Doom
-![Doom](_Screenshots/Doom2.png)
+![Doom](docs/screenshots/Doom2.png)
 
-![Doom](_Screenshots/Doom3.png)
+![Doom](docs/screenshots/Doom3.png)
 
 ### Window System
-![Calc Windows](_Screenshots/CalcWindows.png)
+![Calc Windows](docs/screenshots/CalcWindows.png)
 
 ### WinDBG
-![WinDBG](_Screenshots/WinDbgFull.png)
+![WinDBG](docs/screenshots/WinDbgFull.png)

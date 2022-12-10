@@ -180,7 +180,6 @@ EFI_STATUS EfiLoader::CrtInitialization(const uintptr_t imageBase)
 	CrtInitializer* initializer = (CrtInitializer*)(imageBase + crtSection->VirtualAddress);
 	while (*initializer)
 	{
-		Print(L"Executing: 0x%016llx\n", *initializer);
 		(*initializer)();
 		initializer++;
 	}

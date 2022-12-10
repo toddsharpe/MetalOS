@@ -5,7 +5,7 @@
 #include <vector>
 
 UserPipe::UserPipe() :
-	KObject(KObjectType::Pipe),
+	KObject(KObjectType::Pipe, false),
 	m_readIndex(),
 	m_writeIndex(),
 	m_count(),

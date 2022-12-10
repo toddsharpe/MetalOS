@@ -1,9 +1,10 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
 #include "Driver.h"
 #include "Device.h"
+#include "MetalOS.Kernel.h"
+#include <cstdint>
+#include <string>
 
 //https://wiki.osdev.org/APIC
 //ioapic.pdf

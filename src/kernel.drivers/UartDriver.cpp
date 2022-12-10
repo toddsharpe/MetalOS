@@ -81,9 +81,9 @@ Result UartDriver::EnumerateChildren()
 	return Result::NotImplemented;
 }
 
-void UartDriver::Write(const char* string)
+void UartDriver::Write(const std::string& string)
 {
-	this->Write(string, strlen(string));
+	this->Write(string.c_str(), string.length());
 }
 
 void UartDriver::OnInterrupt()

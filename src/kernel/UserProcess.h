@@ -11,6 +11,12 @@
 #include "KSignalObject.h"
 #include <x64/PageTables.h>
 
+enum class ProcessState
+{
+	Running,
+	Terminated
+};
+
 class KThread;
 class UserProcess : public KSignalObject
 {
@@ -71,7 +77,6 @@ public:
 	UObject* GetObject(Handle handle);
 	bool CloseObject(Handle handle);
 
-	bool Delete;
 	bool IsConsole;
 
 	friend class Scheduler;
@@ -94,5 +99,7 @@ private:
 
 	handle_t m_lastHandle;
 	std::map<handle_t, UObject*> m_objects;
+
+	ProcessState m_state;
 };
 

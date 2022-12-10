@@ -2,7 +2,6 @@
 
 #include <string>
 #include <list>
-#include "Driver.h"
 
 enum class DeviceType
 {

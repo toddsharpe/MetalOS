@@ -18,7 +18,7 @@ void StringPrinter::Printf(const char* format, const va_list args)
 	int retval = vsprintf(buffer, format, args);
 	buffer[retval] = '\0';
 
-	this->Write(buffer);
+	this->Write(std::string(buffer));
 }
 
 void StringPrinter::PrintBytes(const char* buffer, const size_t length)

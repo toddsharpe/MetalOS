@@ -9,18 +9,23 @@ Kernel kernel;
 
 //Init Stack - set by x64_main
 //TODO: reclaim
-static constexpr size_t InitStackSize = PAGE_SIZE << 2; //16kb Init Stack
+static constexpr size_t InitStackSize = PAGE_SIZE << 8; //16kb Init Stack
 KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[InitStackSize] = { 0 };
 extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[InitStackSize];
 
 //Boot Heap
-static constexpr size_t BootHeapSize = PAGE_SIZE << 8; //1MB Boot Heap
+static constexpr size_t BootHeapSize = PAGE_SIZE << 12; //4MB Boot Heap
 KERNEL_PAGE_ALIGN static volatile UINT8 BOOT_HEAP[BootHeapSize] = { 0 };
 KERNEL_GLOBAL_ALIGN BootHeap bootHeap((void*)BOOT_HEAP, BootHeapSize);
 
 extern "C" void INTERRUPT_HANDLER(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 {
 	kernel.HandleInterrupt(vector, pFrame);
+}
+
+extern "C" int __cdecl atexit(void(__cdecl*)(void))
+{
+	return 0;
 }
 
 void Printf(const char* format, ...)
@@ -54,7 +59,24 @@ void* operator new(const size_t n)
 		return (void*)bootHeap.Allocate(n);
 }
 
+void* operator new[](size_t n)
+{
+	uintptr_t callerAddress = (uintptr_t)_ReturnAddress();
+	if (kernel.IsHeapInitialized())
+		return kernel.Allocate(n, callerAddress);
+	else
+		return (void*)bootHeap.Allocate(n);
+}
+
 void operator delete(void* const p)
+{
+	if (kernel.IsHeapInitialized())
+		kernel.Deallocate(p);
+	else
+		bootHeap.Deallocate(p);
+}
+
+void operator delete[](void* const p)
 {
 	if (kernel.IsHeapInitialized())
 		kernel.Deallocate(p);
@@ -89,7 +111,7 @@ extern "C" uint64_t SYSTEMCALL_HANDLER(SystemCallFrame* frame)
 }
 
 extern MetalOSLibrary BootLibrary;
-void main(LOADER_PARAMS* loader)
+int main(LOADER_PARAMS* loader)
 {
 	//BootLibrary.DebugPrint = &Printf;
 	//BootLibrary.AssertPrint = &Printf;
@@ -97,16 +119,8 @@ void main(LOADER_PARAMS* loader)
 	//Initialize kernel
 	kernel.Initialize(loader);
 
-	//Load process
-	//kernel.KeCreateProcess(std::string("fire.exe"));
-
-	//kernel.KeCreateProcess(std::string("calc.exe"));
-	//kernel.KeCreateProcess(std::string("calc.exe"));
-	//kernel.KeCreateProcess(std::string("calc.exe"));
-
-	kernel.KeCreateProcess(std::string("term.exe"));
-
-	//kernel.KeCreateProcess(std::string("doom.exe"));
+	//Load init process
+	kernel.KeCreateProcess(std::string("init.exe"));
 
 	//Exit init thread
 	kernel.KeExitThread();

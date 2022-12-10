@@ -19,7 +19,6 @@ KThread::KThread(const ThreadStart start, void* arg, UserThread* userThread) :
 
 	m_state(ThreadState::Ready),
 	m_waitStatus(WaitStatus::None),
-	m_sleepWake(),
 
 	Name()
 {
@@ -82,13 +81,6 @@ void KThread::Display() const
 	kernel.Printf("    Arg: 0x%016x\n", m_arg);
 	kernel.Printf("  State: %d\n", m_state);
 	kernel.Printf("   User: 0x%016x\n", m_userThread);
-
-	switch (m_state)
-	{
-	case ThreadState::Sleeping:
-		kernel.Printf("  SleepAwake: %d\n", m_sleepWake);
-		break;
-	}
 
 	//TODO: move to arch layer
 	x64_context* ctx = (x64_context*)m_context;

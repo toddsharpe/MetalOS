@@ -23,10 +23,10 @@ UserProcess::UserProcess(const std::string& name) :
 	m_ringBuffers(),
 	InitProcess(),
 	InitThread(),
-	Delete(),
 	IsConsole(),
 	m_lastHandle(StartingHandle),
-	m_objects()
+	m_objects(),
+	m_state(ProcessState::Running)
 {
 	//Create new page tables, using current top level kernel mappings
 	m_pageTables = new PageTables();
@@ -178,5 +178,5 @@ bool UserProcess::CloseObject(Handle handle)
 
 bool UserProcess::IsSignalled() const
 {
-	return Delete;
+	return m_state == ProcessState::Terminated;
 }

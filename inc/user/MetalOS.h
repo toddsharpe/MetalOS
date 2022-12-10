@@ -8,6 +8,9 @@
 //This is to allow potential C# interop to be clean
 
 #include <cstdint>
+#include <Graphics/Types.h>
+#include <shared/MetalOS.Keys.h>
+#include <shared/MetalOS.Types.h>
 
 struct ProcessInfo
 {
@@ -105,14 +108,14 @@ extern "C"
 	//SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t* previousCount);
 
 	//Windows
-	SystemCallResult AllocWindow(HWindow& handle, const Rectangle& frame);
+	SystemCallResult AllocWindow(HWindow& handle, const Graphics::Rectangle& frame);
 	//SystemCallResult GetWindowInfo(HWindow handle, Rectangle& frame, WindowStyle& style);
 	SystemCallResult PaintWindow(HWindow handle, const ReadOnlyBuffer& buffer);
-	SystemCallResult MoveWindow(HWindow handle, const Rectangle& frame);
-	SystemCallResult GetWindowRect(HWindow handle, Rectangle& frame);
+	SystemCallResult MoveWindow(HWindow handle, const Graphics::Rectangle& frame);
+	SystemCallResult GetWindowRect(HWindow handle, Graphics::Rectangle& frame);
 	SystemCallResult GetMessage(Message& message);
 	SystemCallResult PeekMessage(Message& message);
-	SystemCallResult GetScreenRect(Rectangle& rect);
+	SystemCallResult GetScreenRect(Graphics::Rectangle& rect);
 
 	//Files, Pipes
 	HFile CreateFile(const char* path, const GenericAccess access);
@@ -156,7 +159,7 @@ enum class DllEntryReason
 
 //True - LoadLibrary returns handle
 //False - DLL is unloaded
-typedef uint32_t (*DllMainCall)(Handle hinstDLL, enum DllEntryReason fdwReason);
+typedef size_t (*DllMainCall)(Handle hinstDLL, enum DllEntryReason fdwReason);
 const char DllMainName[] = "DllMain";
 
 struct RingBufferHeader

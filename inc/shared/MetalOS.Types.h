@@ -1,59 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-
-//PixelBlueGreenRedReserved8BitPerColor
-struct BGRRPixel
-{	
-	union
-	{
-		struct
-		{
-			uint32_t Blue : 8;
-			uint32_t Green : 8;
-			uint32_t Red : 8;
-			uint32_t Reserved : 8;
-		};
-		uint32_t AsUint32;
-	};
-};
-static_assert(sizeof(struct BGRRPixel) == sizeof(uint32_t), "Pixel greater than UINT32 in size");
-typedef struct BGRRPixel Color;
-
-class Colors
-{
-public:
-	static constexpr Color White = { 0xFF, 0xFF, 0xFF, 0x00 };
-	static constexpr Color Blue = { 0xFF, 0x00, 0x00, 0x00 };
-	static constexpr Color Green = { 0x00, 0xFF, 0x00, 0x00 };
-	static constexpr Color Red = { 0x00, 0x00, 0xFF, 0x00 };
-	static constexpr Color Black = { 0x00, 0x00, 0x00, 0x00 };
-};
-
-struct Point2D
-{
-	size_t X;
-	size_t Y;
-};
-
-struct Rectangle
-{
-	size_t X;
-	size_t Y;
-	size_t Width;
-	size_t Height;
-
-	bool Contains(const Point2D& p) const
-	{
-		if (p.X < X || p.X > (X + Width))
-			return false;
-
-		if (p.Y < Y || p.Y >(Y + Height))
-			return false;
-
-		return true;
-	}
-};
+#include <Graphics/Types.h>
 
 struct ReadOnlyBuffer
 {
@@ -180,7 +128,7 @@ struct MouseEvent
 
 struct PaintEvent
 {
-	Rectangle Region;
+	Graphics::Rectangle Region;
 };
 
 struct Message

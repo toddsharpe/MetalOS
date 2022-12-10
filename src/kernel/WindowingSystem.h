@@ -1,49 +1,63 @@
 #pragma once
-#include "MetalOS.Kernel.h"
-#include "UserThread.h"
-#include "Display.h"
 
+#include "UserThread.h"
+#include "EfiDisplay.h"
+#include <Graphics/Types.h>
+#include <Graphics/DynamicFrameBuffer.h>
 #include <string>
+#include <memory>
 
 class WindowingSystem
 {
+private:
+	static size_t ThreadLoop(void* arg);
+
 public:
-	WindowingSystem(Display* display);
+	WindowingSystem(EfiDisplay& display);
 	void Initialize();
 
-	HWindow AllocWindow(UserThread* thread, const Rectangle& bounds);
+	//Systemcalls
+	HWindow AllocWindow(UserThread& thread, const Graphics::Rectangle& bounds);
 	bool PaintWindow(const HWindow handle, const ReadOnlyBuffer& buffer);
-	bool MoveWindow(const HWindow handle, const Rectangle& bounds);
-	bool GetWindowRect(const HWindow handle, 
-		Rectangle& bounds);
-	bool ThreadHasWindow(const UserThread* thread) const;
-	void FreeWindow(UserThread* thread);
+	bool MoveWindow(const HWindow handle, const Graphics::Rectangle& bounds);
+	bool GetWindowRect(const HWindow handle, Graphics::Rectangle& bounds);
 
 	void PostMessage(Message* message);
 
-private:
-	static size_t ThreadLoop(void* arg);
-	size_t ThreadLoop() const;
+	bool ThreadHasWindow(const UserThread& thread) const;
+	void FreeWindow(const UserThread& thread);
 
+private:
 	struct Window
 	{
-		Window() :
+		Window(UserThread& thread) :
+			Thread(thread),
 			Bounds(),
-			FrameBuffer(),
-			Thread()
+			FrameBuffer()
 		{};
 		
-		Rectangle Bounds;
+		bool operator==(const Window& rhs) const
+		{
+			return this == &rhs;
+		}
+
+		UserThread& Thread;
+		Graphics::Rectangle Bounds;
+		//size_t z_index;
 		Buffer FrameBuffer;
-		UserThread* Thread;
 	};
 
-	Window* GetWindow(const Point2D& point) const;
+	size_t ThreadLoop();
+
+	Window* GetWindow(const Graphics::Point2D& point) const;
 	bool HandleValid(const HWindow handle) const;
 
-	std::list<Window*> m_windows;
-	Display* m_display;
-	Point2D m_mousePos;
+	EfiDisplay& m_display;
+	DynamicFrameBuffer m_frameBuffer;
+	std::unique_ptr<std::list<Window>> m_windows;
+
+	//Mouse
+	Graphics::Point2D m_mousePos;
 	MouseButtonState m_prevMouseButtons;
 
 	//Drag

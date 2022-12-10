@@ -3,14 +3,8 @@
 #include <user/MetalOS.h>
 
 
-uint32_t __declspec(dllexport) DllMain(Handle handle, DllEntryReason reason)
+size_t DllMain(Handle handle, DllEntryReason reason)
 {
-	switch (reason)
-	{
-	default:
-		//Do nothing
-		break;
-	}
-
+	//Do nothing
 	return true;
 }

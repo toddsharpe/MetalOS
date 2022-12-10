@@ -1,12 +1,7 @@
 #include "KSignalObject.h"
 
 KSignalObject::KSignalObject(const KObjectType type) : 
-	KObject(type)
+	KObject(type, true)
 {
 
-}
-
-bool KSignalObject::IsSyncObj() const
-{
-	return true;
 }

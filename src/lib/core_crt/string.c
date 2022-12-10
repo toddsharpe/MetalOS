@@ -146,6 +146,12 @@ int stricmp(char const* _String1, char const* _String2)
 	return 0;
 }
 
+//TODO(tsharpe): Is it possible to tell linker the above function has two names?
+int _stricmp(char const* _String1, char const* _String2)
+{
+	return stricmp(_String1, _String2);
+}
+
 int strnicmp(char const* _String1, char const* _String2, size_t _MaxCount)
 {
 	for (size_t i = 0; i < strlen(_String1) && _MaxCount > 0; i++, _MaxCount--) {

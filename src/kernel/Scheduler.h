@@ -1,16 +1,16 @@
 #pragma once
 
 
-#include <list>
-#include <map>
 #include "MetalOS.Kernel.h"
 #include "HyperV.h"
 #include "KSemaphore.h"
 #include "KThread.h"
 #include "UserPipe.h"
 #include "KSignalObject.h"
-#include "KPredicate.h"
 #include <unordered_map>
+
+#include <map>
+#include <vector>
 
 class Debugger;
 class Scheduler
@@ -20,6 +20,7 @@ public:
 	Scheduler(KThread& bootThread);
 
 	void Schedule();
+	//TODO(tsharpe): Simplfy routines for one cpu only
 	static KThread* GetCurrentThread();
 	UserThread* GetCurrentUserThread() const;
 	UserProcess& GetCurrentProcess() const;
@@ -53,6 +54,40 @@ public:
 private:
 	static bool MessageReceived(void* arg);
 
+	//Object that never signals, for unconditionally sleeping threads
+	class KSleep : public KSignalObject
+	{
+	public:
+		KSleep():
+			KSignalObject(KObjectType::Sleep) {}
+
+		virtual bool IsSignalled() const override
+		{
+			return false;
+		}
+	};
+
+	//Object that waits for condition to be true to signal
+	typedef bool(*SignalPredicate)(void* arg);
+	class KPredicate : public KSignalObject
+	{
+	public:
+		KPredicate(SignalPredicate predicate, void* arg):
+			KSignalObject(KObjectType::Predicate),
+			m_predicate(predicate),
+			m_arg(arg)
+		{ }
+
+		virtual bool IsSignalled() const override
+		{
+			return (*m_predicate)(m_arg);
+		}
+
+	private:
+		SignalPredicate m_predicate;
+		void* m_arg;
+	};
+
 	struct CpuContext
 	{
 		CpuContext* SelfPointer;
@@ -81,8 +116,9 @@ private:
 	void SetCurrentThread(KThread& thread);
 
 	HyperV m_hyperv; //TODO: Clock TSC interface
-	std::list<KThread*> m_readyQueue;
-	std::list<KThread*> m_sleepQueue;
+
+	size_t m_threadIndex;
+	std::vector<KThread*> m_threads;
 
 	struct PipeWaitEvent
 	{

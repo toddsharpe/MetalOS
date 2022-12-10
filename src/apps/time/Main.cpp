@@ -1,4 +1,3 @@
-#include <shared/MetalOS.Types.h>
 #include <user/MetalOS.h>
 #include <user/Debug.h>
 #include <stdio.h>

@@ -1,31 +1,25 @@
-#include <user/new>
-
-#include <shared/MetalOS.Types.h>
 #include <user/MetalOS.h>
 #include <user/MetalOS.UI.h>
 
-#include "Matrix.h"
 #include "FireScreen.h"
 
-#include <user/lockit>
+#include <user/new>
+
+using namespace UI;
+using namespace Graphics;
 
 FireScreen* screen;
 
-bool UICallback(Window& window, Message& message)
+bool UICallback(GUI& window, Message& message)
 {
 	switch (message.Header.MessageType)
 	{
 	case MessageType::PaintEvent:
 	{
-		//Draw what we have
-		ReadOnlyBuffer buffer = {};
-		buffer.Data = screen->GetBuffer();
-		buffer.Length = screen->GetSize();
-		window.Paint(buffer);
-
-		//Kick off update
+		FrameBuffer& frame = window.GetFrameBuffer();
 		screen->Update();
-		screen->Draw();
+		screen->Draw(frame);
+		PaintWindow(window.GetHandle(), { frame.GetBuffer(), frame.Size()});
 		return true;
 	}
 	break;
@@ -43,27 +37,19 @@ int main(int argc, char** argv)
 	
 	Rectangle frame;
 	GetScreenRect(frame);
-
-	//Change location based on proc id
-	//int x = (procInfo.Id - 1) % 2;
-	//int y = (procInfo.Id - 1) / 2;
-
-	//frame.X = x * frame.Width / 2;
-	//frame.Y = y * frame.Height / 2;
-	//frame.Width = frame.Width / 2;
-	//frame.Height = frame.Height / 2;
+	frame.Width /= 2;
+	frame.Height /= 2;
+	frame.X = frame.Width;
+	frame.Y = frame.Height;
 
 	screen = new FireScreen(frame.Height, frame.Width);
 	screen->Initialize();
-	screen->Draw();
 
 	WindowStyle style = {};
-	style.IsBordered = false;
+	style.IsBordered = true;
 
-	Window window("Fire", frame, style, UICallback);
-	window.Initialize();
+	GUI gui("Fire", frame, style, UICallback);
+	gui.Initialize();
 
-	window.Run();
+	gui.Run();
 }
-
-

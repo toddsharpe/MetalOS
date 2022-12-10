@@ -1,31 +1,25 @@
 #pragma once
-#include "Display.h"
-#include "Matrix.h"
-#include <shared/MetalOS.Types.h>
 
-class LoadingScreen
+#include <UI/Window.h>
+#include <UI/Label.h>
+#include "StringPrinter.h"
+
+//This method is called early on during boot (before a proper heap) and therefore
+//writes to the screen directly (versus buffering in UI constructs like window or control).
+class LoadingScreen : public StringPrinter
 {
 public:
-	LoadingScreen(const Display& display);
+	LoadingScreen(Graphics::FrameBuffer& frameBuffer);
+
 	void Initialize();
+	virtual void Write(const std::string& string) override;
 
 private:
-	static const uint32_t PixelSize = 4;
-	static const Color FireColors[];
-	static const size_t FireColorsCount = 37;
-	static size_t ThreadLoop(void* arg);
+	static constexpr Graphics::Color Foreground = Graphics::Colors::White;
+	static constexpr Graphics::Color Background = Graphics::Colors::Black;
+	static constexpr Graphics::Color Border = Graphics::Colors::Blue;
 
-	void Draw();
-	void Update();
-
-	//DOOM Fire implmentation
-	//http://fabiensanglard.net/doom_fire_psx/
-
-	void DoFire();
-	void SpreadFire(Point2D point);
-
-	const Display& m_display;
-	Matrix<uint8_t> m_indexes;
-	Matrix<Color> m_buffer;
+	Graphics::FrameBuffer& m_frameBuffer;
+	size_t yPos;
 };
 

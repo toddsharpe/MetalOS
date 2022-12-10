@@ -7,7 +7,7 @@ class HyperVChannel;
 class HyperVRingBuffer//TODO: inbound ring buffer, outbound ring buffer
 {
 public:
-	HyperVRingBuffer(const paddr_t address, const size_t count, HyperVChannel& channel);
+	HyperVRingBuffer(const paddr_t address, const uint32_t count, HyperVChannel& channel);
 
 	void Write(const ReadOnlyBuffer* buffers, const size_t count);
 

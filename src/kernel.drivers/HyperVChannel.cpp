@@ -3,7 +3,7 @@
 #include <Assert.h>
 #include <HyperV.h>
 
-HyperVChannel::HyperVChannel(size_t sendSize, size_t receiveSize, CallContext callback) :
+HyperVChannel::HyperVChannel(uint32_t sendSize, uint32_t receiveSize, CallContext callback) :
 	m_sendCount(SIZE_TO_PAGES(sendSize)),
 	m_receiveCount(SIZE_TO_PAGES(receiveSize)),
 	m_address(kernel.AllocatePhysical(m_sendCount + m_receiveCount)),
@@ -79,7 +79,7 @@ void HyperVChannel::Initialize(vmbus_channel_offer_channel* offerChannel, const 
 //Format is vmpacket_descriptor followed by buffer, alignment if needed, and then old indexes
 void HyperVChannel::SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const vmbus_packet_type type, const uint32_t flags)
 {
-	uint32_t packetlen = sizeof(vmpacket_descriptor) + length;
+	uint32_t packetlen = sizeof(vmpacket_descriptor) + (uint32_t)length;
 	const uint32_t packetlen_aligned = AlignSize(packetlen, sizeof(uint64_t));
 
 	vmpacket_descriptor desc = { 0 };

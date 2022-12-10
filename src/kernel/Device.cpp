@@ -1,6 +1,5 @@
-#include "Kernel.h"
-
 #include "Device.h"
+#include "Assert.h"
 
 Device::Device() :
 	Path(),
@@ -16,10 +15,10 @@ Device::Device() :
 
 void Device::Display() const
 {
-	kernel.Printf("%s\n", this->Path.c_str());
-	kernel.Printf("    Name: %s\n", this->Name.c_str());
-	kernel.Printf("    Desc: %s\n", this->Description.c_str());
-	kernel.Printf("    HID : %s\n", this->GetHid().c_str());
+	Printf("%s\n", this->Path.c_str());
+	Printf("    Name: %s\n", this->Name.c_str());
+	Printf("    Desc: %s\n", this->Description.c_str());
+	Printf("    HID : %s\n", this->GetHid().c_str());
 
 	this->DisplayDetails();
 

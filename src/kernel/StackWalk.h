@@ -1,7 +1,9 @@
 #pragma once
 
-#include <cstdint>
 #include "MetalOS.Kernel.h"
+#include <cstdint>
+#include <windows/types.h>
+#include <windows/winnt.h>
 
 //https://docs.microsoft.com/en-us/cpp/build/exception-handling-x64?view=vs-2019
 //http://www.nynaeve.net/Code/StackWalk64.cpp

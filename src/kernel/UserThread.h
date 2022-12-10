@@ -40,6 +40,7 @@ public:
 
 	void* SavedStack;
 	//void* SavedUserRBP;
+	bool Deleted;
 
 private:
 	uint32_t m_id;

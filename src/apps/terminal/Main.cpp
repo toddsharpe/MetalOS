@@ -1,15 +1,13 @@
-#include <user/new>
-#include <string>
-
-#include <shared/MetalOS.Keys.h>
-#include <shared/MetalOS.Types.h>
 #include <user/MetalOS.h>
 #include <user/MetalOS.UI.h>
 #include <user/Debug.h>
 
+#include <user/new>
+#include <string>
 #include <vector>
 
-#include <user/lockit>
+using namespace Graphics;
+using namespace UI;
 
 std::string command;
 Label* label;
@@ -81,7 +79,7 @@ size_t TerminalThread(void* arg)
 		PipeInfo info = {};
 		AssertSuccess(GetPipeInfo(stdOut, info));
 
-		DebugPrintf("C: 0x%x\n", info.BytesAvailable);
+		//DebugPrintf("C: 0x%x\n", info.BytesAvailable);
 		if (!info.BytesAvailable)
 		{
 			Sleep(500);
@@ -115,7 +113,7 @@ size_t TerminalThread(void* arg)
 	}
 }
 
-bool UICallback(Window& window, Message& message)
+bool UICallback(GUI& gui, Message& message)
 {
 	switch (message.Header.MessageType)
 	{
@@ -124,9 +122,12 @@ bool UICallback(Window& window, Message& message)
 		{
 			if (message.KeyEvent.Key == VK_RETURN)
 			{
-				//Launch process
-				label->Text += "\n";
-				LaunchProcess(command);
+				if (command != "")
+				{
+					//Launch process
+					label->Text += "\n";
+					LaunchProcess(command);
+				}
 				label->Text += "\n>";
 				command = "";
 			}
@@ -166,16 +167,16 @@ int main(int argc, char** argv)
 	WindowStyle style = {};
 	style.IsBordered = true;
 
-	Window window("Terminal", rectangle, style, UICallback);
-	window.Initialize();
+	GUI gui("Terminal", rectangle, style, UICallback);
+	gui.Initialize();
 
-	label = new Label(">", { 5, 25, 390, 370 });
+	label = new Label("MetalOS Terminal.\nTry typing doom.exe\n>", { 5, 25, 390, 370 });
 	label->Background = Colors::Black;
 	label->Foreground = Colors::White;
-	window.Children.push_back(label);
+	gui.Children.push_back(label);
 
 	AssertSuccess(CreateEvent(event, true, false));
 
 	CreateThread(0, TerminalThread, nullptr);
-	window.Run();
+	gui.Run();
 }

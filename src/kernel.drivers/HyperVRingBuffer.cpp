@@ -5,11 +5,11 @@
 #include "HyperVRingBuffer.h"
 #include "HyperVChannel.h"
 
-HyperVRingBuffer::HyperVRingBuffer(const paddr_t address, const size_t count, HyperVChannel& channel) :
+HyperVRingBuffer::HyperVRingBuffer(const paddr_t address, const uint32_t count, HyperVChannel& channel) :
 	m_channel(channel),
 	m_size(count << PAGE_SHIFT),
 	m_iterator(),
-	m_dataSize((count - 1) << PAGE_SHIFT)
+	m_dataSize(((uint32_t)count - 1) << PAGE_SHIFT)
 {
 	std::vector<paddr_t> addresses;
 	addresses.push_back(address);//hv page
@@ -42,7 +42,7 @@ void HyperVRingBuffer::Write(const ReadOnlyBuffer* buffers, const size_t count)
 	uint32_t index = startIndex;
 	for (size_t i = 0; i < count; i++)
 	{
-		index = this->Copy(index, buffers[i].Data, buffers[i].Length);
+		index = this->Copy(index, buffers[i].Data, (uint32_t)buffers[i].Length);
 	}
 
 	//Write new indexes

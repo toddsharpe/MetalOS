@@ -11,7 +11,7 @@
 class ConfigTables
 {
 public:
-	ConfigTables(EFI_CONFIGURATION_TABLE* ConfigurationTables, UINTN NumConfigTables);
+	ConfigTables(const EFI_CONFIGURATION_TABLE* ConfigurationTables, const UINTN NumConfigTables);
 
 	void* GetAcpiTable() const;
 	void Dump() const;

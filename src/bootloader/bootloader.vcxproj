@@ -75,6 +75,7 @@
       <DisableSpecificWarnings>26812</DisableSpecificWarnings>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>EFI Application</SubSystem>

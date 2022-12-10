@@ -1,7 +1,5 @@
-#include "Kernel.h"
-#include "Assert.h"
-
 #include "StackWalk.h"
+#include "Assert.h"
 #include "RuntimeSupport.h"
 
 StackWalk::StackWalk(PCONTEXT context, PKNONVOLATILE_CONTEXT_POINTERS contextPointers) :
@@ -26,7 +24,7 @@ PCONTEXT StackWalk::Next(const uintptr_t imageBase)
 	if (!functionEntry)
 	{
 		//Pop IP off stack
-		kernel.Printf("Got from stack\n");
+		Printf("Got from stack\n");
 		m_context->Rip = *(DWORD64*)m_context->Rsp;
 		m_context->Rsp += sizeof(DWORD64);
 		return m_context;

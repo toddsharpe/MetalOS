@@ -1,4 +1,6 @@
 EXPORTS
+	DllMain
+
 	; Kernel API
 	GetSystemInfo
 	GetTickCount

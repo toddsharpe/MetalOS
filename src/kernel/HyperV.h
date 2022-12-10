@@ -122,8 +122,6 @@ public:
 		);
 
 private:
-	static uint32_t ThreadLoop(void* arg);
-
 	typedef std::bitset<std::numeric_limits<uint32_t>::digits> bitset_32;
 
 	//Each slot is for one interrupt source

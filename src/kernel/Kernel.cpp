@@ -12,7 +12,6 @@
 #include "kernel.drivers/UartDriver.h"
 #include "RuntimeSupport.h"
 #include "PortableExecutable.h"
-#include "LoadingScreen.h"
 #include "HyperVTimer.h"
 #include "HyperV.h"
 #include "KernelHeap.h"
@@ -31,6 +30,8 @@
 #include <boot/Path.h>
 #include <kernel/MetalOS.Internal.h>
 
+#define ENABLE_PDB 0
+
 Kernel::Kernel() :
 	m_physicalAddress(),
 	m_imageSize(),
@@ -39,7 +40,7 @@ Kernel::Kernel() :
 	m_pdbSize(),
 
 	m_display(),
-	m_textScreen(),
+	m_loadingScreen(m_display),
 	m_printer(),
 
 	m_memoryMap(),
@@ -62,7 +63,6 @@ Kernel::Kernel() :
 
 	m_interruptHandlers(),
 
-	m_processes(),
 	m_scheduler(),
 	m_objectsRingBuffers(),
 
@@ -72,11 +72,11 @@ Kernel::Kernel() :
 
 	m_deviceTree(),
 
-	m_timer(),
+	m_timer(0),
 
 	m_pdb(),
 
-	m_windows(),
+	m_windows(m_display),
 
 	m_debugger()
 {
@@ -98,10 +98,9 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	const paddr_t ramDriveAddress = params->RamDriveAddress;
 
 	//Initialize Display
-	m_display = new Display(params->Display, KernelGraphicsDevice);
-	m_display->ColorScreen(Colors::Black);
-	m_textScreen = new TextScreen(*m_display);
-	m_printer = m_textScreen;
+	m_display.Init((void*)KernelGraphicsDevice, params->Display);
+	m_loadingScreen.Initialize();
+	m_printer = &m_loadingScreen;
 
 	//Initialize and process memory map
 	m_memoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, *params->MemoryMap);
@@ -146,7 +145,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	this->Printf("  PhysicalAddressSize: 0x%16x\n", m_memoryMap->GetPhysicalAddressSize());
 
 	//Test UEFI runtime access
-	EFI_TIME time = { 0 };
+	EFI_TIME time;
 	m_runtime.GetTime(&time, nullptr);
 	this->Printf("  Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 	
@@ -168,7 +167,9 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_heapInitialized = true;
 
 	//PDB
-	//m_pdb = new Pdb((void*)KernelKernelPdb, (Handle*)KernelBaseAddress);
+#if ENABLE_PDB
+	m_pdb = new Pdb((void*)KernelKernelPdb, (Handle*)KernelBaseAddress);
+#endif
 
 	//Interrupts
 	m_interruptHandlers = new std::map<InterruptVector, InterruptContext>();
@@ -176,14 +177,13 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	m_interruptHandlers->insert({ InterruptVector::Breakpoint, { [](void* arg) { ((Kernel*)arg)->Printf("Debug Breakpoint Exception\n"); }, this} });
 
 	//Test interrupts
-	__debugbreak();
+	//__debugbreak();
 
 	//Create boot thread
 	KThread* bootThread = new KThread(nullptr, nullptr);
 	bootThread->Name = "boot";
 
 	//Process and thread containers
-	m_processes = new std::map<uint32_t, UserProcess*>();
 	m_scheduler = new Scheduler(*bootThread);
 	m_objectsRingBuffers = new std::map<std::string, UserRingBuffer*>();
 
@@ -197,12 +197,7 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	idle->Name = "idle";
 
 	//Initialize Platform
-	m_hyperV = new HyperV();
-	Assert(m_hyperV->IsPresent());
-	Assert(m_hyperV->DirectSyntheticTimers());
-	Assert(m_hyperV->AccessPartitionReferenceCounter());
-	Assert(!m_hyperV->DeprecateAutoEOI());
-	m_hyperV->Initialize();
+	m_hyperV.Initialize();
 
 	//Initialized IO
 	this->InitializeAcpi();
@@ -227,16 +222,11 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	//Scheduler (needed to load VMBus driver)
 	m_scheduler->Enabled = true;
-	m_timer = new HyperVTimer(0);
-	m_timer->SetPeriodic(SECOND / 128, (uint8_t)InterruptVector::Timer0);
+	m_timer.Enable(SECOND / 512, (uint8_t)InterruptVector::Timer0);
 
 	//Attach drivers and enumerate tree
 	m_deviceTree.EnumerateChildren();
 	m_deviceTree.Display();
-
-	//Show loading screen (works but we don't need yet)
-	//LoadingScreen loadingScreen(*m_display);
-	//loadingScreen.Initialize();
 
 	//Install interrupts
 	//Device* com2;
@@ -250,13 +240,11 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//ioapicDriver->MapInterrupt(InterruptVector::COM2, 3);//TODO: find a way to get 3 from ACPI
 	//ioapicDriver->UnmaskInterrupt(3);
 
-	m_windows = new WindowingSystem(m_display);
-	m_windows->Initialize();
+	m_windows.Initialize();
 
 	//Debugger
-	m_debugger = new Debugger();
-	m_debugger->Initialize();
-	m_debugger->AddModule(keLibrary);
+	m_debugger.Initialize();
+	m_debugger.AddModule(keLibrary);
 
 	//Done
 	this->Printf("Kernel Initialized\n");
@@ -270,9 +258,9 @@ void Kernel::HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 		__halt();
 	}
 	
-	if (m_debugger != nullptr && m_debugger->Enabled() && vector == InterruptVector::Breakpoint)
+	if (m_debugger.Enabled() && vector == InterruptVector::Breakpoint)
 	{
-		m_debugger->DebuggerEvent(vector, pFrame);
+		m_debugger.DebuggerEvent(vector, pFrame);
 		return;
 	}
 	
@@ -366,8 +354,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* format, ..
 	if (m_scheduler != nullptr)
 		m_scheduler->Enabled = false;
 
-	if (m_timer != nullptr)
-		m_timer->Disable();
+	m_timer.Disable();
 
 	this->Printf("Kernel Bugcheck\n");
 	this->Printf("\n%s\n%s\n", file, line);
@@ -382,6 +369,12 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* format, ..
 	{
 		KThread* thread = m_scheduler->GetCurrentThread();
 		thread->Display();
+	}
+
+	if (m_debugger.Enabled())
+	{
+		__debugbreak();
+		return;
 	}
 
 	//TODO: have arch library do this
@@ -442,8 +435,7 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* format, va
 	if (m_scheduler != nullptr)
 		m_scheduler->Enabled = false;
 
-	if (m_timer != nullptr)
-		m_timer->Disable();
+	m_timer.Disable();
 
 	this->Printf("Kernel Bugcheck\n");
 	this->Printf("\n%s\n%s\n", file, line);
@@ -616,14 +608,16 @@ KeLibrary& Kernel::KeLoadLibrary(const std::string& path)
 	Assert(pdbName);
 
 	const void* address = KeLoadPdb(pdbName);
-	Pdb* pdb = nullptr;// new Pdb(address, (void*)library);
+	Pdb* pdb = nullptr;
+#if ENABLE_PDB
+	pdb = new Pdb(address, (void*)library);
+#endif
 	this->Printf("KeLoadLibrary %s (0x%016x), %s (0x%016x)\n", path.c_str(), (uintptr_t)library, pdbName, address);
 
 	KeLibrary keLibrary = { path, library, pdb };
 	m_modules->push_back(keLibrary);
 
-	if (m_debugger != nullptr)
-		m_debugger->AddModule(keLibrary);
+	m_debugger.AddModule(keLibrary);
 
 	return m_modules->back();
 }
@@ -791,7 +785,7 @@ WaitStatus Kernel::KeWait(KSignalObject& obj, const milli_t timeout)
 {
 	WaitStatus status = m_scheduler->ObjectWait(obj, ToNano(timeout));
 	
-	switch (obj.GetType())
+	switch (obj.Type)
 	{
 	case KObjectType::Event:
 		KEvent& event = (KEvent&)obj;
@@ -984,6 +978,8 @@ UserProcess* Kernel::KeCreateProcess(const std::string& path)
 	//Patch imports of process for just mosrt
 	Loader::KernelExports(address, api, "mosrt.dll");
 
+	//TODO(tsharpe): These processes don't have STD handles
+
 	//Create thread TODO: reserve vs commit stack size
 	CreateThread(*process, pNtHeader->OptionalHeader.SizeOfStackReserve, nullptr, nullptr, process->InitProcess);
 
@@ -1018,8 +1014,7 @@ void* Kernel::VirtualAlloc(UserProcess& process, const void* address, const size
 
 void Kernel::KePostMessage(Message* msg)
 {
-	if (m_windows != nullptr)
-		m_windows->PostMessage(msg);
+	m_windows.PostMessage(msg);
 }
 
 bool Kernel::IsValidUserPointer(const void* p)

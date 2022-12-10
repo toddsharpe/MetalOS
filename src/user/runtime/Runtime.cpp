@@ -23,7 +23,7 @@ Module* Runtime::GetLoadedModule(const char* name)
 	ProcessEnvironmentBlock* peb = GetPEB();
 	for (size_t i = 0; i < peb->ModuleIndex; i++)
 	{
-		if (stricmp(name, peb->LoadedModules[i].Name) == 0)
+		if (_stricmp(name, peb->LoadedModules[i].Name) == 0)
 			return &peb->LoadedModules[i];
 	}
 

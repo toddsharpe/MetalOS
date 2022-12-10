@@ -17,7 +17,6 @@ public:
 	Debugger();
 	void Initialize();
 
-
 	void AddModule(KeLibrary& library);
 
 	void DebuggerEvent(InterruptVector vector, PINTERRUPT_FRAME pFrame);

@@ -1,24 +1,27 @@
-#include <user/new>
-#include <string>
-
-#include <shared/MetalOS.Types.h>
 #include <user/MetalOS.h>
 #include <user/MetalOS.UI.h>
 
+#include <user/new>
+#include <string>
 #include <vector>
-#include <user/lockit>
 
+using namespace Graphics;
+using namespace UI;
 
-bool UICallback(Window& window, Message& message)
+#define TEST_MODE 0
+
+bool UICallback(GUI& gui, Message& message)
 {
 	return false;
 }
 
-uint32_t ResizeThread(void* arg)
+#if TEST_MODE
+//Test method to reposition window at 10hz
+size_t MoveThread(void* arg)
 {
-	Window* window = (Window*)arg;
+	GUI* window = (GUI*)arg;
 	
-	Rectangle rect;
+	Graphics::Rectangle rect;
 	window->GetRectangle(rect);
 	DebugPrintf("Rect: 0x%x 0x%x 0x%x 0x%x\n", rect.X, rect.Y, rect.Width, rect.Height);
 
@@ -31,6 +34,7 @@ uint32_t ResizeThread(void* arg)
 		Sleep(1000 / 10);
 	}
 }
+#endif
 
 void B7Pressed(Button& button)
 {
@@ -50,40 +54,42 @@ int main(int argc, char** argv)
 	WindowStyle style = {};
 	style.IsBordered = true;
 
-	Window window("Calc", rectangle, style, UICallback);
-	window.Initialize();
+	GUI gui("Calc", rectangle, style, UICallback);
+	gui.Initialize();
 
 	Button b7("7", { 5, 25, 20, 20 });
-	window.Children.push_back(&b7);
+	gui.Children.push_back(&b7);
 	b7.Click = &B7Pressed;
 
 	Button b8("8", { 30, 25, 20, 20 });
-	window.Children.push_back(&b8);
+	gui.Children.push_back(&b8);
 
 	Button b9("9", { 55, 25, 20, 20 });
-	window.Children.push_back(&b9);
+	gui.Children.push_back(&b9);
 
 	Button b4("4", { 5, 50, 20, 20 });
-	window.Children.push_back(&b4);
+	gui.Children.push_back(&b4);
 
 	Button b5("5", { 30, 50, 20, 20 });
-	window.Children.push_back(&b5);
+	gui.Children.push_back(&b5);
 
 	Button b6("6", { 55, 50, 20, 20 });
-	window.Children.push_back(&b6);
+	gui.Children.push_back(&b6);
 
 	Button b1("1", { 5, 75, 20, 20 });
-	window.Children.push_back(&b1);
+	gui.Children.push_back(&b1);
 
 	Button b2("2", { 30, 75, 20, 20 });
-	window.Children.push_back(&b2);
+	gui.Children.push_back(&b2);
 
 	Button b3("3", { 55, 75, 20, 20 });
-	window.Children.push_back(&b3);
+	gui.Children.push_back(&b3);
 
 	Label l1("HI!", {5, 175, 20, 20});
-	window.Children.push_back(&l1);
+	gui.Children.push_back(&l1);
 
-	//CreateThread(0, ResizeThread, (void*)&window);
-	window.Run();
+#if TEST_MODE
+	CreateThread(0, MoveThread, (void*)&gui);
+#endif
+	gui.Run();
 }

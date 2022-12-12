@@ -19,7 +19,7 @@ bool UICallback(GUI& window, Message& message)
 		FrameBuffer& frame = window.GetFrameBuffer();
 		screen->Update();
 		screen->Draw(frame);
-		PaintWindow(window.GetHandle(), { frame.GetBuffer(), frame.Size()});
+		AssertSuccess(PaintWindow(window.GetHandle(), { frame.GetBuffer(), frame.Size()}));
 		return true;
 	}
 	break;

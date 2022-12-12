@@ -17,7 +17,7 @@ public:
 	void Draw(Graphics::FrameBuffer& frameBuffer);
 
 private:
-	static constexpr size_t PixelSize = 4;
+	static constexpr size_t PixelSize = 2;
 	static constexpr size_t FireColorsCount = 37;
 	static constexpr std::array<Graphics::Color, FireColorsCount> FireColors = { {
 		{ 0x07, 0x07, 0x07, 0x00},

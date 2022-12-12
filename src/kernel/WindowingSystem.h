@@ -7,6 +7,9 @@
 #include <string>
 #include <memory>
 
+//Simple windowing system. Windows are drawn in order, top window is back of m_windows.
+//NOTE(tsharpe): Handles are just kernel pointers. This should be fixed.
+//NOTE(tsharpe): Enforcing one thread per window would make handle tracking easier
 class WindowingSystem
 {
 private:
@@ -35,33 +38,27 @@ private:
 			Bounds(),
 			FrameBuffer()
 		{};
-		
-		bool operator==(const Window& rhs) const
-		{
-			return this == &rhs;
-		}
 
 		UserThread& Thread;
 		Graphics::Rectangle Bounds;
-		//size_t z_index;
 		Buffer FrameBuffer;
 	};
 
 	size_t ThreadLoop();
 
-	Window* GetWindow(const Graphics::Point2D& point) const;
+	std::shared_ptr<Window> GetWindow(const Graphics::Point2D& point) const;
 	bool HandleValid(const HWindow handle) const;
 
 	EfiDisplay& m_display;
 	DynamicFrameBuffer m_frameBuffer;
-	std::unique_ptr<std::list<Window>> m_windows;
+	std::unique_ptr<std::list<std::shared_ptr<Window>>> m_windows;
 
 	//Mouse
 	Graphics::Point2D m_mousePos;
 	MouseButtonState m_prevMouseButtons;
 
 	//Drag
-	Window* m_dragWindow;
-	Window* m_focusWindow;
+	std::shared_ptr<Window> m_dragWindow;
+	std::shared_ptr<Window> m_focusWindow;
 };
 

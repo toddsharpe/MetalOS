@@ -44,7 +44,7 @@ public:
 		{
 		case MessageType::PaintEvent:
 			Draw(m_frameBuffer);
-			PaintWindow(m_handle, {m_frameBuffer.GetBuffer(), m_frameBuffer.Size()});
+			AssertSuccess(PaintWindow(m_handle, {m_frameBuffer.GetBuffer(), m_frameBuffer.Size()}));
 			break;
 		case MessageType::MouseEvent:
 			//todo: clicked?

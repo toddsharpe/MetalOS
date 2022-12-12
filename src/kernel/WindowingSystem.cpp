@@ -29,7 +29,7 @@ void WindowingSystem::Initialize()
 	m_frameBuffer.Initialize(m_display.GetHeight(), m_display.GetWidth());
 
 	//Initialize window list
-	m_windows = std::make_unique<std::list<Window>>();
+	m_windows = std::make_unique<std::list<std::shared_ptr<Window>>>();
 	
 	//Create thread
 	KThread* thread = kernel.KeCreateThread(&WindowingSystem::ThreadLoop, this);
@@ -38,7 +38,7 @@ void WindowingSystem::Initialize()
 
 HWindow WindowingSystem::AllocWindow(UserThread& thread, const Rectangle& bounds)
 {
-	Printf("AllocWIndow\n");
+	Printf("AllocWindow\n");
 	
 	//Allocate framebuffer on page boundaries
 	//Map into process directly one day?
@@ -46,12 +46,15 @@ HWindow WindowingSystem::AllocWindow(UserThread& thread, const Rectangle& bounds
 	const size_t count = SIZE_TO_PAGES(bytes);
 	void* buffer = kernel.AllocateWindows(count);
 
-	//Create window
-	Window& window = m_windows->emplace_back(thread);
-	window.Bounds = bounds;
-	window.FrameBuffer = { buffer, bytes };
+	//Create window, focused
+	std::shared_ptr<Window> window = std::make_shared<Window>(thread);
+	window->Bounds = bounds;
+	window->FrameBuffer = { buffer, bytes };
 
-	return (HWindow)&window;
+	m_windows->push_back(window);
+	m_focusWindow = window;
+
+	return static_cast<HWindow>(window.get());
 }
 
 bool WindowingSystem::PaintWindow(const HWindow handle, const ReadOnlyBuffer& buffer)
@@ -97,35 +100,24 @@ void WindowingSystem::PostMessage(Message* message)
 	switch (message->Header.MessageType)
 	{
 	case MessageType::MouseEvent:
+
 		//Save cursor position
 		constexpr uint16_t maxX = std::numeric_limits<int16_t>::max();
 		constexpr uint16_t maxY = std::numeric_limits<int16_t>::max();
 		uint16_t absX = m_display.GetWidth() * message->MouseEvent.XPosition / maxX;
 		uint16_t absY = m_display.GetHeight() * message->MouseEvent.YPosition / maxX;
+		Point2D mousePos = { absX , absY };
 
-		//Draw cursor
-		Point2D mousePos = {};
-		mousePos.X = absX;
-		mousePos.Y = absY;
-
-		//Detect click
-		if (message->MouseEvent.Buttons.LeftPressed && !m_prevMouseButtons.LeftPressed)
-		{
-			Window* focus = GetWindow(mousePos);
-			if (focus != nullptr)
-			{
-				//Remove from list, push on top
-				m_windows->remove(*focus);
-				m_windows->push_back(*focus);
-			}
-		}
-
-		//Detect drag
+		//Detect focus/drag
 		if (message->MouseEvent.Buttons.LeftPressed)
 		{
 			//Focus window
-			Window* selected = GetWindow(mousePos);
-			m_focusWindow = selected;
+			m_focusWindow = GetWindow(mousePos);
+			if (m_focusWindow)
+			{
+				m_windows->remove(m_focusWindow);
+				m_windows->push_back(m_focusWindow);
+			}
 
 			if (m_dragWindow == nullptr)
 			{
@@ -162,9 +154,9 @@ void WindowingSystem::PostMessage(Message* message)
 
 bool WindowingSystem::ThreadHasWindow(const UserThread& thread) const
 {
-	for (const Window& window : *m_windows)
+	for (const std::shared_ptr<Window>& window : *m_windows)
 	{
-		if (&window.Thread == &thread)
+		if (&window->Thread == &thread)
 			return true;
 	}
 
@@ -173,16 +165,16 @@ bool WindowingSystem::ThreadHasWindow(const UserThread& thread) const
 
 void WindowingSystem::FreeWindow(const UserThread& thread)
 {
-	for (const Window& window : *m_windows)
+	for (const std::shared_ptr<Window>& window : *m_windows)
 	{
-		if (&window.Thread != &thread)
+		if (&window->Thread != &thread)
 			continue;
 		
-		//Change focus
-		if (m_focusWindow == &window)
-			m_focusWindow = nullptr;
-		if (m_focusWindow == &window)
-			m_dragWindow = nullptr;
+		//Release focus
+		if (m_focusWindow == window)
+			m_focusWindow.reset();
+		if (m_dragWindow = window)
+			m_dragWindow.reset();
 
 		m_windows->remove(window);
 		return;
@@ -198,65 +190,63 @@ size_t WindowingSystem::ThreadLoop()
 		m_frameBuffer.FillScreen(Colors::Black);
 
 		//Draw windows
-		for (const Window& window : *m_windows)
+		for (const std::shared_ptr<Window>& window : *m_windows)
 		{
-			if (&window != m_focusWindow)
+			if (window != m_focusWindow)
 			{
-				m_frameBuffer.WriteFrameGrayscale(window.Bounds, window.FrameBuffer.Data);
+				m_frameBuffer.WriteFrameGrayscale(window->Bounds, window->FrameBuffer.Data);
 			}
 			else
 			{
 				//Focus window gets color
-				m_frameBuffer.WriteFrame(window.Bounds, window.FrameBuffer.Data);
+				m_frameBuffer.WriteFrame(window->Bounds, window->FrameBuffer.Data);
 			}
 		}
 
 		//Draw cursor
-		//m_frameBuffer.DrawRectangle(Colors::Red, { m_mousePos.X, m_mousePos.Y, 3, 3 });
 		m_frameBuffer.DrawCursor({ m_mousePos.X, m_mousePos.Y }, Colors::Red);
 
 		//Send to graphics device
 		m_display.Write(m_frameBuffer);
 
 		//Request repaints
-		//TODO: only changed regions?
-		for (const Window& window : *m_windows)
+		//TODO(tsharpe): Only changed regions
+		for (const std::shared_ptr<Window>& window : *m_windows)
 		{
-			Assert(!window.Thread.Deleted);
+			Assert(!window->Thread.Deleted);
 
-			UserProcess& proc = window.Thread.GetProcess();
+			UserProcess& proc = window->Thread.GetProcess();
 			Assert(!proc.IsSignalled());
 
 			Message message;
 			message.Header.MessageType = MessageType::PaintEvent;
-			message.PaintEvent.Region = window.Bounds;
-			window.Thread.EnqueueMessage(&message);
+			message.PaintEvent.Region = window->Bounds;
+			window->Thread.EnqueueMessage(&message);
 		}
 
 		kernel.KeSleepThread(SECOND / 30);
 	}
 }
 
-WindowingSystem::Window* WindowingSystem::GetWindow(const Point2D& point) const
+std::shared_ptr<WindowingSystem::Window> WindowingSystem::GetWindow(const Point2D& point) const
 {
-	//Loop through in reverse, finding first window inside bounds
-	auto it = m_windows->rbegin();
-	while (it != m_windows->rend())
+	for (auto it = m_windows->rbegin(); it != m_windows->rend(); it++)
 	{
-		Window& window = *it;
-		if (window.Bounds.Contains(point))
-			return &window;
-
-		it++;
+		std::shared_ptr<Window>& window = *it;
+		if (window->Bounds.Contains(point))
+		{
+			return window;
+		}
 	}
+
 	return nullptr;
 }
 
 bool WindowingSystem::HandleValid(const HWindow handle) const
 {
-	for (const Window& window : *m_windows)
+	for (const std::shared_ptr<Window>& window : *m_windows)
 	{
-		if (&window == handle)
+		if (window.get() == handle)
 			return true;
 	}
 	return false;

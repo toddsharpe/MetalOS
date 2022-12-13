@@ -35,8 +35,7 @@ size_t fwrite(void const* _Buffer, size_t _ElementSize, size_t _ElementCount, FI
 		return 0;
 
 	size_t bytes;
-	SystemCallResult result = (SystemCallResult)WriteFile(_Stream, _Buffer, _ElementSize * _ElementCount, &bytes);
-	Assert(result == SystemCallResult::Success);
+	AssertSuccess(WriteFile(_Stream, _Buffer, _ElementSize * _ElementCount, &bytes));
 
 	return bytes / _ElementSize;
 }

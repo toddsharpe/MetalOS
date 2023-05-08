@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <efi.h>
+#include <kernel/MetalOS.List.h>
 
 //PixelsPerScanLine could be larger than HorizonalResolution if theres padding
 typedef struct
@@ -13,42 +14,20 @@ typedef struct
 	UINT32 PixelsPerScanLine;
 } EFI_GRAPHICS_DEVICE, * PEFI_GRAPHICS_DEVICE;
 
-//Windows Internals, Part 2, Page 297
-enum class PageState : uint8_t
+enum class PageState
 {
-	Zeroed,
 	Free,
-	//Standby,
-	//Modified,
-	//ModifiedNoWrite,
-	//Bad,
 	Active,
-	//Transition,
 	Platform //Used for acpi/runtime/reserved pages
 };
 
-//Windows Internals, Part 2, Page 316
-typedef struct _PFN_ENTRY
+//Simple struct to represent a physical page. Its state and list pointers
+typedef struct _PAGE_FRAME
 {
 	//Pointers when placing frames on the lists
-	_PFN_ENTRY* Prev;
-	_PFN_ENTRY* Next;
-
-	//uintptr_t PTEAddress;
-	//uint8_t ShareCount;
+	ListEntry Link;
 	PageState State;
-
-	struct
-	{
-		uint8_t WriteInProgress : 1;
-		uint8_t Modified : 1;
-		uint8_t ReadInProgress : 1;
-	} Flags;
-	uint8_t Priority;//Unused
-
-	uintptr_t PteFrame;
-
-} PFN_ENTRY, * PPFN_ENTRY;
+} PAGE_FRAME;
 
 //No point in supporting multiple monitors since this is built for hyper-v
 typedef struct

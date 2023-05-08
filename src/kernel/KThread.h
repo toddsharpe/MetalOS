@@ -1,63 +1,53 @@
 #pragma once
-#include <cstdint>
+
 #include "MetalOS.Kernel.h"
 #include "UserThread.h"
-#include "KSignalObject.h"
+#include "Objects/KSignalObject.h"
 #include <shared/MetalOS.Types.h>
+#include <cstdint>
 
 enum class ThreadState
 {
 	Ready,
 	Running,
 	SignalWait,
-	MessageWait,
-	PipeWait,
-	Terminated,
-	Sleeping
+	Sleeping,
+	Terminated
 };
 
-class KThread : public KSignalObject
+class KThread
 {
 	friend class Scheduler;
 
-private:
-	static size_t LastId;
-	static const size_t StackPages = 8;
-
 public:
-	KThread(const ThreadStart start, void* arg, UserThread* userThread = nullptr);
+	KThread(const ThreadStart start, void* const arg);
 	~KThread();
 
+	void Init(void* const entry);
 	void Run();
-	void InitContext(void* entry);
-
-	uint32_t GetId() const;
-	void* GetStackPointer() const;
-	UserThread* GetUserThread() const;
-
+	
 	void Display() const;
 
-	virtual bool IsSignalled() const override;
+	const uint32_t Id;
 
-	virtual void Dispose() override;
+	X64_CONTEXT* Context;
+	UserThread* UserThread;
+	std::string Name;
 
 private:
-	//Must be kept the first members of this struct, or insync with SystemCall.asm
-	void* m_context;
-	UserThread* m_userThread;
-
-	ThreadStart m_start;
-	void* m_arg;
-	const size_t m_id;
-	void* m_stackPointer; //Points to bottom of stack minus ArchStackReserve
-	void* m_stackAllocation;//Points to top of stack
+	static uint32_t LastId;
+	static constexpr size_t StackPages = 8;
+	
+	const ThreadStart m_start;
+	void* const m_arg;
+	void* m_stack;
+	void* m_stackPointer;
 
 	//Scheduler
 	ThreadState m_state;
 	WaitStatus m_waitStatus;
-	nano100_t m_sleepWake;
+	nano100_t m_timeout;
+	KSignalObject* m_signal;
 
-public:
-	std::string Name;
+	::NO_COPY_OR_ASSIGN(KThread);
 };
-

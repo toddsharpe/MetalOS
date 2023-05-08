@@ -144,13 +144,13 @@ struct HV_MESSAGE
 	HV_MESSAGE_HEADER Header;
 	UINT64 Payload[HV_MESSAGE_MAX_PAYLOAD_QWORD_COUNT];
 };
-static_assert((sizeof(HV_MESSAGE)* HV_SYNIC_SINT_COUNT) == PAGE_SIZE, "Bad sim page");
+static_assert((sizeof(HV_MESSAGE)* HV_SYNIC_SINT_COUNT) == PageSize, "Bad sim page");
 
 struct HV_SYNIC_EVENT_FLAGS
 {
 	UINT8 Flags[HV_EVENT_FLAGS_BYTE_COUNT];
 };
-static_assert((sizeof(HV_SYNIC_EVENT_FLAGS)* HV_SYNIC_SINT_COUNT) == PAGE_SIZE, "Bad event flags page");
+static_assert((sizeof(HV_SYNIC_EVENT_FLAGS)* HV_SYNIC_SINT_COUNT) == PageSize, "Bad event flags page");
 
 struct HV_CONNECTION_ID
 {
@@ -664,7 +664,7 @@ struct hv_ring_buffer {
 	 */
 	uint8_t buffer[0];
 };
-static_assert(sizeof(hv_ring_buffer) == PAGE_SIZE, "Invalid hv_ring_buffer");
+static_assert(sizeof(hv_ring_buffer) == PageSize, "Invalid hv_ring_buffer");
 
 
 //
@@ -742,7 +742,7 @@ typedef struct _HV_MONITOR_PAGE
 	UINT8                    RsvdZ5[1984];
 
 } HV_MONITOR_PAGE, * PHV_MONITOR_PAGE;
-static_assert(sizeof(HV_MONITOR_PAGE) == PAGE_SIZE, "Invalid monitor page");
+static_assert(sizeof(HV_MONITOR_PAGE) == PageSize, "Invalid monitor page");
 
 typedef volatile HV_MONITOR_PAGE* PVHV_MONITOR_PAGE;
 

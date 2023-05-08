@@ -24,7 +24,7 @@ public:
 
 	void Initialize()
 	{
-		SystemCallResult r = AllocWindow(m_handle, m_rect);
+		AssertSuccess(AllocWindow(m_handle, m_rect));
 		m_frameBuffer.Initialize();
 	}
 

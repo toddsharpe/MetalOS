@@ -1,15 +1,20 @@
 #pragma once
 #include <stdint.h>
+#include <shared/MetalOS.System.h>
 
 //Shared header between loader and kernel
 
+//User space starts at   0x00000000 00000000
+//User space stops at    0x00007FFF FFFFFFFF
 enum UserAddress : uintptr_t
 {
 	UserStart = 0x0,
 	UserStop = 0x0000800000000000,
 };
 
-const size_t KernelSectionLength = 0x10'0000'0000; //64GB
+//Kernel space starts at 0xFFFF8000 00000000
+//Kernel space stops at  0xFFFFFFFF FFFFFFFF
+static constexpr size_t KernelSectionLength = 0x10'0000'0000; //64GB
 enum KernelAddress : uintptr_t
 {
 	KernelStart = 0xFFFF'8000'0000'0000,
@@ -68,38 +73,18 @@ enum KernelAddress : uintptr_t
 
 	KernelEnd = 0xFFFF'FFFF'FFFF'FFFF
 };
-const size_t RamDriveSize = KernelHardwareEnd - KernelRamDrive;
-
-#define PAGE_SHIFT  12
-#define PAGE_SIZE (1 << PAGE_SHIFT)
-#define PAGE_MASK   0xFFF
-
-#define SIZE_TO_PAGES(a)  \
-    ( ((a) >> PAGE_SHIFT) + ((a) & PAGE_MASK ? 1 : 0) )
-
-#define MemoryMapReservedSize PAGE_SIZE
-
-//4mb reserved space
-#define BootloaderPagePoolCount 256
-#define ReservedPageTablePages 512
+static constexpr size_t RamDriveSize = KernelHardwareEnd - KernelRamDrive;
 
 #define KERNEL_GLOBAL_ALIGN __declspec(align(64))
-#define KERNEL_PAGE_ALIGN __declspec(align(PAGE_SIZE))
+#define KERNEL_PAGE_ALIGN __declspec(align(PageSize))
 
+//TODO(tsharpe): Move in kernel only header once x64 library is integrated
 #define QWordHigh(x) (((uint64_t)x) >> 32)
 #define QWordLow(x) ((uint32_t)((uint64_t)x))
 
+//Kernel defines
 typedef uintptr_t paddr_t;
-
-
 typedef size_t cpu_flags_t;
-
-enum class Result
-{
-	Success,
-	Failed,
-	NotImplemented
-};
 
 //Keep in sync with MetalOS.KernalApi syscalls.asm
 enum class SystemCall : size_t
@@ -153,7 +138,7 @@ enum class SystemCall : size_t
 	DebugPrintBytes = 0x601,
 };
 
-
+//Enables shared bootloader/kernel libraries to output
 typedef void (*LibraryPrintf)(const char* format, ...);
 struct MetalOSLibrary
 {

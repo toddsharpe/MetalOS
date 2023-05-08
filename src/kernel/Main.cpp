@@ -9,18 +9,18 @@ Kernel kernel;
 
 //Init Stack - set by x64_main
 //TODO: reclaim
-static constexpr size_t InitStackSize = PAGE_SIZE << 8; //16kb Init Stack
+static constexpr size_t InitStackSize = PageSize << 8; //16kb Init Stack
 KERNEL_PAGE_ALIGN volatile UINT8 KERNEL_STACK[InitStackSize] = { 0 };
 extern "C" UINT64 KERNEL_STACK_STOP = (UINT64)&KERNEL_STACK[InitStackSize];
 
 //Boot Heap
-static constexpr size_t BootHeapSize = PAGE_SIZE << 12; //4MB Boot Heap
+static constexpr size_t BootHeapSize = PageSize << 12; //4MB Boot Heap
 KERNEL_PAGE_ALIGN static volatile UINT8 BOOT_HEAP[BootHeapSize] = { 0 };
 KERNEL_GLOBAL_ALIGN BootHeap bootHeap((void*)BOOT_HEAP, BootHeapSize);
 
-extern "C" void INTERRUPT_HANDLER(InterruptVector vector, PINTERRUPT_FRAME pFrame)
+extern "C" void INTERRUPT_HANDLER(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame)
 {
-	kernel.HandleInterrupt(vector, pFrame);
+	kernel.HandleInterrupt(vector, frame);
 }
 
 extern "C" int __cdecl atexit(void(__cdecl*)(void))
@@ -52,60 +52,64 @@ void Bugcheck(const char* file, const char* line, const char* format, ...)
 
 void* operator new(const size_t n)
 {
-	uintptr_t callerAddress = (uintptr_t)_ReturnAddress();
+	void* const caller = _ReturnAddress();
 	if (kernel.IsHeapInitialized())
-		return kernel.Allocate(n, callerAddress);
+		return kernel.Allocate(n, caller);
 	else
 		return (void*)bootHeap.Allocate(n);
 }
 
 void* operator new[](size_t n)
 {
-	uintptr_t callerAddress = (uintptr_t)_ReturnAddress();
+	void* const caller = _ReturnAddress();
 	if (kernel.IsHeapInitialized())
-		return kernel.Allocate(n, callerAddress);
+		return kernel.Allocate(n, caller);
 	else
 		return (void*)bootHeap.Allocate(n);
 }
 
 void operator delete(void* const p)
 {
+	void* const caller = _ReturnAddress();
 	if (kernel.IsHeapInitialized())
-		kernel.Deallocate(p);
+		kernel.Deallocate(p, caller);
 	else
 		bootHeap.Deallocate(p);
 }
 
 void operator delete[](void* const p)
 {
+	void* const caller = _ReturnAddress();
 	if (kernel.IsHeapInitialized())
-		kernel.Deallocate(p);
+		kernel.Deallocate(p, caller);
 	else
 		bootHeap.Deallocate(p);
 }
 
 void operator delete(void* p, size_t n)
 {
+	void* const caller = _ReturnAddress();
 	if (kernel.IsHeapInitialized())
-		kernel.Deallocate(p);
+		kernel.Deallocate(p, caller);
 	else
 		bootHeap.Deallocate(p);
 }
 
 void* __cdecl malloc(size_t size)
 {
-	uintptr_t callerAddress = (uintptr_t)_ReturnAddress();
+	void* const caller = _ReturnAddress();
 	Assert(kernel.IsHeapInitialized());
-	return kernel.Allocate(size, callerAddress);
+	return kernel.Allocate(size, caller);
 }
 
 void __cdecl free(void* ptr)
 {
+	void* const caller = _ReturnAddress();
 	Assert(kernel.IsHeapInitialized());
-	return kernel.Deallocate(ptr);
+	return kernel.Deallocate(ptr, caller);
 }
 
-extern "C" uint64_t SYSTEMCALL_HANDLER(SystemCallFrame* frame)
+extern "C" uint64_t SYSTEMCALL_HANDLER(X64_SYSCALL_FRAME* frame)
 {
 	return kernel.Syscall(frame);
 }

@@ -71,7 +71,7 @@ void MemoryMap::MergeConventionalPages()
 		{
 			//Look ahead for Conventional memory and condense entry if its sequential
 			EFI_MEMORY_DESCRIPTOR* next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
-			while (next->Type == EfiConventionalMemory && next->PhysicalStart == current->PhysicalStart + current->NumberOfPages * PAGE_SIZE)
+			while (next->Type == EfiConventionalMemory && next->PhysicalStart == current->PhysicalStart + current->NumberOfPages * PageSize)
 			{
 				destination->NumberOfPages += next->NumberOfPages;
 				current = next;
@@ -119,7 +119,7 @@ EFI_PHYSICAL_ADDRESS MemoryMap::AllocatePages(UINT32 count)
 		
 		//Fix up next record
 		EFI_MEMORY_DESCRIPTOR* next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
-		next->PhysicalStart = current->PhysicalStart + ((UINT64)count * EFI_PAGE_SIZE);
+		next->PhysicalStart = current->PhysicalStart + ((UINT64)count << PageShift);
 		next->NumberOfPages = current->NumberOfPages - count;
 
 		//Set size of current
@@ -157,7 +157,7 @@ EFI_MEMORY_DESCRIPTOR* MemoryMap::ResolveAddress(EFI_PHYSICAL_ADDRESS address)
 		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
 		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
-		if ((current->PhysicalStart <= address) && (((address - current->PhysicalStart) >> EFI_PAGE_SHIFT) < current->NumberOfPages))
+		if ((current->PhysicalStart <= address) && (((address - current->PhysicalStart) >> PageShift) < current->NumberOfPages))
 			return current;
 	}
 
@@ -171,7 +171,7 @@ UINTN MemoryMap::GetPhysicalAddressSize()
 	EFI_MEMORY_DESCRIPTOR* current;
 	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
-		uintptr_t address = current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT);
+		uintptr_t address = current->PhysicalStart + (current->NumberOfPages << PageShift);
 		if (address > highest)
 			highest = address;
 	}
@@ -205,7 +205,7 @@ bool MemoryMap::IsConventional(UINTN address)
 		if (current->Type != EfiConventionalMemory)
 			continue;
 		
-		if ((address >= current->PhysicalStart) && (address < current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT)))
+		if ((address >= current->PhysicalStart) && (address < current->PhysicalStart + (current->NumberOfPages << PageShift)))
 			return true;
 	}
 
@@ -217,10 +217,21 @@ UINTN MemoryMap::GetVirtualAddress(EFI_PHYSICAL_ADDRESS address) const
 	EFI_MEMORY_DESCRIPTOR* current;
 	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
 	{
-		const UINTN end = current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT);
+		const UINTN end = current->PhysicalStart + (current->NumberOfPages << PageShift);
 		if ((address >= current->PhysicalStart) && (address < end))
 			return current->VirtualStart + (address - current->PhysicalStart);
 	}
 
 	return 0;
+}
+
+size_t MemoryMap::Length() const
+{
+	return m_memoryMapSize / m_memoryMapDescriptorSize;
+}
+
+EFI_MEMORY_DESCRIPTOR* MemoryMap::Get(size_t index) const
+{
+	Assert(index < Length());
+	return MakePointer<EFI_MEMORY_DESCRIPTOR*>(m_memoryMap, index * m_memoryMapDescriptorSize);
 }

@@ -10,12 +10,6 @@ typedef void (*CrtInitializer)();
 
 extern PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name);
 
-template<typename T>
-constexpr T MakePointer(const void* base, size_t offset = 0)
-{
-	return reinterpret_cast<T>((char*)base + offset);
-}
-
 void ExecuteStaticInitializers(Handle moduleBase)
 {
 	PIMAGE_SECTION_HEADER crtSection = GetPESection(moduleBase, ".CRT");

@@ -14,7 +14,7 @@ RamDrive::RamDrive(const void* address, const size_t size) :
 void RamDrive::Clear()
 {
 	//Zero out superblock
-	memset((void*)m_address, 0, PAGE_SIZE);
+	memset((void*)m_address, 0, PageSize);
 }
 
 size_t RamDrive::FileCount()
@@ -43,8 +43,8 @@ void* RamDrive::Allocate(const char* name, const size_t size)
 	m_superblock->Entries[index].PageNumber = (uint32_t)m_pageWatermark;
 	m_superblock->Entries[index].Length = size;
 
-	void* address = (void*)(m_address + (m_pageWatermark << PAGE_SHIFT));
-	m_pageWatermark += SIZE_TO_PAGES(size);
+	void* address = (void*)(m_address + (m_pageWatermark << PageShift));
+	m_pageWatermark += SizeToPages(size);
 	return address;
 }
 
@@ -56,7 +56,7 @@ bool RamDrive::Open(const char* name, void*& address, size_t& length)
 
 	const Entry& entry = m_superblock->Entries[index];
 	length = entry.Length;
-	address = (void*)(m_address + ((uintptr_t)entry.PageNumber << PAGE_SHIFT));
+	address = (void*)(m_address + ((uintptr_t)entry.PageNumber << PageShift));
 	return true;
 }
 

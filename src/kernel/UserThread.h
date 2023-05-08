@@ -1,54 +1,40 @@
 #pragma once
 
 #include "UserProcess.h"
+#include <shared/MetalOS.System.h>
 
-class Scheduler;
+//TODO(tsharpe): Deallocate TEB from proces
+//TODO(tsharpe): Unmap stack
 class UserThread
 {
-	friend class Scheduler;
-
 public:
-	static uint32_t LastId;
-	const static size_t DefaultStack = (PAGE_SIZE << 4); //64K
+	static bool HasMessage(void* const arg) { return ((UserThread*)arg)->HasMessage(); };
 
-	UserThread(ThreadStart startAddress, void* arg, void* entry, size_t stackSize, UserProcess& process);
+	UserThread(const ThreadStart startAddress, void* const arg, void* const entry, const size_t stackSize, UserProcess& process);
 
 	void Run();
 
-	UserProcess& GetProcess()
-	{
-		return m_process;
-	}
-
-	bool HasMessage()
-	{
-		return !m_messages.empty();
-	}
-
-	const uint32_t GetId() const
-	{
-		return m_id;
-	}
-
-	Message* DequeueMessage();
-	void EnqueueMessage(Message* message);
-
+	void EnqueueMessage(const Message& message);
+	bool DequeueMessage(Message& message);
+	bool HasMessage() const;
 
 	void Display();
 	void DisplayMessages();
 	void DisplayDetails();
 
-	void* SavedStack;
-	//void* SavedUserRBP;
+	void* Stack;
 	bool Deleted;
+	const uint32_t Id;
+	UserProcess& Process;
 
 private:
-	uint32_t m_id;
-	UserProcess& m_process;
+	static constexpr size_t DefaultStack = (PageSize << 4); //64K
+	static uint32_t LastId;
+
 	ThreadEnvironmentBlock* m_teb;
-	void* m_stackAllocation;//Points to top of stack
-	void* m_context;
+	X64_CONTEXT m_context;
+	void* m_stackAllocation;
+	std::list<Message> m_messages;
 
-	std::list<Message*> m_messages;
+	::NO_COPY_OR_ASSIGN(UserThread);
 };
-

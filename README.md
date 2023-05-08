@@ -136,3 +136,7 @@ Gen2 Hyper-V was chosen early into development for its 64-bit UEFI environment (
 
 ### WinDBG
 ![WinDBG](docs/screenshots/WinDbgFull.png)
+May need to set sympath force kernel symbol:
+```
+.reload /f /i moskrnl.exe=0xffff800001000000
+```

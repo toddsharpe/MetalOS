@@ -7,9 +7,13 @@
 #include "VirtualAddressSpace.h"
 #include "BootHeap.h"
 #include "UserRingBuffer.h"
-#include "UObject.h"
-#include "KSignalObject.h"
+#include "Objects/UObject.h"
+#include "Objects/KSignalObject.h"
 #include <x64/PageTables.h>
+
+#include <memory>
+#include <map>
+#include <list>
 
 enum class ProcessState
 {
@@ -18,12 +22,13 @@ enum class ProcessState
 };
 
 class KThread;
+class Scheduler;
 class UserProcess : public KSignalObject
 {
+	friend Scheduler;
 public:
-	static uint32_t LastId;
-
-	UserProcess(const std::string& name);
+	UserProcess(const std::string& name, const bool isConsole);
+	
 	void Init(void* address);
 
 	uintptr_t GetModuleBase(uintptr_t ip) const;
@@ -32,9 +37,6 @@ public:
 	VirtualAddressSpace& GetAddressSpace();
 
 	ThreadEnvironmentBlock* AllocTEB();
-
-	void* InitProcess;
-	void* InitThread;
 
 	void AddThread(KThread& thread)
 	{
@@ -45,16 +47,6 @@ public:
 
 	void Display() const;
 	void DisplayDetails() const;
-
-	const std::string& GetName() const
-	{
-		return m_name;
-	}
-
-	const uint32_t GetId() const
-	{
-		return m_id;
-	}
 
 	void AddRingBuffer(UserRingBuffer& buffer)
 	{
@@ -72,33 +64,38 @@ public:
 
 	virtual bool IsSignalled() const override;
 
-	void SetStandardHandle(const StandardHandle handle, UObject* object);
-	Handle AddObject(UObject* object);
-	UObject* GetObject(Handle handle);
+	void SetStandardHandle(const StandardHandle handle, const std::shared_ptr<UObject>& object);
+	Handle AddObject(const std::shared_ptr<UObject>& object);
+	std::shared_ptr<UObject> GetObject(Handle handle);
 	bool CloseObject(Handle handle);
 
-	bool IsConsole;
+	const std::string Name;
+	const uint32_t Id;
+	const bool IsConsole;
 
-	friend class Scheduler;
+	void* InitProcess;
+	void* InitThread;
+
 private:
-	void* HeapAlloc(size_t size);
+	static uint32_t LastId;
+
+	void* HeapAlloc(const size_t size);
+	
 	typedef size_t handle_t;
 	static constexpr handle_t StartingHandle = 0x10;
 
 	uintptr_t m_imageBase;
-	uint32_t m_id;
-	std::string m_name;
 	time_t m_createTime;
 	time_t m_exitTime;
 	PageTables* m_pageTables;
-	VirtualAddressSpace& m_addressSpace;
+	UserAddressSpace m_addressSpace;
 	BootHeap* m_heap;
 	ProcessEnvironmentBlock* m_peb;
 	std::list<KThread*> m_threads;
 	std::map<HRingBuffer, UserRingBuffer*> m_ringBuffers;
 
 	handle_t m_lastHandle;
-	std::map<handle_t, UObject*> m_objects;
+	std::map<handle_t, std::shared_ptr<UObject>> m_objects;
 
 	ProcessState m_state;
 };

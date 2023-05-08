@@ -59,11 +59,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "kernel", "kernel", "{696841
 		inc\kernel\MetalOS.Arch.h = inc\kernel\MetalOS.Arch.h
 		inc\kernel\MetalOS.Internal.h = inc\kernel\MetalOS.Internal.h
 		inc\kernel\MetalOS.Kernel.s = inc\kernel\MetalOS.Kernel.s
+		inc\kernel\MetalOS.List.h = inc\kernel\MetalOS.List.h
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{1183B775-5CF7-487F-B14F-4467D464B2A0}"
 	ProjectSection(SolutionItems) = preProject
 		inc\shared\MetalOS.Keys.h = inc\shared\MetalOS.Keys.h
+		inc\shared\MetalOS.System.h = inc\shared\MetalOS.System.h
 		inc\shared\MetalOS.Types.h = inc\shared\MetalOS.Types.h
 	EndProjectSection
 EndProject
@@ -84,8 +86,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "user", "user", "{B4A70932-4
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Doom", "external\doom\doomgeneric\doomgeneric.vcxproj", "{95A126D2-CC94-4840-BF05-80305041B5FB}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kernel.drivers", "src\kernel.drivers\kernel.drivers.vcxproj", "{D3CC8150-2A10-47C1-AAB8-DB988D580530}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kernel.kd64", "src\kernel.kd64\kernel.kd64.vcxproj", "{C400A5B4-3D23-405D-95CF-33AC891CBD91}"
 EndProject
@@ -237,14 +237,6 @@ Global
 		{95A126D2-CC94-4840-BF05-80305041B5FB}.Release|x64.Build.0 = Release|x64
 		{95A126D2-CC94-4840-BF05-80305041B5FB}.Release|x86.ActiveCfg = Release|x64
 		{95A126D2-CC94-4840-BF05-80305041B5FB}.Release|x86.Build.0 = Release|x64
-		{D3CC8150-2A10-47C1-AAB8-DB988D580530}.Debug|x64.ActiveCfg = Debug|x64
-		{D3CC8150-2A10-47C1-AAB8-DB988D580530}.Debug|x64.Build.0 = Debug|x64
-		{D3CC8150-2A10-47C1-AAB8-DB988D580530}.Debug|x86.ActiveCfg = Debug|Win32
-		{D3CC8150-2A10-47C1-AAB8-DB988D580530}.Debug|x86.Build.0 = Debug|Win32
-		{D3CC8150-2A10-47C1-AAB8-DB988D580530}.Release|x64.ActiveCfg = Release|x64
-		{D3CC8150-2A10-47C1-AAB8-DB988D580530}.Release|x64.Build.0 = Release|x64
-		{D3CC8150-2A10-47C1-AAB8-DB988D580530}.Release|x86.ActiveCfg = Release|Win32
-		{D3CC8150-2A10-47C1-AAB8-DB988D580530}.Release|x86.Build.0 = Release|Win32
 		{C400A5B4-3D23-405D-95CF-33AC891CBD91}.Debug|x64.ActiveCfg = Debug|x64
 		{C400A5B4-3D23-405D-95CF-33AC891CBD91}.Debug|x64.Build.0 = Debug|x64
 		{C400A5B4-3D23-405D-95CF-33AC891CBD91}.Debug|x86.ActiveCfg = Debug|Win32
@@ -297,7 +289,6 @@ Global
 		{1183B775-5CF7-487F-B14F-4467D464B2A0} = {96536529-C45D-475B-A264-0CB727D5DBC0}
 		{B4A70932-44F0-4825-B710-B877C0E6B00C} = {96536529-C45D-475B-A264-0CB727D5DBC0}
 		{95A126D2-CC94-4840-BF05-80305041B5FB} = {4FDCCD4B-45BC-4177-8A6C-B3B7179C1533}
-		{D3CC8150-2A10-47C1-AAB8-DB988D580530} = {F90AF3CB-764E-4DC7-9B34-AD212471FC70}
 		{C400A5B4-3D23-405D-95CF-33AC891CBD91} = {F90AF3CB-764E-4DC7-9B34-AD212471FC70}
 		{3626BBEC-1153-4B7B-A6CB-7C4C6C5A2D42} = {F90AF3CB-764E-4DC7-9B34-AD212471FC70}
 		{0F27C3C1-5AEF-428B-9B90-C80957319DEE} = {96536529-C45D-475B-A264-0CB727D5DBC0}

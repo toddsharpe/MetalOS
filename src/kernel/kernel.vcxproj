@@ -65,7 +65,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <SupportJustMyCode>false</SupportJustMyCode>
       <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
-      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;CRT_STATIC;GNU_EFI_SETJMP_H;_NO_CRT_STDIO_INLINE;_AMD64_;_CRT_SECURE_NO_WARNINGS;_CONTAINER_DEBUG_LEVEL;_HAS_EXCEPTIONS=0;_KERNEL_MODE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;_MBCS;CRT_STATIC;GNU_EFI_SETJMP_H;_NO_CRT_STDIO_INLINE;_AMD64_;_CRT_SECURE_NO_WARNINGS;_CONTAINER_DEBUG_LEVEL=1;_HAS_EXCEPTIONS=0;_KERNEL_MODE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <OmitFramePointers>false</OmitFramePointers>
       <PreprocessToFile>false</PreprocessToFile>
@@ -133,9 +133,6 @@
     <ProjectReference Include="..\arch\x64\x64.vcxproj">
       <Project>{b240a22c-2efc-487b-936f-b516812f1751}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\kernel.drivers\kernel.drivers.vcxproj">
-      <Project>{d3cc8150-2a10-47c1-aab8-db988d580530}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\kernel.kd64\kernel.kd64.vcxproj">
       <Project>{c400a5b4-3d23-405d-95cf-33ac891cbd91}</Project>
     </ProjectReference>
@@ -151,114 +148,148 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Kernel.def" />
+    <None Include="x64\x64.s" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AcpiDevice.cpp" />
+    <ClCompile Include="Devices\AcpiDevice.cpp" />
     <ClCompile Include="AcpiOSL.cpp" />
     <ClCompile Include="Bitvector.cpp" />
     <ClCompile Include="BootHeap.cpp" />
     <ClCompile Include="ConfigTables.cpp" />
     <ClCompile Include="Cpuid.cpp" />
     <ClCompile Include="Debugger.cpp" />
-    <ClCompile Include="Device.cpp" />
+    <ClCompile Include="Devices\Device.cpp" />
     <ClCompile Include="DeviceTree.cpp" />
     <ClCompile Include="Driver.cpp" />
+    <ClCompile Include="Drivers\HyperVChannel.cpp" />
+    <ClCompile Include="Drivers\HyperVKeyboardDriver.cpp" />
+    <ClCompile Include="Drivers\HyperVMouseDriver.cpp" />
+    <ClCompile Include="Drivers\HyperVRingBuffer.cpp" />
+    <ClCompile Include="Drivers\HyperVScsiDriver.cpp" />
+    <ClCompile Include="Drivers\IoApicDriver.cpp" />
+    <ClCompile Include="Drivers\RamDriveDriver.cpp" />
+    <ClCompile Include="Drivers\UartDriver.cpp" />
+    <ClCompile Include="Drivers\VmBusDriver.cpp" />
+    <ClCompile Include="EarlyUart.cpp" />
     <ClCompile Include="EfiDisplay.cpp" />
     <ClCompile Include="HyperV.cpp" />
-    <ClCompile Include="HyperVDevice.cpp" />
+    <ClCompile Include="Devices\HyperVDevice.cpp" />
     <ClCompile Include="HyperVTimer.cpp" />
     <ClCompile Include="Kernel.cpp" />
     <ClCompile Include="KernelAcpi.cpp" />
     <ClCompile Include="KernelDriverInterface.cpp" />
     <ClCompile Include="KernelHeap.cpp" />
     <ClCompile Include="KernelSystemCalls.cpp" />
-    <ClCompile Include="KEvent.cpp" />
-    <ClCompile Include="KObject.cpp" />
-    <ClCompile Include="KSemaphore.cpp" />
-    <ClCompile Include="KSignalObject.cpp" />
-    <ClCompile Include="KSpinLock.cpp" />
     <ClCompile Include="KThread.cpp" />
     <ClCompile Include="Loader.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MemoryMap.cpp" />
-    <ClCompile Include="MsfFile.cpp" />
-    <ClCompile Include="MsfStream.cpp" />
-    <ClCompile Include="Pdb.cpp" />
-    <ClCompile Include="PdbDbi.cpp" />
-    <ClCompile Include="PdbHashTable.cpp" />
-    <ClCompile Include="PdbPdb.cpp" />
-    <ClCompile Include="PdbPublicsStream.cpp" />
+    <ClCompile Include="Pdb\MsfFile.cpp" />
+    <ClCompile Include="Pdb\MsfStream.cpp" />
+    <ClCompile Include="Pdb\Pdb.cpp" />
+    <ClCompile Include="Pdb\PdbDbi.cpp" />
+    <ClCompile Include="Pdb\PdbHashTable.cpp" />
+    <ClCompile Include="Pdb\PdbPdb.cpp" />
+    <ClCompile Include="Pdb\PdbPublicsStream.cpp" />
     <ClCompile Include="PhysicalMemoryManager.cpp" />
     <ClCompile Include="PortableExecutable.cpp" />
     <ClCompile Include="RuntimeSupport.cpp" />
     <ClCompile Include="Scheduler.cpp" />
-    <ClCompile Include="SoftwareDevice.cpp" />
+    <ClCompile Include="Devices\SoftwareDevice.cpp" />
     <ClCompile Include="StackWalk.cpp" />
     <ClCompile Include="StringPrinter.cpp" />
     <ClCompile Include="System.cpp" />
-    <ClCompile Include="UObject.cpp" />
-    <ClCompile Include="UserPipe.cpp" />
+    <ClCompile Include="Objects\UserPipe.cpp" />
     <ClCompile Include="UserProcess.cpp" />
     <ClCompile Include="UserThread.cpp" />
     <ClCompile Include="VirtualAddressSpace.cpp" />
     <ClCompile Include="VirtualMemoryManager.cpp" />
     <ClCompile Include="WindowingSystem.cpp" />
+    <ClCompile Include="x64\Arch.cpp" />
+    <ClCompile Include="x64\x64.cpp" />
+    <ClCompile Include="x64\x64Data.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AcpiDevice.h" />
+    <ClInclude Include="Devices\AcpiDevice.h" />
     <ClInclude Include="Assert.h" />
     <ClInclude Include="Bitvector.h" />
     <ClInclude Include="BootHeap.h" />
     <ClInclude Include="ConfigTables.h" />
     <ClInclude Include="Cpuid.h" />
     <ClInclude Include="Debugger.h" />
-    <ClInclude Include="Device.h" />
+    <ClInclude Include="Devices\Device.h" />
     <ClInclude Include="DeviceTree.h" />
     <ClInclude Include="Driver.h" />
+    <ClInclude Include="Drivers\GraphicsDriver.h" />
+    <ClInclude Include="Drivers\HardDriveDriver.h" />
+    <ClInclude Include="Drivers\HyperVChannel.h" />
+    <ClInclude Include="Drivers\HyperVKeyboardDriver.h" />
+    <ClInclude Include="Drivers\HyperVMouseDriver.h" />
+    <ClInclude Include="Drivers\HyperVRingBuffer.h" />
+    <ClInclude Include="Drivers\HyperVScsiDriver.h" />
+    <ClInclude Include="Drivers\IoApicDriver.h" />
+    <ClInclude Include="Drivers\RamDriveDriver.h" />
+    <ClInclude Include="Drivers\UartDriver.h" />
+    <ClInclude Include="Drivers\VmBusDriver.h" />
+    <ClInclude Include="EarlyUart.h" />
     <ClInclude Include="EfiDisplay.h" />
     <ClInclude Include="HyperV.h" />
-    <ClInclude Include="HyperVDevice.h" />
+    <ClInclude Include="Devices\HyperVDevice.h" />
     <ClInclude Include="HyperVTimer.h" />
     <ClInclude Include="Kernel.h" />
     <ClInclude Include="KernelHeap.h" />
-    <ClInclude Include="KEvent.h" />
-    <ClInclude Include="KFile.h" />
-    <ClInclude Include="KObject.h" />
+    <ClInclude Include="Objects\KEvent.h" />
+    <ClInclude Include="Objects\KFile.h" />
     <ClInclude Include="KRingBuffer.h" />
-    <ClInclude Include="KSemaphore.h" />
-    <ClInclude Include="KSignalObject.h" />
-    <ClInclude Include="KSpinLock.h" />
+    <ClInclude Include="Objects\KPredicate.h" />
+    <ClInclude Include="Objects\KSemaphore.h" />
+    <ClInclude Include="Objects\KSignalObject.h" />
     <ClInclude Include="KThread.h" />
     <ClInclude Include="Loader.h" />
     <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="MemoryMap.h" />
     <ClInclude Include="MetalOS.Kernel.h" />
-    <ClInclude Include="MsfFile.h" />
-    <ClInclude Include="MsfStream.h" />
-    <ClInclude Include="Pdb.h" />
-    <ClInclude Include="PdbDbi.h" />
-    <ClInclude Include="PdbHashTable.h" />
-    <ClInclude Include="PdbPdb.h" />
-    <ClInclude Include="PdbPublicsStream.h" />
+    <ClInclude Include="Objects\UPipe.h" />
+    <ClInclude Include="Pdb\MsfFile.h" />
+    <ClInclude Include="Pdb\MsfStream.h" />
+    <ClInclude Include="Objects\UDebug.h" />
+    <ClInclude Include="Objects\UEvent.h" />
+    <ClInclude Include="Objects\UFile.h" />
+    <ClInclude Include="Objects\UProcess.h" />
+    <ClInclude Include="Objects\USemaphore.h" />
+    <ClInclude Include="Pdb\Pdb.h" />
+    <ClInclude Include="Pdb\PdbDbi.h" />
+    <ClInclude Include="Pdb\PdbHashTable.h" />
+    <ClInclude Include="Pdb\PdbPdb.h" />
+    <ClInclude Include="Pdb\PdbPublicsStream.h" />
     <ClInclude Include="PhysicalMemoryManager.h" />
     <ClInclude Include="PortableExecutable.h" />
     <ClInclude Include="RuntimeSupport.h" />
     <ClInclude Include="Scheduler.h" />
-    <ClInclude Include="SoftwareDevice.h" />
+    <ClInclude Include="Devices\SoftwareDevice.h" />
     <ClInclude Include="StackWalk.h" />
     <ClInclude Include="StringPrinter.h" />
     <ClInclude Include="System.h" />
-    <ClInclude Include="UObject.h" />
-    <ClInclude Include="UserObjectType.h" />
-    <ClInclude Include="UserPipe.h" />
+    <ClInclude Include="Objects\UObject.h" />
+    <ClInclude Include="Objects\UserPipe.h" />
     <ClInclude Include="UserProcess.h" />
     <ClInclude Include="UserRingBuffer.h" />
     <ClInclude Include="UserThread.h" />
     <ClInclude Include="VirtualAddressSpace.h" />
     <ClInclude Include="VirtualMemoryManager.h" />
     <ClInclude Include="WindowingSystem.h" />
+    <ClInclude Include="x64\Interrupts.h" />
+    <ClInclude Include="x64\Support.h" />
+    <ClInclude Include="x64\x64.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="x64\Context.asm" />
+    <MASM Include="x64\Interrupts.asm" />
+    <MASM Include="x64\ArchMain.asm" />
+    <MASM Include="x64\Support.asm" />
+    <MASM Include="x64\SystemCall.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -19,7 +19,7 @@ void Heap::Initialize(size_t size)
 {
 	//Allocate
 	m_size = size;
-	m_address = VirtualAlloc(nullptr, size, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWrite);
+	m_address = VirtualAlloc(nullptr, size);
 
 	m_head = static_cast<HeapBlock*>(m_address);
 	m_head->Next = nullptr;

@@ -53,7 +53,7 @@ void KeBugCheck()
 
 ULONG64 KeGetCurrentThread()
 {
-	return (ULONG64)(LONG_PTR)Scheduler::GetCurrentThread();
+	return (ULONG64)Scheduler::GetThread();
 }
 
 bool IsValidKernelPointer(const void* address)

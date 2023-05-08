@@ -17,8 +17,8 @@ volatile HyperV::HV_REFERENCE_TSC_PAGE HyperV::TscPage = { 0 };
 
 volatile HV_MESSAGE HyperV::SynicMessages[HV_SYNIC_SINT_COUNT] = { HvMessageTypeNone, 0 };
 volatile HV_SYNIC_EVENT_FLAGS HyperV::SynicEvents[HV_SYNIC_SINT_COUNT] = { 0 };
-volatile uint8_t HyperV::HypercallPage[PAGE_SIZE] = { 0 };
-volatile uint8_t HyperV::PostMessagePage[PAGE_SIZE] = { 0 };
+volatile uint8_t HyperV::HypercallPage[PageSize] = { 0 };
+volatile uint8_t HyperV::PostMessagePage[PageSize] = { 0 };
 
 HyperV::HyperV() :
 	m_highestLeaf(),
@@ -91,7 +91,7 @@ void HyperV::Initialize()
 		if (!reg.Enabled)
 		{
 			reg.Enabled = true;
-			reg.HypercallGPFN = kernel.VirtualToPhysical((paddr_t)HypercallPage) >> PAGE_SHIFT;
+			reg.HypercallGPFN = kernel.VirtualToPhysical((paddr_t)HypercallPage) >> PageShift;
 			__writemsr(HV_REG::HV_X64_MSR_HYPERCALL, reg.AsUint64);
 		}
 	}
@@ -104,7 +104,7 @@ void HyperV::Initialize()
 	HV_REF_TSC_REG tscReg = { 0 };
 	tscReg.AsUint64 = __readmsr(HV_REG::HV_X64_MSR_REFERENCE_TSC);
 	tscReg.Enable = true;
-	tscReg.GPAPageNumber = kernel.VirtualToPhysical((uintptr_t)& TscPage) >> PAGE_SHIFT;
+	tscReg.GPAPageNumber = kernel.VirtualToPhysical((uintptr_t)& TscPage) >> PageShift;
 	__writemsr(HV_REG::HV_X64_MSR_REFERENCE_TSC, tscReg.AsUint64);
 	Printf("  Tsc: 0x%016x\n", ReadTsc());
 }

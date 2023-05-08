@@ -1,53 +1,51 @@
-#include "Kernel.h"
-#include "Assert.h"
-
 #include "VirtualAddressSpace.h"
 
-VirtualAddressSpace::VirtualAddressSpace(const uintptr_t start, const uintptr_t end, const bool global) :
-	m_start(start),
-	m_end(end),
-	m_global(global),
+#include "Assert.h"
+
+VirtualAddressSpace::VirtualAddressSpace(const uintptr_t start, const uintptr_t end, const bool isGlobal) :
+	Start(start),
+	End(end),
+	IsGlobal(isGlobal),
 	m_watermark(start),
-	m_nodes()
+	m_entries()
 {
-	if (m_start == 0)
+	//Reserve some space
+	m_entries.reserve(16);
+	
+	//Set base for user allocations
+	if (Start == 0)
 		m_watermark = 0x140000000;
 }
 
-void VirtualAddressSpace::Init()
+bool VirtualAddressSpace::IsFree(const uintptr_t address, const size_t count) const
 {
-	//m_nodes = new std::map<uintptr_t, Node>();
-}
-
-bool VirtualAddressSpace::IsFree(const uintptr_t address, const size_t count)
-{
-	Assert((address & PAGE_MASK) == 0);
+	Assert((address & PageMask) == 0);
 
 	//Check if address is inside out address space
-	if ((address < m_start) || (address >= m_end))
+	if ((address < Start) || (address >= End))
 		return false;
 
-	const uintptr_t highAddress = address + (count << PAGE_SHIFT);
-	for (const auto& kvp : m_nodes)
+	const uintptr_t highAddress = address + (count << PageShift);
+	for (const Entry& entry : m_entries)
 	{
-		const uintptr_t end = kvp.first + ((uintptr_t)kvp.second.PageCount << PAGE_SHIFT);
+		const uintptr_t end = entry.Address + (entry.PageCount << PageShift);
 		
 		//Check start address
-		if ((address >= kvp.first) && (address < end))
+		if ((address >= entry.Address) && (address < end))
 			return false;
 
 		//Check ending address
-		if ((highAddress >= kvp.first) && (highAddress < end))
+		if ((highAddress >= entry.Address) && (highAddress < end))
 			return false;
 	}
 
 	return true;
 }
 
-bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, const MemoryProtection protection)
+bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count)
 {
 	Assert(count != 0);
-	kernel.Printf("Reserve: 0x%016x in [0x%016x, 0x%016x] Size: 0x%x\n", address, m_start, m_end, count);
+	Printf("Reserve: 0x%016x in [0x%016x, 0x%016x] Size: 0x%x\n", address, Start, End, count);
 
 	if (address != 0)
 	{
@@ -57,29 +55,28 @@ bool VirtualAddressSpace::Reserve(uintptr_t& address, const size_t count, const 
 	}
 	else
 	{
-		kernel.Printf("  Watermark: 0x%016x Gran: 0x%016x\n", m_watermark, AllocationGranularity);
+		Printf("  Watermark: 0x%016x Gran: 0x%016x\n", m_watermark, AllocationGranularity);
 
 		while (!IsFree(m_watermark, count))
 		{
-			Assert(m_watermark < m_end);
+			AssertOp(m_watermark, <, End);
 			m_watermark += AllocationGranularity;
 		}
 		
 		address = m_watermark;
-		m_watermark += ByteAlign((count << PAGE_SHIFT), AllocationGranularity);;
-		kernel.Printf("  NewWatermark: 0x%016x\n", m_watermark);
+		m_watermark += ByteAlign((count << PageShift), AllocationGranularity);;
+		Printf("  NewWatermark: 0x%016x\n", m_watermark);
 	}
 
-	Node n = { count, protection };
-	m_nodes.insert({ address, n });
-	kernel.Printf("  Received: 0x%016x Count:0x%x\n", address, count);
+	m_entries.push_back({ address, count });
+	Printf("  Received: 0x%016x Count:0x%x\n", address, count);
 
 	return true;
 }
 
 //Check to see if pointer is in a valid region
-bool VirtualAddressSpace::IsValidPointer(const void* p)
+bool VirtualAddressSpace::IsValidPointer(const void* p) const
 {
-	const uintptr_t page = (uintptr_t)p & ~PAGE_MASK;
+	const uintptr_t page = (uintptr_t)p & ~PageMask;
 	return !IsFree(page, 1);
 }

@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <Graphics/Types.h>
+#include <type_traits>
 
 struct ReadOnlyBuffer
 {
@@ -20,23 +21,6 @@ struct Buffer
 	}
 };
 
-enum class MemoryAllocationType
-{
-	Commit = 1,
-	Reserve = 2,
-	CommitReserve = Commit | Reserve,
-};
-
-enum class MemoryProtection
-{
-	PageRead = 1,
-	PageWrite = 2,
-	PageExecute = 4,
-	PageReadWrite = PageRead | PageWrite,
-	PageReadExecute = PageRead | PageExecute,
-	PageReadWriteExecute = PageRead | PageWrite | PageExecute
-};
-
 typedef void* Handle;
 typedef void* HThread;
 typedef void* HProcess;
@@ -46,12 +30,21 @@ typedef void* HWindow;
 typedef void* HFile;
 typedef void* HEvent;
 
-enum class GenericAccess
+enum GenericAccess
 {
 	Read = (1 << 0),
 	Write = (1 << 1),
 	ReadWrite = Read | Write
+
 };
+
+inline GenericAccess operator&(GenericAccess lhs, GenericAccess rhs)
+{
+	return static_cast<GenericAccess>(
+		static_cast<std::underlying_type<GenericAccess>::type>(lhs) &
+		static_cast<std::underlying_type<GenericAccess>::type>(rhs)
+	);
+}
 
 enum class StandardHandle
 {
@@ -156,7 +149,6 @@ enum class WaitStatus
 	Timeout,
 	Abandoned,
 	BrokenPipe,
-	//Failed conflicts with macro
 };
 
 enum class DayOfWeek

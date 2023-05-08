@@ -5,6 +5,10 @@
 
 //Intel SDM Vol3A Chapter 4.5
 //M=48 (MAXPHYADDR)
+
+//Paging Structures - https://gist.github.com/mvankuipers/
+//https://queazan.wordpress.com/2013/12/21/paging-under-amd64/
+//https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf
 class PageTablesPool;
 class PageTables
 {

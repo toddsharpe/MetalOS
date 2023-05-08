@@ -23,21 +23,13 @@ public:
 
 	UINTN GetVirtualAddress(EFI_PHYSICAL_ADDRESS address) const;
 
-	//Iterator interface
-	//m_memoryMapDescriptorSize != sizeof(EFI_MEMORY_DESCRIPTOR)
-	size_t Length()
-	{
-		return m_memoryMapSize / m_memoryMapDescriptorSize;
-	}
-
-	EFI_MEMORY_DESCRIPTOR* Get(size_t index)
-	{
-		return MakePointer<EFI_MEMORY_DESCRIPTOR*>(m_memoryMap, index * m_memoryMapDescriptorSize);
-	}
+	//Iterator interface. Required since m_memoryMapDescriptorSize != sizeof(EFI_MEMORY_DESCRIPTOR)
+	size_t Length() const;
+	EFI_MEMORY_DESCRIPTOR* Get(size_t index) const;
 
 private:
 	//Allocate the current size of the map plus space for more entries
-	static const size_t BufferCount = 3;
+	static constexpr size_t BufferCount = 3;
 	static const char MemTypes[16][27];
 
 	EFI_MEMORY_DESCRIPTOR* ResolveAddress(EFI_PHYSICAL_ADDRESS address);

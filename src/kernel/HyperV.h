@@ -10,6 +10,8 @@
 #include <linux\hyperv.h>
 #include "MetalOS.Kernel.h"
 
+#include <list>
+
 //TODO: separate into hypervplatform and hypervinfo
 //platform is basically the hal
 //hypervinfo will be like cpuid, just a light weight way to check features
@@ -51,7 +53,7 @@ public:
 		HV_INTERRUPT_PAGE_REGISTER reg;
 		reg.AsUint64 = __readmsr(SIMP);
 		reg.Enable = true;
-		reg.BaseAddress = (address >> PAGE_SHIFT);
+		reg.BaseAddress = (address >> PageShift);
 
 		__writemsr(SIMP, reg.AsUint64);
 	}
@@ -61,7 +63,7 @@ public:
 		HV_INTERRUPT_PAGE_REGISTER reg;
 		reg.AsUint64 = __readmsr(SIEFP);
 		reg.Enable = true;
-		reg.BaseAddress = (address >> PAGE_SHIFT);
+		reg.BaseAddress = (address >> PageShift);
 
 		__writemsr(SIEFP, reg.AsUint64);
 	}
@@ -534,8 +536,8 @@ private:
 	static KERNEL_PAGE_ALIGN volatile HV_MESSAGE SynicMessages[HV_SYNIC_SINT_COUNT];
 	// examine flags, clear using LOCK AND or LOCK CMPXCHG, write EOI, process
 	static KERNEL_PAGE_ALIGN volatile HV_SYNIC_EVENT_FLAGS SynicEvents[HV_SYNIC_SINT_COUNT];
-	static KERNEL_PAGE_ALIGN volatile uint8_t HypercallPage[PAGE_SIZE];//Code page, map as execute
-	static KERNEL_PAGE_ALIGN volatile uint8_t PostMessagePage[PAGE_SIZE];
+	static KERNEL_PAGE_ALIGN volatile uint8_t HypercallPage[PageSize];//Code page, map as execute
+	static KERNEL_PAGE_ALIGN volatile uint8_t PostMessagePage[PageSize];
 
 	//Synic Event Page
 	//Message buffer

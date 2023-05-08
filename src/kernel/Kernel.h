@@ -21,15 +21,17 @@ extern "C"
 #include "Scheduler.h"
 #include "KernelHeap.h"
 #include <queue>
-#include "Pdb.h"
+#include "Pdb/Pdb.h"
 #include "KThread.h"
 #include "UserProcess.h"
 #include "WindowingSystem.h"
-#include "KEvent.h"
+#include "Objects/KEvent.h"
 #include <kernel/MetalOS.Arch.h>
 #include <shared/MetalOS.Types.h>
 #include <user/MetalOS.h>
 #include <LoadingScreen.h>
+
+#include <memory>
 
 
 class Kernel
@@ -42,9 +44,11 @@ public:
 
 	void Initialize(const PLOADER_PARAMS params);
 
-	void HandleInterrupt(InterruptVector vector, PINTERRUPT_FRAME pFrame);
+	void HandleInterrupt(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame);
 	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* format, ...);
 	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* format, va_list args);
+	void ShowStack(const X64_CONTEXT* context);
+	bool ResolveIP(const uintptr_t ip, PdbFunctionLookup& lookup);
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
@@ -67,22 +71,21 @@ public:
 	}
 
 #pragma region Heap Interface
-	void* Allocate(const size_t size, const uintptr_t callerAddress);
-	void Deallocate(void* address);
+	void* Allocate(const size_t size, void* const caller);
+	void Deallocate(void* const address, void* const caller);
 #pragma endregion
 
 #pragma region Virtual Memory Interface
 	paddr_t AllocatePhysical(const size_t count);
-	void* AllocateLibrary(const uintptr_t address, const size_t count);
+	void* AllocateLibrary(const void* address, const size_t count);
 	void* AllocatePdb(const size_t count);
 	void* AllocateStack(const size_t count);
 	void* AllocateWindows(const size_t count);
-	void* AllocateKernelPage(const uintptr_t address, const size_t count, const MemoryProtection& protect);
-	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses, const MemoryProtection& protect);
+	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses);
 
 	//User process address space
-	void* VirtualAlloc(UserProcess& process, const void* address, const size_t size, const MemoryAllocationType allocationType, const MemoryProtection protection);
-	void* VirtualMap(UserProcess& process, const void* address, const std::vector<paddr_t>& addresses, const MemoryProtection& protection);
+	void* VirtualAlloc(UserProcess& process, const void* address, const size_t size);
+	void* VirtualMap(UserProcess& process, const void* address, const std::vector<paddr_t>& addresses);
 #pragma endregion
 
 #pragma region ACPI
@@ -135,8 +138,8 @@ public:
 #pragma endregion
 
 #pragma region Kernel Debugger
-	void KePauseSystem() const;
-	void KeResumeSystem() const;
+	void KePauseSystem();
+	void KeResumeSystem();
 #pragma endregion
 
 #pragma region Internal Interface
@@ -144,45 +147,35 @@ public:
 	UserProcess* KeCreateProcess(const std::string& path);
 	
 	//Threads
-	KThread* KeCreateThread(const ThreadStart start, void* arg, UserThread* userThread = nullptr);
+	std::shared_ptr<KThread> KeCreateThread(const ThreadStart start, void* const arg, const std::string& name = "");
 	void KeSleepThread(const nano_t value) const;
 	void KeExitThread();
+	std::shared_ptr<KThread> CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
 
 	//Libraries
 	KeLibrary& KeLoadLibrary(const std::string& path);
 	void* KeLoadPdb(const std::string& path);
-	const KeLibrary* KeGetModule(const std::string& path) const;
+	KeLibrary* KeGetModule(const std::string& path) const;
 	const KeLibrary* KeGetModule(const uintptr_t address) const;
 
 	//Files
-	KFile* KeCreateFile(const std::string& path, const GenericAccess access) const;
+	bool KeCreateFile(KFile& file, const std::string& path, const GenericAccess access) const;
 	bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead) const;
 	bool KeSetFilePosition(KFile& file, const size_t position) const;
-	void KeCloseFile(KFile* file) const;
 
-	//Semaphore
-	KSemaphore* KeCreateSemaphore(const size_t initial, const size_t maximum, const std::string& name);
-	bool KeReleaseSemaphore(KSemaphore& semaphore, const size_t releaseCount);
-	WaitStatus KeWaitForSemaphore(KSemaphore& semaphore, size_t timeoutMs, size_t units = 1);
-	bool KeCloseSemaphore(KSemaphore* semaphore);
-
-	//New wait events
-	WaitStatus KeWait(KSignalObject& obj);
-	WaitStatus KeWait(KSignalObject& obj, const milli_t timeout);
-	void KeSignal(KEvent& event);
+	//Wait/Signals
+	WaitStatus KeWait(KSignalObject& obj, const milli_t timeout = std::numeric_limits<milli_t>::max());
 
 	void KeGetSystemTime(SystemTime& time) const;
 
-	void KeRegisterInterrupt(const InterruptVector interrupt, const InterruptContext& context);
+	void KeRegisterInterrupt(const X64_INTERRUPT_VECTOR interrupt, const InterruptContext& context);
 
 	Device* KeGetDevice(const std::string& path) const;
 
-	uint64_t Syscall(SystemCallFrame* frame);
+	uint64_t Syscall(X64_SYSCALL_FRAME* frame);
 	bool IsValidUserPointer(const void* p);
 	bool IsValidKernelPointer(const void* p);
-	void KePostMessage(Message* msg);
-
-	KThread* CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
+	void KePostMessage(Message& msg);
 
 #pragma endregion
 
@@ -220,11 +213,11 @@ public:
 	SystemCallResult WaitForSingleObject(const Handle handle, const uint32_t milliseconds, WaitStatus* status);
 	SystemCallResult GetPipeInfo(const HFile handle, PipeInfo* info);
 	SystemCallResult CloseHandle(const Handle handle);
-	SystemCallResult CreateEvent(HEvent* event, const bool manual, const bool initial);
-	SystemCallResult SetEvent(const HEvent event);
-	SystemCallResult ResetEvent(const HEvent event);
+	SystemCallResult CreateEvent(HEvent* handle, const bool manual, const bool initial);
+	SystemCallResult SetEvent(const HEvent handle);
+	SystemCallResult ResetEvent(const HEvent handle);
 
-	void* VirtualAlloc(const void* address, const size_t size, const MemoryAllocationType allocationType, const MemoryProtection protect);
+	void* VirtualAlloc(const void* address, const size_t size);
 	HRingBuffer CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize);
 	HSharedMemory CreateSharedMemory(const char* name, const size_t size);
 	void* MapObject(const void* address, Handle handle);
@@ -235,7 +228,7 @@ public:
 #pragma endregion
 
 private:
-	static size_t IdleThread(void* arg)
+	static size_t IdleThread(void* unused)
 	{
 		while (true)
 			ArchWait();
@@ -245,11 +238,6 @@ private:
 
 	static void OnTimer0(void* arg) { ((Kernel*)arg)->OnTimer0(); };
 	void OnTimer0();
-
-	KSemaphore* GetSemaphore(Handle handle)
-	{
-		return (KSemaphore*)handle;
-	}
 
 private:
 	//Save from LoaderParams
@@ -286,11 +274,12 @@ private:
 	KernelHeap* m_heap;
 
 	//Interrupts
-	std::map<InterruptVector, InterruptContext>* m_interruptHandlers;
+	std::map<X64_INTERRUPT_VECTOR, InterruptContext>* m_interruptHandlers;
 
 	//Process and Thread management
 	Scheduler* m_scheduler;
 	std::map<std::string, UserRingBuffer*> *m_objectsRingBuffers;
+	std::list<std::shared_ptr<UserProcess>>* m_processes;
 
 	//Libraries
 	std::list<KeLibrary>* m_modules;

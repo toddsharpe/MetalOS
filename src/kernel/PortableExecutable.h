@@ -13,12 +13,12 @@
 class PortableExecutable
 {
 public:
-	static DWORD GetEntryPoint(void* imageBase);
-	static DWORD GetSizeOfImage(void* imageBase);
-	static PIMAGE_SECTION_HEADER GetPESection(void* imageBase, const std::string& name);
-	static PIMAGE_SECTION_HEADER GetPESection(void* imageBase, const uint32_t index);
-	static void* GetProcAddress(void* imageBase, const std::string& procName);
-	static const char* GetPdbName(void* imageBase);
+	static DWORD GetEntryPoint(void* const imageBase);
+	static DWORD GetSizeOfImage(void* const imageBase);
+	static PIMAGE_SECTION_HEADER GetPESection(void* const imageBase, const std::string& name);
+	static PIMAGE_SECTION_HEADER GetPESection(void* const imageBase, const uint32_t index);
+	static void* GetProcAddress(void* const imageBase, const std::string& procName);
+	static const char* GetPdbName(void* const imageBase);
 
 private:
 	//GuidDef.h

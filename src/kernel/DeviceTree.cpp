@@ -5,13 +5,13 @@
 #include "Assert.h"
 #include "Cpuid.h"
 #include "HyperV.h"
-#include "kernel.drivers/VmBusDriver.h"
-#include "kernel.drivers/HyperVKeyboardDriver.h"
-#include "kernel.drivers/HyperVMouseDriver.h"
-#include "kernel.drivers/HyperVScsiDriver.h"
-#include "kernel.drivers/RamDriveDriver.h"
-#include "kernel.drivers/IoApicDriver.h"
-#include "kernel.drivers/UartDriver.h"
+#include "Drivers/VmBusDriver.h"
+#include "Drivers/HyperVKeyboardDriver.h"
+#include "Drivers/HyperVMouseDriver.h"
+#include "Drivers/HyperVScsiDriver.h"
+#include "Drivers/RamDriveDriver.h"
+#include "Drivers/IoApicDriver.h"
+#include "Drivers/UartDriver.h"
 
 DeviceTree::DeviceTree() :
 	m_root()

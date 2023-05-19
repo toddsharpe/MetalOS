@@ -11,6 +11,7 @@
 #include <Graphics/Types.h>
 #include <shared/MetalOS.Keys.h>
 #include <shared/MetalOS.Types.h>
+#include <shared/MetalOS.System.h>
 
 struct ProcessInfo
 {
@@ -135,7 +136,7 @@ extern "C"
 	SystemCallResult SetEvent(const HEvent event);
 	SystemCallResult ResetEvent(const HEvent event);
 
-	void* VirtualAlloc(const void* address, const size_t size, const MemoryAllocationType allocationType, const MemoryProtection protect);
+	void* VirtualAlloc(const void* address, const size_t size);
 	HRingBuffer CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize);
 	HSharedMemory CreateSharedMemory(const char* name, const size_t size);
 	void* MapObject(const void* address, Handle handle);
@@ -170,9 +171,7 @@ struct RingBufferHeader
 	Handle ReadWriteLock;
 };
 
-#define PAGE_SHIFT  12
-#define PAGE_SIZE (1 << PAGE_SHIFT)
-constexpr size_t UIChannelSize = 2 * PAGE_SIZE;
+constexpr size_t UIChannelSize = 2 * PageSize;
 
 struct Channel
 {

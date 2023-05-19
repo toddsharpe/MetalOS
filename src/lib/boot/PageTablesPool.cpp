@@ -29,7 +29,7 @@ PageTablesPool::PageTablesPool(void* const baseAddress, const paddr_t physicalAd
 	m_pageCount(pageCount),
 	m_index((bool*)baseAddress)
 {
-	memset((void*)m_baseAddress, 0, PAGE_SIZE);
+	memset((void*)m_baseAddress, 0, PageSize);
 }
 
 uint64_t PageTablesPool::GetVirtualAddress(uint64_t physicalAddress)
@@ -56,7 +56,7 @@ bool PageTablesPool::AllocatePage(uint64_t * addressOut)
 			continue;
 
 		m_index[i] = true;
-		*addressOut = m_physicalAddress + (i << PAGE_SHIFT);
+		*addressOut = m_physicalAddress + (i << PageShift);
 		return true;
 	}
 
@@ -66,10 +66,10 @@ bool PageTablesPool::AllocatePage(uint64_t * addressOut)
 bool PageTablesPool::DeallocatePage(uint64_t address)
 {
 	uint64_t relative = (address - m_physicalAddress);
-	if (relative % PAGE_SIZE != 0)
+	if (relative % PageSize != 0)
 		return false;
 
-	size_t index = relative >> PAGE_SHIFT;
+	size_t index = relative >> PageShift;
 	if (index > (m_pageCount - 1))
 		return false;
 	if (!m_index[index])

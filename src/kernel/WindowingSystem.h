@@ -25,10 +25,11 @@ public:
 	bool MoveWindow(const HWindow handle, const Graphics::Rectangle& bounds);
 	bool GetWindowRect(const HWindow handle, Graphics::Rectangle& bounds);
 
-	void PostMessage(Message* message);
+	void PostMessage(Message& message);
 
 	bool ThreadHasWindow(const UserThread& thread) const;
 	void FreeWindow(const UserThread& thread);
+	void FreeWindows(const UserProcess& proc);
 
 private:
 	struct Window

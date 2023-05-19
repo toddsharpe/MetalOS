@@ -5,7 +5,7 @@
 
 //First page will be our index
 //Gives us 1024 * 8 bits to signify pages
-#define PageTablesPoolMax (PAGE_SIZE * 8)
+#define PageTablesPoolMax (PageSize * 8)
 
 class PageTablesPool
 {

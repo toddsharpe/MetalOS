@@ -63,8 +63,7 @@ void Debugger::Initialize()
 	NTSTATUS result = Kd64::m_dll.KdInitialize(2);
 	kernel.Printf("KdInitialized %d\n", result);
 
-	KThread* thread = kernel.KeCreateThread(Debugger::ThreadLoop, this);
-	thread->Name = "Debugger::ThreadLoop";
+	kernel.KeCreateThread(Debugger::ThreadLoop, this, "Debugger::ThreadLoop");
 
 	Kd64::KdInitSystem();
 	Kd64::KdDebuggerEnabled = TRUE;
@@ -94,7 +93,7 @@ void Debugger::AddModule(KeLibrary& library)
 	InsertHeadList(&PsLoadedModuleList, &entry->InLoadOrderLinks);
 }
 
-void Debugger::DebuggerEvent(InterruptVector vector, PINTERRUPT_FRAME pFrame)
+void Debugger::DebuggerEvent(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame)
 {
 	KTRAP_FRAME TrapFrame = { 0 }; //Unused?
 	KEXCEPTION_FRAME ExceptionFrame = { 0 }; //Unused?
@@ -103,14 +102,14 @@ void Debugger::DebuggerEvent(InterruptVector vector, PINTERRUPT_FRAME pFrame)
 	KPROCESSOR_MODE PreviousMode = KernelMode;
 	BOOLEAN SecondChanceException = false;
 
-	Assert(vector == InterruptVector::Breakpoint);
+	Assert(vector == X64_INTERRUPT_VECTOR::Breakpoint);
 	ExceptionRecord.ExceptionCode = STATUS_BREAKPOINT;
 	ExceptionRecord.NumberParameters = 3;
 	ExceptionRecord.ExceptionInformation[0] = BREAKPOINT_BREAK;
-	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)kernel.m_scheduler->GetCurrentThread();
+	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)&kernel.m_scheduler->GetCurrentThread();
 	ExceptionRecord.ExceptionInformation[2] = 0;
 
-	ConvertToContext(pFrame, &ContextRecord);
+	ConvertToContext(frame, &ContextRecord);
 
 	BOOLEAN handled = Kd64::KdpTrap(&TrapFrame, &ExceptionFrame, &ExceptionRecord, &ContextRecord, PreviousMode, SecondChanceException);
 	kernel.Printf("Debugger Event: %d\n", handled);
@@ -140,7 +139,7 @@ size_t Debugger::ThreadLoop()
 	return 0;
 }
 
-void Debugger::ConvertToContext(PINTERRUPT_FRAME frame, PCONTEXT context)
+void Debugger::ConvertToContext(X64_INTERRUPT_FRAME* frame, PCONTEXT context)
 {
 	context->SegCs = (WORD)frame->CS;
 	context->SegFs = (WORD)frame->FS;

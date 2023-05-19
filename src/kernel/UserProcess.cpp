@@ -8,22 +8,23 @@
 
 uint32_t UserProcess::LastId = 0;
 
-UserProcess::UserProcess(const std::string& name) : 
-	KSignalObject(KObjectType::Process),
+UserProcess::UserProcess(const std::string& name, const bool isConsole) : 
+	KSignalObject(),
+	InitProcess(),
+	InitThread(),
+	Name(name),
+	Id(++LastId),
+	IsConsole(isConsole),
+
 	m_imageBase(),
-	m_id(++LastId),
-	m_name(name),
 	m_createTime(),
 	m_exitTime(),
 	m_pageTables(),
-	m_addressSpace(*new UserAddressSpace()),
+	m_addressSpace(),
 	m_heap(),
 	m_peb(),
 	m_threads(),
 	m_ringBuffers(),
-	InitProcess(),
-	InitThread(),
-	IsConsole(),
 	m_lastHandle(StartingHandle),
 	m_objects(),
 	m_state(ProcessState::Running)
@@ -40,13 +41,13 @@ void UserProcess::Init(void* address)
 
 	m_imageBase = (uintptr_t)address;
 
-	void* start = kernel.VirtualAlloc(*this, nullptr, PAGE_SIZE, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWrite);
+	void* start = kernel.VirtualAlloc(*this, nullptr, PageSize);
 	kernel.Printf("heap: 0x%016x\n", start);
-	m_heap = new BootHeap(start, PAGE_SIZE);
+	m_heap = new BootHeap(start, PageSize);
 	m_peb = (ProcessEnvironmentBlock*)m_heap->Allocate(sizeof(ProcessEnvironmentBlock));
 	Assert(m_peb);
 	memset(m_peb, 0, sizeof(ProcessEnvironmentBlock));
-	m_peb->ProcessId = m_id;
+	m_peb->ProcessId = Id;
 	m_peb->BaseAddress = (uintptr_t)address;
 	kernel.Printf("m_peb: 0x%016x\n", m_peb);
 	kernel.Printf(" addr: 0x%016x\n", m_peb->BaseAddress);
@@ -64,7 +65,7 @@ void UserProcess::AddModule(const char* name, void* address)
 	m_peb->ModuleIndex++;
 }
 
-void* UserProcess::HeapAlloc(size_t size)
+void* UserProcess::HeapAlloc(const size_t size)
 {
 	return m_heap->Allocate(size);
 }
@@ -114,8 +115,8 @@ VirtualAddressSpace& UserProcess::GetAddressSpace()
 void UserProcess::Display() const
 {
 	kernel.Printf("UserProcess::Display\n");
-	kernel.Printf("     ID: %d\n", m_id);
-	kernel.Printf("   Name: %s\n", m_name.c_str());
+	kernel.Printf("     ID: %d\n", Id);
+	kernel.Printf("   Name: %s\n", Name.c_str());
 	kernel.Printf("   Base: 0x%016x\n", m_imageBase);
 	kernel.Printf("Threads: %d\n", m_threads.size());
 	kernel.Printf("    PEB: 0x%016x\n", m_peb);
@@ -133,9 +134,10 @@ void UserProcess::DisplayDetails() const
 		kernel.Printf("    %s: 0x%016x\n", m_peb->LoadedModules[i].Name, m_peb->LoadedModules[i].Address);
 }
 
-void UserProcess::SetStandardHandle(const StandardHandle handle, UObject* object)
+void UserProcess::SetStandardHandle(const StandardHandle handle, const std::shared_ptr<UObject>& object)
 {
 	Assert(m_objects.find((handle_t)handle) == m_objects.end());
+	Assert(object);
 
 	if (handle == StandardHandle::Input)
 		Assert(object->IsReadable());
@@ -146,33 +148,33 @@ void UserProcess::SetStandardHandle(const StandardHandle handle, UObject* object
 	m_objects.insert({ (handle_t)handle, object });
 }
 
-Handle UserProcess::AddObject(UObject* object)
+Handle UserProcess::AddObject(const std::shared_ptr<UObject>& object)
 {
 	m_lastHandle++;
+	Assert(object.get());
 
-	kernel.Printf("ObjHandle: %d, Name: %s, Type: %d\n", m_lastHandle, m_name.c_str(), object->GetType());
+	kernel.Printf("ObjHandle: %d, Name: %s, Type: %d\n", m_lastHandle, Name.c_str(), object.get()->Type);
 
 	m_objects.insert({ m_lastHandle , object });
 	return (Handle)m_lastHandle;
 }
 
-UObject* UserProcess::GetObject(Handle handle)
+std::shared_ptr<UObject> UserProcess::GetObject(Handle handle)
 {
 	const auto& it = m_objects.find((handle_t)handle);
 	if (it == m_objects.end())
-		return nullptr;
+		return std::shared_ptr<UObject>();
 
 	return it->second;
 }
 
 bool UserProcess::CloseObject(Handle handle)
 {
-	UObject* object = GetObject(handle);
+	std::shared_ptr<UObject> object = GetObject(handle);
 	if (!object)
 		return false;
 
 	m_objects.erase((handle_t)handle);
-	delete object;
 	return true;
 }
 

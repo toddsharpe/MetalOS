@@ -1,6 +1,7 @@
-#include "Kernel.h"
-#include "Assert.h"
 #include "VirtualMemoryManager.h"
+
+#include "Assert.h"
+#include <x64/PageTables.h>
 
 VirtualMemoryManager::VirtualMemoryManager(PhysicalMemoryManager& physicalMemory) :
 	m_physicalMemory(physicalMemory)
@@ -8,71 +9,62 @@ VirtualMemoryManager::VirtualMemoryManager(PhysicalMemoryManager& physicalMemory
 
 }
 
-//TODO: round down address to nearest page or granularity boundary?
-void* VirtualMemoryManager::Allocate(uintptr_t address, const size_t count, const MemoryProtection protection, VirtualAddressSpace& addressSpace)
+void* VirtualMemoryManager::Allocate(const void* address, const size_t count, VirtualAddressSpace& addressSpace)
 {
-	kernel.Printf("Allocate: 0x%016x, Count: 0x%x Global: %d\n", address, count, addressSpace.IsGlobal());
+	Printf("Allocate: 0x%016x, Count: 0x%x Global: %d\n", address, count, addressSpace.IsGlobal);
 	
-	if (address != 0)
-		Assert((address & PAGE_MASK) == 0);
+	uintptr_t addr = (uintptr_t)address;
+	if (addr != 0)
+		Assert((addr & PageMask) == 0);
 	
-	//Reserve region, returning false if it isn't free
-	if (!addressSpace.Reserve(address, count, protection))
+	//Reserve region, returning nullptr if it isn't free
+	if (!addressSpace.Reserve(addr, count))
 		return nullptr;
+	void* const baseAddress = (void*)addr;
 
+	//Allocate and map pages. Physical address list could be non-contiguous, so map one at a time
 	PageTables pt(__readcr3());
-
-	//Retrieve and map physical pages
-	//TODO: this code maps each page since it might have to zero it first
-	//Optimize this
 	for (size_t i = 0; i < count; i++)
 	{
-		PageState state = PageState::Zeroed;
-		paddr_t addr = 0;
-		Assert(m_physicalMemory.AllocatePage(addr, state));
+		paddr_t pAddr = 0;
+		Assert(m_physicalMemory.AllocatePage(pAddr));
 
-		//Map page
-		const uintptr_t virtualAddress = address + (i << PAGE_SHIFT);
-		if (addressSpace.IsGlobal())
-			pt.MapKernelPages(virtualAddress, addr, 1);
+		if (addressSpace.IsGlobal)
+			pt.MapKernelPages(addr + (i << PageShift), pAddr, 1);
 		else
-			pt.MapUserPages(virtualAddress, addr, 1);
-
-		//Clear if needed
-		if (state == PageState::Free)
-			memset((void*)virtualAddress, 0, PAGE_SIZE);
+			pt.MapUserPages(addr + (i << PageShift), pAddr, 1);
 	}
-
-	return (void*)address;
+	
+	//Zero region
+	memset(baseAddress, 0, count * PageSize);
+	return baseAddress;
 }
 
-void* VirtualMemoryManager::VirtualMap(uintptr_t virtualAddress, const std::vector<paddr_t>& addresses, const MemoryProtection& protection, VirtualAddressSpace& addressSpace)
+void* VirtualMemoryManager::VirtualMap(const void* address, const std::vector<paddr_t>& addresses, VirtualAddressSpace& addressSpace)
 {
-	kernel.Printf("VirtualMap: 0x%016x, Count: 0x%x\n", addresses.front(), addresses.size());
+	Printf("VirtualMap: 0x%016x, Count: 0x%x\n", address, addresses.size());
 	Assert(addresses.size() != 0);
 
-	if (virtualAddress != 0)
-		Assert((virtualAddress & PAGE_MASK) == 0);
+	uintptr_t addr = (uintptr_t)address;
+	if (addr != 0)
+		Assert((addr & PageMask) == 0);
 
 	//Reserve region, returning false if it isn't free
-	if (!addressSpace.Reserve(virtualAddress, addresses.size(), protection))
+	if (!addressSpace.Reserve(addr, addresses.size()))
 		return nullptr;
+	void* const baseAddress = (void*)addr;
 
 	PageTables pt(__readcr3());
-
 	for (size_t i = 0; i < addresses.size(); i++)
 	{
-		if (addressSpace.IsGlobal())
-			pt.MapKernelPages(virtualAddress + (i << PAGE_SHIFT), addresses[i], 1);
+		//Physical address list could be non-contiguous, so map one at a time
+		if (addressSpace.IsGlobal)
+			pt.MapKernelPages(addr + (i << PageShift), addresses[i], 1);
 		else
-			pt.MapUserPages(virtualAddress + (i << PAGE_SHIFT), addresses[i], 1);
+			pt.MapUserPages(addr + (i << PageShift), addresses[i], 1);
 	}
 
-	return (void*)virtualAddress;
-}
-
-paddr_t VirtualMemoryManager::ResolveAddress(void* address)
-{
-	PageTables pt(__readcr3());
-	return pt.ResolveAddress((uintptr_t)address);
+	//Zero region
+	memset(baseAddress, 0, addresses.size() * PageSize);
+	return (void*)addr;
 }

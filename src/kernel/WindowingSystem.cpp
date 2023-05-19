@@ -32,8 +32,7 @@ void WindowingSystem::Initialize()
 	m_windows = std::make_unique<std::list<std::shared_ptr<Window>>>();
 	
 	//Create thread
-	KThread* thread = kernel.KeCreateThread(&WindowingSystem::ThreadLoop, this);
-	thread->Name = "WindowingSystem::ThreadLoop";
+	kernel.KeCreateThread(&WindowingSystem::ThreadLoop, this, "WindowingSystem::ThreadLoop");
 }
 
 HWindow WindowingSystem::AllocWindow(UserThread& thread, const Rectangle& bounds)
@@ -43,7 +42,7 @@ HWindow WindowingSystem::AllocWindow(UserThread& thread, const Rectangle& bounds
 	//Allocate framebuffer on page boundaries
 	//Map into process directly one day?
 	const size_t bytes = bounds.Height * bounds.Width * sizeof(Color);
-	const size_t count = SIZE_TO_PAGES(bytes);
+	const size_t count = SizeToPages(bytes);
 	void* buffer = kernel.AllocateWindows(count);
 
 	//Create window, focused
@@ -95,21 +94,21 @@ bool WindowingSystem::GetWindowRect(const HWindow handle, Rectangle& bounds)
 	return true;
 }
 
-void WindowingSystem::PostMessage(Message* message)
+void WindowingSystem::PostMessage(Message& message)
 {
-	switch (message->Header.MessageType)
+	switch (message.Header.MessageType)
 	{
 	case MessageType::MouseEvent:
 
 		//Save cursor position
 		constexpr uint16_t maxX = std::numeric_limits<int16_t>::max();
 		constexpr uint16_t maxY = std::numeric_limits<int16_t>::max();
-		uint16_t absX = m_display.GetWidth() * message->MouseEvent.XPosition / maxX;
-		uint16_t absY = m_display.GetHeight() * message->MouseEvent.YPosition / maxX;
+		uint16_t absX = m_display.GetWidth() * message.MouseEvent.XPosition / maxX;
+		uint16_t absY = m_display.GetHeight() * message.MouseEvent.YPosition / maxX;
 		Point2D mousePos = { absX , absY };
 
 		//Detect focus/drag
-		if (message->MouseEvent.Buttons.LeftPressed)
+		if (message.MouseEvent.Buttons.LeftPressed)
 		{
 			//Focus window
 			m_focusWindow = GetWindow(mousePos);
@@ -183,6 +182,29 @@ void WindowingSystem::FreeWindow(const UserThread& thread)
 	Assert(false);
 }
 
+void WindowingSystem::FreeWindows(const UserProcess& proc)
+{
+	auto it = m_windows->begin();
+	while (it != m_windows->end())
+	{
+		const std::shared_ptr<Window>& item = *it;
+		if (&item->Thread.Process == &proc)
+		{
+			//Release focus
+			if (m_focusWindow == item)
+				m_focusWindow.reset();
+			if (m_dragWindow = item)
+				m_dragWindow.reset();
+			
+			it = m_windows->erase(it);
+		}
+		else
+		{
+			it++;
+		}
+	}
+}
+
 size_t WindowingSystem::ThreadLoop()
 {
 	while (true)
@@ -215,16 +237,16 @@ size_t WindowingSystem::ThreadLoop()
 		{
 			Assert(!window->Thread.Deleted);
 
-			UserProcess& proc = window->Thread.GetProcess();
+			UserProcess& proc = window->Thread.Process;
 			Assert(!proc.IsSignalled());
 
-			Message message;
+			Message message = {};
 			message.Header.MessageType = MessageType::PaintEvent;
 			message.PaintEvent.Region = window->Bounds;
-			window->Thread.EnqueueMessage(&message);
+			window->Thread.EnqueueMessage(message);
 		}
 
-		kernel.KeSleepThread(SECOND / 30);
+		kernel.KeSleepThread(Second / 30);
 	}
 }
 

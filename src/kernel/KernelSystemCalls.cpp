@@ -1,12 +1,21 @@
 #include "Kernel.h"
 #include "Assert.h"
 #include "UserRingBuffer.h"
-#include "UserPipe.h"
+#include "Objects/KEvent.h"
+#include "Objects/UEvent.h"
+#include "Objects/KFile.h"
+#include "Objects/UFile.h"
+#include "Objects/UProcess.h"
+#include "Objects/UserPipe.h"
+#include "Objects/UProcess.h"
+#include "Objects/USemaphore.h"
+#include "Objects/UDebug.h"
+#include "Objects/UPipe.h"
 #include <shared/MetalOS.Types.h>
 
 //TODO: Method to check handles
 
-uint64_t Kernel::Syscall(SystemCallFrame* frame)
+uint64_t Kernel::Syscall(X64_SYSCALL_FRAME* frame)
 {
 	//Printf("Syscall - Call 0x%x\n", frame->SystemCall);
 	switch (frame->SystemCall)
@@ -113,7 +122,7 @@ uint64_t Kernel::Syscall(SystemCallFrame* frame)
 		return (uintptr_t)ResetEvent((HEvent)frame->Arg0);
 
 	case SystemCall::VirtualAlloc:
-		return (uintptr_t)VirtualAlloc((void*)frame->Arg0, (size_t)frame->Arg1, (MemoryAllocationType)frame->Arg2, (MemoryProtection)frame->Arg3);
+		return (uintptr_t)VirtualAlloc((void*)frame->Arg0, (size_t)frame->Arg1);
 
 	case SystemCall::CreateRingBuffer:
 		return (uintptr_t)CreateRingBuffer((char*)frame->Arg0, (size_t)frame->Arg1, (size_t)frame->Arg2);
@@ -145,7 +154,7 @@ SystemCallResult Kernel::GetSystemInfo(SystemInfo* info)
 	if (!IsValidUserPointer(info))
 		return SystemCallResult::Failed;
 	
-	info->PageSize = PAGE_SIZE;
+	info->PageSize = PageSize;
 	info->Architecture = SystemArchitecture::x64;
 	info->NumberOfProcessors = 1;
 	info->AllocationGranularity = VirtualAddressSpace::AllocationGranularity;
@@ -173,19 +182,19 @@ SystemCallResult Kernel::GetSystemTime(SystemTime* time)
 
 HThread Kernel::GetCurrentThread()
 {
-	KThread* current = m_scheduler->GetCurrentThread();
-	UserThread* userThread = current->GetUserThread();
-	Assert(userThread);
-	return userThread;
+	UserThread& user = m_scheduler->GetCurrentUserThread();
+	return &user;
 }
 
-HThread Kernel::CreateThread(size_t stackSize, ThreadStart startAddress, void* arg)
+HThread Kernel::CreateThread(const size_t stackSize, const ThreadStart startAddress, void* const arg)
 {
 	if (!IsValidUserPointer(startAddress))
 		return nullptr;
 
 	UserProcess& process = m_scheduler->GetCurrentProcess();
-	return CreateThread(process, stackSize, startAddress, arg, process.InitThread);
+
+	std::shared_ptr<KThread> thread = CreateThread(process, stackSize, startAddress, arg, process.InitThread);
+	return (HThread)thread->UserThread;
 }
 
 SystemCallResult Kernel::CreateProcess(const char* processName, const CreateProcessArgs* args, CreateProcessResult* result)
@@ -196,18 +205,18 @@ SystemCallResult Kernel::CreateProcess(const char* processName, const CreateProc
 	if (args && !IsValidUserPointer(args))
 		return SystemCallResult::InvalidPointer;
 
-	UserProcess* newProcess = KeCreateProcess(std::string(processName));
+	std::shared_ptr<UserProcess> newProcess = std::shared_ptr<UserProcess>(KeCreateProcess(std::string(processName)));
 	Assert(newProcess);
+	m_processes->push_back(newProcess);
 
-	//HACK: While we still switch contexts in CreateProcess, we need to switch it back
+	//HACK: While we still switch contexts in CreateProcess, we need to switch it back to calling process
 	UserProcess& process = m_scheduler->GetCurrentProcess();
 	ArchSetPagingRoot(process.GetCR3());
-	kernel.Printf("NewCr3: 0x%016x\n", process.GetCR3());
 
 	if (result && IsValidUserPointer(result))
 	{
-		UObject* procObj = new UObject(*newProcess, UserObjectType::Process);
-		result->Process = (HProcess)process.AddObject(procObj);
+		const std::shared_ptr<UProcess> uProc = std::make_shared<UProcess>(newProcess);
+		result->Process = (HProcess)process.AddObject(uProc);
 	}
 
 	kernel.Printf("Console: %d\n", newProcess->IsConsole);
@@ -220,60 +229,77 @@ SystemCallResult Kernel::CreateProcess(const char* processName, const CreateProc
 		Assert(args->StdOutput);
 		Assert(args->StdError);
 
-		UObject* input = process.GetObject((Handle)args->StdInput);
-		if (!input)
-			return SystemCallResult::InvalidHandle;
-		if (!input->IsReadable())
-			return SystemCallResult::InvalidObject;
-		input->GetObject<UserPipe&>().ReaderCount++;
+		//Create standard-in handle
+		{
+			const std::shared_ptr<UObject> input = process.GetObject((Handle)args->StdInput);
+			if (!input)
+				return SystemCallResult::InvalidHandle;
+			if (!input->IsReadable())
+				return SystemCallResult::InvalidObject;
 
-		UObject* output = process.GetObject((Handle)args->StdOutput);
-		if (!output)
-			return SystemCallResult::InvalidHandle;
-		if (!output->IsWriteable())
-			return SystemCallResult::InvalidObject;
-		output->GetObject<UserPipe&>().WriterCount++;
+			UPipe* uInput = (UPipe*)input.get();
+			uInput->Pipe->Readers++;
 
-		UObject* error = process.GetObject((Handle)args->StdError);
-		if (!error)
-			return SystemCallResult::InvalidHandle;
-		if (!error->IsWriteable())
-			return SystemCallResult::InvalidObject;
-		error->GetObject<UserPipe&>().WriterCount++;
+			const std::shared_ptr<UPipe> readPipe = std::make_shared<UPipe>(uInput->Pipe, PipeOp::Read);
+			newProcess->SetStandardHandle(StandardHandle::Input, readPipe);
+		}
 
-		newProcess->SetStandardHandle(StandardHandle::Input, input);
-		newProcess->SetStandardHandle(StandardHandle::Output, output);
-		newProcess->SetStandardHandle(StandardHandle::Error, error);
+		{
+			const std::shared_ptr<UObject> output = process.GetObject((Handle)args->StdOutput);
+			if (!output)
+				return SystemCallResult::InvalidHandle;
+			if (!output->IsWriteable())
+				return SystemCallResult::InvalidObject;
+
+			UPipe* uOutput = (UPipe*)output.get();
+			uOutput->Pipe->Writers++;
+
+			const std::shared_ptr<UPipe> writePipe = std::make_shared<UPipe>(uOutput->Pipe, PipeOp::Write);
+			newProcess->SetStandardHandle(StandardHandle::Output, writePipe);
+		}
+
+		{
+			const std::shared_ptr<UObject> error = process.GetObject((Handle)args->StdError);
+			if (!error)
+				return SystemCallResult::InvalidHandle;
+			if (!error->IsWriteable())
+				return SystemCallResult::InvalidObject;
+
+			UPipe* uError = (UPipe*)error.get();
+			uError->Pipe->Writers++;
+
+			const std::shared_ptr<UPipe> errorPipe = std::make_shared<UPipe>(uError->Pipe, PipeOp::Write);
+			newProcess->SetStandardHandle(StandardHandle::Error, errorPipe);
+		}
 	}
 	else
 	{
-		//Redirect stdout to debug
-		UserPipe* pipe = new UserPipe();
-
-		UObject* debugObj = new UObject(*pipe, UserObjectType::Debug);
-		HFile output = (HFile)newProcess->AddObject(debugObj);
-
-		newProcess->SetStandardHandle(StandardHandle::Output, debugObj);
+		//Create Debug object to pipe stdout to kernel stream for non-console processes
+		const std::shared_ptr<UDebug> uDebug = std::make_shared<UDebug>();
+		newProcess->SetStandardHandle(StandardHandle::Output, uDebug);
 	}
 
 	kernel.Printf("Returning\n");
 	return SystemCallResult::Success;
 }
 
+//TODO(tsharpe): Return system call result?
+//TODO(tsharpe): This is written poorly
+//TODO(tsharpe): Handle is just the address??
 uint32_t Kernel::GetThreadId(const Handle handle)
 {
 	if (!handle)
 		return UINT32_MAX;
 	
 	kernel.Printf("GetThreadId 0x%016x\n", handle);
-	UserProcess& process = m_scheduler->GetCurrentProcess();
-	UserThread* thread = (UserThread*)handle;
 
-	UserProcess& proc = thread->GetProcess();
-	if (proc.GetId() != process.GetId())
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+
+	const UserThread* thread = (UserThread*)handle;
+	if (thread->Process.Id != user.Process.Id)
 		return UINT32_MAX;
 
-	return thread->GetId();
+	return thread->Id;
 }
 
 void Kernel::Sleep(const uint32_t milliseconds)
@@ -291,14 +317,12 @@ void Kernel::SwitchToThread()
 
 SystemCallResult Kernel::ExitProcess(const uint32_t exitCode)
 {
-	UserThread* thread = m_scheduler->GetCurrentUserThread();
-	UserProcess& process = thread->GetProcess();
-	kernel.Printf("Process: %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserProcess& process = user.Process;
+	kernel.Printf("Process: %s exited with code 0x%x\n", process.Name.c_str(), exitCode);
 
 	//Free all windows
-	if (m_windows.ThreadHasWindow(*thread))
-		m_windows.FreeWindow(*thread);
-
+	m_windows.FreeWindows(process);
 
 	m_scheduler->KillCurrentProcess();
 	return SystemCallResult::Success;
@@ -306,15 +330,14 @@ SystemCallResult Kernel::ExitProcess(const uint32_t exitCode)
 
 SystemCallResult Kernel::ExitThread(const uint32_t exitCode)
 {
-	UserThread* thread = m_scheduler->GetCurrentUserThread();
-	UserProcess& process = thread->GetProcess();
-	kernel.Printf("Thread of %s exited with code 0x%x\n", process.GetName().c_str(), exitCode);
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	kernel.Printf("Thread of %s exited with code 0x%x\n", user.Process.Name.c_str(), exitCode);
 
-	//TODO: Check if anybody has handle to this thread and clear
+	//TODO(tsharpe): Determine if any other process has a handle to this thread? Is this possible?
 
 	//Remove window from thread
-	if (m_windows.ThreadHasWindow(*thread))
-		m_windows.FreeWindow(*thread);
+	if (m_windows.ThreadHasWindow(user))
+		m_windows.FreeWindow(user);
 
 	m_scheduler->KillCurrentThread();
 	return SystemCallResult::Success;
@@ -325,13 +348,12 @@ SystemCallResult Kernel::AllocWindow(HWindow* handle, const Graphics::Rectangle*
 	if (!IsValidUserPointer(handle) || !IsValidUserPointer(bounds))
 		return SystemCallResult::InvalidPointer;
 
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
+	UserThread& user = m_scheduler->GetCurrentUserThread();
 
-	if (m_windows.ThreadHasWindow(*user))
+	if (m_windows.ThreadHasWindow(user))
 		return SystemCallResult::Failed;
 
-	*handle = m_windows.AllocWindow(*user, *bounds);
+	*handle = m_windows.AllocWindow(user, *bounds);
 	return SystemCallResult::Success;
 }
 
@@ -341,7 +363,7 @@ SystemCallResult Kernel::PaintWindow(HWindow handle, const ReadOnlyBuffer* buffe
 		return SystemCallResult::InvalidPointer;
 
 	if (!m_windows.PaintWindow(handle, *buffer))
-		return SystemCallResult::Failed;
+		return SystemCallResult::InvalidHandle;
 
 	return SystemCallResult::Success;
 }
@@ -352,7 +374,7 @@ SystemCallResult Kernel::MoveWindow(HWindow handle, const Graphics::Rectangle* r
 		return SystemCallResult::InvalidPointer;
 
 	if (!m_windows.MoveWindow(handle, *rectangle))
-		return SystemCallResult::Failed;
+		return SystemCallResult::InvalidHandle;
 
 	return SystemCallResult::Success;
 }
@@ -363,7 +385,7 @@ SystemCallResult Kernel::GetWindowRect(HWindow handle, Graphics::Rectangle* boun
 		return SystemCallResult::InvalidPointer;
 
 	if (!m_windows.GetWindowRect(handle, *bounds))
-		return SystemCallResult::Failed;
+		return SystemCallResult::InvalidHandle;
 
 	return SystemCallResult::Success;
 }
@@ -372,11 +394,18 @@ SystemCallResult Kernel::GetWindowRect(HWindow handle, Graphics::Rectangle* boun
 SystemCallResult Kernel::GetMessage(Message* message)
 {
 	if (!IsValidUserPointer(message))
-		return SystemCallResult::Failed;
+		return SystemCallResult::InvalidPointer;
 
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Message* msg = m_scheduler->MessageWait(); //Can block
-	*message = *msg;
+	UserThread& user = m_scheduler->GetCurrentUserThread();
+
+	//Create signal, block if low
+	KPredicate signal(&UserThread::HasMessage, &user);
+	m_scheduler->ObjectWait(signal);
+
+	//Return message
+	Assert(user.HasMessage());
+	user.DequeueMessage(*message);
+
 	return SystemCallResult::Success;
 }
 
@@ -384,23 +413,20 @@ SystemCallResult Kernel::GetMessage(Message* message)
 SystemCallResult Kernel::PeekMessage(Message* message)
 {
 	if (!IsValidUserPointer(message))
-		return SystemCallResult::Failed;
+		return SystemCallResult::InvalidPointer;
 	
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-
-	Message* msg = user->DequeueMessage();
-	if (!msg)
+	UserThread& user = m_scheduler->GetCurrentUserThread();
+	if (!user.HasMessage())
 		return SystemCallResult::Failed;
 
-	*message = *msg;
+	Assert(user.DequeueMessage(*message));
 	return SystemCallResult::Success;
 }
 
 SystemCallResult Kernel::GetScreenRect(Graphics::Rectangle* rectangle)
 {
 	if (!IsValidUserPointer(rectangle))
-		return SystemCallResult::Failed;
+		return SystemCallResult::InvalidPointer;
 
 	rectangle->X = 0;
 	rectangle->Y = 0;
@@ -410,6 +436,7 @@ SystemCallResult Kernel::GetScreenRect(Graphics::Rectangle* rectangle)
 	return SystemCallResult::Success;
 }
 
+//TODO(tsharpe): Should this return SystemCallResult?
 HFile Kernel::CreateFile(const char* name, const GenericAccess access)
 {
 	if (!IsValidUserPointer(name))
@@ -417,17 +444,14 @@ HFile Kernel::CreateFile(const char* name, const GenericAccess access)
 
 	kernel.Printf("CreateFile: %s Access: %d\n", name, access);
 
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
 
-	KFile* file = this->KeCreateFile(std::string(name), access);
-	if (file == nullptr)
+	const std::shared_ptr<UFile> uFile = std::make_shared<UFile>();
+	bool result = this->KeCreateFile(uFile->File, std::string(name), access);
+	if (!result)
 		return nullptr;
 
-	UObject* uFile = new UObject(*file, UserObjectType::File);
-
-	Handle handle = process.AddObject(uFile);
+	Handle handle = user.Process.AddObject(uFile);
 	return (HFile)handle;
 }
 
@@ -436,19 +460,18 @@ SystemCallResult Kernel::CreatePipe(HFile* readHandle, HFile* writeHandle)
 	if (!IsValidUserPointer(readHandle) || !IsValidUserPointer(writeHandle))
 		return SystemCallResult::InvalidPointer;
 
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserProcess& process = user.Process;
 
-	UserPipe* pipe = new UserPipe();
-	pipe->ReaderCount = 1;
-	pipe->WriterCount = 1;
+	std::shared_ptr<UserPipe> pipe = std::make_shared<UserPipe>();
+	pipe->Readers = 1;
+	pipe->Writers = 1;
 
-	UObject* readObj = new UObject(*pipe, UserObjectType::ReadPipe);
-	*readHandle = (HFile)process.AddObject(readObj);
+	const std::shared_ptr<UPipe> readPipe = std::make_shared<UPipe>(pipe, PipeOp::Read);
+	*readHandle = (HFile)process.AddObject(readPipe);
 
-	UObject* writeObj = new UObject(*pipe, UserObjectType::WritePipe);
-	*writeHandle = (HFile)process.AddObject(writeObj);
+	const std::shared_ptr<UPipe> writePipe = std::make_shared<UPipe>(pipe, PipeOp::Write);
+	*writeHandle = (HFile)process.AddObject(writePipe);
 
 	return SystemCallResult::Success;
 }
@@ -461,54 +484,49 @@ SystemCallResult Kernel::ReadFile(const HFile handle, void* buffer, const size_t
 	if (!bufferSize)
 		return SystemCallResult::Failed;
 
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
 
-	UObject* userObject = process.GetObject((Handle)handle);
-	if (!userObject || !userObject->IsReadable())
-		return SystemCallResult::Failed;
+	const std::shared_ptr<UObject> uObject = user.Process.GetObject((Handle)handle);
+	if (!uObject)
+		return SystemCallResult::InvalidHandle;
 
-	switch (userObject->GetType())
+	if (!uObject->IsReadable())
+		return SystemCallResult::InvalidObject;
+
+	switch (uObject->Type)
 	{
-	case UserObjectType::File:
+	case UObjectType::File:
 	{
-		KFile& file = (KFile&)userObject->GetObject();
-		if (!CanRead(file.Access))
+		UFile* uFile = (UFile*)uObject.get();
+
+		if (!CanRead(uFile->File.Access))
 			return SystemCallResult::Failed;
 
-		Assert(this->KeReadFile(file, buffer, bufferSize, bytesRead));
+		Assert(this->KeReadFile(uFile->File, buffer, bufferSize, bytesRead));
 		return SystemCallResult::Success;
 	}
 		break;
 		
-	case UserObjectType::ReadPipe:
+	case UObjectType::Pipe:
 	{
-		UserPipe& pipe = (UserPipe&)userObject->GetObject();
-		if (pipe.IsBroken())
-		{
-			size_t read = pipe.ReadPartial(buffer, bufferSize);
-			kernel.Printf("ReadPartial: %d");
-			if (bytesRead)
-				*bytesRead = bufferSize;
+		UPipe* uPipe = (UPipe*)uObject.get();
+		UserPipe& pipe = *uPipe->Pipe.get();
 
-			return SystemCallResult::BrokenPipe;
-		}
+		//Set up signal
+		PipeEvent event(pipe, PipeOp::Read, bufferSize);
+		KPredicate pipeWait(&UserPipe::EventSignal, &event);
 
-		WaitStatus status = m_scheduler->PipeReadWait(pipe, buffer, bufferSize);
-		if (status == WaitStatus::BrokenPipe)
-		{
-			size_t read = pipe.ReadPartial(buffer, bufferSize);
-			kernel.Printf("ReadPartial: %d");
-			if (bytesRead)
-				*bytesRead = bufferSize;
+		//Block if not signaled
+		WaitStatus status = m_scheduler->ObjectWait(pipeWait);
+		Assert(status == WaitStatus::Signaled);
 
-			return SystemCallResult::BrokenPipe;
-		}
-		
+		//Read
+		size_t read;
+		Assert(pipe.Read(buffer, bufferSize, read));
 		if (bytesRead)
-			*bytesRead = bufferSize;
-		return SystemCallResult::Success;
+			*bytesRead = read;
+
+		return pipe.IsBroken() ? SystemCallResult::BrokenPipe : SystemCallResult::Success;
 	}
 		break;
 
@@ -525,42 +543,43 @@ SystemCallResult Kernel::WriteFile(const HFile handle, const void* buffer, size_
 	if (!bufferSize)
 		return SystemCallResult::Failed;
 
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
 
-	kernel.Printf("WriteFile: 0x%x\n", handle);
-	UObject* userObject = process.GetObject((Handle)handle);
-	if (!userObject)
+	const std::shared_ptr<UObject> uObject = user.Process.GetObject((Handle)handle);
+	if (!uObject)
 		return SystemCallResult::InvalidHandle;
 
-	if (!userObject->IsWriteable())
+	if (!uObject->IsWriteable())
 		return SystemCallResult::InvalidObject;
 
-	kernel.PrintBytes((char*)buffer, bufferSize);
-
-	switch (userObject->GetType())
+	switch (uObject->Type)
 	{
-	case UserObjectType::File:
+	case UObjectType::File:
 	{
 		Assert(false);
 	}
 	break;
 
-	case UserObjectType::WritePipe:
+	case UObjectType::Pipe:
 	{
-		UserPipe& pipe = (UserPipe&)userObject->GetObject();
-		WaitStatus status = m_scheduler->PipeWriteWait(pipe, buffer, bufferSize);
-		if (status == WaitStatus::BrokenPipe)
-			return SystemCallResult::BrokenPipe;
+		const UPipe* uPipe = (UPipe*)uObject.get();
+		UserPipe& pipe = *uPipe->Pipe.get();
 
-		if (bytesWritten)
-			*bytesWritten = bufferSize;
+		//Set up signal
+		PipeEvent event(pipe, PipeOp::Write, bufferSize);
+		KPredicate pipeWait(&UserPipe::EventSignal, &event);
+
+		//Block if not signaled
+		WaitStatus status = m_scheduler->ObjectWait(pipeWait);
+		Assert(status == WaitStatus::Signaled);
+
+		//Write
+		Assert(pipe.Write(buffer, bufferSize));
 		return SystemCallResult::Success;
 	}
 	break;
 
-	case UserObjectType::Debug:
+	case UObjectType::Debug:
 	{
 		this->m_printer->Write((char*)buffer);
 		return SystemCallResult::Success;
@@ -574,16 +593,16 @@ SystemCallResult Kernel::WriteFile(const HFile handle, const void* buffer, size_
 
 SystemCallResult Kernel::SetFilePointer(const HFile handle, const size_t position, const FilePointerMove moveType, size_t* newPosition)
 {
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
 
-	UObject* userObject = process.GetObject((Handle)handle);
-	if (!userObject)
-		return SystemCallResult::Failed;
+	const std::shared_ptr<UObject> uObject = user.Process.GetObject((Handle)handle);
+	if (!uObject)
+		return SystemCallResult::InvalidHandle;
 
-	Assert(userObject->GetType() == UserObjectType::File);
-	KFile& file = (KFile&)userObject->GetObject();
+	if (uObject->Type != UObjectType::File)
+		return SystemCallResult::InvalidObject;
+
+	UFile* uFile = (UFile*)uObject.get();
 	
 	size_t pos;
 	switch (moveType)
@@ -593,18 +612,18 @@ SystemCallResult Kernel::SetFilePointer(const HFile handle, const size_t positio
 		break;
 
 	case FilePointerMove::Current:
-		pos = file.Position + position;
+		pos = uFile->File.Position + position;
 		break;
 
 	case FilePointerMove::End:
-		pos = file.Length + position;
+		pos = uFile->File.Length + position;
 		break;
 
 	default:
 		return SystemCallResult::Failed;
 	}
 
-	bool result = this->KeSetFilePosition(file, pos);
+	bool result = this->KeSetFilePosition(uFile->File, pos);
 	if (!result)
 		return SystemCallResult::Failed;
 
@@ -616,17 +635,15 @@ SystemCallResult Kernel::SetFilePointer(const HFile handle, const size_t positio
 
 SystemCallResult Kernel::CloseFile(const HFile handle)
 {
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserProcess& process = user.Process;
 
-	UObject* userObject = process.GetObject((Handle)handle);
-	if (!userObject)
-		return SystemCallResult::Failed;
+	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
+	if (!uObject)
+		return SystemCallResult::InvalidHandle;
 
-	Assert(userObject->GetType() == UserObjectType::File);
-	KFile& file = (KFile&)userObject->GetObject();
-	KeCloseFile(&file);
+	if (uObject->Type != UObjectType::File)
+		return SystemCallResult::InvalidObject;
 
 	process.CloseObject((Handle)handle);
 	return SystemCallResult::Success;
@@ -652,22 +669,44 @@ SystemCallResult Kernel::CreateDirectory(const char* path)
 
 SystemCallResult Kernel::WaitForSingleObject(const Handle handle, const uint32_t milliseconds, WaitStatus* status)
 {
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
-
 	if (!IsValidUserPointer(status))
 		return SystemCallResult::InvalidPointer;
+	
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserProcess& process = user.Process;
 
-	UObject* userObject = process.GetObject((HFile)handle);
-	if (!userObject)
+	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
+	if (!uObject)
 		return SystemCallResult::InvalidHandle;
 
-	KObject& kObj = (KObject&)userObject->GetObject();
-	if (!kObj.IsSyncObj)
-		return SystemCallResult::InvalidObject;
+	//TODO(tsharpe): Might be a better way of getting the KSignalObject from all of these?
+	switch (uObject->Type)
+	{
+		case UObjectType::Process:
+		{
+			const UProcess* process = (UProcess*)uObject.get();
+			*status = this->KeWait(*process->Proc.get(), milliseconds);
+		}
+		break;
 
-	*status = this->KeWait((KSignalObject&)kObj, milliseconds);
+		case UObjectType::Semaphore:
+		{
+			USemaphore* sem = (USemaphore*)uObject.get();
+			*status = this->KeWait(sem->Sem, milliseconds);
+		}
+		break;
+
+		case UObjectType::Event:
+		{
+			UEvent* event = (UEvent*)uObject.get();
+			*status = this->KeWait(event->Event, milliseconds);
+		}
+		break;
+
+		default:
+			return SystemCallResult::InvalidObject;
+	}
+
 	return SystemCallResult::Success;
 }
 
@@ -676,125 +715,111 @@ SystemCallResult Kernel::GetPipeInfo(const HFile handle, PipeInfo* info)
 	if (!IsValidUserPointer(info))
 		return SystemCallResult::InvalidPointer;
 
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
 
-	UObject* userObject = process.GetObject((HFile)handle);
-	if (!userObject)
+	const std::shared_ptr<UObject> uObject = user.Process.GetObject((Handle)handle);
+	if (!uObject)
 		return SystemCallResult::InvalidHandle;
-	if (!userObject->IsPipe())
+
+	if (uObject->Type != UObjectType::Pipe)
 		return SystemCallResult::InvalidObject;
 
-	UserPipe& pipe = (UserPipe&)userObject->GetObject();
+	const UPipe* uPipe = (UPipe*)uObject.get();
+	const UserPipe& pipe = *uPipe->Pipe.get();
+	
 	info->BytesAvailable = pipe.Count();
 	info->IsBroken = pipe.IsBroken();
 	return SystemCallResult::Success;
 }
 
+//TODO(tsharpe): Use deleters on objects?
 SystemCallResult Kernel::CloseHandle(const Handle handle)
 {
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserProcess& process = user.Process;
 
-	UObject* userObject = process.GetObject((HFile)handle);
-	if (!userObject)
+	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
+	if (!uObject)
 		return SystemCallResult::InvalidHandle;
 
-	KObject& obj = userObject->GetObject();
-
-	if (userObject->IsPipe())
+	if (uObject->Type == UObjectType::Pipe)
 	{
-		UserPipe& pipe = (UserPipe&)obj;
-		if (userObject->GetType() == UserObjectType::ReadPipe)
+		const UPipe* uPipe = (UPipe*)uObject.get();
+		UserPipe& pipe = *uPipe->Pipe.get();
+
+		if (uPipe->Op == PipeOp::Read)
 		{
-			pipe.ReaderCount--;
-			if (pipe.ReaderCount == 0)
-				m_scheduler->PipeSignal(pipe, true);
-		}
-		else if (userObject->GetType() == UserObjectType::WritePipe)
-		{
-			pipe.WriterCount--;
-			if (pipe.WriterCount == 0)
-				m_scheduler->PipeSignal(pipe, false);
+			pipe.Readers--;
 		}
 		else
-			Assert(false);
+		{
+			Assert(uPipe->Op == PipeOp::Write);
+			pipe.Writers--;
+		}
 	}
 
 	Assert(process.CloseObject(handle));
 
-	//todo: signal?
-
-	if (obj.IsClosed())
-		obj.Dispose();
-
 	return SystemCallResult::Success;
 }
-SystemCallResult Kernel::CreateEvent(HEvent* event, const bool manual, const bool initial)
+SystemCallResult Kernel::CreateEvent(HEvent* handle, const bool manual, const bool initial)
 {
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
-
-	if (!IsValidUserPointer(event))
+	if (!IsValidUserPointer(handle))
 		return SystemCallResult::InvalidPointer;
+	
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserProcess& process = user.Process;
 
-	KEvent* kEvent = new KEvent(manual, initial);
-	UObject* obj = new UObject(*kEvent, UserObjectType::Event);
+	const std::shared_ptr<UEvent> uEvent = std::make_shared<UEvent>(manual, initial);
 
-	*event = (HEvent)process.AddObject(obj);
+	*handle = (HEvent)process.AddObject(uEvent);
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::SetEvent(const HEvent event)
+SystemCallResult Kernel::SetEvent(const HEvent handle)
 {
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserProcess& process = user.Process;
 
-	UObject* userObject = process.GetObject((HFile)event);
-	if (!userObject)
+	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
+	if (!uObject)
 		return SystemCallResult::InvalidHandle;
 
-	if (!userObject->IsEvent())
+	if (uObject->Type != UObjectType::Event)
 		return SystemCallResult::InvalidObject;
 
-	KEvent& obj = userObject->GetObject<KEvent&>();
-	this->KeSignal(obj);
+	UEvent* uEvent = (UEvent*)uObject.get();
+	uEvent->Event.Set();
 
 	return SystemCallResult::Success;
 }
 
-SystemCallResult Kernel::ResetEvent(const HEvent event)
+SystemCallResult Kernel::ResetEvent(const HEvent handle)
 {
-	UserThread* user = m_scheduler->GetCurrentUserThread();
-	Assert(user);
-	UserProcess& process = user->GetProcess();
+	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserProcess& process = user.Process;
 
-	UObject* userObject = process.GetObject((HFile)event);
-	if (!userObject)
+	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
+	if (!uObject)
 		return SystemCallResult::InvalidHandle;
 
-	if (!userObject->IsEvent())
+	if (uObject->Type != UObjectType::Event)
 		return SystemCallResult::InvalidObject;
 
-	KEvent& obj = userObject->GetObject<KEvent&>();
-	obj.Reset();
+	UEvent* uEvent = (UEvent*)uObject.get();
+	uEvent->Event.Reset();
 
 	return SystemCallResult::Success;
 }
 
-
-void* Kernel::VirtualAlloc(const void* address, const size_t size, const MemoryAllocationType allocationType, const MemoryProtection protect)
+void* Kernel::VirtualAlloc(const void* address, const size_t size)
 {
 	if (!size)
 		return nullptr;
 
 	UserProcess& process = m_scheduler->GetCurrentProcess();
 	
-	return m_virtualMemory->Allocate((uintptr_t)address, SIZE_TO_PAGES(size), protect, process.GetAddressSpace());
+	return m_virtualMemory->Allocate(address, SizeToPages(size), process.GetAddressSpace());
 }
 
 HRingBuffer Kernel::CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize)
@@ -815,8 +840,8 @@ HRingBuffer Kernel::CreateRingBuffer(const char* name, const size_t indexSize, c
 			return nullptr;
 	}
 	
-	const size_t indexCount = SIZE_TO_PAGES(indexSize);
-	const size_t ringCount = SIZE_TO_PAGES(ringSize);
+	const size_t indexCount = SizeToPages(indexSize);
+	const size_t ringCount = SizeToPages(ringSize);
 	const size_t count = indexCount + 2 * ringCount;
 	paddr_t address = AllocatePhysical(count);
 
@@ -825,17 +850,17 @@ HRingBuffer Kernel::CreateRingBuffer(const char* name, const size_t indexSize, c
 	//Add index pages
 	for (size_t i = 0; i < indexCount; i++)
 	{
-		addresses.push_back(address + (i << PAGE_SHIFT));
+		addresses.push_back(address + (i << PageShift));
 	}
 
 	//Push physical addresses twice (for wraparound)
 	for (size_t i = 0; i < ringCount; i++)
 	{
-		addresses.push_back(address + ((i + indexCount) << PAGE_SHIFT));
+		addresses.push_back(address + ((i + indexCount) << PageShift));
 	}
 	for (size_t i = 0; i < ringCount; i++)
 	{
-		addresses.push_back(address + ((i + indexCount) << PAGE_SHIFT));
+		addresses.push_back(address + ((i + indexCount) << PageShift));
 	}
 	Assert(addresses.size() == count);
 
@@ -866,7 +891,7 @@ void* Kernel::MapObject(const void* address, Handle handle)
 	if (!buffer)
 		return nullptr;
 
-	return kernel.VirtualMap(address, buffer->GetAddresses(), MemoryProtection::PageReadWrite);
+	return kernel.VirtualMap(address, buffer->GetAddresses());
 }
 
 void* Kernel::MapSharedObject(const void* address, const char* name)
@@ -892,7 +917,7 @@ void* Kernel::MapSharedObject(const void* address, const char* name)
 
 	UserProcess& process = m_scheduler->GetCurrentProcess();
 
-	return kernel.VirtualMap(address, buffer->GetAddresses(), MemoryProtection::PageReadWrite);
+	return kernel.VirtualMap(address, buffer->GetAddresses());
 }
 
 SystemCallResult Kernel::DebugPrint(const char* s)

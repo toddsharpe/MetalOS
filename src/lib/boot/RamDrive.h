@@ -4,13 +4,13 @@
 #include <kernel/MetalOS.Internal.h>
 
 //Page0: Superblock
-//Page1-Size<<PAGE_SHIFT: files
+//Page1-Size<<PageShift: files
 class RamDrive
 {
 public:
-	static const size_t EntrySize = 32;
-	static const size_t MAX_NAME = EntrySize - sizeof(uint32_t) - sizeof(size_t);
-	static const size_t MAX_ENTRIES = PAGE_SIZE / EntrySize;
+	static constexpr size_t EntrySize = 32;
+	static constexpr size_t MAX_NAME = EntrySize - sizeof(uint32_t) - sizeof(size_t);
+	static constexpr size_t MAX_ENTRIES = PageSize / EntrySize;
 
 	struct Entry
 	{
@@ -37,7 +37,7 @@ private:
 	{
 		Entry Entries[MAX_ENTRIES];
 	};
-	static_assert(sizeof(Superblock) == PAGE_SIZE, "Invalid superblock size");
+	static_assert(sizeof(Superblock) == PageSize, "Invalid superblock size");
 
 	uintptr_t m_address;
 	size_t m_size;

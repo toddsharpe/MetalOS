@@ -1,140 +1,199 @@
-#include "Kernel.h"
-#include "Assert.h"
-
 #include "KernelHeap.h"
+
+#include "Assert.h"
+#include <kernel/MetalOS.List.h>
 
 KernelHeap::KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace& addressSpace) :
 	m_memoryManager(virtualMemory),
 	m_addressSpace(addressSpace),
-	m_address(addressSpace.GetStart()),
-	m_end(m_address),
+	m_start(addressSpace.Start),
+	m_end(m_start),
+	m_count(),
 	m_allocated(),
-	m_head()
+	m_blocks()
 {
 	//Initialize heap
-	const size_t initPages = (1 << 10);//1KB of pages = 4MB heap
-	Grow(initPages);
+	Grow(InitialPages);
 
-	//Initialize by creating a head free block
-	this->m_head = (HeapBlock*)m_address;
-	this->m_head->Next = nullptr;
-	this->m_head->Prev = nullptr;
-	this->m_head->Free = true;
-	this->m_head->Magic = Magic;
+	//Initialize block list
+	ListInitializeHead(&m_blocks);
+
+	//Create block for empty region
+	HeapBlock* head = (HeapBlock*)m_start;
+	head->Free = true;
+	head->Size = (m_end - m_start) - sizeof(HeapBlock);
+	head->Magic = Magic;
+	head->Caller = nullptr;
+
+	//Add to free list
+	ListInsertTail(&m_blocks, &head->Link);
 }
 
-void KernelHeap::Grow(size_t pages)
+void KernelHeap::Grow(const size_t pages)
 {
-	PrintHeapHeaders();
-	kernel.Printf("Heap Grow - 0x%x\n", pages);
-	void* address = m_memoryManager.Allocate(m_end, pages, MemoryProtection::PageReadWrite, m_addressSpace);
-	Assert(address);
+	void* const address = m_memoryManager.Allocate((void*)m_end, pages, m_addressSpace);
+	AssertEqual((uintptr_t)address, m_end);
 
-	m_end += (pages << PAGE_SHIFT);
-	kernel.Printf("  NewEnd: 0x%016x, Addr: 0x%016x\n", m_end, address);
+	m_end += (pages << PageShift);
+	Printf("  NewEnd: 0x%016x\n", m_end);
 }
 
-void* KernelHeap::Allocate(const size_t size, const uintptr_t callerAddress)
+void* KernelHeap::Allocate(const size_t size, void* const caller)
 {
-	const size_t allocationSize = HEAP_ALIGN(size);
-	HeapBlock* current = this->m_head;
-	while (!current->Free || current->GetLength() < allocationSize)
+	const size_t allocationSize = ByteAlign(size, HeapAlign);
+
+	ListEntry* entry = m_blocks.Flink;
+	HeapBlock* block = LIST_CONTAINING_RECORD(entry, HeapBlock, Link);
+	while (!block->Free || block->Size < allocationSize)
 	{
-		Assert(current->Magic == Magic);
-		//If this is our last block it needs to be extended
-		if (current->Next == nullptr)
+		AssertEval(block->Magic == Magic, DisplayAllocations());
+
+		entry = entry->Flink;
+		block = LIST_CONTAINING_RECORD(entry, HeapBlock, Link);
+
+		//Dont loop around
+		if (entry == &m_blocks)
 			break;
-
-		current = current->Next;
 	}
 
-	//Extend last block if needed
-	if (current->Next == nullptr && (((size_t)this->m_end - (size_t)current->Data) < allocationSize))
+	//If there isn't a free block, Grow
+	if (entry == &m_blocks)
 	{
-		//End of the list, allocate
-		const size_t pages = SIZE_TO_PAGES(allocationSize);
-		this->Grow(pages);
+		/*
+		Printf("Test\n");
+		Printf("Allocate: 0x%x\n", size);
+		Display();
+		const uintptr_t old_end = m_end;
+		Printf("Grow, allocate: 0x%x\n", allocationSize);
+		Grow(InitialPages);
 
-		//Grow can allocate, so run block pointer to the end
-		while (current->Next != nullptr)
-			current = current->Next;
-
-		//Assume the last block is free, if not do more work TBD
-		Assert(current->Free);
+		block = (HeapBlock*)old_end;
+		ListInsertTail(&m_blocks, &block->Link);
+		entry = &block->Link;
+		block->Size = (m_end - old_end) - sizeof(HeapBlock);
+		block->Magic = Magic;
+		block->Caller = nullptr;
+		*/
+		Assert(false);
 	}
 
-	//Update block
-	current->Free = false;
-	current->Magic = KernelHeap::Magic;
-	current->CallerAddress = callerAddress;
+	//Mark allocated
+	block->Caller = caller;
+	block->Free = false;
 
 	//Update statistics
-	this->m_allocated += allocationSize;
+	m_allocated += allocationSize;
+	m_count++;
 
-	uintptr_t address = (uintptr_t)&current->Data;
-	if (current->GetLength() - allocationSize < KernelHeap::MinBlockSize + sizeof(HeapBlock))
+	//Determine if block should be split
+	const uintptr_t address = (uintptr_t)&block->Data;
+	if (block->Size - allocationSize < (HeapAlign + sizeof(HeapBlock)))
 	{
-		//Not enough size to split, just return
+		AssertEval(CheckHeap(), DisplayAllocations());
+		memset((void*)address, 0xCC, block->Size);
 		return (void*)address;
 	}
-	
+
 	//Split the block by inserting after current
 	HeapBlock* newBlock = (HeapBlock*)(address + allocationSize);
-	newBlock->Next = current->Next;
-	newBlock->Prev = current;
-	newBlock->Flags = 0;
-	newBlock->Free = 1;
+	ListInsertHead(&block->Link, &newBlock->Link);
+	newBlock->Free = true;
+	newBlock->Size = block->Size - allocationSize - sizeof(HeapBlock);
 	newBlock->Magic = Magic;
+	newBlock->Caller = nullptr;
 
-	//Update current block
-	current->Next = newBlock;
-
+	block->Size = allocationSize;
+	AssertEval(CheckHeap(), DisplayAllocations());
+	memset((void*)address, 0xCC, block->Size);
 	return (void*)address;
 }
 
-void KernelHeap::Deallocate(const void* address)
+void KernelHeap::Deallocate(void* const address, void* const caller)
 {
-	AssertOp((uintptr_t)address, >=, m_address + sizeof(HeapBlock));
+	AssertOp((uintptr_t)address, >=, m_start + sizeof(HeapBlock));
 	AssertOp((uintptr_t)address, <, m_end);
 
 	HeapBlock* block = (HeapBlock*)((uintptr_t)address - sizeof(HeapBlock));
 	AssertEqual(block->Magic, Magic);
+	Assert(!block->Free);
+	Assert(&block->Data == address);
 	
+	//Mark free
 	block->Free = true;
+	block->Caller = caller;
 
+	//Update statistics
+	m_allocated -= block->Size;
+	m_count--;
+
+	//Fill with 0xCC
+	memset(address, 0xBB, block->Size);
+
+	/*
 	//Condense with previous block
-	if (block->Prev->Free)
+	HeapBlock* prev = LIST_CONTAINING_RECORD(block->Link.Blink, HeapBlock, Link);
+	if (prev->Free)
 	{
-		block->Prev->Next = block->Next;
-		if (block->Next != nullptr)
-			block->Next->Prev = block->Prev;
-		block = block->Prev;
+		prev->Size += sizeof(HeapBlock) + block->Size;
+		ListRemoveEntry(&block->Link);
+		block = prev;
 	}
 
 	//Condense with next block
-	if ((block->Next != nullptr) && (block->Next->Free))
+	HeapBlock* next = LIST_CONTAINING_RECORD(block->Link.Flink, HeapBlock, Link);
+	if (next->Free)
 	{
-		block->Next->Prev = block->Prev;
-		block->Prev->Next = block->Next;
+		block->Size += sizeof(HeapBlock) + next->Size;
+		ListRemoveEntry(&next->Link);
+	}
+	*/
+	AssertEval(CheckHeap(), DisplayAllocations());
+}
+
+void KernelHeap::Display() const
+{
+	Printf("PrintHeap\n");
+	Printf("Head: 0x%016x\n", this->m_start);
+	Printf("Start: 0x%016x\n", this->m_start);
+	Printf("End: 0x%016x\n", this->m_end);
+	Printf("Allocated: 0x%016x\n", this->m_allocated);
+	Printf("Count: 0x%016x\n", this->m_count);
+
+	HeapBlock* block = LIST_CONTAINING_RECORD(m_blocks.Blink, HeapBlock, Link);
+	Assert(block->Magic == Magic);
+	Printf("Back Size: 0x%016x\n", block->Size);
+	Printf("Back addr: 0x%016x\n", block);
+}
+
+void KernelHeap::DisplayAllocations() const
+{
+	ListEntry* entry = m_blocks.Flink;
+
+	while (entry != &m_blocks)
+	{
+		HeapBlock* block = LIST_CONTAINING_RECORD(entry, HeapBlock, Link);
+		Assert(block->Magic == Magic);
+
+		Printf("  Addr: 0x%016x, Size: 0x%016x, Free: %d, Caller: 0x%016x\n", &block->Data, block->Size, block->Free, block->Caller);
+		entry = entry->Flink;
 	}
 }
 
-void KernelHeap::PrintHeap() const
+bool KernelHeap::CheckHeap()
 {
-	PrintHeapHeaders();
-	HeapBlock* current = this->m_head;
-	while (current != nullptr)
+	//Ensure all addresses are monotonically increasing.
+	ListEntry* current = m_blocks.Flink;
+	HeapBlock* block = LIST_CONTAINING_RECORD(current, HeapBlock, Link);
+	uintptr_t lastAddr = 0;
+	while (current != &m_blocks)
 	{
-		kernel.Printf("  L: 0x%8x F: 0x%8x P: 0x%16x, N: 0x%016x IP: 0x%16x\n", current->GetLength(), current->Flags, current->Prev, current->Next, current->CallerAddress);
-		current = current->Next;
-	}
-}
+		if ((uintptr_t)block->Data < lastAddr)
+			return false;
 
-void KernelHeap::PrintHeapHeaders() const
-{
-	kernel.Printf("PrintHeap\n");
-	kernel.Printf("Head: 0x%016x\n", this->m_head);
-	kernel.Printf("Address: 0x%016x\n", this->m_address);
-	kernel.Printf("End: 0x%016x\n", this->m_end);
-	kernel.Printf("Allocated: 0x%016x\n", this->m_allocated);
+		lastAddr = (uintptr_t)block->Data;
+		current = current->Flink;
+		block = LIST_CONTAINING_RECORD(current, HeapBlock, Link);
+	}
+
+	return true;
 }

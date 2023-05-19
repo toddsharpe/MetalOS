@@ -7,6 +7,7 @@
 #include "MemoryMap.h"
 #include <kernel/LoaderParams.h>
 #include "Bitvector.h"
+#include <kernel/MetalOS.List.h>
 
 //return original page state and then marks active
 //Page state should be internal, then just return a bool if its zeroed
@@ -15,34 +16,30 @@ class PhysicalMemoryManager
 public:
 	PhysicalMemoryManager(MemoryMap& memoryMap);
 
-	bool AllocatePage(paddr_t& address, PageState& state);
-	void DeallocatePage(paddr_t address);
+	bool AllocatePage(paddr_t& address);
+	void DeallocatePage(const paddr_t address);
 
 	bool AllocateContiguous(paddr_t& address, const size_t pageCount);
 
-	size_t GetSize() const
-	{
-		return sizeof(PFN_ENTRY) * m_length;
-	}
+	size_t GetSize() const;
 
 private:
+	//Construct bitvector where everybit represents group of BuddySize pages.
 	static constexpr size_t BuddySize = 4;
-	static_assert(sizeof(PFN_ENTRY) == 32, "If this number changes, change boot allotment. TODO etc");
+	static constexpr size_t GetBuddyIndex(const paddr_t address);
 
-	static const size_t GetBuddyIndex(paddr_t address);
-	static const PageState GetPageState(const EFI_MEMORY_DESCRIPTOR* desc);
-	paddr_t GetPFN(PPFN_ENTRY entry);
+	static PageState GetPageState(const EFI_MEMORY_DESCRIPTOR& desc);
+	size_t GetIndex(const PAGE_FRAME* entry) const;
+
+	MemoryMap& m_memoryMap;
+	const size_t m_length;
+	PAGE_FRAME* const m_frames;
 
 	//Lists for quick access at runtime
-	PPFN_ENTRY m_zeroed;
-	PPFN_ENTRY m_free;
+	ListEntry m_freeList;
 
-	//Bitvector for contiguous allocations
+	//Bitvector for contiguous allocations, where False is Free.
 	Bitvector m_buddyMap;
 	size_t m_nextBuddy;
-
-	size_t m_length;
-	MemoryMap& m_memoryMap;
-	PFN_ENTRY* m_db;
 };
 

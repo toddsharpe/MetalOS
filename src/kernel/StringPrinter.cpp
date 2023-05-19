@@ -1,6 +1,7 @@
 #include "StringPrinter.h"
 
 #include <stdarg.h>
+#include <intrin.h>
 
 void StringPrinter::Printf(const char* format, ...)
 {
@@ -18,7 +19,15 @@ void StringPrinter::Printf(const char* format, const va_list args)
 	int retval = vsprintf(buffer, format, args);
 	buffer[retval] = '\0';
 
-	this->Write(std::string(buffer));
+
+	char* p = buffer;
+	while (*p != 0)
+	{
+		__outbyte(static_cast<uint16_t>(0x3F8), static_cast<uint8_t>(*p));
+		p++;
+	}
+
+	//this->Write(std::string(buffer));
 }
 
 void StringPrinter::PrintBytes(const char* buffer, const size_t length)

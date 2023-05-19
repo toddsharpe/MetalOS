@@ -15,10 +15,12 @@
 #include <stdlib.h>
 #include "Output.h"
 
-#define EFI_DEBUG 1
-#define Kernel L"moskrnl.exe"
-#define KernelPDB L"moskrnl.pdb"
-#define MaxKernelPath 64
+static constexpr wchar_t Kernel[] = L"moskrnl.exe";
+static constexpr wchar_t KernelPDB[] = L"moskrnl.pdb";
+static constexpr size_t MaxKernelPath = 64;
+static constexpr size_t MemoryMapReservedSize = PageSize;
+static constexpr size_t BootloaderPagePoolCount = 256; //1Mb
+static constexpr size_t ReservedPageTablePages = 512; //2Mb
 
 EFI_SYSTEM_TABLE* ST;
 EFI_RUNTIME_SERVICES* RT;
@@ -31,6 +33,9 @@ extern MetalOSLibrary BootLibrary;
 
 extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 {
+	static_assert(PageShift == EFI_PAGE_SHIFT, "PageShift mismatch");
+	static_assert(PageSize == EFI_PAGE_SIZE, "PageSize mismatch");
+
 	//BootLibrary.AssertPrint = &UartPrintf;
 	//BootLibrary.DebugPrint = &UartPrintf;
 	
@@ -102,12 +107,12 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	UINTN address = GetPhysicalAddressSize(LoaderParams.MemoryMapSize, LoaderParams.MemoryMapDescriptorSize, LoaderParams.MemoryMap);
 	Print(L"Physical Address Max: 0x%016x\r\n", address);
 
-	LoaderParams.PfnDbSize = sizeof(PFN_ENTRY) * (address >> PAGE_SHIFT);
-	size_t pfnDBPages = EFI_SIZE_TO_PAGES(LoaderParams.PfnDbSize);
+	LoaderParams.PfnDbSize = sizeof(PAGE_FRAME) * (address >> PageShift);
+	size_t pfnDBPages = SizeToPages(LoaderParams.PfnDbSize);
 	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, pfnDBPages, &(LoaderParams.PfnDbAddress)));
 
 	//Allocate space for RamDrive
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, SIZE_TO_PAGES(RamDriveSize), &(LoaderParams.RamDriveAddress)));
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, SizeToPages(RamDriveSize), &(LoaderParams.RamDriveAddress)));
 	RamDrive drive((void*)LoaderParams.RamDriveAddress, RamDriveSize);
 
 	//Load kernel path
@@ -179,9 +184,9 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	//The physical page tables will be reclaimed by Kernel, so just remove pointers.
 	currentPT.ClearKernelEntries();
 
-	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, EFI_SIZE_TO_PAGES(LoaderParams.KernelImageSize));
+	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, SizeToPages(LoaderParams.KernelImageSize));
 	currentPT.MapKernelPages(KernelPageTablesPool, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
-	currentPT.MapKernelPages(KernelGraphicsDevice, LoaderParams.Display.FrameBufferBase, EFI_SIZE_TO_PAGES(LoaderParams.Display.FrameBufferSize));
+	currentPT.MapKernelPages(KernelGraphicsDevice, LoaderParams.Display.FrameBufferBase, SizeToPages(LoaderParams.Display.FrameBufferSize));
 
 	//Re-enable write protection
 	__writecr0(__readcr0() | (1 << 16));
@@ -257,9 +262,9 @@ EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* pParams)
 {
 	EFI_STATUS status;
 
-	ReturnIfNotSuccess(Print(L"LoaderParams: 0x%016x, Pages: 0x%x\r\n", pParams, EFI_SIZE_TO_PAGES(sizeof(LOADER_PARAMS))));
-	ReturnIfNotSuccess(Print(L"  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", pParams->KernelAddress, EFI_SIZE_TO_PAGES(pParams->KernelImageSize)));
-	ReturnIfNotSuccess(Print(L"  MemoryMap-Address: 0x%016x, Pages: 0x%x\r\n", pParams->MemoryMap, EFI_SIZE_TO_PAGES(pParams->MemoryMapSize)));
+	ReturnIfNotSuccess(Print(L"LoaderParams: 0x%016x, Pages: 0x%x\r\n", pParams, SizeToPages(sizeof(LOADER_PARAMS))));
+	ReturnIfNotSuccess(Print(L"  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", pParams->KernelAddress, SizeToPages(pParams->KernelImageSize)));
+	ReturnIfNotSuccess(Print(L"  MemoryMap-Address: 0x%016x, Pages: 0x%x\r\n", pParams->MemoryMap, SizeToPages(pParams->MemoryMapSize)));
 	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: 0x%016x, Pages: 0x%x\r\n", pParams->PageTablesPoolAddress, pParams->PageTablesPoolPageCount));
 	ReturnIfNotSuccess(Print(L"  PFN Database-Address: 0x%016x, Size: 0x%x\r\n", pParams->PfnDbAddress, pParams->PfnDbSize));
 	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", pParams->ConfigTables, pParams->ConfigTableSizes));
@@ -435,7 +440,7 @@ UINTN GetPhysicalAddressSize(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize,
 	EFI_MEMORY_DESCRIPTOR* current;
 	for (current = MemoryMap; current < NextMemoryDescriptor(MemoryMap, MemoryMapSize); current = NextMemoryDescriptor(current, MemoryMapDescriptorSize))
 	{
-		uintptr_t address = current->PhysicalStart + (current->NumberOfPages << EFI_PAGE_SHIFT);
+		const uintptr_t address = current->PhysicalStart + (current->NumberOfPages << PageShift);
 		if (address > highest)
 			highest = address;
 	}

@@ -4,61 +4,48 @@
 #include "VirtualAddressSpace.h"
 #include "VirtualMemoryManager.h"
 
+//Needs to track every block so condensing works when deallocating, hence free bit
 class KernelHeap
 {
 public:
 	KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace& addressSpace);
 
-	void* Allocate(const size_t size, const uintptr_t callerAddress);
-	void Deallocate(const void* address);
+	void* Allocate(const size_t size, void* const caller);
+	void Deallocate(void* const address, void* const caller);
 
-	void PrintHeap() const;
-	void PrintHeapHeaders() const;
+	void Display() const;
+	void DisplayAllocations() const;
 
-	static const uint32_t MinBlockSize = 4;
 	static const uint16_t Magic = 0xBEEF;
 
 private:
-	void Grow(size_t pages);
+	static constexpr size_t InitialPages = (1 << 12); //4K pages, 16MB heap
+	static constexpr size_t HeapAlign = 32;
 
-	//TODO: remove magic, use bit of address for free (min alloc = 2)
+	void Grow(const size_t pages);
+	bool CheckHeap();
+
 #pragma warning (push)
-#pragma warning(disable: 4200)
-#pragma pack(push, 1)
+#pragma warning(disable: 4200) //Disable zero-sized member warning
 	struct HeapBlock
 	{
-		HeapBlock* Next;
-		HeapBlock* Prev;
-		union
-		{
-			struct
-			{
-				uint16_t Free : 1;
-				uint16_t Magic;//Debug only, verify block integrity
-			};
-			uint64_t Flags;
-		};
-		uintptr_t CallerAddress; //Address of caller that allocated block
+		ListEntry Link;
+		uint64_t Free : 1;
+		uint64_t Size : 47;
+		uint64_t Magic : 16;//Debug only, verify block integrity
+		void* Caller;
 		uint8_t Data[];
-
-		//Doesn't include header
-		size_t GetLength()
-		{
-			if (Next == nullptr)
-				return 0;
-			return (size_t)Next - (size_t)Data;
-		}
 	};
-#pragma pack(pop)
 #pragma warning (pop)
 	static_assert(sizeof(HeapBlock) == 32, "Heap block has changed");
 
 	VirtualMemoryManager& m_memoryManager;
 	VirtualAddressSpace& m_addressSpace;
 
-	uint64_t m_address;
+	uint64_t m_start;
 	uint64_t m_end;
-	uint32_t m_allocated; //Total size of objects allocated, not space being taken up with padding/alignment/overhead
-	HeapBlock* m_head;
+	size_t m_count;
+	size_t m_allocated; //Total size of objects allocated, not space being taken up with padding/alignment/overhead
+	ListEntry m_blocks;
 };
 

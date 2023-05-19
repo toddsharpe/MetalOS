@@ -174,7 +174,7 @@ bool PageTables::MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, si
 
 	for (size_t i = 0; i < count; i++)
 	{
-		if (!MapPage(virtualAddress + ((uintptr_t)i << PAGE_SHIFT), physicalAddress + ((uintptr_t)i << PAGE_SHIFT), global))
+		if (!MapPage(virtualAddress + ((uintptr_t)i << PageShift), physicalAddress + ((uintptr_t)i << PageShift), global))
 			return false;
 	}
 

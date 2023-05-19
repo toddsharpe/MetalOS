@@ -19,7 +19,7 @@ public:
 
 	void AddModule(KeLibrary& library);
 
-	void DebuggerEvent(InterruptVector vector, PINTERRUPT_FRAME pFrame);
+	void DebuggerEvent(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame);
 	void KdpDprintf(const char* format, va_list args);
 	bool Enabled();
 
@@ -27,7 +27,7 @@ private:
 	static size_t ThreadLoop(void* arg);
 	size_t ThreadLoop();
 
-	void ConvertToContext(PINTERRUPT_FRAME frame, PCONTEXT context);
+	void ConvertToContext(X64_INTERRUPT_FRAME* frame, PCONTEXT context);
 
 	LIST_ENTRY PsLoadedModuleList;
 };

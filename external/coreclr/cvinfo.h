@@ -17,6 +17,8 @@
  *
  */
 
+#include <cstdint>
+
 #pragma once
 
 #include "cvconst.h"

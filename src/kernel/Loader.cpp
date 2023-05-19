@@ -8,21 +8,21 @@
 
 void* Loader::LoadKernelLibrary(const std::string& path)
 {
-	KFile* file = kernel.KeCreateFile(path, GenericAccess::Read);
-	Assert(file);
+	KFile file;
+	Assert(kernel.KeCreateFile(file, path, GenericAccess::Read));
 
 	size_t read;
 
 	//Dos header
 	IMAGE_DOS_HEADER dosHeader;
-	Assert(kernel.KeReadFile(*file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
+	Assert(kernel.KeReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
 	AssertEqual(read, sizeof(IMAGE_DOS_HEADER));
 	AssertEqual(dosHeader.e_magic, IMAGE_DOS_SIGNATURE);
 
 	//NT Header
 	IMAGE_NT_HEADERS peHeader;
-	Assert(kernel.KeSetFilePosition(*file, dosHeader.e_lfanew));
-	Assert(kernel.KeReadFile(*file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
+	Assert(kernel.KeSetFilePosition(file, dosHeader.e_lfanew));
+	Assert(kernel.KeReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
 	AssertEqual(read, sizeof(IMAGE_NT_HEADERS));
 
 	//Verify image
@@ -34,12 +34,12 @@ void* Loader::LoadKernelLibrary(const std::string& path)
 	AssertOp(peHeader.OptionalHeader.ImageBase, >=, KernelAddress::KernelLibraryStart);
 	AssertOp(peHeader.OptionalHeader.ImageBase, <, KernelAddress::KernelLibraryEnd);
 
-	void* address = kernel.AllocateLibrary(peHeader.OptionalHeader.ImageBase, SIZE_TO_PAGES(peHeader.OptionalHeader.SizeOfImage));
+	void* address = kernel.AllocateLibrary((void*)peHeader.OptionalHeader.ImageBase, SizeToPages(peHeader.OptionalHeader.SizeOfImage));
 	Assert(address);
 
 	//Read headers
-	Assert(kernel.KeSetFilePosition(*file, 0));
-	Assert(kernel.KeReadFile(*file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
+	Assert(kernel.KeSetFilePosition(file, 0));
+	Assert(kernel.KeReadFile(file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	AssertEqual(read, peHeader.OptionalHeader.SizeOfHeaders);
 
 	PIMAGE_NT_HEADERS pNtHeader = MakePointer<PIMAGE_NT_HEADERS>(address, dosHeader.e_lfanew);
@@ -54,8 +54,8 @@ void* Loader::LoadKernelLibrary(const std::string& path)
 			continue;
 		
 		void* destination = MakePointer<void*>(address, section[i].VirtualAddress);
-		Assert(kernel.KeSetFilePosition(*file, section[i].PointerToRawData));
-		Assert(kernel.KeReadFile(*file, destination, rawSize, &read));
+		Assert(kernel.KeSetFilePosition(file, section[i].PointerToRawData));
+		Assert(kernel.KeReadFile(file, destination, rawSize, &read));
 		AssertEqual(read, section[i].SizeOfRawData);
 	}
 
@@ -70,21 +70,21 @@ void* Loader::LoadKernelLibrary(const std::string& path)
 //TODO: this is very similar to KernelAPI's loader, as well as create process
 Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 {
-	KFile* file = kernel.KeCreateFile(std::string(path), GenericAccess::Read);
-	Assert(file);
+	KFile file;
+	Assert(kernel.KeCreateFile(file, std::string(path), GenericAccess::Read));
 
 	size_t read;
 
 	//Dos header
 	IMAGE_DOS_HEADER dosHeader;
-	Assert(kernel.KeReadFile(*file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
+	Assert(kernel.KeReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
 	AssertEqual(read, sizeof(IMAGE_DOS_HEADER));
 	AssertEqual(dosHeader.e_magic, IMAGE_DOS_SIGNATURE);
 
 	//NT Header
 	IMAGE_NT_HEADERS peHeader;
-	Assert(kernel.KeSetFilePosition(*file, dosHeader.e_lfanew));
-	Assert(kernel.KeReadFile(*file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
+	Assert(kernel.KeSetFilePosition(file, dosHeader.e_lfanew));
+	Assert(kernel.KeReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
 	AssertEqual(read, sizeof(IMAGE_NT_HEADERS));
 
 	//Verify image
@@ -92,12 +92,12 @@ Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 	AssertEqual(peHeader.FileHeader.Machine, IMAGE_FILE_MACHINE_AMD64);
 	AssertEqual(peHeader.OptionalHeader.Magic, IMAGE_NT_OPTIONAL_HDR64_MAGIC);
 
-	void* address = kernel.VirtualAlloc(process, (void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWriteExecute);
+	void* address = kernel.VirtualAlloc(process, (void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage);
 	Assert(address);
 	
 	//Read headers
-	Assert(kernel.KeSetFilePosition(*file, 0));
-	Assert(kernel.KeReadFile(*file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
+	Assert(kernel.KeSetFilePosition(file, 0));
+	Assert(kernel.KeReadFile(file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
 	AssertEqual(read, peHeader.OptionalHeader.SizeOfHeaders);
 	AssertEqual((ULONGLONG)address, peHeader.OptionalHeader.ImageBase);
 
@@ -113,8 +113,8 @@ Handle Loader::LoadLibrary(UserProcess& process, const char* path)
 			continue;
 
 		void* destination = MakePointer<void*>(address, section[i].VirtualAddress);
-		Assert(kernel.KeSetFilePosition(*file, section[i].PointerToRawData));
-		Assert(kernel.KeReadFile(*file, destination, rawSize, &read));
+		Assert(kernel.KeSetFilePosition(file, section[i].PointerToRawData));
+		Assert(kernel.KeReadFile(file, destination, rawSize, &read));
 		AssertEqual(read, section[i].SizeOfRawData);
 	}
 

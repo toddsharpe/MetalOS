@@ -1,4 +1,0 @@
-extern KERNEL_STACK_STOP: qword
-extern main: proc
-EXTERN SYSTEMCALL_HANDLER: proc
-EXTERN INTERRUPT_HANDLER: proc

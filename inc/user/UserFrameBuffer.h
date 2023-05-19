@@ -17,7 +17,7 @@ public:
 	void Initialize()
 	{
 		m_buffer.Length = m_rect.Height * m_rect.Width * sizeof(Graphics::Color);
-		m_buffer.Data = VirtualAlloc(nullptr, m_buffer.Length, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWrite);
+		m_buffer.Data = VirtualAlloc(nullptr, m_buffer.Length);
 		Assert(m_buffer.Data);
 	}
 

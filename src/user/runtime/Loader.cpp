@@ -9,12 +9,6 @@
 #define ReturnNullIfNot(x) if (!(x)) return nullptr;
 #define RetNullIfFailed(x) if ((x) != SystemCallResult::Success) return nullptr;
 
-template<typename T>
-constexpr T MakePointer(const void* base, size_t offset = 0)
-{
-	return reinterpret_cast<T>((char*)base + offset);
-}
-
 PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name)
 {
 	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)imageBase;
@@ -68,9 +62,9 @@ Handle LoadLibrary(const char* lpLibFileName)
 	}
 
 	//Reserve space for image
-	Handle moduleBase = VirtualAlloc((void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWriteExecute);
+	Handle moduleBase = VirtualAlloc((void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage);
 	if (moduleBase == nullptr)
-		moduleBase = VirtualAlloc(nullptr, peHeader.OptionalHeader.SizeOfImage, MemoryAllocationType::CommitReserve, MemoryProtection::PageReadWriteExecute);
+		moduleBase = VirtualAlloc(nullptr, peHeader.OptionalHeader.SizeOfImage);
 	ReturnNullIfNot(moduleBase != nullptr);
 
 	//Read in headers

@@ -37,7 +37,7 @@ EFI_STATUS EfiLoader::MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS& addressOut, 
 	sizeOut = fileInfo->FileSize;
 
 	//Allocate space for file
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, EFI_SIZE_TO_PAGES(sizeOut), &addressOut));
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, SizeToPages(sizeOut), &addressOut));
 
 	//Read file into memory
 	ReturnIfNotSuccess(file->Read(file, &sizeOut, (void*)addressOut));
@@ -74,7 +74,7 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& e
 		ReturnIfNotSuccess(EFI_UNSUPPORTED);
 
 	//Allocate pages for full image
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, EFI_SIZE_TO_PAGES((UINTN)peHeader.OptionalHeader.SizeOfImage), &physicalImageBaseOut));
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, SizeToPages((UINTN)peHeader.OptionalHeader.SizeOfImage), &physicalImageBaseOut));
 
 	//Read headers into memory
 	size = peHeader.OptionalHeader.SizeOfHeaders;

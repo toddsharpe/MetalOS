@@ -1,11 +1,48 @@
-#include "Kernel.h"
+#include "Bitvector.h"
+
 #include "Assert.h"
 
-#include "Bitvector.h"
+Bitvector::Bitvector(const size_t length) :
+	Length(length),
+	m_map()
+{
+	const size_t mapSize = GetMapSize(length);
+	m_map.reset(new size_t[mapSize]);
+
+	memset(m_map.get(), 0, sizeof(size_t) * mapSize);
+}
+
+bool Bitvector::Get(const size_t index) const
+{
+	AssertOp(index, <, Length);
+	
+	const size_t mapIndex = GetMapIndex(index);
+	const size_t element = m_map.get()[mapIndex];
+
+	const size_t mapShift = GetMapShift(index);
+	const size_t mask = (1LL << mapShift);
+	return (element & mask) != 0;
+}
+
+void Bitvector::Set(const size_t index, const bool value)
+{
+	AssertOp(index, <, Length);
+	
+	const size_t mapIndex = GetMapIndex(index);
+	size_t& const element = m_map.get()[mapIndex];
+
+	const size_t mapShift = GetMapShift(index);
+	const size_t mask = (1LL << mapShift);
+	
+	if (value)
+		element |= mask;
+	else
+		element &= ~mask;
+}
 
 constexpr size_t Bitvector::GetMapSize(size_t length)
 {
-	return length / mapBits + ((length % mapBits != 0) ? 1 : 0);
+	return (length + (mapBits - 1)) / mapBits;
 }
 
 constexpr size_t Bitvector::GetMapIndex(size_t index)
@@ -16,32 +53,4 @@ constexpr size_t Bitvector::GetMapIndex(size_t index)
 constexpr size_t Bitvector::GetMapShift(size_t index)
 {
 	return index % mapBits;
-}
-
-Bitvector::Bitvector(size_t length) : m_size(GetMapSize(length)), m_map(new size_t[m_size]())
-{
-	memset(m_map, 0, sizeof(size_t) * m_size);
-}
-
-bool Bitvector::Get(size_t index) const
-{
-	const size_t mapIndex = GetMapIndex(index);
-	const size_t mapShift = GetMapShift(index);
-	Assert(mapIndex < m_size);
-
-	size_t& element = m_map[mapIndex];
-	return (element & (1LL << mapShift)) != 0;
-}
-
-void Bitvector::Set(size_t index, bool value)
-{
-	const size_t mapIndex = GetMapIndex(index);
-	const size_t mapShift = GetMapShift(index);
-	Assert(mapIndex < m_size);
-	
-	size_t& element = m_map[mapIndex];
-	if (value)
-		element |= (1LL << mapShift);
-	else
-		element &= ~(1LL << mapShift);
 }

@@ -16,8 +16,12 @@ void* BootHeap::Allocate(const size_t size)
 	Assert(m_watermark + size <= m_address + m_length);
 
 	const uintptr_t level = m_watermark;
-	m_watermark += ByteAlign(size, Alignment);
-	return (void*)level;
+	const size_t aligned = ByteAlign(size, Alignment);
+	m_watermark += aligned;
+
+	void* const address = (void*)level;
+	memset(address, 0xdd, aligned);
+	return address;
 }
 
 //Don't deallocate.

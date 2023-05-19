@@ -1,13 +1,13 @@
 #include "Kernel.h"
 #include <intrin.h>
-#include "KSpinLock.h"
-#include "KSemaphore.h"
+#include "Objects/KSemaphore.h"
 #include <kernel/MetalOS.Arch.h>
+#include <shared/MetalOS.System.h>
 
-#define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
-#define Assert(x) if (!(x)) { Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
-#define Trace() Print(__FILE__ "-" STR(__LINE__));
+#include "Assert.h"
+
+typedef int semaphore_t;
+typedef int spinlock_t;
 
 ACPI_STATUS Kernel::AcpiOsInitialize()
 {
@@ -16,6 +16,7 @@ ACPI_STATUS Kernel::AcpiOsInitialize()
 
 ACPI_STATUS Kernel::AcpiOsTerminate()
 {
+	Assert(false);
 	return ACPI_STATUS();
 }
 
@@ -42,12 +43,11 @@ ACPI_STATUS Kernel::AcpiOsTableOverride(ACPI_TABLE_HEADER* ExistingTable, ACPI_T
 void* Kernel::AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length)
 {
 	//Handle unaligned addresses
-	size_t pageOffset = PhysicalAddress & PAGE_MASK;
-	size_t pageCount = SIZE_TO_PAGES(pageOffset + Length);
+	const size_t pageOffset = PhysicalAddress & PageMask;
+	const size_t pageCount = DivRoundUp(pageOffset + Length, PageSize);
 
-	uintptr_t physicalBase = PhysicalAddress & ~PAGE_MASK;
-	m_pageTables->MapKernelPages(KernelAcpiStart + physicalBase, physicalBase, pageCount);
-
+	const uintptr_t physicalBase = PhysicalAddress & ~PageMask;
+	Assert(m_pageTables->MapKernelPages(KernelAcpiStart + physicalBase, physicalBase, pageCount));
 	return (void*)(KernelAcpiStart + physicalBase + pageOffset);
 }
 
@@ -62,6 +62,7 @@ ACPI_STATUS Kernel::AcpiOsGetPhysicalAddress(void* LogicalAddress, ACPI_PHYSICAL
 	//PageTables* current = new PageTables(__readcr3());
 	//*PhysicalAddress = current->ResolveAddress((uintptr_t)LogicalAddress);
 	//TODO
+	Trace();
 	return AE_OK;
 }
 
@@ -86,8 +87,8 @@ BOOLEAN Kernel::AcpiOsWritable(void* Memory, ACPI_SIZE Length)
 
 ACPI_THREAD_ID Kernel::AcpiOsGetThreadId()
 {
-	KThread* thread = m_scheduler->GetCurrentThread();
-	return thread->GetId();
+	//ACPI is single-threaded, just return 1
+	return 1;
 }
 
 ACPI_STATUS Kernel::AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Function, void* Context)
@@ -109,7 +110,7 @@ void Kernel::AcpiOsStall(UINT32 Microseconds)
 
 ACPI_STATUS Kernel::AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEMAPHORE* OutHandle)
 {
-	*OutHandle = this->KeCreateSemaphore(InitialUnits, MaxUnits, "AcpiSemaphore");
+	*OutHandle = new semaphore_t();
 	return AE_OK;
 }
 
@@ -118,15 +119,14 @@ ACPI_STATUS Kernel::AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle)
 	if (!Handle)
 		return AE_BAD_PARAMETER;
 
-	KSemaphore* semaphore = static_cast<KSemaphore*>(Handle);
-	this->KeCloseSemaphore(semaphore);
+	delete Handle;
 	return AE_OK;
 }
 
 void Kernel::AcpiOsVprintf(const char* Format, va_list Args)
 {
 	//Reduce ACPI talk for now (soon, pump to uart?)
-	//Print(Format, Args);
+	Printf(Format, Args);
 }
 
 ACPI_STATUS Kernel::AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout)
@@ -136,12 +136,7 @@ ACPI_STATUS Kernel::AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UIN
 
 	Assert(Units == 1);
 
-	KSemaphore* semaphore = static_cast<KSemaphore*>(Handle);
-	WaitStatus status = this->KeWaitForSemaphore(*semaphore, Timeout, Units);
-	if (status == WaitStatus::Signaled)
-		return AE_OK;
-	else if (status == WaitStatus::Timeout)
-		return AE_TIME;
+	return AE_OK;
 }
 
 ACPI_STATUS Kernel::AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units)
@@ -149,16 +144,12 @@ ACPI_STATUS Kernel::AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units)
 	if (!Handle)
 		return AE_BAD_PARAMETER;
 	
-	KSemaphore* semaphore = static_cast<KSemaphore*>(Handle);
-	if (!this->KeReleaseSemaphore(*semaphore, Units))
-		return AE_BAD_PARAMETER;
-	
 	return AE_OK;
 }
 
 ACPI_STATUS Kernel::AcpiOsCreateLock(ACPI_SPINLOCK* OutHandle)
 {
-	*OutHandle = new KSpinLock();
+	*OutHandle = new spinlock_t();
 	return AE_OK;
 }
 
@@ -169,16 +160,15 @@ void Kernel::AcpiOsDeleteLock(ACPI_SPINLOCK Handle)
 
 ACPI_CPU_FLAGS Kernel::AcpiOsAcquireLock(ACPI_SPINLOCK Handle)
 {
-	KSpinLock* pSpinLock = static_cast<KSpinLock*>(Handle);
-	if (!pSpinLock)
+	if (!Handle)
 		return AE_BAD_PARAMETER;
 
-	return pSpinLock->Acquire();
+	return 0;
 }
 
 void Kernel::AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags)
 {
-	return static_cast<KSpinLock*>(Handle)->Release(Flags);
+	//NOTE(tsharpe): Nothing to do, spinlocks aren't implemented
 }
 
 ACPI_STATUS Kernel::AcpiOsSignal(UINT32 Function, void* Info)

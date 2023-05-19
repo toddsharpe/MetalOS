@@ -14,12 +14,9 @@ class VirtualMemoryManager
 public:
 	VirtualMemoryManager(PhysicalMemoryManager& physicalMemory);
 
-	void* Allocate(uintptr_t address, const size_t count, const MemoryProtection protection, VirtualAddressSpace& addressSpace);
-	void* VirtualMap(uintptr_t address, const std::vector<paddr_t>& addresses, const MemoryProtection& protection, VirtualAddressSpace& addressSpace);
-
-	paddr_t ResolveAddress(void* address);
+	void* Allocate(const void* address, const size_t count, VirtualAddressSpace& addressSpace);
+	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses, VirtualAddressSpace& addressSpace);
 
 private:
 	PhysicalMemoryManager& m_physicalMemory;
 };
-

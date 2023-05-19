@@ -12,14 +12,13 @@ extern "C"
 
 	size_t ArchContextSize();
 	size_t ArchStackReserve();
-	void ArchInitContext(void* context, void* entry, void* stack);
+	void ArchInitContext(void* context, void* const entry, void* const stack);
 	bool ArchSaveContext(void* context); //Returns 0
 	__declspec(noreturn) bool ArchLoadContext(void* context); //Returns 1
 	__declspec(noreturn) void ArchUserThreadStart(void* context, void* teb);
 
 	void ArchSetPagingRoot(paddr_t root);
 	void ArchSetInterruptStack(void* stack);
-	void ArchSetKernelCpuContext(void* context);
 	void ArchSetUserCpuContext(void* context);
 
 	void ArchPause();

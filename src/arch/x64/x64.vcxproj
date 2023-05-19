@@ -11,27 +11,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Arch.cpp" />
     <ClCompile Include="PageTables.cpp" />
-    <ClCompile Include="x64.cpp" />
-    <ClCompile Include="x64Data.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="Context.asm" />
-    <MASM Include="Interrupts.asm" />
-    <MASM Include="Main.asm" />
-    <MASM Include="Support.asm" />
-    <MASM Include="SystemCall.asm" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Interrupts.h" />
     <ClInclude Include="PageTables.h" />
-    <ClInclude Include="Support.h" />
-    <ClInclude Include="SystemCall.h" />
-    <ClInclude Include="x64.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="x64.s" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

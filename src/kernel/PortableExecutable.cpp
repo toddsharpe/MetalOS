@@ -5,7 +5,7 @@
 
 #include "PortableExecutable.h"
 
-DWORD PortableExecutable::GetSizeOfImage(void* imageBase)
+DWORD PortableExecutable::GetSizeOfImage(void* const imageBase)
 {
 	//Headers
 	const PIMAGE_DOS_HEADER dosHeader = static_cast<const PIMAGE_DOS_HEADER>(imageBase);
@@ -17,7 +17,7 @@ DWORD PortableExecutable::GetSizeOfImage(void* imageBase)
 	return ntHeader->OptionalHeader.SizeOfImage;
 }
 
-DWORD PortableExecutable::GetEntryPoint(void* imageBase)
+DWORD PortableExecutable::GetEntryPoint(void* const imageBase)
 {
 	//Headers
 	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(imageBase);
@@ -29,7 +29,7 @@ DWORD PortableExecutable::GetEntryPoint(void* imageBase)
 	return ntHeader->OptionalHeader.AddressOfEntryPoint;
 }
 
-PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(void* imageBase, const std::string& name)
+PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(void* const imageBase, const std::string& name)
 {
 	//Headers
 	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(imageBase);
@@ -50,7 +50,7 @@ PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(void* imageBase, const st
 	return nullptr;
 }
 
-PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(void* imageBase, const uint32_t index)
+PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(void* const imageBase, const uint32_t index)
 {
 	//Headers
 	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(imageBase);
@@ -66,7 +66,7 @@ PIMAGE_SECTION_HEADER PortableExecutable::GetPESection(void* imageBase, const ui
 	return &section[index];
 }
 
-void* PortableExecutable::GetProcAddress(void* imageBase, const std::string& procName)
+void* PortableExecutable::GetProcAddress(void* const imageBase, const std::string& procName)
 {
 	//Headers
 	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(imageBase);
@@ -125,7 +125,7 @@ void* PortableExecutable::GetProcAddress(void* imageBase, const std::string& pro
 //ReactOS::reactos\dll\win32\dbghelp\msc.c
 #define MAKESIG(a,b,c,d)        ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
 #define CODEVIEW_RSDS_SIG       MAKESIG('R','S','D','S')
-const char* PortableExecutable::GetPdbName(void* imageBase)
+const char* PortableExecutable::GetPdbName(void* const imageBase)
 {
 	//Headers
 	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(imageBase);

@@ -1,7 +1,7 @@
 #include "UserPipe.h"
 
-#include "MetalOS.Kernel.h"
-#include "Kernel.h"
+#include "Kernel/MetalOS.Kernel.h"
+#include "Kernel/Kernel.h"
 #include <vector>
 
 bool UserPipe::EventSignal(void* const arg)

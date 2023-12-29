@@ -1,7 +1,7 @@
 #include "KernelHeap.h"
 
 #include "Assert.h"
-#include <kernel/MetalOS.List.h>
+#include "MetalOS.List.h"
 
 KernelHeap::KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace& addressSpace) :
 	m_memoryManager(virtualMemory),

@@ -1,7 +1,7 @@
 #include "VirtualMemoryManager.h"
 
 #include "Assert.h"
-#include <x64/PageTables.h>
+#include "PageTables.h"
 
 VirtualMemoryManager::VirtualMemoryManager(PhysicalMemoryManager& physicalMemory) :
 	m_physicalMemory(physicalMemory)

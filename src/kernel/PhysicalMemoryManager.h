@@ -1,13 +1,13 @@
 #pragma once
 
-#include "MetalOS.Kernel.h"
+#include "Kernel/MetalOS.Kernel.h"
 
 #include <array>
 #include <vector>
 #include "MemoryMap.h"
-#include <kernel/LoaderParams.h>
+#include "LoaderParams.h"
 #include "Bitvector.h"
-#include <kernel/MetalOS.List.h>
+#include "MetalOS.List.h"
 
 //return original page state and then marks active
 //Page state should be internal, then just return a bool if its zeroed

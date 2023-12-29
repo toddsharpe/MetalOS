@@ -5,7 +5,7 @@
 
 #include "Assert.h"
 
-#include <shared/MetalOS.Types.h>
+#include "user/MetalOS.Types.h"
 
 Pdb::Pdb(const void* pdbAddress, const Handle image) :
 	m_msfFile(pdbAddress),

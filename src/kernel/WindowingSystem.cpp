@@ -1,6 +1,6 @@
 #include "WindowingSystem.h"
 
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include "Assert.h"
 #include <limits>
 

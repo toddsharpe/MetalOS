@@ -1,8 +1,8 @@
-#include <Kernel.h>
+#include "Kernel/Kernel.h"
 #include <Assert.h>
 
-#include "HyperVMouseDriver.h"
-#include "Devices/HyperVDevice.h"
+#include "Kernel/Drivers/HyperVMouseDriver.h"
+#include "Kernel/Devices/HyperVDevice.h"
 
 //TODO: could be refactored into HID + HyperV portions
 //For now it does both

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <efi.h>
-#include <kernel/LoaderParams.h>
-#include <Graphics/FrameBuffer.h>
-#include "MetalOS.Kernel.h"
+#include "LoaderParams.h"
+#include <Graphics/Framebuffer.h>
+#include "Kernel/MetalOS.Kernel.h"
 
 class EfiDisplay : public Graphics::FrameBuffer
 {

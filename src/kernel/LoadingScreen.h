@@ -1,7 +1,7 @@
 #pragma once
 
-#include <UI/Window.h>
-#include <UI/Label.h>
+#include "UI/Window.h"
+#include "UI/Label.h"
 #include "StringPrinter.h"
 
 //This method is called early on during boot (before a proper heap) and therefore

@@ -1,8 +1,8 @@
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include <intrin.h>
-#include "Objects/KSemaphore.h"
-#include <kernel/MetalOS.Arch.h>
-#include <shared/MetalOS.System.h>
+#include "Kernel/Objects/KSemaphore.h"
+#include "MetalOS.Arch.h"
+#include "user/MetalOS.System.h"
 
 #include "Assert.h"
 

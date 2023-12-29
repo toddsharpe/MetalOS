@@ -1,10 +1,11 @@
+#include "MetalOS.h"
+#include "user/Assert.h"
+#include "user/MetalOS.Types.h"
+
 #include <stdint.h>
-#include <user/Debug.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#include <shared/MetalOS.Types.h>
-#include <user/MetalOS.h>
 
 extern "C" FILE* __acrt_iob_func(unsigned index)
 {
@@ -23,7 +24,7 @@ size_t fread(void* _Buffer, size_t _ElementSize, size_t _ElementCount, FILE* _St
 		return 0;
 	
 	size_t bytes;
-	SystemCallResult result = (SystemCallResult)ReadFile(_Stream, _Buffer, _ElementSize * _ElementCount, &bytes);
+	SystemCallResult result = ReadFile(_Stream, _Buffer, _ElementSize * _ElementCount, &bytes);
 	Assert(result == SystemCallResult::Success);
 
 	return bytes / _ElementSize;
@@ -63,7 +64,7 @@ int fseek(FILE* _Stream, long _Offset, int _Origin)
 	
 	size_t newPos;
 
-	SystemCallResult result = (SystemCallResult)SetFilePointer(_Stream, _Offset, move, &newPos);
+	SystemCallResult result = SetFilePointer(_Stream, _Offset, move, &newPos);
 	return (int)newPos;
 }
 

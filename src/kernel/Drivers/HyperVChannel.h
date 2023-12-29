@@ -1,9 +1,9 @@
 #pragma once
 
-#include <linux\hyperv.h>
 #include "HyperVRingBuffer.h"
 #include "VmBusDriver.h"
-#include <Kernel.h>
+#include "Kernel/Kernel.h"
+#include <linux\hyperv.h>
 
 //Channel allocates one contigious section of memory
 //Builds outbound and inbound ring buffers

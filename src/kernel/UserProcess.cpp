@@ -1,9 +1,9 @@
 #include "UserProcess.h"
 
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include "Assert.h"
 #include <intrin.h>
-#include <shared/MetalOS.Types.h>
+#include "user/MetalOS.Types.h"
 
 
 uint32_t UserProcess::LastId = 0;

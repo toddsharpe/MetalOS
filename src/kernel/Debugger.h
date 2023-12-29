@@ -5,7 +5,7 @@
 #include <reactos/ldrtypes.h>
 #include <windows/winnt.h>
 #include <reactos/windbgkd.h>
-#include <kernel/kddll.h>
+#include "kddll.h"
 #include <map>
 #include "KThread.h"
 

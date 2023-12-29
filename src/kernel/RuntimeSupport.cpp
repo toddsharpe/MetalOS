@@ -1,7 +1,7 @@
 #include "RuntimeSupport.h"
 
 #include "Assert.h"
-#include <shared/MetalOS.Types.h>
+#include "user/MetalOS.Types.h"
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include "PortableExecutable.h"

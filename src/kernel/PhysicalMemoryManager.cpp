@@ -1,7 +1,7 @@
 #include "Assert.h"
 
 #include "PhysicalMemoryManager.h"
-#include <shared/MetalOS.System.h>
+#include "user/MetalOS.System.h"
 
 PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
 	m_memoryMap(memoryMap),

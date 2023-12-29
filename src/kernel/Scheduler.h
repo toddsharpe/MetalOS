@@ -1,12 +1,12 @@
 #pragma once
 
-#include "MetalOS.Kernel.h"
+#include "Kernel/MetalOS.Kernel.h"
 #include "HyperV.h"
-#include "Objects/KSemaphore.h"
+#include "Kernel/Objects/KSemaphore.h"
 #include "KThread.h"
-#include "Objects/UserPipe.h"
-#include "Objects/KSignalObject.h"
-#include "Objects/KPredicate.h"
+#include "Kernel/Objects/UserPipe.h"
+#include "Kernel/Objects/KSignalObject.h"
+#include "Kernel/Objects/KPredicate.h"
 
 #include <map>
 #include <vector>
@@ -56,7 +56,7 @@ private:
 	HyperV m_hyperv;
 
 	//Cpu context
-	std::unique_ptr<CpuContext> m_cpu;
+	CpuContext m_cpu;
 
 	//Threads and current thread
 	size_t m_threadIndex;

@@ -7,9 +7,9 @@
 #include "VirtualAddressSpace.h"
 #include "BootHeap.h"
 #include "UserRingBuffer.h"
-#include "Objects/UObject.h"
-#include "Objects/KSignalObject.h"
-#include <x64/PageTables.h>
+#include "Kernel/Objects/UObject.h"
+#include "Kernel/Objects/KSignalObject.h"
+#include "PageTables.h"
 
 #include <memory>
 #include <map>

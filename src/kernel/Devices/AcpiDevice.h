@@ -6,7 +6,7 @@ extern "C"
 #include <acpi.h>
 }
 #include <list>
-#include "Devices/Device.h"
+#include "Kernel/Devices/Device.h"
 
 class AcpiDevice : public Device
 {

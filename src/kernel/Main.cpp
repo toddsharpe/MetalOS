@@ -1,6 +1,6 @@
 #include "Main.h"
 
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include "Assert.h"
 #include "BootHeap.h"
 

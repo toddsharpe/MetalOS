@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Devices/Device.h"
-#include "Driver.h"
-#include "Drivers/HardDriveDriver.h"
+#include "Kernel/Devices/Device.h"
+#include "Kernel/Driver.h"
+#include "Kernel/Drivers/HardDriveDriver.h"
 
-#include <boot/RamDrive.h>
-#include <Objects/KFile.h>
+#include "RamDrive.h"
+#include "Kernel/Objects/KFile.h"
 
 #include <memory>
 

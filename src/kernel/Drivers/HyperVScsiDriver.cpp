@@ -1,8 +1,8 @@
-#include <Kernel.h>
+#include "Kernel/Kernel.h"
 #include <Assert.h>
 
-#include "HyperVScsiDriver.h"
-#include "Devices/HyperVDevice.h"
+#include "Kernel/Drivers/HyperVScsiDriver.h"
+#include "Kernel/Devices/HyperVDevice.h"
 
 HyperVScsiDriver::HyperVScsiDriver(Device& device) :
 	Driver(device),

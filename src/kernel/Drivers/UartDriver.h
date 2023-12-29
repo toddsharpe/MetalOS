@@ -1,10 +1,10 @@
 #pragma once
 #include <cstdint>
 #include <string>
-#include "Driver.h"
-#include "Devices/Device.h"
-#include "KRingBuffer.h"
-#include "StringPrinter.h"
+#include "Kernel/Driver.h"
+#include "Kernel/Devices/Device.h"
+#include "Kernel/KRingBuffer.h"
+#include "Kernel/StringPrinter.h"
 
 //PNP0501 - Generic 16550A-compatible COM port
 //http://caro.su/msx/ocm_de1/16550.pdf . Page 9/18. Table 2.

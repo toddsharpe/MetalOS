@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Objects/UObject.h"
-#include "Objects/KSemaphore.h"
+#include "Kernel/Objects/UObject.h"
+#include "Kernel/Objects/KSemaphore.h"
 
 class USemaphore : public UObject
 {

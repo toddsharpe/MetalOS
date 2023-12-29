@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Devices/Device.h"
+#include "Kernel/Devices/Device.h"
 
 class SoftwareDevice : public Device
 {

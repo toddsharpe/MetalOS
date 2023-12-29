@@ -1,4 +1,4 @@
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include "Assert.h"
 #include <windows/types.h>
 #include <windows/winnt.h>
@@ -134,7 +134,7 @@ const char* PortableExecutable::GetPdbName(void* const imageBase)
 	PIMAGE_NT_HEADERS64 ntHeader = MakePointer<PIMAGE_NT_HEADERS64>(imageBase, dosHeader->e_lfanew);
 	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
 
-	Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
+	Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size);
 
 	PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
 	if ((directory->Size == 0) || (directory->VirtualAddress == 0))

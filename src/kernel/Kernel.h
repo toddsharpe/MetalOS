@@ -25,11 +25,11 @@ extern "C"
 #include "KThread.h"
 #include "UserProcess.h"
 #include "WindowingSystem.h"
-#include "Objects/KEvent.h"
-#include <kernel/MetalOS.Arch.h>
-#include <shared/MetalOS.Types.h>
-#include <user/MetalOS.h>
-#include <LoadingScreen.h>
+#include "Kernel/Objects/KEvent.h"
+#include "MetalOS.Arch.h"
+#include "user/MetalOS.Types.h"
+#include "user/MetalOS.h"
+#include "LoadingScreen.h"
 
 #include <memory>
 

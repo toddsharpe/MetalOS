@@ -1,11 +1,11 @@
 #include "Scheduler.h"
 
 #include "Assert.h"
-#include "Objects/KSemaphore.h"
+#include "Kernel/Objects/KSemaphore.h"
 #include "StackWalk.h"
 #include "PortableExecutable.h"
-#include <kernel/MetalOS.Arch.h>
-#include "Objects/UPipe.h"
+#include "MetalOS.Arch.h"
+#include "Kernel/Objects/UPipe.h"
 
 KThread* Scheduler::GetThread()
 {
@@ -33,11 +33,8 @@ void Scheduler::Init()
 	boot->m_state = ThreadState::Running;
 	m_threads.push_back(boot);
 
-	//Initialize CPU context
-	m_cpu = std::make_unique<CpuContext>();
-
 	//Write to CPU state
-	ArchSetUserCpuContext(m_cpu.get());
+	ArchSetUserCpuContext(&m_cpu);
 }
 
 void Scheduler::Schedule()
@@ -157,7 +154,7 @@ void Scheduler::Schedule()
 		}
 
 		//Set current thread
-		m_cpu->Thread = &next;
+		m_cpu.Thread = &next;
 
 		//Set interrupt stack
 		//TODO(tsharpe): Syscall and interrupt handlers have different stack depths. RSP here is effectively reset,

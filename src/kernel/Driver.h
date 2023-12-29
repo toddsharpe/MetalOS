@@ -1,10 +1,10 @@
 #pragma once
 
 #include <string>
-#include <shared\MetalOS.Types.h>
-#include <kernel\MetalOS.Internal.h>
-#include <Objects/KFile.h>
-#include <Graphics/FrameBuffer.h>
+#include "user/MetalOS.Types.h"
+#include "MetalOS.Internal.h"
+#include "Kernel/Objects/KFile.h"
+#include <Graphics/Framebuffer.h>
 
 #include <memory>
 

@@ -1,8 +1,8 @@
 #include "IoApicDriver.h"
 
 #include <Assert.h>
-#include "Devices/AcpiDevice.h"
-#include "Kernel.h"
+#include "Kernel/Devices/AcpiDevice.h"
+#include "Kernel/Kernel.h"
 
 IoApicDriver::IoApicDriver(Device& device) :
 	Driver(device),

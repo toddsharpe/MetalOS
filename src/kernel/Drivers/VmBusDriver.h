@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Driver.h"
+#include "Kernel/Driver.h"
 #include <linux/hyperv.h>
-#include <Objects/KEvent.h>
-#include <Objects/KSemaphore.h>
-#include <shared/MetalOS.Types.h>
-#include <KThread.h>
+#include "Kernel/Objects/KEvent.h"
+#include "Kernel/Objects/KSemaphore.h"
+#include "user/MetalOS.Types.h"
+#include "Kernel/KThread.h"
 
 #include <list>
 

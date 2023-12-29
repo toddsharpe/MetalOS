@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Objects/UObject.h"
-#include "Objects/KEvent.h"
+#include "Kernel/Objects/UObject.h"
+#include "Kernel/Objects/KEvent.h"
 
 #include <memory>
 

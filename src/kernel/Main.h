@@ -2,7 +2,7 @@
 
 
 #include <cstdarg>
-#include <kernel/LoaderParams.h>
+#include "LoaderParams.h"
 
 extern "C" int main(LOADER_PARAMS* loader);
 

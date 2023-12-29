@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Devices/Device.h"
-#include "Driver.h"
+#include "Kernel/Devices/Device.h"
+#include "Kernel/Driver.h"
 #include "HyperVChannel.h"
-#include <shared\MetalOS.Keys.h>
-#include <kernel\MetalOS.Internal.h>
+#include <user/MetalOS.Keys.h>
+#include "MetalOS.Internal.h"
 
 #include <queue>
 

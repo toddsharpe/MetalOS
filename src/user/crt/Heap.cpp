@@ -1,13 +1,9 @@
-extern "C" void __cdecl _Throw_bad_array_new_length()
-{
-
-}
-
+#include "MetalOS.h"
+#include "user/MetalOS.Types.h"
+#include "user/Assert.h"
 #include "Heap.h"
-#include <user/Debug.h>
+#include "msvc.h"
 #include <algorithm>
-#include <shared/MetalOS.Types.h>
-#include <user/MetalOS.h>
 
 Heap::Heap()
 {

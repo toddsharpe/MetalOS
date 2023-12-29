@@ -3,7 +3,7 @@
 #include "MsfStream.h"
 #include <linux/hyperv.h>
 #include "PdbHashTable.h"
-#include "MetalOS.Kernel.h"
+#include "Kernel/MetalOS.Kernel.h"
 #include <string>
 
 //https://llvm.org/docs/PDB/PdbStream.html

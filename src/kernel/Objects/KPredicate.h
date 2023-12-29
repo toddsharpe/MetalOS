@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Objects/KSignalObject.h"
+#include "Kernel/Objects/KSignalObject.h"
 
 typedef bool(*SignalPredicate)(void* const arg);
 class KPredicate : public KSignalObject

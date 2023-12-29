@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Objects/UObject.h"
-#include "Objects/UserPipe.h"
+#include "Kernel/Objects/UObject.h"
+#include "Kernel/Objects/UserPipe.h"
 
 #include <memory>
 

@@ -2,7 +2,7 @@
 
 #include <efi.h>
 #include <cstdint>
-#include "MetalOS.Kernel.h"
+#include "Kernel/MetalOS.Kernel.h"
 
 class MemoryMap
 {

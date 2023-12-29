@@ -1,9 +1,7 @@
 #pragma once
 
-
+#include "Kernel/Devices/Device.h"
 #include <linux/hyperv.h>
-#include "Devices/Device.h"
-
 #include <map>
 
 //static const maps don't build yet (vcrt dependencies)

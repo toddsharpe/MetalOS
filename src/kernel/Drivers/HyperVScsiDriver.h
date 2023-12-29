@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Devices/Device.h"
-#include "Driver.h"
-#include "HyperVChannel.h"
-#include "Objects/KEvent.h"
+#include "Kernel/Devices/Device.h"
+#include "Kernel/Driver.h"
+#include "Kernel/Drivers/HyperVChannel.h"
+#include "Kernel/Objects/KEvent.h"
 
 /* SCSI Definitions*/
 #define SCAN_WILD_CARD	~0

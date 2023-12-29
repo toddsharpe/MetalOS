@@ -1,10 +1,10 @@
 #pragma once
 
 
-#include "MetalOS.Kernel.h"
-#include <kernel/MetalOS.Internal.h>
-#include <shared/MetalOS.Types.h>
-#include <shared/MetalOS.System.h>
+#include "Kernel/MetalOS.Kernel.h"
+#include "MetalOS.Internal.h"
+#include "user/MetalOS.Types.h"
+#include "user/MetalOS.System.h"
 
 #include <vector>
 

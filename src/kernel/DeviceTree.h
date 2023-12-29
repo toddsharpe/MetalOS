@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Devices/Device.h"
+#include "Kernel/Devices/Device.h"
 #include "Driver.h"
-#include "Devices/AcpiDevice.h"
+#include "Kernel/Devices/AcpiDevice.h"
 
 class DeviceTree
 {

@@ -8,7 +8,7 @@
 #include <intrin.h>
 #include <windows/types.h>
 #include <linux\hyperv.h>
-#include "MetalOS.Kernel.h"
+#include "Kernel/MetalOS.Kernel.h"
 
 #include <list>
 

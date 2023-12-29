@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{48E6F78A-5C2B-4C66-8767-DF5BE189BD2C}</ProjectGuid>
+    <RootNamespace>MetalOSAcpi</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Kernel.Acpi</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <SpectreMitigation>false</SpectreMitigation>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)..\build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\obj\$(MSBuildProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>false</SDLCheck>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\external\acpica\source\include\platform;$(SolutionDir)\..\external\acpica\source\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;CRT_STATIC;_CRT_SECURE_NO_WARNINGS;_NO_CRT_STDIO_INLINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessToFile>false</PreprocessToFile>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <OmitFramePointers>false</OmitFramePointers>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <Lib>
+      <SubSystem>Console</SubSystem>
+      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>false</SDLCheck>
+      <AdditionalIncludeDirectories>..\acpica\source\include\platform;..\acpica\source\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN64;ACPI_LIBRARY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessToFile>false</PreprocessToFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Lib>
+      <SubSystem>Console</SubSystem>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\external\acpica\source\include\acbuffer.h" />
+    <ClInclude Include="..\external\acpica\source\include\accommon.h" />
+    <ClInclude Include="..\external\acpica\source\include\acconfig.h" />
+    <ClInclude Include="..\external\acpica\source\include\acdebug.h" />
+    <ClInclude Include="..\external\acpica\source\include\acdisasm.h" />
+    <ClInclude Include="..\external\acpica\source\include\acdispat.h" />
+    <ClInclude Include="..\external\acpica\source\include\acevents.h" />
+    <ClInclude Include="..\external\acpica\source\include\acexcep.h" />
+    <ClInclude Include="..\external\acpica\source\include\acglobal.h" />
+    <ClInclude Include="..\external\acpica\source\include\achware.h" />
+    <ClInclude Include="..\external\acpica\source\include\acinterp.h" />
+    <ClInclude Include="..\external\acpica\source\include\aclocal.h" />
+    <ClInclude Include="..\external\acpica\source\include\acmacros.h" />
+    <ClInclude Include="..\external\acpica\source\include\acnames.h" />
+    <ClInclude Include="..\external\acpica\source\include\acnamesp.h" />
+    <ClInclude Include="..\external\acpica\source\include\acobject.h" />
+    <ClInclude Include="..\external\acpica\source\include\acopcode.h" />
+    <ClInclude Include="..\external\acpica\source\include\acoutput.h" />
+    <ClInclude Include="..\external\acpica\source\include\acparser.h" />
+    <ClInclude Include="..\external\acpica\source\include\acpi.h" />
+    <ClInclude Include="..\external\acpica\source\include\acpiosxf.h" />
+    <ClInclude Include="..\external\acpica\source\include\acpixf.h" />
+    <ClInclude Include="..\external\acpica\source\include\acpredef.h" />
+    <ClInclude Include="..\external\acpica\source\include\acresrc.h" />
+    <ClInclude Include="..\external\acpica\source\include\acrestyp.h" />
+    <ClInclude Include="..\external\acpica\source\include\acstruct.h" />
+    <ClInclude Include="..\external\acpica\source\include\actables.h" />
+    <ClInclude Include="..\external\acpica\source\include\actbl.h" />
+    <ClInclude Include="..\external\acpica\source\include\actbl1.h" />
+    <ClInclude Include="..\external\acpica\source\include\actbl2.h" />
+    <ClInclude Include="..\external\acpica\source\include\actbl3.h" />
+    <ClInclude Include="..\external\acpica\source\include\actypes.h" />
+    <ClInclude Include="..\external\acpica\source\include\acutils.h" />
+    <ClInclude Include="..\external\acpica\source\include\amlcode.h" />
+    <ClInclude Include="..\external\acpica\source\include\amlresrc.h" />
+    <ClInclude Include="..\external\acpica\source\include\platform\acefi.h" />
+    <ClInclude Include="..\external\acpica\source\include\platform\acenv.h" />
+    <ClInclude Include="..\external\acpica\source\include\platform\acfreebsd.h" />
+    <ClInclude Include="..\external\acpica\source\include\platform\acgcc.h" />
+    <ClInclude Include="..\external\acpica\source\include\platform\aclinux.h" />
+    <ClInclude Include="..\external\acpica\source\include\platform\acmsvc.h" />
+    <ClInclude Include="..\external\acpica\source\include\platform\acwin.h" />
+    <ClInclude Include="..\external\acpica\source\include\platform\acwin64.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\acpica\source\common\ahids.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dsargs.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dscontrol.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dsdebug.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dsfield.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dsinit.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dsmethod.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dsmthdat.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dsobject.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dsopcode.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dspkginit.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dsutils.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dswexec.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dswload.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dswload2.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dswscope.c" />
+    <ClCompile Include="..\external\acpica\source\components\dispatcher\dswstate.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evevent.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evglock.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evgpe.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evgpeblk.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evgpeinit.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evgpeutil.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evhandler.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evmisc.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evregion.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evrgnini.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evsci.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evxface.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evxfevnt.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evxfgpe.c" />
+    <ClCompile Include="..\external\acpica\source\components\events\evxfregn.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exconcat.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exconfig.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exconvrt.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\excreate.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exdebug.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exdump.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exfield.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exfldio.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exmisc.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exmutex.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exnames.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exoparg1.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exoparg2.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exoparg3.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exoparg6.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exprep.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exregion.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exresnte.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exresolv.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exresop.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exserial.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exstore.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exstoren.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exstorob.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exsystem.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\extrace.c" />
+    <ClCompile Include="..\external\acpica\source\components\executer\exutils.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwacpi.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwesleep.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwgpe.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwpci.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwregs.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwsleep.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwtimer.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwvalid.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwxface.c" />
+    <ClCompile Include="..\external\acpica\source\components\hardware\hwxfsleep.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsaccess.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsalloc.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsarguments.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsconvert.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsdump.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsdumpdv.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nseval.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsinit.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsload.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsnames.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsobject.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsparse.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nspredef.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsprepkg.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsrepair.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsrepair2.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nssearch.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsutils.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nswalk.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsxfeval.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsxfname.c" />
+    <ClCompile Include="..\external\acpica\source\components\namespace\nsxfobj.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\psargs.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\psloop.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\psobject.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\psopcode.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\psopinfo.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\psparse.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\psscope.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\pstree.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\psutils.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\pswalk.c" />
+    <ClCompile Include="..\external\acpica\source\components\parser\psxface.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsaddr.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rscalc.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rscreate.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsdumpinfo.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsinfo.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsio.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsirq.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rslist.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsmemory.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsmisc.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsserial.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsutils.c" />
+    <ClCompile Include="..\external\acpica\source\components\resources\rsxface.c" />
+    <ClCompile Include="..\external\acpica\source\components\tables\tbdata.c" />
+    <ClCompile Include="..\external\acpica\source\components\tables\tbfadt.c" />
+    <ClCompile Include="..\external\acpica\source\components\tables\tbfind.c" />
+    <ClCompile Include="..\external\acpica\source\components\tables\tbinstal.c" />
+    <ClCompile Include="..\external\acpica\source\components\tables\tbprint.c" />
+    <ClCompile Include="..\external\acpica\source\components\tables\tbutils.c" />
+    <ClCompile Include="..\external\acpica\source\components\tables\tbxface.c" />
+    <ClCompile Include="..\external\acpica\source\components\tables\tbxfload.c" />
+    <ClCompile Include="..\external\acpica\source\components\tables\tbxfroot.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utaddress.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utalloc.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utascii.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utbuffer.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utcache.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utclib.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utcopy.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utdebug.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utdecode.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utdelete.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\uterror.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\uteval.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utexcep.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utglobal.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\uthex.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utids.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utinit.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utlock.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utmath.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utmisc.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utmutex.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utnonansi.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utobject.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utosi.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utownerid.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utpredef.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utresdecode.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utresrc.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utstate.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utstring.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utstrsuppt.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utstrtoul64.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\uttrack.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utuuid.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utxface.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utxferror.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utxfinit.c" />
+    <ClCompile Include="..\external\acpica\source\components\utilities\utxfmutex.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

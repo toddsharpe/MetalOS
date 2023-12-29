@@ -1,7 +1,7 @@
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include "Assert.h"
 
-#include "MetalOS.Kernel.h"
+#include "Kernel/MetalOS.Kernel.h"
 #include "MemoryMap.h"
 
 // https://dox.ipxe.org/UefiMultiPhase_8h.html

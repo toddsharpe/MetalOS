@@ -1,9 +1,9 @@
 #include "RamDriveDriver.h"
 
-#include "Kernel.h"
-#include "Devices/SoftwareDevice.h"
+#include "Kernel/Kernel.h"
+#include "Kernel/Devices/SoftwareDevice.h"
 #include <Assert.h>
-#include <shared/MetalOS.System.h>
+#include "user/MetalOS.System.h"
 
 RamDriveDriver::RamDriveDriver(Device& device) : 
 	Driver(device),

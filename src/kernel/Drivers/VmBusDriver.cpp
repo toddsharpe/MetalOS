@@ -2,8 +2,8 @@
 
 #include <Assert.h>
 #include <linux/hyperv.h>
-#include <Kernel.h>
-#include <Devices/HyperVDevice.h>
+#include "Kernel/Kernel.h"
+#include "Kernel/Devices/HyperVDevice.h"
 
 volatile uint8_t VmBusDriver::MonitorPage1[PageSize] = { 0 }; //Parent->child notifications
 volatile uint8_t VmBusDriver::MonitorPage2[PageSize] = { 0 }; //Child->parent notifications

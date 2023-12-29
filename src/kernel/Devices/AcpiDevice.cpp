@@ -1,6 +1,6 @@
 #include <cstdint>
 #include <windows/types.h>
-#include "Devices/AcpiDevice.h"
+#include "Kernel/Devices/AcpiDevice.h"
 extern "C"
 {
 #include <aclocal.h>

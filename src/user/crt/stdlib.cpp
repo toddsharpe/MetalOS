@@ -1,6 +1,6 @@
 #include "Heap.h"
-#include <shared/MetalOS.Types.h>
-#include <user/MetalOS.h>
+#include "user/MetalOS.Types.h"
+#include "MetalOS.h"
 #include <string.h>
 
 Heap CrtHeap;

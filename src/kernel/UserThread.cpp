@@ -1,6 +1,6 @@
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include "Assert.h"
-#include <kernel/MetalOS.Arch.h>
+#include "MetalOS.Arch.h"
 
 #include "UserThread.h"
 

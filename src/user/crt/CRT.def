@@ -1,0 +1,51 @@
+EXPORTS
+	DllMain
+
+	; stdio
+	__acrt_iob_func
+	fopen
+	fread
+	fwrite
+	fseek
+	ftell
+	fclose
+	fprintf
+	vfprintf
+	rename
+	remove
+	printf
+	snprintf
+	vsnprintf
+
+	; stdlib
+	exit
+	calloc
+	realloc
+	malloc
+	free
+	abs
+
+	; string
+	memcpy
+	memmove
+	strlen
+	memcmp
+	memset
+	strcmp
+	strncmp
+	stricmp
+	strnicmp
+	strdup
+	strrchr
+	strchr
+	strncpy
+	strstr
+
+	; stdlib
+	rand
+	atoi
+
+	; ctype
+	tolower
+	toupper
+	isspace

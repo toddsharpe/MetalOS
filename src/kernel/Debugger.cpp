@@ -1,4 +1,4 @@
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include "Assert.h"
 
 #include <algorithm>
@@ -13,10 +13,10 @@
 #include <reactos/amd64/ke.h>
 #include <reactos/windbgkd.h>
 #include <coreclr/list.h>
-#include <kernel/kddll.h>
+#include "kddll.h"
 namespace Kd64
 {
-	#include <kernel.kd64/kd64.h>
+	#include "Kd64/kd64.h"
 	extern "C" KdDll m_dll;
 }
 #include "Debugger.h"

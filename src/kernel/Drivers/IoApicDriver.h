@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Driver.h"
-#include "Devices/Device.h"
-#include "MetalOS.Kernel.h"
+#include "Kernel/Driver.h"
+#include "Kernel/Devices/Device.h"
+#include "Kernel/MetalOS.Kernel.h"
 #include <cstdint>
 #include <string>
 

@@ -1,4 +1,4 @@
-#include "Devices/HyperVDevice.h"
+#include "Kernel/Devices/HyperVDevice.h"
 #include "Assert.h"
 
 HyperVDevice::HyperVDevice(vmbus_channel_offer_channel& channel, uint32_t conn_id) :

@@ -1,6 +1,6 @@
 #include <intrin.h>
 #include "Main.h"
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 extern "C"
 {
 #include <acpi.h>

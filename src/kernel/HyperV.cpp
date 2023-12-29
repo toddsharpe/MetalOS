@@ -1,6 +1,6 @@
 //TLFS: Hypervisor Top Level Functional Specification v6.0b.pdf
 
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include "Assert.h"
 
 #include "HyperV.h"

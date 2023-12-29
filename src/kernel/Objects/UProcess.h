@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Objects/UObject.h"
+#include "Kernel/Objects/UObject.h"
 #include "UserProcess.h"
 
 #include <memory>

@@ -5,8 +5,8 @@
 
 #include "MsfStream.h"
 #include "PdbPublicsStream.h"
-#include "MetalOS.Kernel.h"
-#include <shared/MetalOS.Types.h>
+#include "Kernel/MetalOS.Kernel.h"
+#include "user/MetalOS.Types.h"
 
 //https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/dbi.h
 //https://llvm.org/docs/PDB/DbiStream.html

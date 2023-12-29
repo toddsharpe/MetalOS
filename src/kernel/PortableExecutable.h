@@ -2,11 +2,11 @@
 
 
 #include <efi.h>
-#include <kernel/LoaderParams.h>
+#include "LoaderParams.h"
 #include <cstdint>
 
 #include <string>
-#include "MetalOS.Kernel.h"
+#include "Kernel/MetalOS.Kernel.h"
 
 //https://deplinenoise.wordpress.com/2013/06/14/getting-your-pdb-name-from-a-running-executable-windows/
 //https://gist.github.com/gimelfarb/8642282

@@ -1,4 +1,4 @@
-#include "Kernel.h"
+#include "Kernel/Kernel.h"
 #include "Assert.h"
 
 #define PACKED
@@ -8,7 +8,7 @@
 #include "System.h"
 #include "Main.h"
 #include <functional>
-#include "Devices/AcpiDevice.h"
+#include "Kernel/Devices/AcpiDevice.h"
 #include "Drivers/UartDriver.h"
 #include "RuntimeSupport.h"
 #include "PortableExecutable.h"
@@ -17,18 +17,18 @@
 #include "KernelHeap.h"
 #include "BootHeap.h"
 #include "StackWalk.h"
-#include "Objects/KSemaphore.h"
+#include "Kernel/Objects/KSemaphore.h"
 #include "Drivers/RamDriveDriver.h"
-#include "Devices/SoftwareDevice.h"
+#include "Kernel/Devices/SoftwareDevice.h"
 #include "Drivers/IoApicDriver.h"
 #include "Loader.h"
 #include <string>
 #include "KThread.h"
-#include <kernel/MetalOS.Arch.h>
-#include <x64/PageTables.h>
-#include <boot/PageTablesPool.h>
-#include <boot/Path.h>
-#include <kernel/MetalOS.Internal.h>
+#include "MetalOS.Arch.h"
+#include "PageTables.h"
+#include "PageTablesPool.h"
+#include "Path.h"
+#include "MetalOS.Internal.h"
 #include "EarlyUart.h"
 
 #define ENABLE_PDB 1

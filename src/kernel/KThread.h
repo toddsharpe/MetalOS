@@ -1,9 +1,9 @@
 #pragma once
 
-#include "MetalOS.Kernel.h"
+#include "Kernel/MetalOS.Kernel.h"
 #include "UserThread.h"
-#include "Objects/KSignalObject.h"
-#include <shared/MetalOS.Types.h>
+#include "Kernel/Objects/KSignalObject.h"
+#include "user/MetalOS.Types.h"
 #include <cstdint>
 
 enum class ThreadState

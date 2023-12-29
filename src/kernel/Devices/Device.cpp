@@ -1,4 +1,4 @@
-#include "Devices/Device.h"
+#include "Kernel/Devices/Device.h"
 #include "Assert.h"
 
 Device::Device() :

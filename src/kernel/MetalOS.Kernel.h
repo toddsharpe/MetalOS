@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <time.h>
 #include <string>
-#include <kernel/MetalOS.Internal.h>
+#include "MetalOS.Internal.h"
 
 #define NO_COPY_OR_ASSIGN(X) X(const X&) = delete; X& operator = (const X&) = delete;
 

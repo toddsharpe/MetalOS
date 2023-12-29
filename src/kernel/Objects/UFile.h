@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Objects/UObject.h"
-#include "Objects/KFile.h"
+#include "Kernel/Objects/UObject.h"
+#include "Kernel/Objects/KFile.h"
 
 class UFile : public UObject
 {

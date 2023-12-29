@@ -1,7 +1,7 @@
 #include "HyperVChannel.h"
 
 #include <Assert.h>
-#include <HyperV.h>
+#include "Kernel/HyperV.h"
 
 HyperVChannel::HyperVChannel(uint32_t sendSize, uint32_t receiveSize, CallContext callback) :
 	m_sendCount(SizeToPages(sendSize)),

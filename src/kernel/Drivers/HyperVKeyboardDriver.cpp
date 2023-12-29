@@ -1,8 +1,8 @@
 #include "HyperVKeyboardDriver.h"
 
 #include <Assert.h>
-#include <Devices/HyperVDevice.h>
-#include <shared\MetalOS.Types.h>
+#include "Kernel/Devices/HyperVDevice.h"
+#include "user/MetalOS.Types.h"
 
 HyperVKeyboardDriver::HyperVKeyboardDriver(Device& device) :
 	Driver(device),

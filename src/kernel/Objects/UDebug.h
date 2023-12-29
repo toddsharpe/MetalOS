@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Objects/UObject.h"
+#include "Kernel/Objects/UObject.h"
 
 
 //Simple object to pipe stdout to kernel debug stream

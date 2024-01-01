@@ -156,9 +156,6 @@
     <ClCompile Include="Kernel\PhysicalMemoryManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Kernel\PortableExecutable.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Kernel\RuntimeSupport.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -247,6 +244,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="msvc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PortableExecutable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -428,9 +428,6 @@
     <ClInclude Include="Kernel\PhysicalMemoryManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Kernel\PortableExecutable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Kernel\RuntimeSupport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -518,17 +515,11 @@
     <ClInclude Include="Kernel\Kd64\kd64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PortableExecutable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Kernel\x64\Interrupts.asm">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="Kernel\x64\Support.asm">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="Kernel\x64\SystemCall.asm">
-      <Filter>Source Files</Filter>
-    </None>
     <None Include="Kernel\Kernel.def">
       <Filter>Source Files</Filter>
     </None>
@@ -542,6 +533,15 @@
       <Filter>Source Files</Filter>
     </MASM>
     <MASM Include="Kernel\x64\Context.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="Kernel\x64\Interrupts.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="Kernel\x64\Support.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="Kernel\x64\SystemCall.asm">
       <Filter>Source Files</Filter>
     </MASM>
   </ItemGroup>

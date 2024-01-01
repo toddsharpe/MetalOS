@@ -212,7 +212,6 @@
     <ClCompile Include="Kernel\Pdb\PdbPdb.cpp" />
     <ClCompile Include="Kernel\Pdb\PdbPublicsStream.cpp" />
     <ClCompile Include="Kernel\PhysicalMemoryManager.cpp" />
-    <ClCompile Include="Kernel\PortableExecutable.cpp" />
     <ClCompile Include="Kernel\RuntimeSupport.cpp" />
     <ClCompile Include="Kernel\Scheduler.cpp" />
     <ClCompile Include="Kernel\StackWalk.cpp" />
@@ -229,6 +228,7 @@
     <ClCompile Include="msvc.cpp" />
     <ClCompile Include="PageTables.cpp" />
     <ClCompile Include="PageTablesPool.cpp" />
+    <ClCompile Include="PortableExecutable.cpp" />
     <ClCompile Include="RamDrive.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -298,7 +298,6 @@
     <ClInclude Include="Kernel\Pdb\PdbPdb.h" />
     <ClInclude Include="Kernel\Pdb\PdbPublicsStream.h" />
     <ClInclude Include="Kernel\PhysicalMemoryManager.h" />
-    <ClInclude Include="Kernel\PortableExecutable.h" />
     <ClInclude Include="Kernel\RuntimeSupport.h" />
     <ClInclude Include="Kernel\Scheduler.h" />
     <ClInclude Include="Kernel\StackWalk.h" />
@@ -320,6 +319,7 @@
     <ClInclude Include="PageTables.h" />
     <ClInclude Include="PageTablesPool.h" />
     <ClInclude Include="Path.h" />
+    <ClInclude Include="PortableExecutable.h" />
     <ClInclude Include="RamDrive.h" />
   </ItemGroup>
   <ItemGroup>

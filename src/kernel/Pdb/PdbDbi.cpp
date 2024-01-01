@@ -2,7 +2,7 @@
 #include <coreclr/cvinfo.h>
 
 #include "PdbDbi.h"
-#include "Kernel/PortableExecutable.h"
+#include "PortableExecutable.h"
 
 PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file, const Handle image) :
 	m_stream(stream),

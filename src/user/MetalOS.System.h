@@ -28,7 +28,7 @@ constexpr size_t PageAlign(const size_t size)
 }
 
 template<typename T>
-constexpr T MakePointer(const void* base, const ptrdiff_t offset = 0)
+constexpr T MakePointer(const void* const base, const ptrdiff_t offset = 0)
 {
 	return reinterpret_cast<T>((char*)base + offset);
 }

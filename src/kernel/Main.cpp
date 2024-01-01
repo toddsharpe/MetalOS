@@ -28,7 +28,7 @@ extern "C" int __cdecl atexit(void(__cdecl*)(void))
 	return 0;
 }
 
-void Printf(const char* format, ...)
+extern "C" void Printf(const char* format, ...)
 {
 	va_list args;
 
@@ -37,12 +37,9 @@ void Printf(const char* format, ...)
 	va_end(args);
 }
 
-void Printf(const char* format, va_list args)
-{
-	kernel.Printf(format, args);
-}
 
-void Bugcheck(const char* file, const char* line, const char* format, ...)
+
+extern "C" void Bugcheck(const char* file, const char* line, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);

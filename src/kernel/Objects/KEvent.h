@@ -1,6 +1,7 @@
 #pragma once
 
 #include "KSignalObject.h"
+#include "Assert.h"
 
 class KEvent : public KSignalObject
 {

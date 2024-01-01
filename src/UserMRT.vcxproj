@@ -13,6 +13,8 @@
   <ItemGroup>
     <ClCompile Include="core_crt\stdio.c" />
     <ClCompile Include="core_crt\string.c" />
+    <ClCompile Include="msvc.cpp" />
+    <ClCompile Include="PortableExecutable.cpp" />
     <ClCompile Include="user\MRT\Debug.cpp" />
     <ClCompile Include="user\MRT\DllMain.cpp" />
     <ClCompile Include="user\MRT\Init.cpp" />
@@ -20,6 +22,8 @@
     <ClCompile Include="user\MRT\Runtime.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="msvc.h" />
+    <ClInclude Include="PortableExecutable.h" />
     <ClInclude Include="user\MRT\Loader.h" />
     <ClInclude Include="user\MRT\Runtime.h" />
   </ItemGroup>
@@ -78,7 +82,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;EXPORT;_CRT_SECURE_NO_WARNINGS;_NO_CRT_STDIO_INLINE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_NO_CRT_STDIO_INLINE;_HAS_EXCEPTIONS=0;_KERNEL_MODE=1;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -91,6 +95,9 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
       <OmitFramePointers>false</OmitFramePointers>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <AssemblerOutput>AssemblyAndMachineCode</AssemblerOutput>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -99,6 +106,7 @@
       <AdditionalDependencies />
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <BaseAddress>0x0000000180000000</BaseAddress>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

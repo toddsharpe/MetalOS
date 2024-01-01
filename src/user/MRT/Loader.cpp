@@ -1,63 +1,29 @@
-#include <windows/types.h>
-#include <windows/winnt.h>
-#include "Runtime.h"
-#include "user/Assert.h"
-#include <string.h>
+#include "Loader.h"
+#include "PortableExecutable.h"
 #include "user/MetalOS.Types.h"
 #include "MetalOS.h"
-#include "Loader.h"
+#include "Runtime.h"
+#include "user/Assert.h"
 
 #define ReturnNullIfNot(x) if (!(x)) return nullptr;
 #define RetNullIfFailed(x) if ((x) != SystemCallResult::Success) return nullptr;
 
-PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name)
+void* Loader::LoadLibrary(const char* const moduleName)
 {
-	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)imageBase;
-	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)((uint64_t)imageBase + dosHeader->e_lfanew);
+	DebugPrintf("LoadLibrary: %s\n", moduleName);
 
-	//Find section
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
-	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
-	{
-		if (strcmp((char*)&section[i].Name, name) == 0)
-			return &section[i];
-	}
-
-	return nullptr;
-}
-
-typedef void (*CrtInitializer)();
-//Initializes C++ statics
-void Loader::CrtInit(Handle moduleBase)
-{
-	PIMAGE_SECTION_HEADER crtSection = GetPESection(moduleBase, ".CRT");
-	if (crtSection != nullptr)
-	{
-		CrtInitializer* initializer = (CrtInitializer*)((uintptr_t)moduleBase + crtSection->VirtualAddress);
-		while (*initializer)
-		{
-			(*initializer)();
-			initializer++;
-		}
-	}
-}
-
-Handle Loader::LoadLibrary(const char* lpLibFileName)
-{
-	DebugPrintf("LoadLibrary: %s\n", lpLibFileName);
-	
 	//Check if module is already loaded
 	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
-	Module* module = Runtime::GetLoadedModule(lpLibFileName);
+	Module* module = Runtime::GetLoadedModule(moduleName);
 	if (module != nullptr)
 	{
 		DebugPrintf("  Loaded at: 0x%016x\n", module);
 		return module->Address;
 	}
-	
+
 	//Load it
-	Handle file = CreateFile(lpLibFileName, GenericAccess::Read);
-	ReturnNullIfNot(file);
+	const HFile file = CreateFile(moduleName, GenericAccess::Read);
+	Assert(file);
 
 	size_t read;
 
@@ -85,7 +51,7 @@ Handle Loader::LoadLibrary(const char* lpLibFileName)
 	Handle moduleBase = VirtualAlloc((void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage);
 	//TODO(tsharpe): Implement relocations (below). Until then assert address is the one in PE header.
 	ReturnNullIfNot(moduleBase)
-	DebugPrintf("  Loading at 0x%016x\n", moduleBase);
+		DebugPrintf("  Loading at 0x%016x\n", moduleBase);
 
 	//Read in headers
 	RetNullIfFailed(SetFilePointer(file, 0, FilePointerMove::Begin, nullptr));
@@ -111,30 +77,8 @@ Handle Loader::LoadLibrary(const char* lpLibFileName)
 		}
 	}
 
-	//Imports
-	IMAGE_DATA_DIRECTORY importDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-	if (importDirectory.Size)
-	{
-		PIMAGE_IMPORT_DESCRIPTOR importDescriptor = MakePointer<PIMAGE_IMPORT_DESCRIPTOR>(moduleBase, importDirectory.VirtualAddress);
-
-		while (importDescriptor->Name)
-		{
-			char* module = MakePointer<char*>(moduleBase, importDescriptor->Name);
-			Handle hModule = LoadLibrary(module);
-			Assert(hModule);
-
-			PIMAGE_THUNK_DATA pThunkData = MakePointer<PIMAGE_THUNK_DATA>(moduleBase, importDescriptor->FirstThunk);
-			while (pThunkData->u1.AddressOfData)
-			{
-				PIMAGE_IMPORT_BY_NAME pImportByName = MakePointer<PIMAGE_IMPORT_BY_NAME>(moduleBase, pThunkData->u1.AddressOfData);
-
-				pThunkData->u1.Function = GetProcAddress(hModule, (char*)pImportByName->Name);
-				DebugPrintf("  Patched %s::%s to 0x%016x\n", module, (char*)pImportByName->Name, pThunkData->u1.Function);
-				pThunkData++;
-			}
-			importDescriptor++;
-		}
-	}
+	//Process imports
+	Loader::ProcessImports(moduleBase, false);
 
 	//Relocations
 	//IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
@@ -176,71 +120,70 @@ Handle Loader::LoadLibrary(const char* lpLibFileName)
 	//}
 
 	//Run static initializers
-	CrtInit(moduleBase);
+	Loader::CrtInit(moduleBase);
+
+	//TODO: TLS
 
 	//Execute entry point
-	//TODO: thread
-	DllMainCall main = (DllMainCall)GetProcAddress(moduleBase, DllMainName);
+	DllMainCall main = MakePointer<DllMainCall>(PortableExecutable::GetEntryPoint(moduleBase));
 	main(moduleBase, DllEntryReason::ProcessAttach);
 
 	return moduleBase;
 }
 
-extern "C" uintptr_t GetProcAddress(Handle hModule, const char* lpProcName)
+//Kernel does RT imports. Due to the PE unions, imports can't be done more than once.
+void Loader::ProcessImports(const void* const imageBase, const bool skipRT)
 {
 	//Headers
-	PIMAGE_DOS_HEADER dosHeader = MakePointer<PIMAGE_DOS_HEADER>(hModule, 0);
-	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
-		return NULL;
+	const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
+	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
+	const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
+	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
 
-	PIMAGE_NT_HEADERS64 ntHeader = MakePointer<PIMAGE_NT_HEADERS64>(hModule, dosHeader->e_lfanew);
-	if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
-		return NULL;
+	//Imports
+	const IMAGE_DATA_DIRECTORY* importDirectory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+	if (!importDirectory->Size)
+		return;
 
-	if (ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size == 0)
-		return NULL;
+	const IMAGE_IMPORT_DESCRIPTOR* importDescriptor = MakePointer<const IMAGE_IMPORT_DESCRIPTOR*>(imageBase, importDirectory->VirtualAddress);
 
-	PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-	if ((directory->Size == 0) || (directory->VirtualAddress == 0))
-		return NULL;
-
-	PIMAGE_EXPORT_DIRECTORY exportDirectory = MakePointer<PIMAGE_EXPORT_DIRECTORY>(hModule, directory->VirtualAddress);
-
-	PDWORD pNames = MakePointer<PDWORD>(hModule, exportDirectory->AddressOfNames);
-	PWORD pOrdinals = MakePointer<PWORD>(hModule, exportDirectory->AddressOfNameOrdinals);
-	PDWORD pFunctions = MakePointer<PDWORD>(hModule, exportDirectory->AddressOfFunctions);
-
-	uintptr_t search = 0;
-	for (DWORD i = 0; i < exportDirectory->NumberOfNames; i++)
+	while (importDescriptor->Name)
 	{
-		char* name = MakePointer<char*>(hModule, pNames[i]);
-		if (_stricmp(lpProcName, name) == 0)
+		const char* module = MakePointer<char*>(imageBase, importDescriptor->Name);
+		Assert(module);
+		const void* moduleAddr = Loader::LoadLibrary(module);
+		Assert(moduleAddr);
+
+		IMAGE_THUNK_DATA* pThunkData = MakePointer<IMAGE_THUNK_DATA*>(imageBase, importDescriptor->FirstThunk);
+		importDescriptor++;
+		
+		if ((skipRT) && (_stricmp(module, "mosrt.dll") == 0))
+			continue;
+		
+		while (pThunkData->u1.AddressOfData)
 		{
-			WORD ordinal = pOrdinals[i];
-			search = MakePointer<uintptr_t>(hModule, pFunctions[ordinal]);
+			PIMAGE_IMPORT_BY_NAME pImportByName = MakePointer<PIMAGE_IMPORT_BY_NAME>(imageBase, pThunkData->u1.AddressOfData);
+
+			pThunkData->u1.Function = (uintptr_t)PortableExecutable::GetProcAddress(moduleAddr, pImportByName->Name);
+			DebugPrintf("  Patched %s to 0x%016x\n", (char*)pImportByName->Name, pThunkData->u1.Function);
+			pThunkData++;
 		}
 	}
-
-	//Check if forwarded
-	uintptr_t base = (uintptr_t)hModule + directory->VirtualAddress;
-	if ((search >= base) && (search < (base + directory->Size)))
-	{
-		return NULL;
-	}
-
-	//If function is forwarded, (PCHAR)search is its name
-	//DWORD base = (DWORD)hModule + directory->VirtualAddress;
-	//if ((search >= base) && (search < (base + directory->Size)))
-	//{
-	//    char* name = (char*)search;
-	//    char* copy = (char*)malloc((strlen(name) + 1) * sizeof(char));
-	//    strcpy(copy, name);
-	//    char* library = strtok(copy, ".");
-	//    char* function = strtok(NULL, ".");
-
-	//    HMODULE hLibrary = LoadLibrary(library);//Get the address
-	//    return GetExportAddress(hLibrary, function);
-	//}
-
-	return search;
 }
+
+typedef void (*CrtInitializer)();
+//Initializes C++ statics
+void Loader::CrtInit(const void* imageBase)
+{
+	const IMAGE_SECTION_HEADER* crtSection = PortableExecutable::GetPESection(imageBase, ".CRT");
+	if (crtSection != nullptr)
+	{
+		CrtInitializer* initializer = MakePointer<CrtInitializer*>(imageBase, crtSection->VirtualAddress);
+		while (*initializer)
+		{
+			(*initializer)();
+			initializer++;
+		}
+	}
+}
+

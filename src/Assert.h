@@ -1,7 +1,15 @@
 #pragma once
 
-void Bugcheck(const char* file, const char* line, const char* format, ...);
-void Printf(const char* format, ...);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	void Printf(const char* format, ...);
+	void Bugcheck(const char* file, const char* line, const char* format, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)

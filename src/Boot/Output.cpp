@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern EFI_SYSTEM_TABLE * ST;
+extern EFI_SYSTEM_TABLE* ST;
 
 static constexpr size_t MaxBuffer = 256;
 
@@ -55,7 +55,7 @@ void UartPrintf(const char* format, ...)
 	uart.Write(buffer);
 }
 
-void Printf(const char* format, ...)
+extern "C" void Printf(const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);

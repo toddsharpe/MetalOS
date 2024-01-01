@@ -176,6 +176,6 @@ private:
 	MsfFile& m_file;
 	PdbPublicsStream m_publics;
 	DbiStreamHeader m_header;
-	PIMAGE_SECTION_HEADER m_textSection;
+	const IMAGE_SECTION_HEADER* m_textSection;
 };
 

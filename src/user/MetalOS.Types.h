@@ -22,6 +22,7 @@ struct Buffer
 };
 
 typedef void* Handle;
+typedef void* HModule;
 typedef void* HThread;
 typedef void* HProcess;
 typedef void* HSharedMemory;
@@ -66,7 +67,7 @@ constexpr size_t MaxLoadedModules = 8;
 struct ProcessEnvironmentBlock
 {
 	uint32_t ProcessId;
-	uintptr_t BaseAddress;
+	void* BaseAddress;
 	Module LoadedModules[MaxLoadedModules];
 	size_t ModuleIndex;
 };

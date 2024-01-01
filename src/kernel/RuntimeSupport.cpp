@@ -11,7 +11,7 @@ PRUNTIME_FUNCTION RuntimeSupport::LookupFunctionEntry(const uint64_t ControlPC, 
 {
 	const uint64_t RVA = (ControlPC - (uint64_t)ImageBase);
 	
-	PIMAGE_SECTION_HEADER pdataHeader = PortableExecutable::GetPESection((Handle)ImageBase, ".pdata");
+	const IMAGE_SECTION_HEADER* pdataHeader = PortableExecutable::GetPESection((Handle)ImageBase, ".pdata");
 	Assert(pdataHeader);
 
 	PRUNTIME_FUNCTION current = (PRUNTIME_FUNCTION)((uint64_t)ImageBase + pdataHeader->VirtualAddress);

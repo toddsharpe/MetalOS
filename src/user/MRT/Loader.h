@@ -1,10 +1,9 @@
 #pragma once
 
-#include <MetalOS.h>
-
 class Loader
 {
 public:
-	static Handle LoadLibrary(const char* lpLibFileName);
-	static void CrtInit(Handle moduleBase);
+	static void* LoadLibrary(const char* const moduleName);
+	static void ProcessImports(const void* const imageBase, const bool skipRT);
+	static void CrtInit(const void* imageBase);
 };

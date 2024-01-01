@@ -76,7 +76,7 @@ void Debugger::AddModule(KeLibrary& library)
 	LDR_DATA_TABLE_ENTRY* entry = new LDR_DATA_TABLE_ENTRY();
 
 	entry->DllBase = (void*)library.ImageBase;
-	entry->EntryPoint = (void*)((uintptr_t)library.ImageBase + PortableExecutable::GetEntryPoint(library.ImageBase));
+	entry->EntryPoint = PortableExecutable::GetEntryPoint(library.ImageBase);
 	entry->SizeOfImage = PortableExecutable::GetSizeOfImage(library.ImageBase);
 	entry->LoadCount = 1;
 
@@ -102,7 +102,7 @@ void Debugger::DebuggerEvent(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* f
 	KPROCESSOR_MODE PreviousMode = KernelMode;
 	BOOLEAN SecondChanceException = false;
 
-	Assert(vector == X64_INTERRUPT_VECTOR::Breakpoint);
+	//Assert(vector == X64_INTERRUPT_VECTOR::Breakpoint);
 	ExceptionRecord.ExceptionCode = STATUS_BREAKPOINT;
 	ExceptionRecord.NumberParameters = 3;
 	ExceptionRecord.ExceptionInformation[0] = BREAKPOINT_BREAK;

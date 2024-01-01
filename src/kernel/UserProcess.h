@@ -44,6 +44,7 @@ public:
 	}
 
 	void AddModule(const char* name, void* address);
+	bool GetModuleBaseAddress(const uintptr_t ip, void*& baseAddress) const;
 
 	void Display() const;
 	void DisplayDetails() const;

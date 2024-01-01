@@ -262,7 +262,7 @@ void Kernel::HandleInterrupt(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* f
 		__halt();
 	}
 
-	if (m_debugger.Enabled() && vector == X64_INTERRUPT_VECTOR::Breakpoint)
+	if (m_debugger.Enabled())
 	{
 		m_debugger.DebuggerEvent(vector, frame);
 		return;
@@ -388,16 +388,31 @@ void Kernel::ShowStack(const X64_CONTEXT* context)
 
 bool Kernel::ResolveIP(const uintptr_t ip, PdbFunctionLookup& lookup)
 {
-	const KeLibrary* module = KeGetModule(ip);
-	if (!module)
-		return false;
+	if (IsValidUserPointer((void*)ip))
+	{
+		UserProcess& proc = m_scheduler->GetCurrentUserThread().Process;
+		proc.DisplayDetails();
 
-	if (!module->Pdb)
+		Assert(proc.GetModuleBaseAddress(ip, lookup.Base));
+		lookup.RVA = (uint32_t)(ip - (uintptr_t)lookup.Base);
 		return false;
+	}
+	else if (IsValidKernelPointer((void*)ip))
+	{
+		const KeLibrary* module = KeGetModule(ip);
+		if (!module)
+			return false;
 
-	lookup.Base = module->ImageBase;
-	lookup.RVA = (uint32_t)(ip - (uintptr_t)lookup.Base);
-	return module->Pdb->ResolveFunction(lookup.RVA, lookup);
+		if (!module->Pdb)
+			return false;
+
+		lookup.Base = module->ImageBase;
+		lookup.RVA = (uint32_t)(ip - (uintptr_t)lookup.Base);
+		return module->Pdb->ResolveFunction(lookup.RVA, lookup);
+	}
+
+	Assert(false);
+	return false;
 }
 
 void Kernel::Printf(const char* format, ...)

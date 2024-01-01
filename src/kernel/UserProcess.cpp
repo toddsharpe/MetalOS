@@ -4,6 +4,7 @@
 #include "Assert.h"
 #include <intrin.h>
 #include "user/MetalOS.Types.h"
+#include "PortableExecutable.h"
 
 
 uint32_t UserProcess::LastId = 0;
@@ -48,7 +49,7 @@ void UserProcess::Init(void* address)
 	Assert(m_peb);
 	memset(m_peb, 0, sizeof(ProcessEnvironmentBlock));
 	m_peb->ProcessId = Id;
-	m_peb->BaseAddress = (uintptr_t)address;
+	m_peb->BaseAddress = address;
 	kernel.Printf("m_peb: 0x%016x\n", m_peb);
 	kernel.Printf(" addr: 0x%016x\n", m_peb->BaseAddress);
 }
@@ -100,6 +101,32 @@ uintptr_t UserProcess::GetModuleBase(uintptr_t ip) const
 	kernel.Printf("IP: 0x%016x\n", ip);
 	Assert(false);
 	return 0;
+}
+
+/*
+bool UserProcess::GetModule(const uintptr_t ip, Module& module) const
+{
+	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
+	{
+		module = m_peb->LoadedModules[i];
+		kernel.Printf("M: %s\n", module.Name);
+		if (PortableExecutable::Contains(module.Address, ip))
+			return true;
+	}
+	return false;
+}
+*/
+
+bool UserProcess::GetModuleBaseAddress(const uintptr_t ip, void*& baseAddress) const
+{
+	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
+	{
+		baseAddress = m_peb->LoadedModules[i].Address;
+		kernel.Printf("M: %s\n", m_peb->LoadedModules[i].Name);
+		if (PortableExecutable::Contains(baseAddress, ip))
+			return true;
+	}
+	return false;
 }
 
 uintptr_t UserProcess::GetCR3() const

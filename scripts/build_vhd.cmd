@@ -30,6 +30,7 @@ xcopy %BUILD_OUT%\kdcom.pdb X:\EFI\BOOT\
 
 @rem Copy runtime libraries
 xcopy %BUILD_OUT%\mosrt.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\crt.dll X:\EFI\BOOT\
 
 @rem Copy apps
 xcopy %BUILD_OUT%\calc.exe X:\EFI\BOOT\

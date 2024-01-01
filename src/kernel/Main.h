@@ -12,7 +12,7 @@ void operator delete(void* p, size_t n);
 
 extern "C" void* malloc(size_t size);
 extern "C" void free(void* ptr);
-void Bugcheck(const char* file, const char* line, const char* format, ...);
+extern "C" void Bugcheck(const char* file, const char* line, const char* format, ...);
 
-void Print(const char* format, ...);
+extern "C" void Printf(const char* format, ...);
 

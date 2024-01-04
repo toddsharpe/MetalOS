@@ -181,7 +181,7 @@ int main(int argc, char** argv)
 
 	DebugPrint("Hi From terminal!\n");
 
-	Rectangle rectangle = { 100, 100, 400, 400 };
+	Rectangle rectangle = { 100, 100, 800, 400 };
 
 	WindowStyle style = {};
 	style.IsBordered = true;
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
 	GUI gui("Terminal", rectangle, style, UICallback);
 	gui.Initialize();
 
-	label = new Label("MetalOS Terminal.\nTry typing doom.exe\n>", { 5, 25, 390, 370 });
+	label = new Label("MetalOS Terminal.\nTry typing doom.exe\n>", { 5, 25, 790, 370 });
 	label->Background = Colors::Black;
 	label->Foreground = Colors::White;
 	gui.Children.push_back(label);

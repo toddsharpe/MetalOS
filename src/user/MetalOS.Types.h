@@ -55,10 +55,12 @@ enum class StandardHandle
 
 typedef size_t (*ThreadStart)(void* parameter);
 
+//TODO(tsharpe): Mapping PDB here 1:1 with a loaded module isn't the same as 1:1 with binary. Optimize later.
 constexpr size_t MaxModuleName = 16;
 struct Module
 {
-	void* Address;
+	void* ImageBase;
+	void* PDB;
 	char Name[MaxModuleName];
 };
 
@@ -66,7 +68,10 @@ constexpr size_t MaxLoadedModules = 8;
 struct ProcessEnvironmentBlock
 {
 	uint32_t ProcessId;
-	uintptr_t BaseAddress;
+	void* ImageBase;
+	int argc;
+	char** argv;
+	void* PDB;
 	Module LoadedModules[MaxLoadedModules];
 	size_t ModuleIndex;
 };

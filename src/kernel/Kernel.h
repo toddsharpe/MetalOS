@@ -49,6 +49,7 @@ public:
 	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* format, va_list args);
 	void ShowStack(const X64_CONTEXT* context);
 	bool ResolveIP(const uintptr_t ip, PdbFunctionLookup& lookup);
+	bool ResolveUserIP(const uintptr_t ip, PdbFunctionLookup& lookup);
 
 	void Printf(const char* format, ...);
 	void Printf(const char* format, va_list args);
@@ -144,7 +145,7 @@ public:
 
 #pragma region Internal Interface
 	//Processes
-	UserProcess* KeCreateProcess(const std::string& path);
+	UserProcess* KeCreateProcess(const std::string& commandLine);
 	
 	//Threads
 	std::shared_ptr<KThread> KeCreateThread(const ThreadStart start, void* const arg, const std::string& name = "");
@@ -185,7 +186,7 @@ public:
 	SystemCallResult GetSystemTime(SystemTime* time);
 
 	HThread GetCurrentThread();
-	SystemCallResult CreateProcess(const char* processName, const CreateProcessArgs* args, CreateProcessResult* result);
+	SystemCallResult CreateProcess(const char* commandLine, const CreateProcessArgs* args, CreateProcessResult* result);
 	HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg);
 	uint32_t GetThreadId(const Handle handle);
 	void Sleep(const uint32_t milliseconds);

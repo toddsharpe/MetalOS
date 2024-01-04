@@ -4,6 +4,8 @@
 #include "Assert.h"
 #include <intrin.h>
 #include "user/MetalOS.Types.h"
+#include "PortableExecutable.h"
+#include <string>
 
 
 uint32_t UserProcess::LastId = 0;
@@ -34,7 +36,7 @@ UserProcess::UserProcess(const std::string& name, const bool isConsole) :
 	m_pageTables->LoadKernelMappings(new PageTables(__readcr3()));
 }
 
-void UserProcess::Init(void* address)
+void UserProcess::Init(void* address, const std::vector<std::string>& args)
 {
 	//Has to be called within context of process for now
 	Assert(__readcr3() == m_pageTables->GetCr3());
@@ -48,9 +50,25 @@ void UserProcess::Init(void* address)
 	Assert(m_peb);
 	memset(m_peb, 0, sizeof(ProcessEnvironmentBlock));
 	m_peb->ProcessId = Id;
-	m_peb->BaseAddress = (uintptr_t)address;
+	m_peb->ImageBase = address;
+
+	//Build args in PEB
+	m_peb->argc = args.size();
+	m_peb->argv = (char**)m_heap->Allocate(sizeof(char*) * args.size());
+	for (size_t i = 0; i < args.size(); i++)
+	{
+		m_peb->argv[i] = (char*)m_heap->Allocate(args[i].size() + 1);
+		strcpy(m_peb->argv[i], args[i].c_str());
+		m_peb->argv[i][args[i].size()] = '\0';
+	}
+
 	kernel.Printf("m_peb: 0x%016x\n", m_peb);
-	kernel.Printf(" addr: 0x%016x\n", m_peb->BaseAddress);
+	kernel.Printf(" addr: 0x%016x\n", m_peb->ImageBase);
+	kernel.Printf(" argc: %d\n", m_peb->argc);
+	for (size_t i = 0; i < m_peb->argc; i++)
+	{
+		kernel.Printf("   argv[%d]: %s\n", i, m_peb->argv[i]);
+	}
 }
 
 void UserProcess::AddModule(const char* name, void* address)
@@ -60,9 +78,21 @@ void UserProcess::AddModule(const char* name, void* address)
 
 	//TODO: check name length
 
-	m_peb->LoadedModules[m_peb->ModuleIndex].Address = address;
+	m_peb->LoadedModules[m_peb->ModuleIndex].ImageBase = address;
 	strcpy(m_peb->LoadedModules[m_peb->ModuleIndex].Name, name);
 	m_peb->ModuleIndex++;
+}
+
+Module* UserProcess::GetModule(const uintptr_t ip) const
+{
+	AssertEqual(__readcr3(), m_pageTables->GetCr3());
+	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
+	{
+		const void* address = m_peb->LoadedModules[i].ImageBase;
+		if (PortableExecutable::Contains(address, ip))
+			return &m_peb->LoadedModules[i];
+	}
+	return nullptr;
 }
 
 void* UserProcess::HeapAlloc(const size_t size)
@@ -82,7 +112,7 @@ uintptr_t UserProcess::GetModuleBase(uintptr_t ip) const
 {
 	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
 	{
-		void* address = m_peb->LoadedModules[i].Address;
+		void* address = m_peb->LoadedModules[i].ImageBase;
 
 		if (ip < (uintptr_t)address)
 			continue;
@@ -128,10 +158,10 @@ void UserProcess::DisplayDetails() const
 
 	kernel.Printf("DisplayPEB\n");
 	kernel.Printf("     ID: %d\n", m_peb->ProcessId);
-	kernel.Printf("   Base: 0x%016x\n", m_peb->BaseAddress);
+	kernel.Printf("   Base: 0x%016x\n", m_peb->ImageBase);
 	kernel.Printf("   Mods: %d\n", m_peb->ModuleIndex);
 	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
-		kernel.Printf("    %s: 0x%016x\n", m_peb->LoadedModules[i].Name, m_peb->LoadedModules[i].Address);
+		kernel.Printf("    %s: 0x%016x\n", m_peb->LoadedModules[i].Name, m_peb->LoadedModules[i].ImageBase);
 }
 
 void UserProcess::SetStandardHandle(const StandardHandle handle, const std::shared_ptr<UObject>& object)

@@ -52,7 +52,7 @@ Handle Loader::LoadLibrary(const char* lpLibFileName)
 	if (module != nullptr)
 	{
 		DebugPrintf("  Loaded at: 0x%016x\n", module);
-		return module->Address;
+		return module->ImageBase;
 	}
 	
 	//Load it

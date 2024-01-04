@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Kernel/Objects/UObject.h"
+#include "Kernel/StringPrinter.h"
 
 #include <memory>
 
@@ -11,7 +12,7 @@ enum class PipeOp
 };
 
 //Ring buffer implementation using double-mapped physical pages in callers address space.
-class UserPipe
+class UserPipe : public StringPrinter
 {
 public:
 	static bool EventSignal(void* const arg);
@@ -23,6 +24,7 @@ public:
 
 	bool Read(void* const buffer, const size_t length, size_t& read);
 	bool Write(const void* buffer, const size_t length);
+	void Write(const std::string& string);
 
 	size_t FreeSpace() const;
 	size_t Count() const;

@@ -30,14 +30,20 @@ xcopy %BUILD_OUT%\kdcom.pdb X:\EFI\BOOT\
 
 @rem Copy runtime libraries
 xcopy %BUILD_OUT%\mosrt.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\mosrt.pdb X:\EFI\BOOT\
+xcopy %BUILD_OUT%\crt.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\crt.pdb X:\EFI\BOOT\
 
 @rem Copy apps
 xcopy %BUILD_OUT%\calc.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\fire.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\hello.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\init.exe X:\EFI\BOOT\
+xcopy %BUILD_OUT%\init.pdb X:\EFI\BOOT\
 xcopy %BUILD_OUT%\term.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\time.exe X:\EFI\BOOT\
+xcopy %BUILD_OUT%\crash.exe X:\EFI\BOOT\
+xcopy %BUILD_OUT%\crash.pdb X:\EFI\BOOT\
 
 @rem Copy Doom!!!
 xcopy %BUILD_OUT%\doom.exe X:\EFI\BOOT\

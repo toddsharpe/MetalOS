@@ -3,6 +3,7 @@
 
 #include "PdbDbi.h"
 #include "Kernel/PortableExecutable.h"
+#include <Kernel/Kernel.h>
 
 PdbDbi::PdbDbi(MsfStream& stream, MsfFile& file, const Handle image) :
 	m_stream(stream),
@@ -46,66 +47,74 @@ bool PdbDbi::ResolveFunction(const uint32_t rva, PdbFunctionLookup& lookup)
 	Assert(header == 4);//TODO: magic
 	moduleStream.Seek(info.SymByteSize);
 
+	//After seeking past the symbols, PDB contains records in order:
+	// * CV_DebugSLinesHeader_t (DEBUG_S_LINES) (or DEBUG_S_FILECHKSMS, not handled here)
+	// * CV_DebugSLinesHeader_t - defines range of offsets in segment
+	// * CV_DebugSLinesFileBlockHeader_t - defines number of lines
+	// * CV_Line_t - defines each line entry
 	{
-		CV_DebugSSubsectionHeader_t checksumHeader;
-		Assert(moduleStream.Read(&checksumHeader));
-		//if (checksumHeader.type != DEBUG_S_SUBSECTION_TYPE::DEBUG_S_FILECHKSMS)
-		//{
-		//	Printf("Unexpected checksum type: 0x%x\n", checksumHeader.type);
-		//	Assert(false);
-		//}
-
-		//Skip checksums section
-		moduleStream.Skip(checksumHeader.cbLen);
-
+		//Entries are sorted
 		const uint32_t endPosition = info.SymByteSize + info.C13ByteSize;
 		while (moduleStream.Position() < endPosition)
 		{
-			CV_DebugSSubsectionHeader_t subHeader;
-			Assert(moduleStream.Read(&subHeader));
-			//AssertEqual(subHeader.type, DEBUG_S_SUBSECTION_TYPE::DEBUG_S_LINES);
-			if (subHeader.type != DEBUG_S_SUBSECTION_TYPE::DEBUG_S_LINES)
+			CV_DebugSSubsectionHeader_t sectionHeader;
+			Assert(moduleStream.Read(&sectionHeader));
+
+			if (sectionHeader.type != DEBUG_S_SUBSECTION_TYPE::DEBUG_S_LINES)
 			{
-				lookup.Name = "<unknown type>";
-				lookup.LineNumber = subHeader.type;
-				return false;
+				moduleStream.Skip(sectionHeader.cbLen);
+				continue;
 			}
 
 			CV_DebugSLinesHeader_t linesHeader;
 			Assert(moduleStream.Read(&linesHeader));
 
 			//Printf("%04x:%08x-%08x\n", 1, linesHeader.offCon, (linesHeader.offCon + linesHeader.cbCon));
-			if (offset < linesHeader.offCon || offset >= (linesHeader.offCon + linesHeader.cbCon))
+
+			//Offset wasn't found (list is sorted)
+			if (offset < linesHeader.offCon)
 			{
-				moduleStream.Skip(subHeader.cbLen - sizeof(CV_DebugSLinesHeader_t));
+				//not found
+				lookup.Name = "<not found1>";
+				lookup.LineNumber = 0;
+				return false;
 			}
-			else
+
+			//Continue to next entry
+			if (offset >= (linesHeader.offCon + linesHeader.cbCon))
 			{
-				CV_DebugSLinesFileBlockHeader_t fileHeader;
-				Assert(moduleStream.Read(&fileHeader));
-				//Printf("file: %d\n", fileHeader.nLines);
+				moduleStream.Skip(sectionHeader.cbLen - sizeof(CV_DebugSLinesHeader_t));
+				continue;
+			}
 
-				const uint32_t functionOffset = offset - linesHeader.offCon;
+			//Iterate through blocks
+			CV_DebugSLinesFileBlockHeader_t fileHeader;
+			Assert(moduleStream.Read(&fileHeader));
 
-				CV_Line_t prev = { };
-				for (size_t i = 0; fileHeader.nLines; i++)
+			//Relative offset in lines section
+			const uint32_t targetOffset = offset - linesHeader.offCon;
+			//Printf("Offset: 0x%016x, offCon: 0x%016x\n", offset, linesHeader.offCon);
+			CV_Line_t prev = {};
+			for (size_t i = 0; fileHeader.nLines; i++)
+			{
+				CV_Line_t line;
+				Assert(moduleStream.Read(&line));
+
+				//Lines are comprised of one or more instructions
+				//Check if target offset is between start of line and start of next line
+				if (targetOffset >= prev.offset && targetOffset < line.offset)
 				{
-					CV_Line_t line;
-					Assert(moduleStream.Read(&line));
-
-					if (functionOffset >= prev.offset && functionOffset < line.offset)
-					{
-						m_publics.GetFunction(linesHeader.offCon, lookup.Name);
-						lookup.LineNumber = line.linenumStart;
-						return true;
-					}
-
-					prev = line;
+					m_publics.GetFunction(linesHeader.offCon, lookup.Name);
+					lookup.LineNumber = prev.linenumStart;
+					return true;
 				}
+				prev = line;
 			}
 		}
 	}
 
+	lookup.Name = "<not found2>";
+	lookup.LineNumber = 0;
 	return false;
 }
 

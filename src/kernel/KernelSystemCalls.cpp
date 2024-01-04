@@ -197,15 +197,15 @@ HThread Kernel::CreateThread(const size_t stackSize, const ThreadStart startAddr
 	return (HThread)thread->UserThread;
 }
 
-SystemCallResult Kernel::CreateProcess(const char* processName, const CreateProcessArgs* args, CreateProcessResult* result)
+SystemCallResult Kernel::CreateProcess(const char* commandLine, const CreateProcessArgs* args, CreateProcessResult* result)
 {
-	if (!IsValidUserPointer(processName))
+	if (!IsValidUserPointer(commandLine))
 		return SystemCallResult::InvalidPointer;
 
 	if (args && !IsValidUserPointer(args))
 		return SystemCallResult::InvalidPointer;
 
-	std::shared_ptr<UserProcess> newProcess = std::shared_ptr<UserProcess>(KeCreateProcess(std::string(processName)));
+	std::shared_ptr<UserProcess> newProcess = std::shared_ptr<UserProcess>(KeCreateProcess(std::string(commandLine)));
 	Assert(newProcess);
 	m_processes->push_back(newProcess);
 

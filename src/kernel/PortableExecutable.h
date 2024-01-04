@@ -19,6 +19,7 @@ public:
 	static PIMAGE_SECTION_HEADER GetPESection(void* const imageBase, const uint32_t index);
 	static void* GetProcAddress(void* const imageBase, const std::string& procName);
 	static const char* GetPdbName(void* const imageBase);
+	static bool Contains(const void* const imageBase, const uintptr_t ip);
 
 private:
 	//GuidDef.h

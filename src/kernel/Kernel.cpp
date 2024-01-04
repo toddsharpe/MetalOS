@@ -30,6 +30,8 @@
 #include "Path.h"
 #include "MetalOS.Internal.h"
 #include "EarlyUart.h"
+#include "Kernel/Objects/UserPipe.h"
+#include "Kernel/Objects/UPipe.h"
 
 #define ENABLE_PDB 1
 
@@ -262,12 +264,13 @@ void Kernel::HandleInterrupt(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* f
 		__halt();
 	}
 
+	//Break into kernel debugger if not user code
 	if (m_debugger.Enabled() && vector == X64_INTERRUPT_VECTOR::Breakpoint)
 	{
 		m_debugger.DebuggerEvent(vector, frame);
 		return;
 	}
-	
+
 	const auto& it = m_interruptHandlers->find(vector);
 	if (it != m_interruptHandlers->end())
 	{
@@ -296,15 +299,68 @@ void Kernel::HandleInterrupt(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* f
 			this->Printf("        Null pointer\n");
 	}
 
-	//Show interrupt stack
+	//Build context
 	X64_CONTEXT context = {};
 	context.Rip = frame->RIP;
 	context.Rsp = frame->RSP;
 	context.Rbp = frame->RBP;
-	this->ShowStack(&context);
 
-	//Bugcheck
-	Fatal("Unhandled exception");
+	if (IsValidUserPointer((void*)frame->RIP))
+	{
+		//Interrupt is in userspace. Write Stack to stdout, write message, kill process.
+		UserProcess& proc = m_scheduler->GetCurrentProcess();
+		std::shared_ptr<UObject> uObject = proc.GetObject((Handle)StandardHandle::Output);
+		if (uObject)
+		{
+			//Write stack
+			AssertEqual(uObject->Type, UObjectType::Pipe);
+			const UPipe* uPipe = (UPipe*)uObject.get();
+			UserPipe& pipe = *uPipe->Pipe.get();
+
+			//Write exception
+			if (vector == X64_INTERRUPT_VECTOR::DivideError)
+				pipe.Printf("Exception: Divide by zero\n");
+			else if (vector == X64_INTERRUPT_VECTOR::Breakpoint)
+				pipe.Printf("Exception: Breakpoint\n");
+			else if (vector == X64_INTERRUPT_VECTOR::PageFault && __readcr2() == 0)
+				pipe.Printf("Exception: Null pointer dereference\n");
+			
+			//Convert to unwind context
+			CONTEXT ctx = { 0 };
+			ctx.Rip = context.Rip;
+			ctx.Rsp = context.Rsp;
+			ctx.Rbp = context.Rbp;
+
+			//Unwind stack, writing to process stdout
+			StackWalk sw(&ctx);
+			while (sw.HasNext())
+			{
+				PdbFunctionLookup lookup = {};
+				Assert(IsValidUserPointer((void*)ctx.Rip));
+				ResolveUserIP(ctx.Rip, lookup);
+
+				Module* module = proc.GetModule(ctx.Rip);
+
+				pipe.Printf("    %s::%s (%d)\n", module->Name, lookup.Name.c_str(), lookup.LineNumber);
+				pipe.Printf("        IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", ctx.Rip, lookup.Base, lookup.RVA);
+
+				if (lookup.Base == nullptr)
+					break;
+
+				sw.Next((uintptr_t)lookup.Base);
+			}
+		}
+
+		m_scheduler->KillCurrentProcess();
+		return;
+	}
+	else
+	{
+		this->ShowStack(&context);
+
+		//Bugcheck
+		Fatal("Unhandled exception");
+	}
 }
 
 void Kernel::Bugcheck(const char* file, const char* line, const char* format, ...)
@@ -398,6 +454,39 @@ bool Kernel::ResolveIP(const uintptr_t ip, PdbFunctionLookup& lookup)
 	lookup.Base = module->ImageBase;
 	lookup.RVA = (uint32_t)(ip - (uintptr_t)lookup.Base);
 	return module->Pdb->ResolveFunction(lookup.RVA, lookup);
+}
+
+bool Kernel::ResolveUserIP(const uintptr_t ip, PdbFunctionLookup& lookup)
+{
+	kernel.Printf("ResolveUserIP: 0x%016x\n", ip);
+	const UserProcess& proc = m_scheduler->GetCurrentUserThread().Process;
+	proc.DisplayDetails();
+	Module* module = proc.GetModule(ip);
+	if (!module)
+		return false;
+	Assert(module);
+
+#if ENABLE_PDB
+	if (!module->PDB)
+	{
+		//Attempt to load PDB.
+		const char* fullPath = PortableExecutable::GetPdbName(module->ImageBase);
+		Assert(fullPath);
+		const char* pdbName = GetFileName(fullPath);
+		Assert(pdbName);
+		kernel.Printf("Loading: %s\n", pdbName);
+		const void* const address = KeLoadPdb(pdbName);
+		Assert(address);
+		module->PDB = new Pdb(address, module->ImageBase);
+	}
+#endif
+
+	if (!module->PDB)
+		return false;
+
+	lookup.Base = module->ImageBase;
+	lookup.RVA = (uint32_t)(ip - (uintptr_t)lookup.Base);
+	return reinterpret_cast<Pdb*>(module->PDB)->ResolveFunction(lookup.RVA, lookup);
 }
 
 void Kernel::Printf(const char* format, ...)
@@ -723,9 +812,31 @@ bool Kernel::KeSetFilePosition(KFile& file, const size_t position) const
 	return true;
 }
 //TODO: fold into syscall function
-UserProcess* Kernel::KeCreateProcess(const std::string& path)
+UserProcess* Kernel::KeCreateProcess(const std::string& commandLine)
 {
-	this->Printf("CreateProcess %s\n", path);
+	this->Printf("CreateProcess %s\n", commandLine);
+
+	//Parse command line
+	std::vector<std::string> args;
+	{
+		size_t start = 0;
+		size_t i = 0;
+		while (commandLine[i] != '\0')
+		{
+			if (commandLine[i] == ' ')
+			{
+				args.push_back(std::string(&commandLine[start], (i - start)));
+				i++;
+				start = i;
+			}
+			else
+			{
+				i++;
+			}
+		}
+		args.push_back(std::string(&commandLine[start], (i - start)));
+	}
+	const std::string path = args[0];
 
 	KFile file;
 	Assert(KeCreateFile(file, path, GenericAccess::Read));
@@ -765,7 +876,7 @@ UserProcess* Kernel::KeCreateProcess(const std::string& path)
 	Assert(address);
 
 	//Init in context of address space
-	process->Init(address);
+	process->Init(address, args);
 	process->AddModule(path.c_str(), address);
 
 	//Read headers

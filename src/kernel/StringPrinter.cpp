@@ -20,14 +20,7 @@ void StringPrinter::Printf(const char* format, const va_list args)
 	buffer[retval] = '\0';
 
 
-	char* p = buffer;
-	while (*p != 0)
-	{
-		__outbyte(static_cast<uint16_t>(0x3F8), static_cast<uint8_t>(*p));
-		p++;
-	}
-
-	//this->Write(std::string(buffer));
+	this->Write(std::string(buffer));
 }
 
 void StringPrinter::PrintBytes(const char* buffer, const size_t length)

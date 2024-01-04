@@ -76,6 +76,11 @@ bool UserPipe::Write(const void* buffer, const size_t length)
 	return true;
 }
 
+void UserPipe::Write(const std::string& string)
+{
+	this->Write(string.c_str(), string.length());
+}
+
 size_t UserPipe::FreeSpace() const
 {
 	return m_size - m_count;

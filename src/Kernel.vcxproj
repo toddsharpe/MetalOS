@@ -317,6 +317,7 @@
     <ClInclude Include="MetalOS.Arch.h" />
     <ClInclude Include="MetalOS.Internal.h" />
     <ClInclude Include="MetalOS.List.h" />
+    <ClInclude Include="msvc.h" />
     <ClInclude Include="PageTables.h" />
     <ClInclude Include="PageTablesPool.h" />
     <ClInclude Include="Path.h" />

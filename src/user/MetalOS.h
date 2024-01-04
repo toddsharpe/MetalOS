@@ -91,7 +91,7 @@ extern "C"
 
 
 	//Process/Thread
-	SystemCallResult CreateProcess(const char* processName, const CreateProcessArgs* args, CreateProcessResult* result);
+	SystemCallResult CreateProcess(const char* commandLine, const CreateProcessArgs* args, CreateProcessResult* result);
 	uint32_t GetThreadId(HThread thread);
 	HThread GetCurrentThread();
 	uint64_t GetCurrentThreadId();

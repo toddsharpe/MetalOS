@@ -14,6 +14,7 @@
 #include <memory>
 #include <map>
 #include <list>
+#include <vector>
 
 enum class ProcessState
 {
@@ -29,7 +30,7 @@ class UserProcess : public KSignalObject
 public:
 	UserProcess(const std::string& name, const bool isConsole);
 	
-	void Init(void* address);
+	void Init(void* address, const std::vector<std::string>& args);
 
 	uintptr_t GetModuleBase(uintptr_t ip) const;
 
@@ -44,6 +45,7 @@ public:
 	}
 
 	void AddModule(const char* name, void* address);
+	Module* GetModule(const uintptr_t ip) const;
 
 	void Display() const;
 	void DisplayDetails() const;

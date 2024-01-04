@@ -149,3 +149,16 @@ const char* PortableExecutable::GetPdbName(void* const imageBase)
 	const OMFSignatureRSDS* rsds = (const OMFSignatureRSDS*)address;
 	return rsds->name;
 }
+
+bool PortableExecutable::Contains(const void* const imageBase, const uintptr_t ip)
+{
+	//Headers
+	const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
+	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
+
+	const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
+	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
+
+	const uintptr_t imageEnd = (uintptr_t)imageBase + ntHeader->OptionalHeader.SizeOfImage;
+	return ((ip >= (uintptr_t)imageBase) && (ip < imageEnd));
+}

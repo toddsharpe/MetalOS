@@ -3,8 +3,8 @@
 #include "Kernel/Kernel.h"
 #include "Assert.h"
 #include <intrin.h>
-#include "user/MetalOS.Types.h"
 #include "PortableExecutable.h"
+
 #include <string>
 
 
@@ -32,14 +32,15 @@ UserProcess::UserProcess(const std::string& name, const bool isConsole) :
 	m_state(ProcessState::Running)
 {
 	//Create new page tables, using current top level kernel mappings
-	m_pageTables = new PageTables();
-	m_pageTables->LoadKernelMappings(new PageTables(__readcr3()));
+	m_pageTables.CreateNew();
+	m_pageTables.LoadKernelMappings();
+	m_addressSpace.Initialize();
 }
 
 void UserProcess::Init(void* address, const std::vector<std::string>& args)
 {
 	//Has to be called within context of process for now
-	Assert(__readcr3() == m_pageTables->GetCr3());
+	Assert(m_pageTables.IsActive());
 
 	m_imageBase = (uintptr_t)address;
 
@@ -74,7 +75,7 @@ void UserProcess::Init(void* address, const std::vector<std::string>& args)
 void UserProcess::AddModule(const char* name, void* address)
 {
 	//Has to be called within context of process for now
-	AssertEqual(__readcr3(), m_pageTables->GetCr3());
+	Assert(m_pageTables.IsActive());
 
 	//TODO: check name length
 
@@ -85,7 +86,7 @@ void UserProcess::AddModule(const char* name, void* address)
 
 Module* UserProcess::GetModule(const uintptr_t ip) const
 {
-	AssertEqual(__readcr3(), m_pageTables->GetCr3());
+	Assert(m_pageTables.IsActive());
 	for (size_t i = 0; i < m_peb->ModuleIndex; i++)
 	{
 		const void* address = m_peb->LoadedModules[i].ImageBase;
@@ -134,7 +135,7 @@ uintptr_t UserProcess::GetModuleBase(uintptr_t ip) const
 
 uintptr_t UserProcess::GetCR3() const
 {
-	return m_pageTables->GetCr3();
+	return m_pageTables.GetRoot();
 }
 
 VirtualAddressSpace& UserProcess::GetAddressSpace()

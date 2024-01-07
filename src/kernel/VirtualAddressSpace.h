@@ -1,43 +1,56 @@
 #pragma once
 
-
-#include "Kernel/MetalOS.Kernel.h"
+#include "MetalOS.List.h"
 #include "MetalOS.Internal.h"
-#include "user/MetalOS.Types.h"
-#include "user/MetalOS.System.h"
-
-#include <vector>
+#include <cstdint>
+#include <cstddef>
 
 class VirtualAddressSpace
 {
 public:
-	static const size_t AllocationGranularity = (PageSize << 2);//16KB
+	static bool Debug;
 
 	VirtualAddressSpace(const uintptr_t start, const uintptr_t end, const bool isGlobal);
 	
-	bool IsFree(const uintptr_t address, const size_t count) const;
+	void Initialize();
 	bool Reserve(uintptr_t& address, const size_t count);
+	bool IsValidPointer(const void* const p) const;
 
-	bool IsValidPointer(const void* p) const;
-
-	const uintptr_t Start;
-	const uintptr_t End;
 	const bool IsGlobal;
 
 private:
-	struct Entry
+	struct Reservation
 	{
 		uintptr_t Address;
 		size_t PageCount;
+		ListEntry Link;
 	};
 
+	bool IsFree(const uintptr_t address, const size_t count) const;
+
+	ListEntry m_reservations;
+	const uintptr_t m_start;
+	const uintptr_t m_end;
 	uintptr_t m_watermark;
-	std::vector<Entry> m_entries;
+	bool m_initialized;
 };
 
 class UserAddressSpace : public VirtualAddressSpace
 {
 public:
-	UserAddressSpace() : VirtualAddressSpace(UserAddress::UserStart, UserAddress::UserStop, false) { }
+	UserAddressSpace() : VirtualAddressSpace(UserAddress::UserStart, UserAddress::UserStop, false)
+	{
+
+	}
 };
 
+/*
+class KernelAddressSpace : public VirtualAddressSpace
+{
+public:
+	KernelAddressSpace() : VirtualAddressSpace(KernelAddress::KernelStart, KernelAddress::KernelEnd, KernelAddress::KernelStart, true)
+	{
+
+	}
+};
+*/

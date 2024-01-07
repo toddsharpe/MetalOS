@@ -1,48 +1,76 @@
+#include "PhysicalMemoryManager.h"
 #include "Assert.h"
 
-#include "PhysicalMemoryManager.h"
-#include "user/MetalOS.System.h"
+namespace
+{
+	inline PageState GetPageState(const EFI_MEMORY_DESCRIPTOR& desc)
+	{
+		switch (desc.Type)
+		{
+		case EfiConventionalMemory:
+			return PageState::Free;
 
-PhysicalMemoryManager::PhysicalMemoryManager(MemoryMap& memoryMap) :
-	m_memoryMap(memoryMap),
-	m_length(memoryMap.GetPhysicalAddressSize() >> PageShift),
-	m_frames((PAGE_FRAME*)KernelPfnDbStart),
+		default:
+			return PageState::Reserved;
+		}
+	}
+	
+	constexpr size_t BuddySize = 4;
+
+	size_t GetBuddyIndex(const paddr_t address)
+	{
+		return (address >> PageShift) / BuddySize;
+	}
+}
+
+PhysicalMemoryManager::PhysicalMemoryManager(void* const address, const size_t count) :
+	m_frames(reinterpret_cast<PageFrame*>(address)),
+	m_count(count),
 	m_freeList(),
-	m_buddyMap(m_length / BuddySize),
+	m_buddyMap(count / BuddySize),
 	m_nextBuddy()
 {
-	Assert((memoryMap.GetPhysicalAddressSize() & PageMask) == 0);
-	
-	//Zero out frame database
-	memset(m_frames, 0, sizeof(PAGE_FRAME) * m_length);
+
+}
+
+void PhysicalMemoryManager::Initialize(const MemoryMap& memoryMap)
+{
+	//Zero out memory region
+	memset(m_frames, 0, sizeof(PageFrame) * m_count);
 
 	//Initialize free list
 	ListInitializeHead(&m_freeList);
+	m_buddyMap.Initialize();
 
 	//Populate page states
 	for (size_t i = 0; i < memoryMap.Length(); i++)
 	{
 		const EFI_MEMORY_DESCRIPTOR* desc = memoryMap.Get(i);
-		Assert(desc != nullptr);
+		Assert(desc);
 
 		const PageState state = GetPageState(*desc);
+		const bool regionInUse = state != PageState::Free;
 		Assert((desc->PhysicalStart & PageMask) == 0);
-		const size_t baseIndex = desc->PhysicalStart >> PageShift;
+
+		const size_t baseIndex = (desc->PhysicalStart >> PageShift);
 		for (size_t j = 0; j < desc->NumberOfPages; j++)
 		{
+			const size_t absIndex = baseIndex + j;
+			
 			//Mark page state
-			PAGE_FRAME* frame = &m_frames[baseIndex + j];
-			frame->State = state;
+			PageFrame& frame = m_frames[absIndex];
+			frame.State = state;
 
 			//Update buddy availability by ORing free with current buddy value.
-			const size_t buddyIndex = (baseIndex + j) / BuddySize;
-			const bool notFree = state != PageState::Free;
-			m_buddyMap.Set(buddyIndex, m_buddyMap.Get(buddyIndex) || notFree);
+			//Buddy can span regions
+			const size_t buddyIndex = absIndex / BuddySize;
+			const bool buddyInUse = m_buddyMap.Get(buddyIndex);
+			m_buddyMap.Set(buddyIndex, regionInUse || buddyInUse);
 
 			//Conditionally add to free list
-			if (state == PageState::Free)
+			if (!regionInUse)
 			{
-				ListInsertHead(&m_freeList, &frame->Link);
+				ListInsertHead(&m_freeList, &frame.Link);
 			}
 		}
 	}
@@ -57,35 +85,41 @@ bool PhysicalMemoryManager::AllocatePage(paddr_t& address)
 	if (address != 0)
 	{
 		//Specific address requested
-		Assert((address & PageMask) == 0);
+		AssertPrintInt((address & PageMask) == 0, address);
 
 		const size_t index = address >> PageShift;
-		AssertOp(index, < , m_length);
-		PAGE_FRAME* entry = &m_frames[index];
+		AssertOp(index, < , m_count);
+		PageFrame& entry = m_frames[index];
 
 		//Check if page is free
-		if (entry->State != PageState::Free)
+		if (entry.State != PageState::Free)
 			return false;
 
 		//Set page as active, mark buddy unavailable, remove from free list
-		entry->State = PageState::Active;
+		entry.State = PageState::Active;
 		m_buddyMap.Set(GetBuddyIndex(address), true);
-		ListRemoveEntry(&entry->Link);
+		ListRemoveEntry(&entry.Link);
 
 		return true;
 	}
+	else
+	{
+		//Choose a page, asserting there is one (if not we'd have to free)
+		Assert(!ListIsEmpty(&m_freeList));
+		ListEntry* popped = ListRemoveHead(&m_freeList);
+		PageFrame* entry = LIST_CONTAINING_RECORD(popped, PageFrame, Link);
+		address = GetIndex(entry) << PageShift;
 
-	//Choose a page, asserting there is one (if not we'd have to free)
-	Assert(!ListIsEmpty(&m_freeList));
-	ListEntry* popped = ListRemoveHead(&m_freeList);
-	PAGE_FRAME* entry = LIST_CONTAINING_RECORD(popped, PAGE_FRAME, Link);
-	address = GetIndex(entry) << PageShift;
+		entry->State = PageState::Active;
+		m_buddyMap.Set(GetBuddyIndex(address), true);
 
-	entry->State = PageState::Active;
-	m_buddyMap.Set(GetBuddyIndex(address), true);
+		return true;
+	}
+}
 
-	return true;
-
+void PhysicalMemoryManager::DeallocatePage(const paddr_t address)
+{
+	NotImplemented();
 }
 
 //Allocates contiguous physical pages, returning base address
@@ -94,21 +128,22 @@ bool PhysicalMemoryManager::AllocateContiguous(paddr_t& address, const size_t pa
 	Printf("AllocateContiguous: 0x%016x, 0x%x\n", address, pageCount);
 
 	const size_t length = m_buddyMap.Length;
-	const size_t buddyCount = (pageCount + (BuddySize - 1)) / BuddySize;;
+	const size_t buddyCount = DivRoundUp(pageCount, BuddySize);
 
-	while (m_nextBuddy < length - buddyCount)
+	while (m_nextBuddy < (length - buddyCount))
 	{
 		Printf("Buddy 0x%016x, size 0x%016x, count 0x%016x\n", m_nextBuddy, length, buddyCount);
+
 		//Check to make sure entire buddy group is free
-		bool notFree = false;
+		bool inUse = false;
 		for (size_t i = 0; i < buddyCount; i++)
 		{
-			notFree |= m_buddyMap.Get(m_nextBuddy + i);
-			if (notFree)
+			inUse |= m_buddyMap.Get(m_nextBuddy + i);
+			if (inUse)
 				break;
 		}
 
-		if (notFree)
+		if (inUse)
 		{
 			m_nextBuddy++;
 			continue;
@@ -139,30 +174,12 @@ bool PhysicalMemoryManager::AllocateContiguous(paddr_t& address, const size_t pa
 
 size_t PhysicalMemoryManager::GetSize() const
 {
-	return sizeof(PAGE_FRAME) * m_length;
-}
-
-constexpr size_t PhysicalMemoryManager::GetBuddyIndex(const paddr_t address)
-{
-	return (address >> PageShift) / BuddySize;
-}
-
-PageState PhysicalMemoryManager::GetPageState(const EFI_MEMORY_DESCRIPTOR& desc)
-{
-	switch (desc.Type)
-	{
-	case EfiConventionalMemory:
-		return PageState::Free;
-
-	default:
-		return PageState::Platform;
-	}
+	return m_count * sizeof(PageFrame);
 }
 
 //Frames is an array, so frame number is index
-size_t PhysicalMemoryManager::GetIndex(const PAGE_FRAME* entry) const
+size_t PhysicalMemoryManager::GetIndex(const PageFrame* entry) const
 {
 	//Yay for pointer math
 	return (entry - m_frames);
 }
-

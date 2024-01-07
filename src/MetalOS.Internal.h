@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include "user/MetalOS.System.h"
 
 //Shared header between loader and kernel
 
@@ -49,7 +48,7 @@ enum KernelAddress : uintptr_t
 	KernelGraphicsDevice = KernelHardwareStart + 0x200'0000, //32MB
 	KernelRamDrive = KernelHardwareStart + 0x400'0000, //64MB
 	KernelHardwareEnd = KernelHardwareStart + 0x800'0000,
-	KernelPfnDbStart = KernelHardwareStart + 0x1'0000'0000,//4GB
+	KernelPageFrameDBStart = KernelHardwareStart + 0x1'0000'0000,//4GB
 
 	//Heap 0xFFFF'8020'0000'0000
 	KernelHeapStart = KernelHardwareStart + KernelSectionLength,
@@ -83,14 +82,12 @@ static constexpr size_t RamDriveSize = KernelHardwareEnd - KernelRamDrive;
 #define QWordLow(x) ((uint32_t)((uint64_t)x))
 
 //Kernel defines
-typedef uintptr_t paddr_t;
 typedef size_t cpu_flags_t;
 
 //Keep in sync with MetalOS.KernalApi syscalls.asm
 enum class SystemCall : size_t
 {
-	GetSystemInfo = 0x100,
-	GetTickCount,
+	GetTickCount = 0x100,
 	GetSystemTime,
 
 	GetCurrentThread = 0x200,
@@ -136,12 +133,4 @@ enum class SystemCall : size_t
 
 	DebugPrint = 0x600,
 	DebugPrintBytes = 0x601,
-};
-
-//Enables shared bootloader/kernel libraries to output
-typedef void (*LibraryPrintf)(const char* format, ...);
-struct MetalOSLibrary
-{
-	LibraryPrintf DebugPrint;
-	LibraryPrintf AssertPrint;
 };

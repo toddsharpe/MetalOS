@@ -5,22 +5,23 @@
 #include <Graphics/Framebuffer.h>
 #include "Kernel/MetalOS.Kernel.h"
 
+//TODO(tsharpe): This class is just a Preallocated framebuffer. Move to Graphics.
 class EfiDisplay : public Graphics::FrameBuffer
 {
 public:
-	EfiDisplay();
-
-	void Init(void* address, const EFI_GRAPHICS_DEVICE& device);
-	void Write(Graphics::FrameBuffer& framebuffer);
+	EfiDisplay(void* const address, const size_t height, const size_t width);
 
 	virtual size_t GetHeight() const override;
 	virtual size_t GetWidth() const override;
 	virtual Graphics::Color* GetBuffer() override;
 
+	//Write buffer at once
+	void Write(Graphics::FrameBuffer& framebuffer);
+
 private:
-	void* m_address;
-	EFI_GRAPHICS_DEVICE m_device;
+	Graphics::Color* const m_buffer;
+	const size_t m_height;
+	const size_t m_width;
 
 	::NO_COPY_OR_ASSIGN(EfiDisplay);
 };
-

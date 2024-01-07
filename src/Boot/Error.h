@@ -11,7 +11,15 @@
 #define WFILE WSTR(__FILE__)
 #define LLINE WSTR(STR(__LINE__))
 
-#define ReturnIfNotSuccess(x) status = x; if (EFI_ERROR(status)) { Error::DisplayError(L#x, WFILE, LLINE, status); return status; }
+#define ReturnIfNotSuccess(x) \
+do \
+{ \
+	status = x; \
+	if (EFI_ERROR(status)) \
+	{ \
+		Error::DisplayError(L#x, WFILE, LLINE, status); return status; \
+	} \
+} while (0)
 #define ReturnIfNotSuccessNoDisplay(x) status = x; if (EFI_ERROR(status)) { return status; }
 
 struct

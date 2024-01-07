@@ -5,7 +5,10 @@ void* Kernel::DriverMapPages(paddr_t address, size_t count)
 {
 	Assert(count > 0);
 
-	uintptr_t virtualAddress = KernelIoStart + address;
-	Assert(m_pageTables->MapKernelPages(virtualAddress, address, count));
+	const uintptr_t virtualAddress = KernelIoStart + address;
+	
+	PageTables tables;
+	tables.OpenCurrent();
+	Assert(tables.MapPages(virtualAddress, address, count, true));
 	return (void*)virtualAddress;
 }

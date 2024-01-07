@@ -8,6 +8,8 @@
 #include "EfiMain.h"
 #include "Error.h"
 #include <string.h>
+#include <Assert.h>
+#include "Output.h"
 
 EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
 EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
@@ -101,12 +103,12 @@ EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& e
 
 	//TODO: Remove relocation logic, it has no meaning as we are allocating in Identity Paging
 	bool relocate = pNtHeader->OptionalHeader.ImageBase != KernelBaseAddress;
+	Assert(!relocate);
 	//Update NTHeader to point to new virtual address
 	pNtHeader->OptionalHeader.ImageBase = KernelBaseAddress;
 
 	//Relocate image to KernelSpace. It gets allocated at KernelStart + ImageBase
 	IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-	Print(L"  Relocations: %u Relocation Needed: %d\r\n", relocationDirectory.Size, relocate);
 	if (relocationDirectory.Size)
 	{
 		PIMAGE_BASE_RELOCATION pBaseRelocation = (PIMAGE_BASE_RELOCATION)(physicalImageBaseOut + relocationDirectory.VirtualAddress);
@@ -170,7 +172,6 @@ EFI_STATUS EfiLoader::CrtInitialization(const uintptr_t imageBase)
 			break;
 		}
 	}
-
 	if (crtSection == nullptr)
 		return EFI_NOT_FOUND;
 	
@@ -185,4 +186,60 @@ EFI_STATUS EfiLoader::CrtInitialization(const uintptr_t imageBase)
 	}
 
 	return EFI_SUCCESS;
+}
+
+void* EfiLoader::GetProcAddress(void* const imageBase, const std::string& procName)
+{
+	//Headers
+	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(imageBase);
+	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
+
+	PIMAGE_NT_HEADERS64 ntHeader = MakePointer<PIMAGE_NT_HEADERS64>(imageBase, dosHeader->e_lfanew);
+	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
+
+	Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
+
+	PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+	if ((directory->Size == 0) || (directory->VirtualAddress == 0))
+		return NULL;
+
+	PIMAGE_EXPORT_DIRECTORY exportDirectory = MakePointer<PIMAGE_EXPORT_DIRECTORY>(imageBase, directory->VirtualAddress);
+
+	PDWORD pNames = MakePointer<PDWORD>(imageBase, exportDirectory->AddressOfNames);
+	PWORD pOrdinals = MakePointer<PWORD>(imageBase, exportDirectory->AddressOfNameOrdinals);
+	PDWORD pFunctions = MakePointer<PDWORD>(imageBase, exportDirectory->AddressOfFunctions);
+
+	uintptr_t search = 0;
+	for (DWORD i = 0; i < exportDirectory->NumberOfNames; i++)
+	{
+		char* name = MakePointer<char*>(imageBase, pNames[i]);
+		if (procName == name)
+		{
+			WORD ordinal = pOrdinals[i];
+			search = MakePointer<uintptr_t>(imageBase, pFunctions[ordinal]);
+		}
+	}
+
+	//Check if forwarded
+	uintptr_t base = (uintptr_t)imageBase + directory->VirtualAddress;
+	if ((search >= base) && (search < (base + directory->Size)))
+	{
+		return NULL;
+	}
+
+	//If function is forwarded, (PCHAR)search is its name
+	//DWORD base = (DWORD)hModule + directory->VirtualAddress;
+	//if ((search >= base) && (search < (base + directory->Size)))
+	//{
+	//    char* name = (char*)search;
+	//    char* copy = (char*)malloc((strlen(name) + 1) * sizeof(char));
+	//    strcpy(copy, name);
+	//    char* library = strtok(copy, ".");
+	//    char* function = strtok(NULL, ".");
+
+	//    HMODULE hLibrary = LoadLibrary(library);//Get the address
+	//    return GetExportAddress(hLibrary, function);
+	//}
+
+	return (void*)search;
 }

@@ -1,7 +1,7 @@
 #pragma once
 
+#include "MetalOS.System.h"
 #include <stdint.h>
-#include "MetalOS.Internal.h"
 
 //Page0: Superblock
 //Page1-Size<<PageShift: files

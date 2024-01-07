@@ -5,7 +5,6 @@
 #include <tianocore-edk2/IndustryStandard/PlatformAcpi.h>
 #include <intrin.h>
 #include <cstdarg>
-#include "System.h"
 #include "Main.h"
 #include <functional>
 #include "Kernel/Devices/AcpiDevice.h"
@@ -26,43 +25,41 @@
 #include "KThread.h"
 #include "MetalOS.Arch.h"
 #include "PageTables.h"
-#include "PageTablesPool.h"
 #include "Path.h"
 #include "MetalOS.Internal.h"
 #include "EarlyUart.h"
 #include "Kernel/Objects/UserPipe.h"
 #include "Kernel/Objects/UPipe.h"
 
-#define ENABLE_PDB 1
+Kernel::Kernel(const LoaderParams& params, BootHeap& bootHeap) :
+	//Boot params
+	m_params(params),
+	m_runtime(*params.Runtime),
+	m_bootHeap(bootHeap),
 
-Kernel::Kernel() :
-	m_physicalAddress(),
-	m_imageSize(),
-	m_runtime(),
-	m_pdbAddress(),
-	m_pdbSize(),
-
-	m_display(),
+	//Basic output drivers
+	m_display((void*)KernelGraphicsDevice, params.Display.VerticalResolution, params.Display.HorizontalResolution),
 	m_loadingScreen(m_display),
-	m_printer(),
+	m_uart(ComPort::Com1),
+	m_printer(&m_uart),
 
-	m_memoryMap(),
-	m_configTables(),
-	m_pagePool(),
-	m_pageTables(),
+	//Page tables
+	m_pool((void*)KernelPageTablesPool, params.PageTablesPoolAddress, params.PageTablesPoolPageCount),
+
+	//Memory and Heap
+	m_memoryMap(params.MemoryMap.Table, params.MemoryMap.Size, params.MemoryMap.DescriptorSize),
+	m_physicalMemory((void*)KernelPageFrameDBStart, params.PageFrameCount),
+	m_heap(m_physicalMemory, (void*)KernelHeapStart, (void*)KernelHeapEnd),
+	m_virtualMemory(m_physicalMemory),
+
+	//Copy before PT switch
+	m_configTables(params.ConfigTables, params.ConfigTablesCount),
 	
-	m_librarySpace(),
-	m_pdbSpace(),
-	m_stackSpace(),
-	m_heapSpace(),
-	m_runtimeSpace(),
-	m_windowsSpace(),
-
-	m_heapInitialized(),
-	m_pfnDbAddress(),
-	m_pfnDb(),
-	m_virtualMemory(),
-	m_heap(),
+	m_librarySpace(KernelLibraryStart, KernelLibraryEnd, true),
+	m_pdbSpace(KernelPdbStart, KernelPdbEnd, true),
+	m_stackSpace(KernelStackStart, KernelStackEnd, true),
+	m_runtimeSpace(KernelRuntimeStart, KernelRuntimeEnd, true),
+	m_windowsSpace(KernelWindowsStart, KernelWindowsEnd, true),
 
 	m_interruptHandlers(),
 
@@ -78,8 +75,6 @@ Kernel::Kernel() :
 
 	m_timer(0),
 
-	m_pdb(),
-
 	m_windows(m_display),
 
 	m_debugger()
@@ -87,92 +82,54 @@ Kernel::Kernel() :
 
 }
 
-void Kernel::Initialize(const PLOADER_PARAMS params)
+void Kernel::Initialize()
 {
 	ArchInitialize();
-	
-	//Save Loader Params
-	m_physicalAddress = params->KernelAddress;
-	m_imageSize = params->KernelImageSize;
-	m_runtime = *params->Runtime;//UEFI has rewritten these pointers, now we copy them locally
-	m_pfnDbAddress = params->PfnDbAddress;
-	const size_t pfnDbSize = params->PfnDbSize;
-	m_pdbAddress = params->PdbAddress;
-	m_pdbSize = params->PdbSize;
-	const paddr_t ramDriveAddress = params->RamDriveAddress;
 
 	//Initialize Display
-	m_display.Init((void*)KernelGraphicsDevice, params->Display);
 	m_loadingScreen.Initialize();
-	m_printer = &m_loadingScreen;
 
-	//Initialize and process memory map
-	m_memoryMap = new MemoryMap(params->MemoryMapSize, params->MemoryMapDescriptorSize, params->MemoryMapDescriptorVersion, *params->MemoryMap);
-	m_memoryMap->ReclaimBootPages();
-	m_memoryMap->MergeConventionalPages();
-	//UEFI configuration tables (saves them to boot heap)
-	m_configTables = new ConfigTables(params->ConfigTables, params->ConfigTableSizes);
+	//Page tables
+	m_pool.Initialize();
+	PageTables::Pool = &m_pool;
 
-	//Initialize page table pool
-	PageTables::Pool = new PageTablesPool((void*)KernelPageTablesPool, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
+	//Memory and Heap
+	m_memoryMap.Display(); //These strings go on boot heap
+	m_physicalMemory.Initialize(m_memoryMap);
 
-	//Construct kernel page table
-	m_pageTables = new PageTables();
+	//Copy from UEFI to kernel boot heap
+	m_memoryMap.Reallocate();
+	m_configTables.Reallocate();
 
-	m_pageTables->MapKernelPages(KernelBaseAddress, params->KernelAddress, SizeToPages(params->KernelImageSize));
-	m_pageTables->MapKernelPages(KernelPageTablesPool, params->PageTablesPoolAddress, params->PageTablesPoolPageCount);
-	m_pageTables->MapKernelPages(KernelGraphicsDevice, params->Display.FrameBufferBase, SizeToPages(params->Display.FrameBufferSize));
-	m_pageTables->MapKernelPages(KernelPfnDbStart, params->PfnDbAddress, SizeToPages(params->PfnDbSize));
-	m_pageTables->MapKernelPages(KernelKernelPdb, params->PdbAddress, SizeToPages(params->PdbSize));
+	//Build new page table with just Kernel space
+	PageTables pageTables;
+	pageTables.CreateNew();
+	pageTables.MapPages(KernelBaseAddress, m_params.KernelAddress, SizeToPages(m_params.KernelImageSize), true);
+	pageTables.MapPages(KernelPageTablesPool, m_params.PageTablesPoolAddress, m_params.PageTablesPoolPageCount, true);
+	pageTables.MapPages(KernelGraphicsDevice, m_params.Display.FrameBufferBase, SizeToPages(m_params.Display.FrameBufferSize), true);
+	pageTables.MapPages(KernelPageFrameDBStart, m_params.PageFrameAddr, SizeToPages(m_physicalMemory.GetSize()), true);
+	pageTables.MapPages(KernelKernelPdb, m_params.PdbAddress, SizeToPages(m_params.PdbSize), true);
+	m_memoryMap.MapRuntime(pageTables);
+	ArchSetPagingRoot(pageTables.GetRoot());
 
-	//Map in runtime sections
-	{
-		EFI_MEMORY_DESCRIPTOR* current;
-		for (current = params->MemoryMap;
-			current < NextMemoryDescriptor(params->MemoryMap, params->MemoryMapSize);
-			current = NextMemoryDescriptor(current, params->MemoryMapDescriptorSize))
-		{
-			if ((current->Attribute & EFI_MEMORY_RUNTIME) == 0)
-				continue;
+	//Initialize heap now that paging works
+	m_heap.Initialize();
 
-			Assert(m_pageTables->MapKernelPages(current->VirtualStart, current->PhysicalStart, current->NumberOfPages));
-		}
-	}
-
-	//Use new Kernel PT
-	//Identity mappings are not possible now, lost access to params
-	//Alternatively - remove physical identity mappings from bootloader PT since entry in pt root can be cleared and subsequent pages are going to be eaten (since they are in boot memory)
-	//This requires copying at least the root
-	ArchSetPagingRoot(m_pageTables->GetCr3());
-
-	this->Printf("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_physicalAddress, m_imageSize);
-	this->Printf("  PhysicalAddressSize: 0x%16x\n", m_memoryMap->GetPhysicalAddressSize());
+	Printf("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_params.KernelAddress, m_params.KernelImageSize);
+	Printf("  PhysicalAddressSize: 0x%16x\n", m_memoryMap.GetPhysicalAddressSize());
 
 	//Test UEFI runtime access
 	EFI_TIME time;
 	m_runtime.GetTime(&time, nullptr);
-	this->Printf("  Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+	Printf("  Date: %02d-%02d-%02d %02d:%02d:%02d\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 	
-	//Initialize virtual memory
-	m_pfnDb = new PhysicalMemoryManager(*m_memoryMap);
-	Assert(m_pfnDb->GetSize() == pfnDbSize);
-	m_virtualMemory = new VirtualMemoryManager(*m_pfnDb);
+	//Initialize address spaces
+	m_librarySpace.Initialize();
+	m_pdbSpace.Initialize();
+	m_stackSpace.Initialize();
+	m_runtimeSpace.Initialize();
+	m_windowsSpace.Initialize();
 
-	//TODO: Remove this concept, cant allocate memory or have growing containers before heap!
-	m_heapSpace = new VirtualAddressSpace(KernelHeapStart, KernelHeapEnd, true);
-	
-	//Initialize Heap
-	m_heap = new KernelHeap(*m_virtualMemory, *m_heapSpace);
-	m_heapInitialized = true;
-	m_printer = new EarlyUart(ComPort::Com1);
-
-	//Initialize address spaces (TODO: condense with split method)
-	m_librarySpace = new VirtualAddressSpace(KernelLibraryStart, KernelLibraryEnd, true);
-	m_pdbSpace = new VirtualAddressSpace(KernelPdbStart, KernelPdbEnd, true);
-	m_stackSpace = new VirtualAddressSpace(KernelStackStart, KernelStackEnd, true);
-	m_heapSpace = new VirtualAddressSpace(KernelHeapStart, KernelHeapEnd, true);
-	m_runtimeSpace = new VirtualAddressSpace(KernelRuntimeStart, KernelRuntimeEnd, true);
-	m_windowsSpace = new VirtualAddressSpace(KernelWindowsStart, KernelWindowsEnd, true);
 
 	//Interrupts
 	m_interruptHandlers = new std::map<X64_INTERRUPT_VECTOR, InterruptContext>();
@@ -183,17 +140,17 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//__debugbreak();
 
 	//Process and thread containers
-	m_scheduler = new Scheduler();
-	m_scheduler->Init();
+	m_scheduler.Init();
 	KeCreateThread(&Kernel::IdleThread, this, "Idle");
 
 	m_processes = new std::list<std::shared_ptr<UserProcess>>();
 	m_objectsRingBuffers = new std::map<std::string, UserRingBuffer*>();
 
 	//Modules
-	m_modules = new std::list<KeLibrary>();
-	KeLibrary keLibrary = { "moskrnl.exe", (Handle)KernelBaseAddress, m_pdb };
-	m_modules->push_back(keLibrary);
+	m_modules = new std::list<KeModule>();
+	auto pdb = new Pdb((void*)KernelKernelPdb, (Handle*)KernelBaseAddress);
+	const KeModule kernel = { "moskrnl.exe", (Handle)KernelBaseAddress, pdb };
+	m_modules->push_back(kernel);
 
 	//Initialize Platform
 	m_hyperV.Initialize();
@@ -204,8 +161,8 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	//Devices
 	m_deviceTree.Populate();
 
-	if (ramDriveAddress != NULL)
-		m_deviceTree.AddRootDevice(*new SoftwareDevice(RamDriveHid, (void*)ramDriveAddress));
+	if (m_params.RamDriveAddress != NULL)
+		m_deviceTree.AddRootDevice(*new SoftwareDevice(RamDriveHid, (void*)m_params.RamDriveAddress));
 
 	//Swap output to uart
 	Device* com1 = m_deviceTree.GetDeviceByName("COM1");
@@ -213,14 +170,14 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 	this->m_printer = ((UartDriver*)com1->GetDriver());
 
 	//Output full current state
-	m_memoryMap->DumpMemoryMap();
+	m_memoryMap.Display();
 	//m_configTables->Dump();
 	//m_deviceTree.Display();
 	//m_heap->PrintHeap();
-	m_pageTables->DisplayCr3();
+	pageTables.DisplayRoot();
 
 	//Scheduler (needed to load VMBus driver)
-	m_scheduler->Enabled = true;
+	m_scheduler.Enabled = true;
 	m_timer.Enable(Second / 512, (uint8_t)X64_INTERRUPT_VECTOR::Timer0);
 	//m_timer.Enable(Second / 32, (uint8_t)X64_INTERRUPT_VECTOR::Timer0);
 
@@ -242,15 +199,9 @@ void Kernel::Initialize(const PLOADER_PARAMS params)
 
 	m_windows.Initialize();
 	
-	//Lastly, load the pdb
-#if ENABLE_PDB
-	m_pdb = new Pdb((void*)KernelKernelPdb, (Handle*)KernelBaseAddress);
-	KeGetModule("moskrnl.exe")->Pdb = m_pdb;
-#endif
-
 	//Debugger
 	m_debugger.Initialize();
-	m_debugger.AddModule(keLibrary);
+	m_debugger.AddModule(kernel);
 
 	//Done
 	this->Printf("Kernel Initialized\n");
@@ -308,7 +259,7 @@ void Kernel::HandleInterrupt(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* f
 	if (IsValidUserPointer((void*)frame->RIP))
 	{
 		//Interrupt is in userspace. Write Stack to stdout, write message, kill process.
-		UserProcess& proc = m_scheduler->GetCurrentProcess();
+		UserProcess& proc = m_scheduler.GetCurrentProcess();
 		std::shared_ptr<UObject> uObject = proc.GetObject((Handle)StandardHandle::Output);
 		if (uObject)
 		{
@@ -351,7 +302,7 @@ void Kernel::HandleInterrupt(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* f
 			}
 		}
 
-		m_scheduler->KillCurrentProcess();
+		m_scheduler.KillCurrentProcess();
 		return;
 	}
 	else
@@ -405,9 +356,9 @@ void Kernel::Bugcheck(const char* file, const char* line, const char* format, va
 	ArchSaveContext(&context);
 	this->ShowStack(&context);
 
-	if (m_scheduler)
+	if (m_scheduler.Enabled)
 	{
-		KThread& thread = m_scheduler->GetCurrentThread();
+		KThread& thread = m_scheduler.GetCurrentThread();
 		thread.Display();
 	}
 
@@ -444,7 +395,7 @@ void Kernel::ShowStack(const X64_CONTEXT* context)
 
 bool Kernel::ResolveIP(const uintptr_t ip, PdbFunctionLookup& lookup)
 {
-	const KeLibrary* module = KeGetModule(ip);
+	const KeModule* module = KeGetModule(ip);
 	if (!module)
 		return false;
 
@@ -459,14 +410,13 @@ bool Kernel::ResolveIP(const uintptr_t ip, PdbFunctionLookup& lookup)
 bool Kernel::ResolveUserIP(const uintptr_t ip, PdbFunctionLookup& lookup)
 {
 	kernel.Printf("ResolveUserIP: 0x%016x\n", ip);
-	const UserProcess& proc = m_scheduler->GetCurrentUserThread().Process;
+	const UserProcess& proc = m_scheduler.GetCurrentUserThread().Process;
 	proc.DisplayDetails();
 	Module* module = proc.GetModule(ip);
 	if (!module)
 		return false;
 	Assert(module);
 
-#if ENABLE_PDB
 	if (!module->PDB)
 	{
 		//Attempt to load PDB.
@@ -479,7 +429,6 @@ bool Kernel::ResolveUserIP(const uintptr_t ip, PdbFunctionLookup& lookup)
 		Assert(address);
 		module->PDB = new Pdb(address, module->ImageBase);
 	}
-#endif
 
 	if (!module->PDB)
 		return false;
@@ -502,8 +451,7 @@ void Kernel::Printf(const char* format, va_list args)
 {
 	//if ((m_debugger != nullptr) && m_debugger->IsBrokenIn())
 		//m_debugger->KdpDprintf(format, args);
-	if (m_printer != nullptr)
-		m_printer->Printf(format, args);
+	m_printer->Printf(format, args);
 }
 
 void Kernel::InitializeAcpi()
@@ -575,8 +523,8 @@ void Kernel::InitializeAcpi()
 
 void Kernel::OnTimer0()
 {
-	if (m_scheduler && m_scheduler->Enabled)
-		m_scheduler->Schedule();
+	if (m_scheduler.Enabled)
+		m_scheduler.Schedule();
 }
 
 std::shared_ptr<KThread> Kernel::KeCreateThread(const ThreadStart start, void* const arg, const std::string& name)
@@ -586,7 +534,7 @@ std::shared_ptr<KThread> Kernel::KeCreateThread(const ThreadStart start, void* c
 	thread->Init(&Kernel::KernelThreadInitThunk);
 	thread->Name = name;
 	Printf("    Name: %s\n", name.c_str());
-	m_scheduler->AddReady(thread);
+	m_scheduler.AddReady(thread);
 
 	return thread;
 }
@@ -595,7 +543,7 @@ void Kernel::KeExitThread()
 {
 	this->Printf("Kernel::KeThreadExit\n");
 
-	m_scheduler->KillCurrentThread();
+	m_scheduler.KillCurrentThread();
 }
 
 std::shared_ptr<KThread> Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry)
@@ -611,7 +559,7 @@ std::shared_ptr<KThread> Kernel::CreateThread(UserProcess& process, size_t stack
 	return thread;
 }
 
-KeLibrary& Kernel::KeLoadLibrary(const std::string& path)
+KeModule& Kernel::KeLoadLibrary(const std::string& path)
 {
 	void* library = Loader::LoadKernelLibrary(path);
 
@@ -622,20 +570,18 @@ KeLibrary& Kernel::KeLoadLibrary(const std::string& path)
 
 	const void* address = KeLoadPdb(pdbName);
 	Pdb* pdb = nullptr;
-#if ENABLE_PDB
 	pdb = new Pdb(address, (void*)library);
-#endif
 	this->Printf("KeLoadLibrary %s (0x%016x), %s (0x%016x)\n", path.c_str(), (uintptr_t)library, pdbName, address);
 
-	KeLibrary keLibrary = { path, library, pdb };
-	m_modules->push_back(keLibrary);
+	KeModule KeModule = { path, library, pdb };
+	m_modules->push_back(KeModule);
 
-	m_debugger.AddModule(keLibrary);
+	m_debugger.AddModule(KeModule);
 
 	return m_modules->back();
 }
 
-const KeLibrary* Kernel::KeGetModule(const uintptr_t address) const
+const KeModule* Kernel::KeGetModule(const uintptr_t address) const
 {
 	for (const auto& module : *m_modules)
 	{
@@ -648,7 +594,7 @@ const KeLibrary* Kernel::KeGetModule(const uintptr_t address) const
 	return nullptr;
 }
 
-KeLibrary* Kernel::KeGetModule(const std::string& path) const
+KeModule* Kernel::KeGetModule(const std::string& path) const
 {
 	for (auto& module : *m_modules)
 	{
@@ -662,7 +608,7 @@ void Kernel::KernelThreadInitThunk()
 {
 	kernel.Printf("Kernel::KernelThreadInitThunk\n");
 
-	KThread& current = kernel.m_scheduler->GetCurrentThread();
+	KThread& current = kernel.m_scheduler.GetCurrentThread();
 	current.Display();
 	
 	//Run thread
@@ -677,7 +623,7 @@ size_t Kernel::UserThreadInitThunk(void* unused)
 {
 	kernel.Printf("Kernel::UserThreadInitThunk\n");
 
-	UserThread& user = kernel.m_scheduler->GetCurrentUserThread();
+	UserThread& user = kernel.m_scheduler.GetCurrentUserThread();
 	user.Display();
 	user.DisplayDetails();
 
@@ -688,9 +634,9 @@ size_t Kernel::UserThreadInitThunk(void* unused)
 	return 0;
 }
 
-void Kernel::KeSleepThread(const nano_t value) const
+void Kernel::KeSleepThread(const nano_t value)
 {
-	m_scheduler->Sleep(value);
+	m_scheduler.Sleep(value);
 }
 
 void Kernel::KeGetSystemTime(SystemTime& time) const
@@ -709,39 +655,47 @@ void Kernel::KeGetSystemTime(SystemTime& time) const
 	time.Milliseconds = efiTime.Nanosecond / 1000;
 }
 
-void* Kernel::Allocate(const size_t size, void* const caller)
+void* Kernel::Allocate(const size_t size)
 {
-	return m_heap->Allocate(size, caller);
+	if (m_heap.IsInitialized())
+		return m_heap.Allocate(size);
+	else
+		return m_bootHeap.Allocate(size);
 }
 
-void Kernel::Deallocate(void* const address, void* const caller)
+//TODO(tsharpe): Really needs to call deallocate of the heap that originally allocated it
+//Could add a heapblock tag to determine location?
+void Kernel::Deallocate(void* const address)
 {
-	m_heap->Deallocate(address, caller);
+	if (m_heap.IsInitialized())
+		m_heap.Deallocate(address);
+	else
+		return m_bootHeap.Deallocate(address);
 }
 
 void* Kernel::AllocateLibrary(const void* address, const size_t count)
 {
-	return m_virtualMemory->Allocate(address, count, *m_librarySpace);
+	return m_virtualMemory.Allocate(address, count, m_librarySpace);
 }
 
 void* Kernel::AllocatePdb(const size_t count)
 {
-	return m_virtualMemory->Allocate(0, count, *m_pdbSpace);
+	return m_virtualMemory.Allocate(0, count, m_pdbSpace);
 }
 
 void* Kernel::AllocateStack(const size_t count)
 {
-	return m_virtualMemory->Allocate(0, count, *m_stackSpace);
+	return m_virtualMemory.Allocate(0, count, m_stackSpace);
 }
 
 void* Kernel::AllocateWindows(const size_t count)
 {
-	return m_virtualMemory->Allocate(0, count, *m_windowsSpace);
+	return m_virtualMemory.Allocate(0, count, m_windowsSpace);
 }
 
 WaitStatus Kernel::KeWait(KSignalObject& obj, const milli_t timeout)
 {
-	WaitStatus status = m_scheduler->ObjectWait(obj, ToNano(timeout));
+	WaitStatus status = m_scheduler.ObjectWait(obj, ToNano(timeout));
 	return status;
 }
 
@@ -754,18 +708,18 @@ void Kernel::KeRegisterInterrupt(const X64_INTERRUPT_VECTOR interrupt, const Int
 paddr_t Kernel::AllocatePhysical(const size_t count)
 {
 	paddr_t address;
-	Assert(m_pfnDb->AllocateContiguous(address, count));
+	Assert(m_physicalMemory.AllocateContiguous(address, count));
 	return address;
 }
 
 void* Kernel::VirtualMap(const void* address, const std::vector<paddr_t>& addresses)
 {
-	return m_virtualMemory->VirtualMap(address, addresses, *m_runtimeSpace);
+	return m_virtualMemory.VirtualMap(address, addresses, m_runtimeSpace);
 }
 
 void* Kernel::VirtualMap(UserProcess& process, const void* address, const std::vector<paddr_t>& addresses)
 {
-	return m_virtualMemory->VirtualMap(address, addresses, process.GetAddressSpace());
+	return m_virtualMemory.VirtualMap(address, addresses, process.GetAddressSpace());
 }
 
 Device* Kernel::KeGetDevice(const std::string& path) const
@@ -925,7 +879,7 @@ UserProcess* Kernel::KeCreateProcess(const std::string& commandLine)
 void* Kernel::VirtualAlloc(UserProcess& process, const void* address, const size_t size)
 {
 	kernel.Printf("VirtualAlloc: 0x%016x, Size: 0x%x\n", address, size);
-	void* allocated = m_virtualMemory->Allocate(address, SizeToPages(size), process.GetAddressSpace());
+	void* allocated = m_virtualMemory.Allocate(address, SizeToPages(size), process.GetAddressSpace());
 	Assert(allocated);
 	return allocated;
 }
@@ -945,7 +899,7 @@ bool Kernel::IsValidUserPointer(const void* p)
 		return false;
 
 	//Make sure pointer is User's address space
-	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserProcess& process = m_scheduler.GetCurrentProcess();
 	return process.GetAddressSpace().IsValidPointer(p);
 }
 
@@ -959,12 +913,11 @@ bool Kernel::IsValidKernelPointer(const void* p)
 		return false;
 
 	std::vector<VirtualAddressSpace*> addressSpaces = {
-		m_librarySpace,
-		m_pdbSpace,
-		m_stackSpace,
-		m_heapSpace,
-		m_runtimeSpace,
-		m_windowsSpace
+		&m_librarySpace,
+		&m_pdbSpace,
+		&m_stackSpace,
+		&m_runtimeSpace,
+		&m_windowsSpace
 	};
 
 	//Check every address space
@@ -982,14 +935,12 @@ void Kernel::KePauseSystem()
 	ArchDisableInterrupts();
 	m_timer.Disable();
 
-	if (m_scheduler)
-		m_scheduler->Enabled = false;
+	m_scheduler.Enabled = false;
 }
 
 void Kernel::KeResumeSystem()
 {
-	if (m_scheduler)
-		m_scheduler->Enabled = true;
+	m_scheduler.Enabled = true;
 	ArchEnableInterrupts();
 	//TODO(tsharpe): Enable timer
 	//m_timer.Enable();

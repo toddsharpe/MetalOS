@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MetalOS.System.h"
 #include "MetalOS.Internal.h"
 #include <cstdint>
 
@@ -311,4 +312,3 @@ private:
 	__declspec(align(2)) static DESCRIPTOR_TABLE GDTR;
 	__declspec(align(2)) static DESCRIPTOR_TABLE IDTR;
 };
-

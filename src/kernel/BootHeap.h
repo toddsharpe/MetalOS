@@ -5,7 +5,7 @@
 class BootHeap
 {
 public:
-	BootHeap(const void* address, const size_t length);
+	BootHeap(const void* const address, const size_t length);
 
 	void* Allocate(const size_t size);
 	void Deallocate(void* const address);

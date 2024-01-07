@@ -110,7 +110,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_NO_CRT_STDIO_INLINE;GNU_EFI_SETJMP_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;_NO_CRT_STDIO_INLINE;GNU_EFI_SETJMP_H;_HAS_EXCEPTIONS=0;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../external/gnu-efi/x86_64;../external/gnu-efi;../external/;./;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
@@ -123,6 +123,8 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <OmitFramePointers>false</OmitFramePointers>
+      <ExceptionHandling>false</ExceptionHandling>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>EFI Application</SubSystem>
@@ -155,6 +157,7 @@
     <ClCompile Include="Boot\EfiLoader.cpp" />
     <ClCompile Include="Boot\EfiMain.cpp" />
     <ClCompile Include="Boot\Error.cpp" />
+    <ClCompile Include="Boot\new.cpp" />
     <ClCompile Include="Boot\Output.cpp" />
     <ClCompile Include="Boot\System.cpp" />
     <ClCompile Include="Boot\Uart.cpp" />
@@ -163,6 +166,8 @@
     <ClCompile Include="core_crt\stdlib.c" />
     <ClCompile Include="core_crt\string.c" />
     <ClCompile Include="core_crt\wchar.c" />
+    <ClCompile Include="Cpuid.cpp" />
+    <ClCompile Include="msvc.cpp" />
     <ClCompile Include="PageTables.cpp" />
     <ClCompile Include="PageTablesPool.cpp" />
     <ClCompile Include="RamDrive.cpp" />
@@ -176,9 +181,11 @@
     <ClInclude Include="Boot\Output.h" />
     <ClInclude Include="Boot\System.h" />
     <ClInclude Include="Boot\Uart.h" />
+    <ClInclude Include="Cpuid.h" />
     <ClInclude Include="LoaderParams.h" />
     <ClInclude Include="MetalOS.Internal.h" />
     <ClInclude Include="MetalOS.List.h" />
+    <ClInclude Include="msvc.h" />
     <ClInclude Include="PageTables.h" />
     <ClInclude Include="PageTablesPool.h" />
     <ClInclude Include="Path.h" />

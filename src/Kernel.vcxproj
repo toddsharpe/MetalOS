@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -133,6 +133,7 @@
       <EnableUAC>false</EnableUAC>
       <EntryPointSymbol>ArchMain</EntryPointSymbol>
       <BaseAddress>0xFFFF800001000000</BaseAddress>
+      <ModuleDefinitionFile>Kernel\Kernel.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -157,11 +158,11 @@
     <ClCompile Include="core_crt\stdlib.c" />
     <ClCompile Include="core_crt\string.c" />
     <ClCompile Include="core_crt\wchar.c" />
+    <ClCompile Include="Cpuid.cpp" />
     <ClCompile Include="Kernel\AcpiOSL.cpp" />
     <ClCompile Include="Kernel\Bitvector.cpp" />
     <ClCompile Include="Kernel\BootHeap.cpp" />
     <ClCompile Include="Kernel\ConfigTables.cpp" />
-    <ClCompile Include="Kernel\Cpuid.cpp" />
     <ClCompile Include="Kernel\Debugger.cpp" />
     <ClCompile Include="Kernel\Devices\AcpiDevice.cpp" />
     <ClCompile Include="Kernel\Devices\Device.cpp" />
@@ -203,6 +204,7 @@
     <ClCompile Include="Kernel\Main.cpp" />
     <ClCompile Include="Kernel\MemoryMap.cpp" />
     <ClCompile Include="Kernel\MetalOSkd.cpp" />
+    <ClCompile Include="Kernel\new.cpp" />
     <ClCompile Include="Kernel\Objects\UserPipe.cpp" />
     <ClCompile Include="Kernel\Pdb\MsfFile.cpp" />
     <ClCompile Include="Kernel\Pdb\MsfStream.cpp" />
@@ -217,7 +219,6 @@
     <ClCompile Include="Kernel\Scheduler.cpp" />
     <ClCompile Include="Kernel\StackWalk.cpp" />
     <ClCompile Include="Kernel\StringPrinter.cpp" />
-    <ClCompile Include="Kernel\System.cpp" />
     <ClCompile Include="Kernel\UserProcess.cpp" />
     <ClCompile Include="Kernel\UserThread.cpp" />
     <ClCompile Include="Kernel\VirtualAddressSpace.cpp" />
@@ -233,6 +234,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Assert.h" />
+    <ClInclude Include="Cpuid.h" />
     <ClInclude Include="Graphics\Color.h" />
     <ClInclude Include="Graphics\Cursor.h" />
     <ClInclude Include="Graphics\DynamicFrameBuffer.h" />
@@ -243,7 +245,6 @@
     <ClInclude Include="Kernel\Bitvector.h" />
     <ClInclude Include="Kernel\BootHeap.h" />
     <ClInclude Include="Kernel\ConfigTables.h" />
-    <ClInclude Include="Kernel\Cpuid.h" />
     <ClInclude Include="Kernel\Debugger.h" />
     <ClInclude Include="Kernel\Devices\AcpiDevice.h" />
     <ClInclude Include="Kernel\Devices\Device.h" />
@@ -303,7 +304,6 @@
     <ClInclude Include="Kernel\Scheduler.h" />
     <ClInclude Include="Kernel\StackWalk.h" />
     <ClInclude Include="Kernel\StringPrinter.h" />
-    <ClInclude Include="Kernel\System.h" />
     <ClInclude Include="Kernel\UserProcess.h" />
     <ClInclude Include="Kernel\UserRingBuffer.h" />
     <ClInclude Include="Kernel\UserThread.h" />
@@ -317,6 +317,7 @@
     <ClInclude Include="MetalOS.Arch.h" />
     <ClInclude Include="MetalOS.Internal.h" />
     <ClInclude Include="MetalOS.List.h" />
+    <ClInclude Include="MetalOS.System.h" />
     <ClInclude Include="msvc.h" />
     <ClInclude Include="PageTables.h" />
     <ClInclude Include="PageTablesPool.h" />

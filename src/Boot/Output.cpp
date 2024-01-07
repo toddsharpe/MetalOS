@@ -55,6 +55,29 @@ void UartPrintf(const char* format, ...)
 	uart.Write(buffer);
 }
 
+void CPrintf(const bool enable, const char* format, ...)
+{
+	if (!enable)
+		return;
+	
+	va_list args;
+	va_start(args, format);
+	char buffer[MaxBuffer / 2] = { 0 };
+	int retval = vsprintf(buffer, format, args);
+	buffer[retval] = '\0';
+	va_end(args);
+
+	CHAR16 wide[MaxBuffer] = { 0 };
+	mbstowcs(wide, buffer, MaxBuffer);
+
+	//Write to UEFI
+	ST->ConOut->OutputString(ST->ConOut, wide);
+
+	//Write to UART
+	Uart uart(ComPort::Com1);
+	uart.Write(buffer);
+}
+
 void Printf(const char* format, ...)
 {
 	va_list args;

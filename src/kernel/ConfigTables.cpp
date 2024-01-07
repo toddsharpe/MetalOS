@@ -3,41 +3,49 @@
 #include "Assert.h"
 #include <string>
 
-ConfigTables::ConfigTables(const EFI_CONFIGURATION_TABLE* ConfigurationTables, const UINTN NumConfigTables) :
-	m_tables(new EFI_CONFIGURATION_TABLE[NumConfigTables]),
-	m_count(NumConfigTables)
+ConfigTables::ConfigTables(const EFI_CONFIGURATION_TABLE* const configTables, const size_t count) :
+	m_tables(configTables),
+	m_count(count)
 {
-	Assert(m_tables != nullptr);
 
-	memcpy(m_tables, ConfigurationTables, NumConfigTables * sizeof(EFI_CONFIGURATION_TABLE));
+}
+
+//Reallocates and copies config tables. Used to move from UEFI space to Kernel
+void ConfigTables::Reallocate()
+{
+	EFI_CONFIGURATION_TABLE* const newTables = new EFI_CONFIGURATION_TABLE[m_count];
+	Assert(newTables);
+
+	memcpy(newTables, m_tables, m_count * sizeof(EFI_CONFIGURATION_TABLE));
+	m_tables = newTables;
 }
 
 void* ConfigTables::GetAcpiTable() const
 {
 	void* table = nullptr;
-	EFI_GUID guid = ACPI_20_TABLE_GUID;
-	Assert(GetTableByGuid(&guid, &table));
+	const EFI_GUID guid = ACPI_20_TABLE_GUID;
+	Assert(GetTableByGuid(guid, table));
 
 	return table;
 }
 
-bool ConfigTables::GetTableByGuid(const EFI_GUID* guid, void** vendorTable) const
+bool ConfigTables::GetTableByGuid(const EFI_GUID& guid, void*& vendorTable) const
 {
-	for (UINT32 i = 0; i < m_count; i++)
+	for (size_t i = 0; i < m_count; i++)
 	{
-		if (memcmp(&m_tables[i].VendorGuid, guid, sizeof(EFI_GUID)) != 0)
+		if (memcmp(&m_tables[i].VendorGuid, &guid, sizeof(EFI_GUID)) != 0)
 			continue;
 
-		*vendorTable = m_tables[i].VendorTable;
+		vendorTable = m_tables[i].VendorTable;
 		return true;
 	}
 
 	return false;
 }
 
-void ConfigTables::Dump() const
+void ConfigTables::Display() const
 {
-	for (UINT32 i = 0; i < m_count; i++)
+	for (size_t i = 0; i < m_count; i++)
 	{
 		const EFI_GUID guid = m_tables[i].VendorGuid;
 		const void* address = m_tables[i].VendorTable;

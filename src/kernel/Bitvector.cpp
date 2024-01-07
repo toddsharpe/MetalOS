@@ -2,22 +2,49 @@
 
 #include "Assert.h"
 
+namespace
+{
+	static constexpr size_t mapBits = std::numeric_limits<size_t>::digits;
+
+	inline size_t GetMapSize(const size_t length)
+	{
+		return (length + (mapBits - 1)) / mapBits;
+	}
+
+	inline size_t GetMapIndex(const size_t index)
+	{
+		return index / mapBits;
+	}
+
+	inline size_t GetMapShift(const size_t index)
+	{
+		return index % mapBits;
+	}
+}
+
 Bitvector::Bitvector(const size_t length) :
 	Length(length),
 	m_map()
 {
-	const size_t mapSize = GetMapSize(length);
-	m_map.reset(new size_t[mapSize]);
 
-	memset(m_map.get(), 0, sizeof(size_t) * mapSize);
+}
+
+void Bitvector::Initialize()
+{
+	const size_t mapSize = GetMapSize(Length);
+	m_map = new size_t[mapSize];
+	Assert(m_map);
+
+	memset(m_map, 0, sizeof(size_t) * mapSize);
 }
 
 bool Bitvector::Get(const size_t index) const
 {
+	Assert(m_map);
 	AssertOp(index, <, Length);
 	
 	const size_t mapIndex = GetMapIndex(index);
-	const size_t element = m_map.get()[mapIndex];
+	const size_t element = m_map[mapIndex];
 
 	const size_t mapShift = GetMapShift(index);
 	const size_t mask = (1LL << mapShift);
@@ -26,10 +53,11 @@ bool Bitvector::Get(const size_t index) const
 
 void Bitvector::Set(const size_t index, const bool value)
 {
+	Assert(m_map);
 	AssertOp(index, <, Length);
 	
 	const size_t mapIndex = GetMapIndex(index);
-	size_t& const element = m_map.get()[mapIndex];
+	size_t& const element = m_map[mapIndex];
 
 	const size_t mapShift = GetMapShift(index);
 	const size_t mask = (1LL << mapShift);
@@ -40,17 +68,4 @@ void Bitvector::Set(const size_t index, const bool value)
 		element &= ~mask;
 }
 
-constexpr size_t Bitvector::GetMapSize(size_t length)
-{
-	return (length + (mapBits - 1)) / mapBits;
-}
 
-constexpr size_t Bitvector::GetMapIndex(size_t index)
-{
-	return index / mapBits;
-}
-
-constexpr size_t Bitvector::GetMapShift(size_t index)
-{
-	return index % mapBits;
-}

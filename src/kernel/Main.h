@@ -4,7 +4,7 @@
 #include <cstdarg>
 #include "LoaderParams.h"
 
-extern "C" int main(LOADER_PARAMS* loader);
+extern "C" int main();
 
 void* operator new(size_t n);
 void operator delete(void* p);

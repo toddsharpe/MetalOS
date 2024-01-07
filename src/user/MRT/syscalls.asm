@@ -10,8 +10,7 @@ x64SysCall MACRO name, id
 ENDM
 
 ; This needs to be kept consistent with SystemCall in MetalOS.Internal.h. Figure out how
-x64SysCall <GetSystemInfo>, 100h
-x64SysCall <GetTickCount>, 101h
+x64SysCall <GetTickCount>, 100h
 x64SysCall <GetSystemTime>, 102h
 
 x64SysCall <GetCurrentThread>, 200h

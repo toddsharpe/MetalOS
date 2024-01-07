@@ -20,9 +20,6 @@ uint64_t Kernel::Syscall(X64_SYSCALL_FRAME* frame)
 	//Printf("Syscall - Call 0x%x\n", frame->SystemCall);
 	switch (frame->SystemCall)
 	{
-	case SystemCall::GetSystemInfo:
-		return (uint64_t)GetSystemInfo((SystemInfo*)frame->Arg0);
-
 	case SystemCall::GetTickCount:
 		return GetTickCount();
 
@@ -149,20 +146,6 @@ uint64_t Kernel::Syscall(X64_SYSCALL_FRAME* frame)
 	}
 }
 
-SystemCallResult Kernel::GetSystemInfo(SystemInfo* info)
-{
-	if (!IsValidUserPointer(info))
-		return SystemCallResult::Failed;
-	
-	info->PageSize = PageSize;
-	info->Architecture = SystemArchitecture::x64;
-	info->NumberOfProcessors = 1;
-	info->AllocationGranularity = VirtualAddressSpace::AllocationGranularity;
-	info->MinimumApplicationAddress = VirtualAddressSpace::AllocationGranularity;
-	info->MaximumApplicationAddress = (UserStop - 1) - VirtualAddressSpace::AllocationGranularity;
-	return SystemCallResult::Success;
-}
-
 //Milliseconds
 size_t Kernel::GetTickCount()
 {
@@ -182,7 +165,7 @@ SystemCallResult Kernel::GetSystemTime(SystemTime* time)
 
 HThread Kernel::GetCurrentThread()
 {
-	UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserThread& user = m_scheduler.GetCurrentUserThread();
 	return &user;
 }
 
@@ -191,7 +174,7 @@ HThread Kernel::CreateThread(const size_t stackSize, const ThreadStart startAddr
 	if (!IsValidUserPointer(startAddress))
 		return nullptr;
 
-	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserProcess& process = m_scheduler.GetCurrentProcess();
 
 	std::shared_ptr<KThread> thread = CreateThread(process, stackSize, startAddress, arg, process.InitThread);
 	return (HThread)thread->UserThread;
@@ -210,7 +193,7 @@ SystemCallResult Kernel::CreateProcess(const char* commandLine, const CreateProc
 	m_processes->push_back(newProcess);
 
 	//HACK: While we still switch contexts in CreateProcess, we need to switch it back to calling process
-	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserProcess& process = m_scheduler.GetCurrentProcess();
 	ArchSetPagingRoot(process.GetCR3());
 
 	if (result && IsValidUserPointer(result))
@@ -293,7 +276,7 @@ uint32_t Kernel::GetThreadId(const Handle handle)
 	
 	kernel.Printf("GetThreadId 0x%016x\n", handle);
 
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 
 	const UserThread* thread = (UserThread*)handle;
 	if (thread->Process.Id != user.Process.Id)
@@ -312,25 +295,25 @@ void Kernel::Sleep(const uint32_t milliseconds)
 
 void Kernel::SwitchToThread()
 {
-	m_scheduler->Schedule();
+	m_scheduler.Schedule();
 }
 
 SystemCallResult Kernel::ExitProcess(const uint32_t exitCode)
 {
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 	UserProcess& process = user.Process;
 	kernel.Printf("Process: %s exited with code 0x%x\n", process.Name.c_str(), exitCode);
 
 	//Free all windows
 	m_windows.FreeWindows(process);
 
-	m_scheduler->KillCurrentProcess();
+	m_scheduler.KillCurrentProcess();
 	return SystemCallResult::Success;
 }
 
 SystemCallResult Kernel::ExitThread(const uint32_t exitCode)
 {
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 	kernel.Printf("Thread of %s exited with code 0x%x\n", user.Process.Name.c_str(), exitCode);
 
 	//TODO(tsharpe): Determine if any other process has a handle to this thread? Is this possible?
@@ -339,7 +322,7 @@ SystemCallResult Kernel::ExitThread(const uint32_t exitCode)
 	if (m_windows.ThreadHasWindow(user))
 		m_windows.FreeWindow(user);
 
-	m_scheduler->KillCurrentThread();
+	m_scheduler.KillCurrentThread();
 	return SystemCallResult::Success;
 }
 
@@ -348,7 +331,7 @@ SystemCallResult Kernel::AllocWindow(HWindow* handle, const Graphics::Rectangle*
 	if (!IsValidUserPointer(handle) || !IsValidUserPointer(bounds))
 		return SystemCallResult::InvalidPointer;
 
-	UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserThread& user = m_scheduler.GetCurrentUserThread();
 
 	if (m_windows.ThreadHasWindow(user))
 		return SystemCallResult::Failed;
@@ -396,11 +379,11 @@ SystemCallResult Kernel::GetMessage(Message* message)
 	if (!IsValidUserPointer(message))
 		return SystemCallResult::InvalidPointer;
 
-	UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserThread& user = m_scheduler.GetCurrentUserThread();
 
 	//Create signal, block if low
 	KPredicate signal(&UserThread::HasMessage, &user);
-	m_scheduler->ObjectWait(signal);
+	m_scheduler.ObjectWait(signal);
 
 	//Return message
 	Assert(user.HasMessage());
@@ -415,7 +398,7 @@ SystemCallResult Kernel::PeekMessage(Message* message)
 	if (!IsValidUserPointer(message))
 		return SystemCallResult::InvalidPointer;
 	
-	UserThread& user = m_scheduler->GetCurrentUserThread();
+	UserThread& user = m_scheduler.GetCurrentUserThread();
 	if (!user.HasMessage())
 		return SystemCallResult::Failed;
 
@@ -444,7 +427,7 @@ HFile Kernel::CreateFile(const char* name, const GenericAccess access)
 
 	kernel.Printf("CreateFile: %s Access: %d\n", name, access);
 
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 
 	const std::shared_ptr<UFile> uFile = std::make_shared<UFile>();
 	bool result = this->KeCreateFile(uFile->File, std::string(name), access);
@@ -460,7 +443,7 @@ SystemCallResult Kernel::CreatePipe(HFile* readHandle, HFile* writeHandle)
 	if (!IsValidUserPointer(readHandle) || !IsValidUserPointer(writeHandle))
 		return SystemCallResult::InvalidPointer;
 
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 	UserProcess& process = user.Process;
 
 	std::shared_ptr<UserPipe> pipe = std::make_shared<UserPipe>();
@@ -484,7 +467,7 @@ SystemCallResult Kernel::ReadFile(const HFile handle, void* buffer, const size_t
 	if (!bufferSize)
 		return SystemCallResult::Failed;
 
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 
 	const std::shared_ptr<UObject> uObject = user.Process.GetObject((Handle)handle);
 	if (!uObject)
@@ -517,7 +500,7 @@ SystemCallResult Kernel::ReadFile(const HFile handle, void* buffer, const size_t
 		KPredicate pipeWait(&UserPipe::EventSignal, &event);
 
 		//Block if not signaled
-		WaitStatus status = m_scheduler->ObjectWait(pipeWait);
+		WaitStatus status = m_scheduler.ObjectWait(pipeWait);
 		Assert(status == WaitStatus::Signaled);
 
 		//Read
@@ -543,7 +526,7 @@ SystemCallResult Kernel::WriteFile(const HFile handle, const void* buffer, size_
 	if (!bufferSize)
 		return SystemCallResult::Failed;
 
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 
 	const std::shared_ptr<UObject> uObject = user.Process.GetObject((Handle)handle);
 	if (!uObject)
@@ -570,7 +553,7 @@ SystemCallResult Kernel::WriteFile(const HFile handle, const void* buffer, size_
 		KPredicate pipeWait(&UserPipe::EventSignal, &event);
 
 		//Block if not signaled
-		WaitStatus status = m_scheduler->ObjectWait(pipeWait);
+		WaitStatus status = m_scheduler.ObjectWait(pipeWait);
 		Assert(status == WaitStatus::Signaled);
 
 		//Write
@@ -593,7 +576,7 @@ SystemCallResult Kernel::WriteFile(const HFile handle, const void* buffer, size_
 
 SystemCallResult Kernel::SetFilePointer(const HFile handle, const size_t position, const FilePointerMove moveType, size_t* newPosition)
 {
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 
 	const std::shared_ptr<UObject> uObject = user.Process.GetObject((Handle)handle);
 	if (!uObject)
@@ -635,7 +618,7 @@ SystemCallResult Kernel::SetFilePointer(const HFile handle, const size_t positio
 
 SystemCallResult Kernel::CloseFile(const HFile handle)
 {
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 	UserProcess& process = user.Process;
 
 	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
@@ -672,7 +655,7 @@ SystemCallResult Kernel::WaitForSingleObject(const Handle handle, const uint32_t
 	if (!IsValidUserPointer(status))
 		return SystemCallResult::InvalidPointer;
 	
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 	UserProcess& process = user.Process;
 
 	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
@@ -715,7 +698,7 @@ SystemCallResult Kernel::GetPipeInfo(const HFile handle, PipeInfo* info)
 	if (!IsValidUserPointer(info))
 		return SystemCallResult::InvalidPointer;
 
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 
 	const std::shared_ptr<UObject> uObject = user.Process.GetObject((Handle)handle);
 	if (!uObject)
@@ -735,7 +718,7 @@ SystemCallResult Kernel::GetPipeInfo(const HFile handle, PipeInfo* info)
 //TODO(tsharpe): Use deleters on objects?
 SystemCallResult Kernel::CloseHandle(const Handle handle)
 {
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 	UserProcess& process = user.Process;
 
 	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
@@ -767,7 +750,7 @@ SystemCallResult Kernel::CreateEvent(HEvent* handle, const bool manual, const bo
 	if (!IsValidUserPointer(handle))
 		return SystemCallResult::InvalidPointer;
 	
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 	UserProcess& process = user.Process;
 
 	const std::shared_ptr<UEvent> uEvent = std::make_shared<UEvent>(manual, initial);
@@ -778,7 +761,7 @@ SystemCallResult Kernel::CreateEvent(HEvent* handle, const bool manual, const bo
 
 SystemCallResult Kernel::SetEvent(const HEvent handle)
 {
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 	UserProcess& process = user.Process;
 
 	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
@@ -796,7 +779,7 @@ SystemCallResult Kernel::SetEvent(const HEvent handle)
 
 SystemCallResult Kernel::ResetEvent(const HEvent handle)
 {
-	const UserThread& user = m_scheduler->GetCurrentUserThread();
+	const UserThread& user = m_scheduler.GetCurrentUserThread();
 	UserProcess& process = user.Process;
 
 	const std::shared_ptr<UObject> uObject = process.GetObject((Handle)handle);
@@ -817,9 +800,9 @@ void* Kernel::VirtualAlloc(const void* address, const size_t size)
 	if (!size)
 		return nullptr;
 
-	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserProcess& process = m_scheduler.GetCurrentProcess();
 	
-	return m_virtualMemory->Allocate(address, SizeToPages(size), process.GetAddressSpace());
+	return m_virtualMemory.Allocate(address, SizeToPages(size), process.GetAddressSpace());
 }
 
 HRingBuffer Kernel::CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize)
@@ -865,7 +848,7 @@ HRingBuffer Kernel::CreateRingBuffer(const char* name, const size_t indexSize, c
 	Assert(addresses.size() == count);
 
 	//Add to process
-	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserProcess& process = m_scheduler.GetCurrentProcess();
 	UserRingBuffer* ringBuffer = new UserRingBuffer("", addresses);
 	Assert(ringBuffer);
 	process.AddRingBuffer(*ringBuffer);
@@ -886,7 +869,7 @@ HSharedMemory Kernel::CreateSharedMemory(const char* name, const size_t size)
 
 void* Kernel::MapObject(const void* address, Handle handle)
 {
-	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserProcess& process = m_scheduler.GetCurrentProcess();
 	UserRingBuffer* buffer = process.GetRingBuffer((HRingBuffer)handle);
 	if (!buffer)
 		return nullptr;
@@ -915,7 +898,7 @@ void* Kernel::MapSharedObject(const void* address, const char* name)
 	UserRingBuffer* buffer = (UserRingBuffer*)it->second;
 	Assert(buffer);
 
-	UserProcess& process = m_scheduler->GetCurrentProcess();
+	UserProcess& process = m_scheduler.GetCurrentProcess();
 
 	return kernel.VirtualMap(address, buffer->GetAddresses());
 }

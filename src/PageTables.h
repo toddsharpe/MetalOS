@@ -1,7 +1,7 @@
 #pragma once
 
+#include "MetalOS.System.h"
 #include <stdint.h>
-#include "MetalOS.Internal.h"
 
 //Intel SDM Vol3A Chapter 4.5
 //M=48 (MAXPHYADDR)
@@ -9,38 +9,37 @@
 //Paging Structures - https://gist.github.com/mvankuipers/
 //https://queazan.wordpress.com/2013/12/21/paging-under-amd64/
 //https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf
+//Class is inherently x64, so use uint64_t instead of uintptr_t
 class PageTablesPool;
 class PageTables
 {
 public:
+	//Pool physical pages came from
 	static PageTablesPool* Pool;
+	static bool Debug;
 
 	PageTables();
-	PageTables(paddr_t physicalAddress);
+	PageTables(const paddr_t root);
 
-	void ClearKernelEntries();
+	//NOTE(tsharpe): Could be static methods, but don't want to own the allocation
+	void OpenCurrent();
+	void CreateNew();
+	paddr_t GetRoot() const;
+	bool IsActive() const;
 
-	//TODO: attributes
-	bool MapUserPages(uintptr_t virtualAddress, uintptr_t physicalAddress, size_t count);
-	bool MapKernelPages(uintptr_t virtualAddress, uintptr_t physicalAddress, size_t count);
-
-	uintptr_t GetCr3() const;
-
+	//TODO(tsharpe): page attributes
+	bool MapPages(const uintptr_t virtualBase, const paddr_t physicalBase, const size_t count, const bool global) const;
 	//TODO: unmap
+	paddr_t ResolveAddress(const uintptr_t virtualAddress) const;
 
-	void LoadKernelMappings(PageTables* copyPt);
-
-	bool EnableWrite(uintptr_t virtualAddress);
-
-	//Is there a use for this besides testing?
-	uintptr_t ResolveAddress(uintptr_t virtualAddress);
+	//Table manipulation
+	void ClearKernelEntries() const;
+	void LoadKernelMappings() const;
 
 	void Display();
-	void DisplayCr3();
+	void DisplayRoot() const;
 
 private:
-	constexpr uintptr_t BuildAddress(size_t i4, size_t i3, size_t i2, size_t i1, size_t index = 0);
-
 #pragma pack(push, 1)
 	//Intel SDM Vol3A Table 4-14
 	typedef struct _PML4E
@@ -209,10 +208,29 @@ private:
 		};
 	} PTE, * PPTE;
 	static_assert(sizeof(_PTE) == sizeof(uintptr_t), "Incorrect.");
+
+	struct VirtualAddress
+	{
+		union
+		{
+			struct
+			{
+				uint64_t offset : 12;
+				uint64_t index1 : 9;
+				uint64_t index2 : 9;
+				uint64_t index3 : 9;
+				uint64_t index4 : 9;
+				uint64_t upper : 16;
+			};
+			uint64_t AsUint64;
+		};
+
+	};
+	static_assert(sizeof(VirtualAddress) == sizeof(uint64_t), "Size mismatch");
 #pragma pack(pop)
 
-	bool MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, size_t count, bool global);
-	bool MapPage(uintptr_t virtualAddress, uintptr_t physicalAddress, bool global);
+	bool MapPage(const uintptr_t virtualAddress, const paddr_t physicalAddress, const bool global) const;
+	uintptr_t BuildAddress(const size_t i4, const size_t i3, const size_t i2, const size_t i1, const size_t offset) const;
 
-	uintptr_t m_physicalAddress;
+	paddr_t m_root;
 };

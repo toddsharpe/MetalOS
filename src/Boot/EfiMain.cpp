@@ -15,11 +15,13 @@
 #include <stdlib.h>
 #include "Output.h"
 #include <Assert.h>
+#include "Cpuid.h"
+#include <MetalOS.System.h>
+#include <MetalOS.Internal.h>
 
 static constexpr wchar_t Kernel[] = L"moskrnl.exe";
 static constexpr wchar_t KernelPDB[] = L"moskrnl.pdb";
 static constexpr size_t MaxKernelPath = 64;
-static constexpr size_t MemoryMapReservedSize = PageSize;
 static constexpr size_t BootloaderPagePoolCount = 256; //1Mb
 static constexpr size_t ReservedPageTablePages = 512; //2Mb
 
@@ -28,36 +30,30 @@ EFI_RUNTIME_SERVICES* RT;
 EFI_BOOT_SERVICES* BS;
 EFI_MEMORY_TYPE AllocationType;
 
-LOADER_PARAMS LoaderParams = { 0 };
-
-extern MetalOSLibrary BootLibrary;
-
 extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable)
 {
 	static_assert(PageShift == EFI_PAGE_SHIFT, "PageShift mismatch");
 	static_assert(PageSize == EFI_PAGE_SIZE, "PageSize mismatch");
-
-	//BootLibrary.AssertPrint = &UartPrintf;
-	//BootLibrary.DebugPrint = &UartPrintf;
-	
-	EFI_STATUS status;
 
 	//Save UEFI environment
 	ST = SystemTable;
 	BS = SystemTable->BootServices;
 	RT = SystemTable->RuntimeServices;
 
-	//Populate params
-	LoaderParams.ConfigTables = ST->ConfigurationTable;
-	LoaderParams.ConfigTableSizes = ST->NumberOfTableEntries;
-	LoaderParams.Runtime = RT;
+	//Boot Params for kernel
+	LoaderParams params;
+	params.ConfigTables = ST->ConfigurationTable;
+	params.ConfigTablesCount = ST->NumberOfTableEntries;
+	params.Runtime = RT;
 
+	EFI_STATUS status;
 	ReturnIfNotSuccess(ST->ConOut->ClearScreen(ST->ConOut));
 
-	EFI_LOADED_IMAGE* LoadedImage;
+	//Get handle to bootloader.
+	EFI_LOADED_IMAGE* LoadedImage = nullptr;
 	ReturnIfNotSuccess(BS->OpenProtocol(ImageHandle, &LoadedImageProtocol, (void**)&LoadedImage, NULL, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
 	AllocationType = LoadedImage->ImageDataType;
-	CHAR16* BootFilePath = ((FILEPATH_DEVICE_PATH*)LoadedImage->FilePath)->PathName;
+	const CHAR16* BootFilePath = ((FILEPATH_DEVICE_PATH*)LoadedImage->FilePath)->PathName;
 
 	//Display some splash info
 	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\r\n"));
@@ -73,25 +69,16 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Determine size of memory map, allocate it in Boot Services Data so Kernel cleans it up
 	UINTN memoryMapKey = 0;
-	status = BS->GetMemoryMap(&LoaderParams.MemoryMapSize, LoaderParams.MemoryMap, &memoryMapKey, &LoaderParams.MemoryMapDescriptorSize, &LoaderParams.MemoryMapDescriptorVersion);
-	if (status == EFI_BUFFER_TOO_SMALL)
-	{
-		//We need an initial memory map to know physical address space for PFN DB
-		LoaderParams.MemoryMapSize *= 2;//Increase allocation size to leave room for additional allocations
-		ReturnIfNotSuccess(BS->AllocatePool(EfiBootServicesData, LoaderParams.MemoryMapSize, (void**)&LoaderParams.MemoryMap));
-		ReturnIfNotSuccess(BS->GetMemoryMap(&LoaderParams.MemoryMapSize, LoaderParams.MemoryMap, &memoryMapKey, &LoaderParams.MemoryMapDescriptorSize, &LoaderParams.MemoryMapDescriptorVersion));
-	}
-	else
-	{
+	UINT32 descriptorVersion = 0;
+	status = BS->GetMemoryMap(&params.MemoryMap.Size, params.MemoryMap.Table, &memoryMapKey, &params.MemoryMap.DescriptorSize, &descriptorVersion);
+	if (status != EFI_BUFFER_TOO_SMALL)
 		ReturnIfNotSuccess(status);
-	}
 
-	DumpMemoryMap();
-
-	if (LoaderParams.MemoryMapSize > MemoryMapReservedSize)
-	{
-		ReturnIfNotSuccess(EFI_BUFFER_TOO_SMALL);
-	}
+	//We need an initial memory map to know physical address space for PFN DB
+	params.MemoryMap.Size *= 2;//Increase allocation size to leave room for additional allocations
+	ReturnIfNotSuccess(BS->AllocatePool(EfiBootServicesData, params.MemoryMap.Size, (void**)&params.MemoryMap.Table));
+	ReturnIfNotSuccess(BS->GetMemoryMap(&params.MemoryMap.Size, params.MemoryMap.Table, &memoryMapKey, &params.MemoryMap.DescriptorSize, &descriptorVersion));
+	DumpMemoryMap(params.MemoryMap);
 
 	//Allocate pages for Bootloader PageTablesPool in BootServicesData
 	//Pages from this pool will be used to bootstrap the kernel
@@ -101,20 +88,20 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Allocate pages for our Kernel's page pools
 	//This pool will be kept for the kernel to use during runtime
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, ReservedPageTablePages, &(LoaderParams.PageTablesPoolAddress)));
-	LoaderParams.PageTablesPoolPageCount = ReservedPageTablePages;
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, ReservedPageTablePages, &params.PageTablesPoolAddress));
+	params.PageTablesPoolPageCount = ReservedPageTablePages;
 
-	//Allocate space for PFN DB
-	UINTN address = GetPhysicalAddressSize(LoaderParams.MemoryMapSize, LoaderParams.MemoryMapDescriptorSize, LoaderParams.MemoryMap);
+	//Allocate space for Page Frame DB
+	const UINTN address = GetPhysicalAddressSize(params.MemoryMap);
 	Print(L"Physical Address Max: 0x%016x\r\n", address);
 
-	LoaderParams.PfnDbSize = sizeof(PAGE_FRAME) * (address >> PageShift);
-	size_t pfnDBPages = SizeToPages(LoaderParams.PfnDbSize);
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, pfnDBPages, &(LoaderParams.PfnDbAddress)));
+	const size_t pageCount = address >> PageShift;
+	params.PageFrameCount = pageCount;
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, SizeToPages(pageCount * sizeof(PageFrame)), &params.PageFrameAddr));
 
 	//Allocate space for RamDrive
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, SizeToPages(RamDriveSize), &(LoaderParams.RamDriveAddress)));
-	RamDrive drive((void*)LoaderParams.RamDriveAddress, RamDriveSize);
+	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, SizeToPages(RamDriveSize), &params.RamDriveAddress));
+	RamDrive drive((void*)params.RamDriveAddress, RamDriveSize);
 
 	//Load kernel path
 	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem = nullptr;
@@ -151,7 +138,11 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Map kernel into memory. It will be relocated at KernelBaseAddress
 	UINT64 entryPoint;
-	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, LoaderParams.KernelImageSize, entryPoint, LoaderParams.KernelAddress));
+	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, params.KernelImageSize, entryPoint, params.KernelAddress));
+
+	LoaderParams* kParams = (LoaderParams*)EfiLoader::GetProcAddress((void*)params.KernelAddress, "BootParams");
+	Assert(kParams);
+	Print(L"  Params: 0x%016x\r\n", kParams);
 
 	//Build path to kernelpdb
 	CHAR16* KernelPdbPath;
@@ -167,53 +158,52 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	ReturnIfNotSuccess(BS->FreePool(KernelPdbPath));
 
 	//Map PDB into memory
-	ReturnIfNotSuccess(EfiLoader::MapFile(KernelPdbFile, LoaderParams.PdbAddress, LoaderParams.PdbSize));
-	Print(L"  Address: 0x%016x Size:0x%x\r\n", LoaderParams.PdbAddress, LoaderParams.PdbSize);
+	ReturnIfNotSuccess(EfiLoader::MapFile(KernelPdbFile, params.PdbAddress, params.PdbSize));
+	Print(L"  Address: 0x%016x Size:0x%x\r\n", params.PdbAddress, params.PdbSize);
 
 	//Initialize graphics
-	ReturnIfNotSuccess(InitializeGraphics(&LoaderParams.Display));
+	ReturnIfNotSuccess(InitializeGraphics(params.Display));
 
 	//Disable write protection, allowing current page tables to be modified
 	__writecr0(__readcr0() & ~(1 << 16));
 
 	//Map in Kernel Space
 	PageTablesPool pageTablesPool((void*)bootloaderPagePoolAddress, bootloaderPagePoolAddress, BootloaderPagePoolCount);
+	pageTablesPool.Initialize();
 	PageTables::Pool = &pageTablesPool;
-	PageTables currentPT(__readcr3());
+
+	PageTables currentPT;
+	currentPT.OpenCurrent();
 	
 	//Some platforms have Kernel addresses already mapped (B550i/5950x). Clear them.
 	//The physical page tables will be reclaimed by Kernel, so just remove pointers.
 	currentPT.ClearKernelEntries();
-
-	currentPT.MapKernelPages(KernelBaseAddress, LoaderParams.KernelAddress, SizeToPages(LoaderParams.KernelImageSize));
-	currentPT.MapKernelPages(KernelPageTablesPool, LoaderParams.PageTablesPoolAddress, LoaderParams.PageTablesPoolPageCount);
-	currentPT.MapKernelPages(KernelGraphicsDevice, LoaderParams.Display.FrameBufferBase, SizeToPages(LoaderParams.Display.FrameBufferSize));
+	Assert(currentPT.MapPages(KernelBaseAddress, params.KernelAddress, SizeToPages(params.KernelImageSize), true));
+	Assert(currentPT.MapPages(KernelPageTablesPool, params.PageTablesPoolAddress, params.PageTablesPoolPageCount, true));
+	Assert(currentPT.MapPages(KernelGraphicsDevice, params.Display.FrameBufferBase, SizeToPages(params.Display.FrameBufferSize), true));
+	Assert(currentPT.MapPages(KernelPageFrameDBStart, params.PageFrameAddr, SizeToPages(params.PageFrameCount * sizeof(PageFrame)), true));
 
 	//Re-enable write protection
 	__writecr0(__readcr0() | (1 << 16));
 
-	//Finish kernel image initialization now that address space is constructed
-	ReturnIfNotSuccess(EfiLoader::CrtInitialization(KernelBaseAddress));
-	
 	//Display graphics
-	ReturnIfNotSuccess(DisplayLoaderParams(&LoaderParams));
-	//DumpGopLocations();
+	ReturnIfNotSuccess(DisplayLoaderParams(params));
 
 	//Pause here before booting kernel to inspect bootloader outputs
 	Keywait();
 
 	//Retrieve map from UEFI
 	//This could fail on EFI_BUFFER_TOO_SMALL
-	LoaderParams.MemoryMapSize *= 2;
-	ReturnIfNotSuccess(BS->GetMemoryMap(&LoaderParams.MemoryMapSize, LoaderParams.MemoryMap, &memoryMapKey, &LoaderParams.MemoryMapDescriptorSize, &LoaderParams.MemoryMapDescriptorVersion));
+	params.MemoryMap.Size *= 2;
+	ReturnIfNotSuccess(BS->GetMemoryMap(&params.MemoryMap.Size, params.MemoryMap.Table, &memoryMapKey, &params.MemoryMap.DescriptorSize, &descriptorVersion));
 
 	//After ExitBootServices we can no longer use the BS handle (no print, memory, etc)
 	ReturnIfNotSuccess(BS->ExitBootServices(ImageHandle, memoryMapKey));
 
 	//Assign virtual mappings for runtime sections
-	for (EFI_MEMORY_DESCRIPTOR* current = LoaderParams.MemoryMap;
-		current < NextMemoryDescriptor(LoaderParams.MemoryMap, LoaderParams.MemoryMapSize);
-		current = NextMemoryDescriptor(current, LoaderParams.MemoryMapDescriptorSize))
+	for (EFI_MEMORY_DESCRIPTOR* current = params.MemoryMap.Table;
+		current < NextMemoryDescriptor(params.MemoryMap.Table, params.MemoryMap.Size);
+		current = NextMemoryDescriptor(current, params.MemoryMap.DescriptorSize))
 	{
 		if ((current->Attribute & EFI_MEMORY_RUNTIME) == 0)
 			continue;
@@ -222,14 +212,18 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	}
 
 	//Update UEFI virtual address map
-	ReturnIfNotSuccessNoDisplay(RT->SetVirtualAddressMap(LoaderParams.MemoryMapSize, LoaderParams.MemoryMapDescriptorSize, LoaderParams.MemoryMapDescriptorVersion, LoaderParams.MemoryMap));
+	ReturnIfNotSuccessNoDisplay(RT->SetVirtualAddressMap(params.MemoryMap.Size, params.MemoryMap.DescriptorSize, descriptorVersion, params.MemoryMap.Table));
 
 	//Output final map to uart
-	DumpMemoryMap();
+	DumpMemoryMap(params.MemoryMap);
 
 	//Call into kernel
 	const KernelMain kernelMain = (KernelMain)(entryPoint);
-	kernelMain(&LoaderParams);
+	*kParams = params;
+
+	//Finish kernel image initialization now that address space is constructed
+	ReturnIfNotSuccess(EfiLoader::CrtInitialization(KernelBaseAddress));
+	kernelMain();
 
 	//Should never get here
 	return EFI_ABORTED;
@@ -239,16 +233,10 @@ EFI_STATUS PrintCpuDetails()
 {
 	EFI_STATUS status;
 
-	int registers[4] = { };
-	char vendor[13] = { };
+	std::string vendor;
+	Cpuid::GetVendor(vendor);
 	CHAR16 wideVendor[13] = { };
-
-	__cpuid(registers, 0);
-	*((UINT32*)vendor) = (UINT32)registers[1];
-	*((UINT32*)(vendor + 4)) = (UINT32)registers[3];
-	*((UINT32*)(vendor + 8)) = (UINT32)registers[2];
-
-	mbstowcs(wideVendor, vendor, sizeof(wideVendor) / sizeof(CHAR16));
+	mbstowcs(wideVendor, vendor.c_str(), sizeof(wideVendor) / sizeof(CHAR16));
 
 	ReturnIfNotSuccess(Print(L"CPU Vendor: %s,", wideVendor));
 
@@ -259,67 +247,23 @@ EFI_STATUS PrintCpuDetails()
 	return status;
 }
 
-EFI_STATUS DisplayLoaderParams(LOADER_PARAMS* pParams)
+EFI_STATUS DisplayLoaderParams(const LoaderParams& params)
 {
 	EFI_STATUS status;
 
-	ReturnIfNotSuccess(Print(L"LoaderParams: 0x%016x, Pages: 0x%x\r\n", pParams, SizeToPages(sizeof(LOADER_PARAMS))));
-	ReturnIfNotSuccess(Print(L"  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", pParams->KernelAddress, SizeToPages(pParams->KernelImageSize)));
-	ReturnIfNotSuccess(Print(L"  MemoryMap-Address: 0x%016x, Pages: 0x%x\r\n", pParams->MemoryMap, SizeToPages(pParams->MemoryMapSize)));
-	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: 0x%016x, Pages: 0x%x\r\n", pParams->PageTablesPoolAddress, pParams->PageTablesPoolPageCount));
-	ReturnIfNotSuccess(Print(L"  PFN Database-Address: 0x%016x, Size: 0x%x\r\n", pParams->PfnDbAddress, pParams->PfnDbSize));
-	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", pParams->ConfigTables, pParams->ConfigTableSizes));
-	ReturnIfNotSuccess(Print(L"  RamDrive-Address: 0x%016x, Size: 0x%x\r\n", pParams->RamDriveAddress, RamDriveSize));
-	ReturnIfNotSuccess(Print(L"  PDB-Address: 0x%016x, Size: 0x%x\r\n", pParams->PdbAddress, pParams->PdbSize));
-
-	PrintGraphicsDevice(&pParams->Display);
-	return status;
-}
-
-EFI_STATUS PrintGraphicsDevice(PEFI_GRAPHICS_DEVICE pDevice)
-{
-	EFI_STATUS status;
+	ReturnIfNotSuccess(Print(L"LoaderParams: 0x%016x, Pages: 0x%x\r\n", &params, SizeToPages(sizeof(LoaderParams))));
+	ReturnIfNotSuccess(Print(L"  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", params.KernelAddress, SizeToPages(params.KernelImageSize)));
+	ReturnIfNotSuccess(Print(L"  MemoryMap-Address: 0x%016x, Pages: 0x%x\r\n", params.MemoryMap.Table, SizeToPages(params.MemoryMap.Size)));
+	ReturnIfNotSuccess(Print(L"  PageTablesPool-Address: 0x%016x, Pages: 0x%x\r\n", params.PageTablesPoolAddress, params.PageTablesPoolPageCount));
+	ReturnIfNotSuccess(Print(L"  PFN Database-Address: 0x%016x, Count: 0x%x\r\n", params.PageFrameAddr, params.PageFrameCount));
+	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", params.ConfigTables, params.ConfigTablesCount));
+	ReturnIfNotSuccess(Print(L"  RamDrive-Address: 0x%016x, Size: 0x%x\r\n", params.RamDriveAddress, RamDriveSize));
+	ReturnIfNotSuccess(Print(L"  PDB-Address: 0x%016x, Size: 0x%x\r\n", params.PdbAddress, params.PdbSize));
 
 	ReturnIfNotSuccess(Print(L"Graphics:\r\n"));
-	ReturnIfNotSuccess(Print(L"  FrameBuffer-Base 0x%016x, Size: 0x%08x\r\n", pDevice->FrameBufferBase, pDevice->FrameBufferSize));
-	ReturnIfNotSuccess(Print(L"  Resulution 0x%04x (0x%04x) x 0x%04x\r\n", pDevice->HorizontalResolution, pDevice->PixelsPerScanLine, pDevice->VerticalResolution));
-
+	ReturnIfNotSuccess(Print(L"  FrameBuffer-Base 0x%016x, Size: 0x%08x\r\n", params.Display.FrameBufferBase, params.Display.FrameBufferSize));
+	ReturnIfNotSuccess(Print(L"  Resulution 0x%04x (0x%04x) x 0x%04x\r\n", params.Display.HorizontalResolution, params.Display.PixelsPerScanLine, params.Display.VerticalResolution));
 	return status;
-}
-
-EFI_STATUS DumpMemoryMap()
-{
-	const CHAR16 mem_types[16][27] = {
-	  L"EfiReservedMemoryType     ",
-	  L"EfiLoaderCode             ",
-	  L"EfiLoaderData             ",
-	  L"EfiBootServicesCode       ",
-	  L"EfiBootServicesData       ",
-	  L"EfiRuntimeServicesCode    ",
-	  L"EfiRuntimeServicesData    ",
-	  L"EfiConventionalMemory     ",
-	  L"EfiUnusableMemory         ",
-	  L"EfiACPIReclaimMemory      ",
-	  L"EfiACPIMemoryNVS          ",
-	  L"EfiMemoryMappedIO         ",
-	  L"EfiMemoryMappedIOPortSpace",
-	  L"EfiPalCode                ",
-	  L"EfiPersistentMemory       ",
-	  L"EfiMaxMemoryType          "
-	};
-
-	UartPrintf(L"MapSize: 0x%x, DescSize: 0x%x\n", LoaderParams.MemoryMap, LoaderParams.MemoryMapDescriptorSize);
-
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = LoaderParams.MemoryMap;
-		current < NextMemoryDescriptor(LoaderParams.MemoryMap, LoaderParams.MemoryMapSize);
-		current = NextMemoryDescriptor(current, LoaderParams.MemoryMapDescriptorSize))
-	{
-		const bool runtime = (current->Attribute & EFI_MEMORY_RUNTIME) != 0;
-		UartPrintf(L"P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, mem_types[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
-	}
-
-	return EFI_SUCCESS;
 }
 
 EFI_STATUS PrintDirectory(EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir)
@@ -434,11 +378,13 @@ EFI_STATUS Keywait(const CHAR16* String)
 	return status;
 }
 
-UINTN GetPhysicalAddressSize(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize, EFI_MEMORY_DESCRIPTOR* MemoryMap)
+UINTN GetPhysicalAddressSize(const EFI_MEMORY_MAP& map)
 {
 	UINTN highest = 0;
 
-	for (const EFI_MEMORY_DESCRIPTOR* current = MemoryMap; current < NextMemoryDescriptor(MemoryMap, MemoryMapSize); current = NextMemoryDescriptor(current, MemoryMapDescriptorSize))
+	for (const EFI_MEMORY_DESCRIPTOR* current = map.Table;
+		current < NextMemoryDescriptor(map.Table, map.Size);
+		current = NextMemoryDescriptor(current, map.DescriptorSize))
 	{
 		const uintptr_t address = current->PhysicalStart + (current->NumberOfPages << PageShift);
 		if (address > highest)
@@ -446,4 +392,36 @@ UINTN GetPhysicalAddressSize(UINTN MemoryMapSize, UINTN MemoryMapDescriptorSize,
 	}
 
 	return highest;
+}
+
+EFI_STATUS DumpMemoryMap(const EFI_MEMORY_MAP& map)
+{
+	const CHAR16 mem_types[16][27] = {
+	  L"EfiReservedMemoryType     ",
+	  L"EfiLoaderCode             ",
+	  L"EfiLoaderData             ",
+	  L"EfiBootServicesCode       ",
+	  L"EfiBootServicesData       ",
+	  L"EfiRuntimeServicesCode    ",
+	  L"EfiRuntimeServicesData    ",
+	  L"EfiConventionalMemory     ",
+	  L"EfiUnusableMemory         ",
+	  L"EfiACPIReclaimMemory      ",
+	  L"EfiACPIMemoryNVS          ",
+	  L"EfiMemoryMappedIO         ",
+	  L"EfiMemoryMappedIOPortSpace",
+	  L"EfiPalCode                ",
+	  L"EfiPersistentMemory       ",
+	  L"EfiMaxMemoryType          "
+	};
+
+	UartPrintf(L"MapSize: 0x%016X, Size: 0x%x, DescSize: 0x%x\n", map.Table, map.Size, map.DescriptorSize);
+
+	for (EFI_MEMORY_DESCRIPTOR* current = map.Table; current < NextMemoryDescriptor(map.Table, map.Size); current = NextMemoryDescriptor(current, map.DescriptorSize))
+	{
+		const bool runtime = (current->Attribute & EFI_MEMORY_RUNTIME) != 0;
+		UartPrintf(L"P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, mem_types[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
+	}
+
+	return EFI_SUCCESS;
 }

@@ -11,14 +11,15 @@
 class ConfigTables
 {
 public:
-	ConfigTables(const EFI_CONFIGURATION_TABLE* ConfigurationTables, const UINTN NumConfigTables);
+	ConfigTables(const EFI_CONFIGURATION_TABLE* const configTables, const size_t count);
 
+	void Reallocate();
 	void* GetAcpiTable() const;
-	void Dump() const;
+	void Display() const;
 
 private:
-	bool GetTableByGuid(const EFI_GUID* guid, void** vendorTable) const;
+	bool GetTableByGuid(const EFI_GUID& guid, void*& vendorTable) const;
 
-	EFI_CONFIGURATION_TABLE* m_tables;
-	size_t m_count;
+	const EFI_CONFIGURATION_TABLE* m_tables;
+	const size_t m_count;
 };

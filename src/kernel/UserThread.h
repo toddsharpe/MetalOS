@@ -1,7 +1,7 @@
 #pragma once
 
 #include "UserProcess.h"
-#include "user/MetalOS.System.h"
+#include "MetalOS.System.h"
 
 //TODO(tsharpe): Deallocate TEB from proces
 //TODO(tsharpe): Unmap stack

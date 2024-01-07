@@ -1,6 +1,5 @@
 #include "RamDrive.h"
 #include <string.h>
-#include "MetalOS.Internal.h"
 
 RamDrive::RamDrive(const void* address, const size_t size) :
 	m_address((uintptr_t)address),

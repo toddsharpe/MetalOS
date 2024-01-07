@@ -131,7 +131,7 @@ struct InterruptContext
 };
 
 class Pdb;
-struct KeLibrary
+struct KeModule
 {
 	std::string Name;
 	void* ImageBase;

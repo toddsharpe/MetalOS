@@ -27,3 +27,16 @@ Cpuid::Cpuid()
 	__cpuid(registers, 1);
 	m_func1Ecx = (uint32_t)registers[ECX];
 }
+
+void Cpuid::GetVendor(std::string& vendor)
+{
+	char cVendor[13] = { 0 };
+
+	//CPUID 0
+	int registers[4] = { 0 };
+	__cpuid(registers, 0);
+	*((uint32_t*)cVendor) = (uint32_t)registers[Regs::EBX];
+	*((uint32_t*)(cVendor + sizeof(uint32_t))) = (uint32_t)registers[Regs::EDX];
+	*((uint32_t*)(cVendor + sizeof(uint32_t) * 2)) = (uint32_t)registers[Regs::ECX];
+	vendor = cVendor; 
+}

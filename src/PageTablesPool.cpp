@@ -4,72 +4,69 @@
 #include <string.h>
 #include <intrin.h>
 
-PageTablesPool::PageTablesPool(void* const baseAddress, const paddr_t physicalAddress, const size_t pageCount) :
-	m_baseAddress(baseAddress),
-	m_physicalAddress(physicalAddress),
-	m_pageCount(pageCount),
-	m_index((bool*)baseAddress)
+namespace
 {
-	memset((void*)m_baseAddress, 0, PageSize);
+	//One page worth of bools
+	constexpr size_t PageCountMax = PageSize / sizeof(bool);
 }
 
-uint64_t PageTablesPool::GetVirtualAddress(uint64_t physicalAddress)
+PageTablesPool::PageTablesPool(void* const virtualBase, const paddr_t physicalBase, const size_t count) :
+	m_virtualBase(reinterpret_cast<uintptr_t>(virtualBase)),
+	m_physicalBase(physicalBase),
+	m_count(count),
+	m_index(reinterpret_cast<bool*>(virtualBase))
 {
-	//Printf("Pin 0x%016x, Pbase: 0x%016x, V: 0x%016x\r\n", physicalAddress, m_physicalAddress, m_baseAddress);
-	//Assert(physicalAddress > m_physicalAddress);
 
-	if (physicalAddress < m_physicalAddress)
-		return physicalAddress;
-
-	return (physicalAddress - m_physicalAddress) + (uint64_t)m_baseAddress;
 }
 
-bool PageTablesPool::AllocatePage(uint64_t * addressOut)
+void PageTablesPool::Initialize()
 {
-	//First page is index 
-	//Simple scheme - a page of booleans
-	//Yes this should be like bitmasks or maybe ints if i used more info here (like if it was backed to disk)
-	//But to stand this up, just booleans
+	Assert(m_count < PageCountMax);
+	
+	//Zero index page
+	memset(m_index, 0, PageSize);
+}
 
-	for (size_t i = 1; i < this->m_pageCount; i++)
+bool PageTablesPool::AllocatePage(paddr_t& address)
+{
+	//First page is array of bools as index
+	for (size_t i = 1; i < this->m_count; i++)
 	{
+		//True indicates allocated
 		if (m_index[i])
 			continue;
 
+		//Allocate page
 		m_index[i] = true;
-		*addressOut = m_physicalAddress + (i << PageShift);
+		address = (m_physicalBase + (i << PageShift));
 		return true;
 	}
 
 	return false;
 }
 
-bool PageTablesPool::DeallocatePage(uint64_t address)
+bool PageTablesPool::DeallocatePage(const paddr_t address)
 {
-	uint64_t relative = (address - m_physicalAddress);
-	if (relative % PageSize != 0)
-		return false;
+	Assert(address % PageSize == 0);
 
-	size_t index = relative >> PageShift;
-	if (index > (m_pageCount - 1))
-		return false;
-	if (!m_index[index])
-		return false;
-
+	const paddr_t relative = (address - m_physicalBase);
+	const size_t index = relative >> PageShift;
+	Assert(index < m_count);
+	
+	//Assert page was allocated, then mark it deallocated
+	Assert(m_index[index]);
 	m_index[index] = false;
 	return true;
 }
 
-uint32_t PageTablesPool::AllocatedPageCount()
+//Existing pages require identity shortcut
+void* PageTablesPool::GetVirtualAddress(const paddr_t address) const
 {
-	uint32_t count = 0;
-	for (size_t i = 1; i < this->m_pageCount; i++)
-	{
-		if (!m_index[i])
-			continue;
+	//Assert(address > m_physicalBase);
+	//Assert(address < m_physicalBase + PageSize * m_count);
 
-		count++;
-	}
+	if (address < m_physicalBase)
+		return (void*)address;
 
-	return count;
+	return (void*)((address - m_physicalBase) + m_virtualBase);
 }

@@ -1,175 +1,102 @@
-#include "Kernel/Kernel.h"
-#include "Assert.h"
-
-#include "Kernel/MetalOS.Kernel.h"
 #include "MemoryMap.h"
+#include "Assert.h"
+#include <string>
+#include <MetalOS.System.h>
+#include <PageTables.h>
 
-// https://dox.ipxe.org/UefiMultiPhase_8h.html
-const char MemoryMap::MemTypes[16][27] = {
-	  "EfiReservedMemoryType     ",
-	  "EfiLoaderCode             ",
-	  "EfiLoaderData             ",
-	  "EfiBootServicesCode       ",
-	  "EfiBootServicesData       ",
-	  "EfiRuntimeServicesCode    ",
-	  "EfiRuntimeServicesData    ",
-	  "EfiConventionalMemory     ",
-	  "EfiUnusableMemory         ",
-	  "EfiACPIReclaimMemory      ",
-	  "EfiACPIMemoryNVS          ",
-	  "EfiMemoryMappedIO         ",
-	  "EfiMemoryMappedIOPortSpace",
-	  "EfiPalCode                ",
-	  "EfiPersistentMemory       ",
-	  "EfiMaxMemoryType          "
-};
-
-MemoryMap::MemoryMap(const UINTN MemoryMapSize, const UINTN MemoryMapDescriptorSize, const UINT32 MemoryMapDescriptorVersion, const EFI_MEMORY_DESCRIPTOR& MemoryMap) :
-	m_memoryMapSize(MemoryMapSize),
-	m_memoryMapMaxSize(MemoryMapSize + BufferCount * MemoryMapDescriptorSize),
-	m_memoryMapDescriptorSize(MemoryMapDescriptorSize),
-	m_memoryMapDescriptorVersion(MemoryMapDescriptorVersion)
+namespace
 {
-	Assert(MemoryMapSize % MemoryMapDescriptorSize == 0);
-
-	//Allocate copy of memory map
-	m_memoryMap = (EFI_MEMORY_DESCRIPTOR*)operator new(m_memoryMapMaxSize);
-	Assert(m_memoryMap);
-	memcpy(m_memoryMap, &MemoryMap, MemoryMapSize);
+	// https://dox.ipxe.org/UefiMultiPhase_8h.html
+	const char MemTypes[16][27] = {
+		  "EfiReservedMemoryType     ",
+		  "EfiLoaderCode             ",
+		  "EfiLoaderData             ",
+		  "EfiBootServicesCode       ",
+		  "EfiBootServicesData       ",
+		  "EfiRuntimeServicesCode    ",
+		  "EfiRuntimeServicesData    ",
+		  "EfiConventionalMemory     ",
+		  "EfiUnusableMemory         ",
+		  "EfiACPIReclaimMemory      ",
+		  "EfiACPIMemoryNVS          ",
+		  "EfiMemoryMappedIO         ",
+		  "EfiMemoryMappedIOPortSpace",
+		  "EfiPalCode                ",
+		  "EfiPersistentMemory       ",
+		  "EfiMaxMemoryType          "
+	};
 }
 
-void MemoryMap::ReclaimBootPages() const
+MemoryMap::MemoryMap(const EFI_MEMORY_DESCRIPTOR* const table, const size_t size, const size_t descSize) :
+	m_table(table),
+	m_size(size),
+	m_descSize(descSize)
 {
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap;
-		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
-		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
-	{
-		if ((current->Type == EfiBootServicesCode) || (current->Type == EfiBootServicesData) || (current->Type == EfiLoaderCode))
-		{
-			Assert((current->Attribute & EFI_MEMORY_RUNTIME) == 0);
-			current->Type = EfiConventionalMemory;
-		}
-	}
+
 }
 
-//Note: m_memoryMapDescriptorSize (0x30) is not the same size as EFI_MEMORY_DESCRIPTOR (0x28)
-void MemoryMap::MergeConventionalPages()
+//Reallocates and copies table. Used to move from UEFI space to Kernel
+//While reallocating, reclaim memory from UEFI
+void MemoryMap::Reallocate()
 {
-	EFI_MEMORY_DESCRIPTOR* destination;;
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = this->m_memoryMap,
-			destination = this->m_memoryMap;
-		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
-		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize),
-			destination = NextMemoryDescriptor(destination, m_memoryMapDescriptorSize))
-	{
-		//Copy over entry
-		memcpy(destination, current, this->m_memoryMapDescriptorSize);
+	const size_t tableSize = m_size * m_descSize;
+	uint8_t* const buffer = new uint8_t[tableSize];
+	Assert(buffer);
 
-		if (current->Type == EfiConventionalMemory)
+	EFI_MEMORY_DESCRIPTOR* const newTable = reinterpret_cast<EFI_MEMORY_DESCRIPTOR*>(buffer);
+	memcpy(newTable, m_table, tableSize);
+
+	//Reclaim UEFI memory
+	for (EFI_MEMORY_DESCRIPTOR* current = newTable;
+		current < NextMemoryDescriptor(newTable, m_size);
+		current = NextMemoryDescriptor(current, m_descSize))
+	{
+		switch (current->Type)
 		{
-			//Look ahead for Conventional memory and condense entry if its sequential
-			EFI_MEMORY_DESCRIPTOR* next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
-			while (next->Type == EfiConventionalMemory && next->PhysicalStart == current->PhysicalStart + current->NumberOfPages * PageSize)
-			{
-				destination->NumberOfPages += next->NumberOfPages;
-				current = next;
-				next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
-			}
+			case EfiBootServicesCode:
+			case EfiBootServicesData:
+			case EfiLoaderCode:
+				Assert((current->Attribute & EFI_MEMORY_RUNTIME) == 0);
+				current->Type = EfiConventionalMemory;
 		}
 	}
 
-	//Zero out remaining entries
-	uintptr_t newSize = (uintptr_t)destination - (uintptr_t)this->m_memoryMap;
-	memset(destination, this->m_memoryMapSize - newSize, 0);
-
-	//Update size
-	this->m_memoryMapSize = newSize;
+	//Adopt new table
+	m_table = newTable;
 }
 
-//Maybe return bool?
-EFI_PHYSICAL_ADDRESS MemoryMap::AllocatePages(UINT32 count)
+void MemoryMap::Display()
 {
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
-	{
-		if (current->NumberOfPages < count)
-			continue;
-
-		break;
-	}
-
-	Assert(current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize));
-	if (current->NumberOfPages > count)
-	{
-		Assert(m_memoryMapSize + m_memoryMapDescriptorSize <= m_memoryMapMaxSize);
-
-		UINTN index = (UINTN)(m_memoryMap - current) / m_memoryMapDescriptorSize;
-		UINTN length = m_memoryMapSize / m_memoryMapDescriptorSize;
-
-		//Copy all subsequent records down one
-		for (UINTN i = length - 1; i >= index; i--)
-		{
-			void* destination = MakePointer<void*>(m_memoryMap, m_memoryMapDescriptorSize * (i + 1));
-			void* source = MakePointer<void*>(m_memoryMap, m_memoryMapDescriptorSize * i);
-			memcpy(destination, source, m_memoryMapDescriptorSize);
-		}
-		m_memoryMapSize += m_memoryMapDescriptorSize;
-		
-		//Fix up next record
-		EFI_MEMORY_DESCRIPTOR* next = NextMemoryDescriptor(current, m_memoryMapDescriptorSize);
-		next->PhysicalStart = current->PhysicalStart + ((UINT64)count << PageShift);
-		next->NumberOfPages = current->NumberOfPages - count;
-
-		//Set size of current
-		current->NumberOfPages = count;
-	}
-	
-	//Mark current allocated
-	current->Type = EfiLoaderData;
-	return current->PhysicalStart;
-}
-
-bool MemoryMap::AddressFree(EFI_PHYSICAL_ADDRESS address)
-{
-	EFI_MEMORY_DESCRIPTOR* descriptor = ResolveAddress(address);
-	return descriptor->Type == EfiConventionalMemory;
-}
-
-void MemoryMap::DumpMemoryMap()
-{
-	kernel.Printf("MapSize: 0x%x, DescSize: 0x%x\n", m_memoryMapSize, m_memoryMapDescriptorSize);
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap;
-		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
-		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	Printf("MapSize: 0x%016X, Size: 0x%x DescSize: 0x%x\n", m_table, m_size, m_descSize);
+	for (const EFI_MEMORY_DESCRIPTOR* current = m_table;
+		current < NextMemoryDescriptor(m_table, m_size);
+		current = NextMemoryDescriptor(current, m_descSize))
 	{
 		const bool runtime = (current->Attribute & EFI_MEMORY_RUNTIME) != 0;
-		kernel.Printf("P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, MemTypes[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
+		Printf("P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, MemTypes[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
 	}
 }
 
-EFI_MEMORY_DESCRIPTOR* MemoryMap::ResolveAddress(EFI_PHYSICAL_ADDRESS address)
+void MemoryMap::MapRuntime(PageTables& pageTables)
 {
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap;
-		current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize);
-		current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	for (const EFI_MEMORY_DESCRIPTOR* current = m_table;
+		current < NextMemoryDescriptor(m_table, m_size);
+		current = NextMemoryDescriptor(current, m_descSize))
 	{
-		if ((current->PhysicalStart <= address) && (((address - current->PhysicalStart) >> PageShift) < current->NumberOfPages))
-			return current;
-	}
+		if ((current->Attribute & EFI_MEMORY_RUNTIME) == 0)
+			continue;
 
-	Fatal("ResolveAddress failed");
+		Assert(pageTables.MapPages(current->VirtualStart, current->PhysicalStart, current->NumberOfPages, true));
+	}
 }
 
-UINTN MemoryMap::GetPhysicalAddressSize()
+uintptr_t MemoryMap::GetPhysicalAddressSize() const
 {
-	UINTN highest = 0;
+	uintptr_t highest = 0;
 
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	for (const EFI_MEMORY_DESCRIPTOR* current = m_table;
+		current < NextMemoryDescriptor(m_table, m_size);
+		current = NextMemoryDescriptor(current, m_descSize))
 	{
 		uintptr_t address = current->PhysicalStart + (current->NumberOfPages << PageShift);
 		if (address > highest)
@@ -179,12 +106,13 @@ UINTN MemoryMap::GetPhysicalAddressSize()
 	return highest;
 }
 
-UINTN MemoryMap::GetLargestConventionalAddress()
+uintptr_t MemoryMap::GetLargestConventionalAddress() const
 {
-	EFI_MEMORY_DESCRIPTOR* largest = m_memoryMap;
+	const EFI_MEMORY_DESCRIPTOR* largest = m_table;
 
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
+	for (const EFI_MEMORY_DESCRIPTOR* current = m_table;
+		current < NextMemoryDescriptor(m_table, m_size);
+		current = NextMemoryDescriptor(current, m_descSize))
 	{
 		if (current->Type != EfiConventionalMemory)
 			continue;
@@ -196,42 +124,13 @@ UINTN MemoryMap::GetLargestConventionalAddress()
 	return largest->PhysicalStart;
 }
 
-//TODO: maybe refactor out a "find descriptor" method
-bool MemoryMap::IsConventional(UINTN address)
-{
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
-	{
-		if (current->Type != EfiConventionalMemory)
-			continue;
-		
-		if ((address >= current->PhysicalStart) && (address < current->PhysicalStart + (current->NumberOfPages << PageShift)))
-			return true;
-	}
-
-	return false;
-}
-
-UINTN MemoryMap::GetVirtualAddress(EFI_PHYSICAL_ADDRESS address) const
-{
-	EFI_MEMORY_DESCRIPTOR* current;
-	for (current = m_memoryMap; current < NextMemoryDescriptor(m_memoryMap, m_memoryMapSize); current = NextMemoryDescriptor(current, m_memoryMapDescriptorSize))
-	{
-		const UINTN end = current->PhysicalStart + (current->NumberOfPages << PageShift);
-		if ((address >= current->PhysicalStart) && (address < end))
-			return current->VirtualStart + (address - current->PhysicalStart);
-	}
-
-	return 0;
-}
-
 size_t MemoryMap::Length() const
 {
-	return m_memoryMapSize / m_memoryMapDescriptorSize;
+	return m_size / m_descSize;
 }
 
 EFI_MEMORY_DESCRIPTOR* MemoryMap::Get(size_t index) const
 {
 	Assert(index < Length());
-	return MakePointer<EFI_MEMORY_DESCRIPTOR*>(m_memoryMap, index * m_memoryMapDescriptorSize);
+	return MakePointer<EFI_MEMORY_DESCRIPTOR*>(m_table, index * m_descSize);
 }

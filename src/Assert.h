@@ -2,6 +2,9 @@
 
 void Bugcheck(const char* file, const char* line, const char* format, ...);
 void Printf(const char* format, ...);
+void CPrintf(const bool enable, const char* format, ...);
+
+#define UNUSED(x) ((void)(x))
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
@@ -29,5 +32,6 @@ void Printf(const char* format, ...);
 	{ \
 		Bugcheck("File: " __FILE__, "Line: " STR(__LINE__), #x " (0x%x) " STR(op) " " #y " (0x%x)", (x), (y)); \
 	}
-#define Fatal(x) Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); 
+#define Fatal(x) Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x);
+#define NotImplemented() Fatal(Not Implemented);
 #define Trace() Printf(__FILE__ "-" STR(__LINE__) "\n");

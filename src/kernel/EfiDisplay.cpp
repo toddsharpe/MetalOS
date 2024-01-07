@@ -3,37 +3,32 @@
 
 #include "EfiDisplay.h"
 
-EfiDisplay::EfiDisplay() : 
+EfiDisplay::EfiDisplay(void* const address, const size_t height, const size_t width) :
 	Graphics::FrameBuffer(),
-	m_address(),
-	m_device()
+	m_buffer(reinterpret_cast<Graphics::Color*>(address)),
+	m_height(height),
+	m_width(width)
 {
 	
 }
 
-void EfiDisplay::Init(void* address, const EFI_GRAPHICS_DEVICE& device)
+size_t EfiDisplay::GetHeight() const
 {
-	m_address = address;
-	m_device = device;
+	return m_height;
+}
+
+size_t EfiDisplay::GetWidth() const
+{
+	return m_width;
+}
+
+Graphics::Color* EfiDisplay::GetBuffer()
+{
+	return m_buffer;
 }
 
 void EfiDisplay::Write(Graphics::FrameBuffer& framebuffer)
 {
 	const size_t bufferSize = framebuffer.GetHeight() * framebuffer.GetWidth() * sizeof(Graphics::Color);
-	memcpy(m_address, framebuffer.GetBuffer(), bufferSize);
-}
-
-size_t EfiDisplay::GetHeight() const
-{
-	return m_device.VerticalResolution;
-}
-
-size_t EfiDisplay::GetWidth() const
-{
-	return m_device.HorizontalResolution;
-}
-
-Graphics::Color* EfiDisplay::GetBuffer()
-{
-	return (Graphics::Color*)m_address;
+	memcpy(m_buffer, framebuffer.GetBuffer(), bufferSize);
 }

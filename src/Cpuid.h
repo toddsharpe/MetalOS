@@ -27,6 +27,8 @@ public:
 		return m_func1Ecx[31];
 	}
 
+	static void GetVendor(std::string& vendor);
+
 private:
 	enum Regs
 	{

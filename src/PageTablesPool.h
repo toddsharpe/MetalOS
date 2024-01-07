@@ -1,27 +1,25 @@
 #pragma once
 
+#include "MetalOS.System.h"
 #include <stdint.h>
-#include "MetalOS.Internal.h"
 
-//First page will be our index
-//Gives us 1024 * 8 bits to signify pages
-#define PageTablesPoolMax (PageSize * 8)
-
+//Contiguous pool of physical pages which can be addressed from virtual base address
+//First page is array of bools (NOT bitmap).
+//TODO(tsharpe): Change to bitmap or map all physical pages in virtual space and eliminate this class
 class PageTablesPool
 {
 public:
-	PageTablesPool(void* const baseAddress, const paddr_t physicalAddress, const size_t pageCount);
+	PageTablesPool(void* const virtualBase, const paddr_t physicalBase, const size_t count);
 
-	bool AllocatePage(uint64_t* addressOut);
-	bool DeallocatePage(uint64_t address);
+	void Initialize();
+	bool AllocatePage(paddr_t& address);
+	bool DeallocatePage(const paddr_t address);
 
-	uint32_t AllocatedPageCount();
-
-	uint64_t GetVirtualAddress(uint64_t physicalAddress);
+	void* GetVirtualAddress(const paddr_t address) const;
 
 private:
-	void* m_baseAddress;
-	paddr_t m_physicalAddress;
-	size_t m_pageCount;
+	uintptr_t m_virtualBase;
+	paddr_t m_physicalBase;
+	size_t m_count;
 	bool* m_index;
 };

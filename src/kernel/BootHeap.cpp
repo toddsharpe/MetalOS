@@ -3,7 +3,7 @@
 
 #include "BootHeap.h"
 
-BootHeap::BootHeap(const void* address, const size_t length) :
+BootHeap::BootHeap(const void* const address, const size_t length) :
 	m_address((uintptr_t)address),
 	m_length(length),
 	m_watermark(m_address)

@@ -11,6 +11,7 @@ extern "C"
 #include <vector>
 #include <list>
 #include <map>
+#include "BootHeap.h"
 #include "Debugger.h"
 #include "DeviceTree.h"
 #include "HyperVTimer.h"
@@ -30,6 +31,9 @@ extern "C"
 #include "user/MetalOS.Types.h"
 #include "user/MetalOS.h"
 #include "LoadingScreen.h"
+#include "LoaderParams.h"
+#include "Kernel/EarlyUart.h"
+#include "PageTablesPool.h"
 
 #include <memory>
 
@@ -38,11 +42,9 @@ class Kernel
 {
 	friend Debugger;
 public:
-	Kernel();
-	Kernel(const Kernel&) = delete;
-	Kernel& operator = (const Kernel&) = delete;
+	Kernel(const LoaderParams& params, BootHeap& heap);
 
-	void Initialize(const PLOADER_PARAMS params);
+	void Initialize();
 
 	void HandleInterrupt(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame);
 	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* format, ...);
@@ -58,22 +60,17 @@ public:
 		this->m_printer->PrintBytes(buffer, length);
 	}
 
-	bool IsHeapInitialized()
-	{
-		return m_heapInitialized;
-	}
-
 	//This method only works because the loader ensures we are physically contiguous
 	paddr_t VirtualToPhysical(uintptr_t virtualAddress)
 	{
 		//TODO: assert
 		uint64_t rva = virtualAddress - KernelBaseAddress;
-		return m_physicalAddress + rva;
+		return m_params.KernelAddress + rva;
 	}
 
 #pragma region Heap Interface
-	void* Allocate(const size_t size, void* const caller);
-	void Deallocate(void* const address, void* const caller);
+	void* Allocate(const size_t size);
+	void Deallocate(void* const address);
 #pragma endregion
 
 #pragma region Virtual Memory Interface
@@ -149,15 +146,15 @@ public:
 	
 	//Threads
 	std::shared_ptr<KThread> KeCreateThread(const ThreadStart start, void* const arg, const std::string& name = "");
-	void KeSleepThread(const nano_t value) const;
+	void KeSleepThread(const nano_t value);
 	void KeExitThread();
 	std::shared_ptr<KThread> CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
 
 	//Libraries
-	KeLibrary& KeLoadLibrary(const std::string& path);
+	KeModule& KeLoadLibrary(const std::string& path);
 	void* KeLoadPdb(const std::string& path);
-	KeLibrary* KeGetModule(const std::string& path) const;
-	const KeLibrary* KeGetModule(const uintptr_t address) const;
+	KeModule* KeGetModule(const std::string& path) const;
+	const KeModule* KeGetModule(const uintptr_t address) const;
 
 	//Files
 	bool KeCreateFile(KFile& file, const std::string& path, const GenericAccess access) const;
@@ -181,7 +178,6 @@ public:
 #pragma endregion
 
 #pragma region System Calls
-	SystemCallResult GetSystemInfo(SystemInfo* info);
 	size_t GetTickCount();
 	SystemCallResult GetSystemTime(SystemTime* time);
 
@@ -241,49 +237,47 @@ private:
 	void OnTimer0();
 
 private:
-	//Save from LoaderParams
-	paddr_t m_physicalAddress;
-	size_t m_imageSize;
+	//Boot params
+	const LoaderParams& m_params;
 	EFI_RUNTIME_SERVICES m_runtime;
-	paddr_t m_pdbAddress;
-	size_t m_pdbSize;
+	BootHeap& m_bootHeap;
 
 	//Basic output drivers
 	EfiDisplay m_display;
 	LoadingScreen m_loadingScreen;
+	EarlyUart m_uart;
 	StringPrinter* m_printer;
 
-	//Initialize before PT switch
-	MemoryMap* m_memoryMap;
-	ConfigTables* m_configTables;
-	PageTablesPool* m_pagePool;
-	PageTables* m_pageTables;
+	//Page tables
+	PageTablesPool m_pool;
 
-	//Heap spaces
-	VirtualAddressSpace* m_librarySpace;
-	VirtualAddressSpace* m_pdbSpace;
-	VirtualAddressSpace* m_stackSpace;
-	VirtualAddressSpace* m_heapSpace;
-	VirtualAddressSpace* m_runtimeSpace;
-	VirtualAddressSpace* m_windowsSpace;
+	//Memory and Heap
+	MemoryMap m_memoryMap;
+	PhysicalMemoryManager m_physicalMemory;
+	KernelHeap m_heap;
+	VirtualMemoryManager m_virtualMemory;
 
-	//Memory Management
-	bool m_heapInitialized;
-	paddr_t m_pfnDbAddress;
-	PhysicalMemoryManager* m_pfnDb;
-	VirtualMemoryManager* m_virtualMemory;
-	KernelHeap* m_heap;
+	//Create virtual address spaces
+	//TODO(tsharpe): Condense into one?
+	VirtualAddressSpace m_librarySpace;
+	VirtualAddressSpace m_pdbSpace;
+	VirtualAddressSpace m_stackSpace;
+	VirtualAddressSpace m_runtimeSpace;
+	VirtualAddressSpace m_windowsSpace;
+
+	//Copy to kernel heap
+	ConfigTables m_configTables;
 
 	//Interrupts
 	std::map<X64_INTERRUPT_VECTOR, InterruptContext>* m_interruptHandlers;
 
 	//Process and Thread management
-	Scheduler* m_scheduler;
+	Scheduler m_scheduler;
 	std::map<std::string, UserRingBuffer*> *m_objectsRingBuffers;
 	std::list<std::shared_ptr<UserProcess>>* m_processes;
 
 	//Libraries
-	std::list<KeLibrary>* m_modules;
+	std::list<KeModule>* m_modules;
 
 	//Platform
 	HyperV m_hyperV;
@@ -292,13 +286,12 @@ private:
 	DeviceTree m_deviceTree;
 	HyperVTimer m_timer;
 
-	//PDB
-	Pdb* m_pdb;
-
 	//UI
 	WindowingSystem m_windows;
 
 	Debugger m_debugger;
+
+	::NO_COPY_OR_ASSIGN(Kernel);
 };
 extern Kernel kernel;
 

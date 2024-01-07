@@ -83,7 +83,6 @@ struct PipeInfo
 extern "C"
 {
 	//Info
-	SystemCallResult GetSystemInfo(SystemInfo& info);
 	size_t GetTickCount();
 	SystemCallResult GetSystemTime(SystemTime& time);
 

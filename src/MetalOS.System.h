@@ -1,19 +1,22 @@
 #pragma once
 
-//Convenient defines for all targets
+#include <cstdint>
 
+//Convenient defines for all targets
 constexpr size_t PageShift = 12;
 constexpr size_t PageSize = (1 << PageShift);
 constexpr size_t PageMask = 0xFFF;
 
+typedef uintptr_t paddr_t;
+
 inline constexpr size_t DivRoundUp(const size_t x, const size_t y)
 {
-    return (x + y - 1) / y;
+	return (x + y - 1) / y;
 }
 
 inline constexpr size_t SizeToPages(const size_t bytes)
 {
-    return DivRoundUp(bytes, PageSize);
+	return DivRoundUp(bytes, PageSize);
 }
 
 constexpr size_t ByteAlign(const size_t size, const size_t alignment)

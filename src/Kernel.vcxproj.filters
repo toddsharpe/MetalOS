@@ -99,9 +99,6 @@
     <ClCompile Include="Kernel\ConfigTables.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Kernel\Cpuid.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Kernel\Debugger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -249,6 +246,9 @@
     <ClCompile Include="msvc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Cpuid.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Kernel\Devices\AcpiDevice.h">
@@ -372,9 +372,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Kernel\ConfigTables.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Kernel\Cpuid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Kernel\Debugger.h">
@@ -519,6 +516,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="msvc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Cpuid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

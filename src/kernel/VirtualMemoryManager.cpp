@@ -23,16 +23,14 @@ void* VirtualMemoryManager::Allocate(const void* address, const size_t count, Vi
 	void* const baseAddress = (void*)addr;
 
 	//Allocate and map pages. Physical address list could be non-contiguous, so map one at a time
-	PageTables pt(__readcr3());
+	PageTables pt;
+	pt.OpenCurrent();
 	for (size_t i = 0; i < count; i++)
 	{
 		paddr_t pAddr = 0;
 		Assert(m_physicalMemory.AllocatePage(pAddr));
 
-		if (addressSpace.IsGlobal)
-			pt.MapKernelPages(addr + (i << PageShift), pAddr, 1);
-		else
-			pt.MapUserPages(addr + (i << PageShift), pAddr, 1);
+		Assert(pt.MapPages(addr + (i << PageShift), pAddr, 1, addressSpace.IsGlobal));
 	}
 	
 	//Zero region
@@ -54,14 +52,12 @@ void* VirtualMemoryManager::VirtualMap(const void* address, const std::vector<pa
 		return nullptr;
 	void* const baseAddress = (void*)addr;
 
-	PageTables pt(__readcr3());
+	PageTables pt;
+	pt.OpenCurrent();
 	for (size_t i = 0; i < addresses.size(); i++)
 	{
 		//Physical address list could be non-contiguous, so map one at a time
-		if (addressSpace.IsGlobal)
-			pt.MapKernelPages(addr + (i << PageShift), addresses[i], 1);
-		else
-			pt.MapUserPages(addr + (i << PageShift), addresses[i], 1);
+		Assert(pt.MapPages(addr + (i << PageShift), addresses[i], 1, addressSpace.IsGlobal));
 	}
 
 	//Zero region

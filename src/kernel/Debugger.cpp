@@ -49,7 +49,7 @@ Debugger::Debugger()
 
 void Debugger::Initialize()
 {
-	KeLibrary& kddll = kernel.KeLoadLibrary("kdcom.dll");
+	KeModule& kddll = kernel.KeLoadLibrary("kdcom.dll");
 
 	//Load pointers
 	Kd64::m_dll.KdInitialize = static_cast<OnKdInitialize>(PortableExecutable::GetProcAddress(kddll.ImageBase, "KdInitialize"));
@@ -71,7 +71,7 @@ void Debugger::Initialize()
 	Kd64::KdpDprintf("MetalOS::KdCom initialized!\n");
 }
 
-void Debugger::AddModule(KeLibrary& library)
+void Debugger::AddModule(const KeModule& library)
 {
 	LDR_DATA_TABLE_ENTRY* entry = new LDR_DATA_TABLE_ENTRY();
 
@@ -106,7 +106,7 @@ void Debugger::DebuggerEvent(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* f
 	ExceptionRecord.ExceptionCode = STATUS_BREAKPOINT;
 	ExceptionRecord.NumberParameters = 3;
 	ExceptionRecord.ExceptionInformation[0] = BREAKPOINT_BREAK;
-	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)&kernel.m_scheduler->GetCurrentThread();
+	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)&kernel.m_scheduler.GetCurrentThread();
 	ExceptionRecord.ExceptionInformation[2] = 0;
 
 	ConvertToContext(frame, &ContextRecord);

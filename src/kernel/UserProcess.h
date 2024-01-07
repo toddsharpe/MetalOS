@@ -10,6 +10,7 @@
 #include "Kernel/Objects/UObject.h"
 #include "Kernel/Objects/KSignalObject.h"
 #include "PageTables.h"
+#include "user/MetalOS.Types.h"
 
 #include <memory>
 #include <map>
@@ -89,7 +90,7 @@ private:
 	uintptr_t m_imageBase;
 	time_t m_createTime;
 	time_t m_exitTime;
-	PageTables* m_pageTables;
+	PageTables m_pageTables;
 	UserAddressSpace m_addressSpace;
 	BootHeap* m_heap;
 	ProcessEnvironmentBlock* m_peb;

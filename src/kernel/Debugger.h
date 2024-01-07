@@ -17,7 +17,7 @@ public:
 	Debugger();
 	void Initialize();
 
-	void AddModule(KeLibrary& library);
+	void AddModule(const KeModule& library);
 
 	void DebuggerEvent(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame);
 	void KdpDprintf(const char* format, va_list args);

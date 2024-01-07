@@ -1,17 +1,19 @@
 #pragma once
 
-#include "Kernel/MetalOS.Kernel.h"
-#include "VirtualAddressSpace.h"
-#include "VirtualMemoryManager.h"
+#include <cstddef>
+#include <cstdint>
+#include "Kernel/PhysicalMemoryManager.h"
 
 //Needs to track every block so condensing works when deallocating, hence free bit
 class KernelHeap
 {
 public:
-	KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace& addressSpace);
+	KernelHeap(PhysicalMemoryManager& physicalMemory, void* const heapStart, void* const heapEnd);
 
-	void* Allocate(const size_t size, void* const caller);
-	void Deallocate(void* const address, void* const caller);
+	void Initialize();
+	bool IsInitialized();
+	void* Allocate(const size_t size);
+	void Deallocate(void* const address);
 
 	void Display() const;
 	void DisplayAllocations() const;
@@ -19,9 +21,6 @@ public:
 	static const uint16_t Magic = 0xBEEF;
 
 private:
-	static constexpr size_t InitialPages = (1 << 12); //4K pages, 16MB heap
-	static constexpr size_t HeapAlign = 32;
-
 	void Grow(const size_t pages);
 	bool CheckHeap();
 
@@ -33,19 +32,23 @@ private:
 		uint64_t Free : 1;
 		uint64_t Size : 47;
 		uint64_t Magic : 16;//Debug only, verify block integrity
-		void* Caller;
 		uint8_t Data[];
 	};
 #pragma warning (pop)
-	static_assert(sizeof(HeapBlock) == 32, "Heap block has changed");
+	static_assert(sizeof(HeapBlock) == 24, "Heap block has changed");
 
-	VirtualMemoryManager& m_memoryManager;
-	VirtualAddressSpace& m_addressSpace;
+	PhysicalMemoryManager& m_physicalMemory;
 
-	uint64_t m_start;
-	uint64_t m_end;
-	size_t m_count;
-	size_t m_allocated; //Total size of objects allocated, not space being taken up with padding/alignment/overhead
+	bool m_isInitialized;
+
+	//Housekeeping
 	ListEntry m_blocks;
+	uintptr_t m_start;
+	uintptr_t m_watermark;
+	uintptr_t m_end;
+
+	//Stats
+	size_t m_bytes;
+	size_t m_count;
 };
 

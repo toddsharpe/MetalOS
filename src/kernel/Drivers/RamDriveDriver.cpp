@@ -3,7 +3,7 @@
 #include "Kernel/Kernel.h"
 #include "Kernel/Devices/SoftwareDevice.h"
 #include <Assert.h>
-#include "user/MetalOS.System.h"
+#include "MetalOS.System.h"
 
 RamDriveDriver::RamDriveDriver(Device& device) : 
 	Driver(device),

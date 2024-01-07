@@ -2,43 +2,52 @@
 
 #include "Assert.h"
 #include "MetalOS.List.h"
+#include <PageTables.h>
+#include <intrin.h>
 
-KernelHeap::KernelHeap(VirtualMemoryManager& virtualMemory, VirtualAddressSpace& addressSpace) :
-	m_memoryManager(virtualMemory),
-	m_addressSpace(addressSpace),
-	m_start(addressSpace.Start),
-	m_end(m_start),
-	m_count(),
-	m_allocated(),
-	m_blocks()
+namespace
 {
-	//Initialize heap
-	Grow(InitialPages);
+	static constexpr size_t InitialPages = (1 << 12); //4K pages, 16MB heap
+	static constexpr size_t HeapAlign = 32;
+}
 
+KernelHeap::KernelHeap(PhysicalMemoryManager& physicalMemory, void* const heapStart, void* const heapEnd) :
+	m_physicalMemory(physicalMemory),
+	m_isInitialized(),
+	m_blocks(),
+	m_start(reinterpret_cast<uintptr_t>(heapStart)),
+	m_watermark(reinterpret_cast<uintptr_t>(heapStart)),
+	m_end(reinterpret_cast<uintptr_t>(heapEnd)),
+	m_bytes(),
+	m_count()
+{
+
+}
+
+void KernelHeap::Initialize()
+{
 	//Initialize block list
 	ListInitializeHead(&m_blocks);
 
-	//Create block for empty region
+	//Initialize heap
+	Grow(InitialPages);
+
+	//Create block for empty region, adding to block list
 	HeapBlock* head = (HeapBlock*)m_start;
+	ListInsertTail(&m_blocks, &head->Link);
 	head->Free = true;
 	head->Size = (m_end - m_start) - sizeof(HeapBlock);
 	head->Magic = Magic;
-	head->Caller = nullptr;
 
-	//Add to free list
-	ListInsertTail(&m_blocks, &head->Link);
+	m_isInitialized = true;
 }
 
-void KernelHeap::Grow(const size_t pages)
+bool KernelHeap::IsInitialized()
 {
-	void* const address = m_memoryManager.Allocate((void*)m_end, pages, m_addressSpace);
-	AssertEqual((uintptr_t)address, m_end);
-
-	m_end += (pages << PageShift);
-	Printf("  NewEnd: 0x%016x\n", m_end);
+	return m_isInitialized;
 }
 
-void* KernelHeap::Allocate(const size_t size, void* const caller)
+void* KernelHeap::Allocate(const size_t size)
 {
 	const size_t allocationSize = ByteAlign(size, HeapAlign);
 
@@ -78,11 +87,10 @@ void* KernelHeap::Allocate(const size_t size, void* const caller)
 	}
 
 	//Mark allocated
-	block->Caller = caller;
 	block->Free = false;
 
 	//Update statistics
-	m_allocated += allocationSize;
+	m_bytes += allocationSize;
 	m_count++;
 
 	//Determine if block should be split
@@ -100,7 +108,6 @@ void* KernelHeap::Allocate(const size_t size, void* const caller)
 	newBlock->Free = true;
 	newBlock->Size = block->Size - allocationSize - sizeof(HeapBlock);
 	newBlock->Magic = Magic;
-	newBlock->Caller = nullptr;
 
 	block->Size = allocationSize;
 	AssertEval(CheckHeap(), DisplayAllocations());
@@ -108,7 +115,7 @@ void* KernelHeap::Allocate(const size_t size, void* const caller)
 	return (void*)address;
 }
 
-void KernelHeap::Deallocate(void* const address, void* const caller)
+void KernelHeap::Deallocate(void* const address)
 {
 	AssertOp((uintptr_t)address, >=, m_start + sizeof(HeapBlock));
 	AssertOp((uintptr_t)address, <, m_end);
@@ -120,10 +127,9 @@ void KernelHeap::Deallocate(void* const address, void* const caller)
 	
 	//Mark free
 	block->Free = true;
-	block->Caller = caller;
 
 	//Update statistics
-	m_allocated -= block->Size;
+	m_bytes -= block->Size;
 	m_count--;
 
 	//Fill with 0xCC
@@ -153,30 +159,47 @@ void KernelHeap::Deallocate(void* const address, void* const caller)
 void KernelHeap::Display() const
 {
 	Printf("PrintHeap\n");
-	Printf("Head: 0x%016x\n", this->m_start);
-	Printf("Start: 0x%016x\n", this->m_start);
-	Printf("End: 0x%016x\n", this->m_end);
-	Printf("Allocated: 0x%016x\n", this->m_allocated);
-	Printf("Count: 0x%016x\n", this->m_count);
+	Printf("    Start: 0x%016x\n", m_start);
+	Printf("    Watermark: 0x%016x\n", m_watermark);
+	Printf("    End: 0x%016x\n", m_end);
+	Printf("    Bytes: 0x%016x\n", m_bytes);
+	Printf("    Count: 0x%016x\n", m_count);
 
-	HeapBlock* block = LIST_CONTAINING_RECORD(m_blocks.Blink, HeapBlock, Link);
+	//Display last block
+	const HeapBlock* block = LIST_CONTAINING_RECORD(m_blocks.Blink, HeapBlock, Link);
 	Assert(block->Magic == Magic);
-	Printf("Back Size: 0x%016x\n", block->Size);
-	Printf("Back addr: 0x%016x\n", block);
+	Printf("    Back Size: 0x%016x\n", block->Size);
+	Printf("    Back addr: 0x%016x\n", block);
 }
 
 void KernelHeap::DisplayAllocations() const
 {
 	ListEntry* entry = m_blocks.Flink;
-
 	while (entry != &m_blocks)
 	{
 		HeapBlock* block = LIST_CONTAINING_RECORD(entry, HeapBlock, Link);
 		Assert(block->Magic == Magic);
 
-		Printf("  Addr: 0x%016x, Size: 0x%016x, Free: %d, Caller: 0x%016x\n", &block->Data, block->Size, block->Free, block->Caller);
+		Printf("    Addr: 0x%016x, Size: 0x%016x, Free: %d\n", &block->Data, block->Size, block->Free);
 		entry = entry->Flink;
 	}
+}
+
+void KernelHeap::Grow(const size_t pages)
+{
+	Printf("KernelHeap::Grow\n");
+	Printf("    Watermark: 0x%016X\n", m_watermark);
+
+	PageTables tables;
+	tables.OpenCurrent();
+	for (size_t i = 0; i < pages; i++)
+	{
+		paddr_t page = 0;
+		Assert(m_physicalMemory.AllocatePage(page));
+		Assert(tables.MapPages(m_watermark, page, 1, true));
+		m_watermark += PageSize;
+	}
+	Printf("    Watermark: 0x%016X\n", m_watermark);
 }
 
 bool KernelHeap::CheckHeap()

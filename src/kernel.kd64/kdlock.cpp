@@ -86,7 +86,7 @@ BOOLEAN
 NTAPI
 KdPollBreakIn(VOID)
 {
-	BOOLEAN DoBreak = FALSE, Enable;
+	BOOLEAN DoBreak = FALSE;
 
 	/* First make sure that KD is enabled */
 	if (KdDebuggerEnabled)

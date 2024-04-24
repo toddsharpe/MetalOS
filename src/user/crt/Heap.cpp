@@ -4,7 +4,7 @@ extern "C" void __cdecl _Throw_bad_array_new_length()
 }
 
 #include "Heap.h"
-#include <user/Debug.h>
+#include <user/Assert.h>
 #include <algorithm>
 #include <shared/MetalOS.Types.h>
 #include <user/MetalOS.h>

@@ -5,3 +5,6 @@
 [submodule "external/doom"]
 	path = external/doom
 	url = https://github.com/toddsharpe/MetalOS.Apps.Doom.git
+[submodule "external/Graphics"]
+	path = external/Graphics
+	url = https://github.com/toddsharpe/Graphics.git

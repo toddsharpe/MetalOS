@@ -107,7 +107,7 @@ KdpPromptString(
 	Header.Buffer = (PCHAR)&DebugIo;
 
 	/* Build the data */
-	Data.Length = Length;
+	Data.Length = (USHORT)Length;
 	Data.Buffer = KdpMessageBuffer;
 
 	/* Send the packet */

@@ -947,7 +947,8 @@ KdpGetContextEx(IN PDBGKD_MANIPULATE_STATE64 State,
 			ContextEx->ByteCount);
 
 		/* KD copies all */
-		Data->Length = ContextEx->BytesCopied = ContextEx->ByteCount;
+		ContextEx->BytesCopied = ContextEx->ByteCount;
+		Data->Length = (USHORT)ContextEx->BytesCopied;
 
 		/* Let the debugger set the context now */
 		KdpContextSent = TRUE;
@@ -1947,7 +1948,7 @@ VOID
 NTAPI
 KdExitDebugger(IN BOOLEAN Enable)
 {
-	ULONG TimeSlip;
+	//ULONG TimeSlip;
 
 	/* Restore the state and unlock the port */
 	//KdRestore(FALSE);

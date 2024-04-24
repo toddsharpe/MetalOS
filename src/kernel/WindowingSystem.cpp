@@ -103,8 +103,8 @@ void WindowingSystem::PostMessage(Message& message)
 		//Save cursor position
 		constexpr uint16_t maxX = std::numeric_limits<int16_t>::max();
 		constexpr uint16_t maxY = std::numeric_limits<int16_t>::max();
-		uint16_t absX = m_display.GetWidth() * message.MouseEvent.XPosition / maxX;
-		uint16_t absY = m_display.GetHeight() * message.MouseEvent.YPosition / maxX;
+		const size_t absX = m_display.GetWidth() * message.MouseEvent.XPosition / maxX;
+		const size_t absY = m_display.GetHeight() * message.MouseEvent.YPosition / maxX;
 		Point2D mousePos = { absX , absY };
 
 		//Detect focus/drag
@@ -127,8 +127,8 @@ void WindowingSystem::PostMessage(Message& message)
 			if (m_dragWindow != nullptr)
 			{
 				//Calculate difference between old mouse and new mouse
-				int deltaX = (int)(mousePos.X - m_mousePos.X);
-				int deltaY = (int)(mousePos.Y - m_mousePos.Y);
+				const int deltaX = (int)(mousePos.X - m_mousePos.X);
+				const int deltaY = (int)(mousePos.Y - m_mousePos.Y);
 
 				//Update window position
 				m_dragWindow->Bounds.X += deltaX;

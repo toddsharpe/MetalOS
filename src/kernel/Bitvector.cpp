@@ -29,7 +29,7 @@ void Bitvector::Set(const size_t index, const bool value)
 	AssertOp(index, <, Length);
 	
 	const size_t mapIndex = GetMapIndex(index);
-	size_t& const element = m_map.get()[mapIndex];
+	size_t& element = m_map.get()[mapIndex];
 
 	const size_t mapShift = GetMapShift(index);
 	const size_t mask = (1LL << mapShift);

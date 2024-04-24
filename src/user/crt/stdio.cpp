@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <user/Debug.h>
+#include <user/Assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>

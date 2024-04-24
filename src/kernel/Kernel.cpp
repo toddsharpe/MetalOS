@@ -596,7 +596,7 @@ size_t Kernel::UserThreadInitThunk(void* unused)
 	user.Run();
 	kernel.Printf("User thread exit: %d\n", user.Id);
 
-	return 0;
+	return -1;
 }
 
 void Kernel::KeSleepThread(const nano_t value) const

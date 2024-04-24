@@ -2,7 +2,7 @@
 
 #include <Graphics/FrameBuffer.h>
 #include <user/MetalOS.h>
-#include <user/Debug.h>
+#include <user/Assert.h>
 
 class UserFrameBuffer : public Graphics::FrameBuffer
 {

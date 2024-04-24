@@ -1,4 +1,4 @@
-#include <user/Debug.h>
+#include <user/Assert.h>
 
 #include <stdarg.h>
 #include <stdio.h>

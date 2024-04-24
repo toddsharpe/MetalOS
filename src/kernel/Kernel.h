@@ -134,7 +134,7 @@ public:
 
 #pragma region ThreadStarts
 	__declspec(noreturn) static void KernelThreadInitThunk();
-	__declspec(noreturn) static size_t UserThreadInitThunk(void* unused);
+	static size_t UserThreadInitThunk(void* unused);
 #pragma endregion
 
 #pragma region Kernel Debugger

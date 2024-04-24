@@ -1,4 +1,4 @@
-#include <user/Debug.h>
+#include <user/Assert.h>
 #include <shared/MetalOS.Types.h>
 #include <user/MetalOS.h>
 

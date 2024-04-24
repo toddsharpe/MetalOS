@@ -1,7 +1,7 @@
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include "Runtime.h"
-#include <user/Debug.h>
+#include <user/Assert.h>
 #include <string.h>
 #include <shared/MetalOS.Types.h>
 #include <user/MetalOS.h>

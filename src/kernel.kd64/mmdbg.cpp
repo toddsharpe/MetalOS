@@ -24,7 +24,7 @@ MmDbgCopyMemory(IN ULONG64 Address,
 	IN ULONG Flags)
 {
 	PVOID TargetAddress;
-	ULONG64 PhysicalAddress;
+	//ULONG64 PhysicalAddress;
 	//PMMPTE PointerPte;
 	PVOID CopyDestination, CopySource;
 

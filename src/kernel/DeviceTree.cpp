@@ -136,7 +136,7 @@ void DeviceTree::AttachDriver(Device& device)
 	//TODO: proper pnp/driver manager?
 	if (device.GetHid() == "PNP0501")
 		device.SetDriver(new UartDriver(device));
-	else if (device.GetHid() == "VMBUS")
+	else if (device.GetHid() == "VMBUS" || device.GetHid() == "MSFT1000")
 		device.SetDriver(new VmBusDriver(device));
 	else if (device.GetHid() == "{F912AD6D-2B17-48EA-BD65-F927A61C7684}")
 		device.SetDriver(new HyperVKeyboardDriver(device));

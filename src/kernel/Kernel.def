@@ -1,6 +1,2 @@
 EXPORTS
 	BootParams
-
-	;Bugcheck
-	malloc
-	free

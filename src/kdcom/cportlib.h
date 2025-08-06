@@ -17,6 +17,15 @@
 #define CP_GET_NODATA   1
 #define CP_GET_ERROR    2
 
+__inline
+unsigned short
+PtrToUshort(
+	const void* p
+)
+{
+	return((unsigned short)(unsigned long)(ULONG_PTR)p);
+}
+
 //
 // COM port flags.
 //

@@ -1,37 +1,33 @@
 #pragma once
 
-#include "MemoryMap.h"
-#include "LoaderParams.h"
-#include "Bitvector.h"
-#include "MetalOS.List.h"
-#include "MetalOS.System.h"
+#include "Lib/Bitset.h"
+#include "Lib/Arena.h"
+#include "kernel/MemoryMap.h"
+#include "MetalOS.Loader.h"
 
-#include <array>
-#include <vector>
-
-//return original page state and then marks active
-//Page state should be internal, then just return a bool if its zeroed
+//Allocates physical pages from page frame database
 class PhysicalMemoryManager
 {
 public:
-	PhysicalMemoryManager(void* const address, const size_t count);
+	PhysicalMemoryManager(PageFrame* const frames, const size_t count);
 
-	void Initialize(const MemoryMap& memoryMap);
-	bool AllocatePage(paddr_t& address);
-	void DeallocatePage(const paddr_t address);
+	void Initialize(const MemoryMap& memoryMap, Arena& arena);
 
-	bool AllocateContiguous(paddr_t& address, const size_t pageCount);
-
-	size_t GetSize() const;
+	bool Allocate(paddr_t& address);
+	bool Allocate(paddr_t& address, const size_t pageCount);
+	void Deallocate(const paddr_t address);
 
 private:
-	size_t GetIndex(const PageFrame* entry) const;
+	static constexpr size_t BuddySize = 4;
+	constexpr size_t PhysicalMemoryManager::GetIndex(const PageFrame* entry) const;
+
+	constexpr size_t GetBuddyIndex(const paddr_t address);
 
 	PageFrame* const m_frames;
 	const size_t m_count;
-	ListEntry m_freeList;
+	ListHead m_freeList;
 
 	//Bitvector for contiguous allocations, where False is Free.
-	Bitvector m_buddyMap;
+	DynamicBitset m_buddyMap;
 	size_t m_nextBuddy;
 };

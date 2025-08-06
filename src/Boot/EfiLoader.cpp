@@ -1,245 +1,224 @@
-#include "EfiLoader.h"
+#pragma once
 
-#include <efilib.h>
-#include <MetalOS.Internal.h>
-#include "LoaderParams.h"
-#include <windows/types.h>
-#include <windows/winnt.h>
-#include "EfiMain.h"
-#include "Error.h"
-#include <string.h>
-#include <Assert.h>
-#include "Output.h"
+#include "Boot/EfiLoader.h"
+#include "Lib/String.h"
+#include "WinPE.h"
 
-EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
-EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
-
-EFI_GUID gEfiFileInfoGuid = EFI_FILE_INFO_ID;
-
-typedef void (*CrtInitializer)();
-
-EFI_STATUS EfiLoader::MapFile(EFI_FILE* file, EFI_PHYSICAL_ADDRESS& addressOut, size_t& sizeOut)
+namespace EfiLoader
 {
-	EFI_STATUS status;
-	
-	//Get file info size
-	UINTN infoSize = 0;
-	status = file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, nullptr);
-	if (status != EFI_BUFFER_TOO_SMALL)
+	typedef void (*CrtInitializer)();
+
+	EFI_STATUS MapFile(EFI_FILE * file, const EFI_MEMORY_TYPE allocationType, EFI_PHYSICAL_ADDRESS& addressOut, size_t& sizeOut)
 	{
-		ReturnIfNotSuccess(status);
-	}
+		EFI_STATUS status;
 
-	//Allocate space for file info
-	EFI_FILE_INFO* fileInfo;
-	ReturnIfNotSuccess(BS->AllocatePool(AllocationType, infoSize, (void**)&fileInfo));
-
-	//Get file info
-	ReturnIfNotSuccess(file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, (void*)fileInfo));
-	sizeOut = fileInfo->FileSize;
-
-	//Allocate space for file
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, AllocationType, SizeToPages(sizeOut), &addressOut));
-
-	//Read file into memory
-	ReturnIfNotSuccess(file->Read(file, &sizeOut, (void*)addressOut));
-
-	return EFI_SUCCESS;
-}
-
-//This method should check the memory map file and ensure nobody else has this reservation
-EFI_STATUS EfiLoader::MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& entryPointOut, EFI_PHYSICAL_ADDRESS& physicalImageBaseOut)
-{
-	EFI_STATUS status;
-
-	//Dos header
-	UINTN size = sizeof(IMAGE_DOS_HEADER);
-	IMAGE_DOS_HEADER dosHeader;
-	ReturnIfNotSuccess(pFile->Read(pFile, &size, &dosHeader));
-	ReturnIfNotSuccess(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
-
-	//NT Header
-	size = sizeof(IMAGE_NT_HEADERS64);
-	IMAGE_NT_HEADERS64 peHeader;
-	ReturnIfNotSuccess(pFile->SetPosition(pFile, (UINT64)dosHeader.e_lfanew));
-	ReturnIfNotSuccess(pFile->Read(pFile, &size, &peHeader));
-
-	//Verify image
-	if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
-		peHeader.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
-		peHeader.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC ||
-		peHeader.OptionalHeader.Subsystem != IMAGE_SUBSYSTEM_NATIVE)
-		return EFI_UNSUPPORTED;
-
-	//Kernel cant have imports yet
-	if (peHeader.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size != 0)
-		ReturnIfNotSuccess(EFI_UNSUPPORTED);
-
-	//Allocate pages for full image
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, SizeToPages((UINTN)peHeader.OptionalHeader.SizeOfImage), &physicalImageBaseOut));
-
-	//Read headers into memory
-	size = peHeader.OptionalHeader.SizeOfHeaders;
-	ReturnIfNotSuccess(pFile->SetPosition(pFile, 0));
-	ReturnIfNotSuccess(pFile->Read(pFile, &size, (void*)physicalImageBaseOut));
-
-	//Pointer into NTHeader loaded in memory
-	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(physicalImageBaseOut + dosHeader.e_lfanew);
-	
-	//Write sections into memory
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
-	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
-	{
-		EFI_PHYSICAL_ADDRESS destination = physicalImageBaseOut + section[i].VirtualAddress;
-
-		//If physical size is non-zero, read data to allocated address
-		UINTN rawSize = section[i].SizeOfRawData;
-		if (rawSize != 0)
+		//Get file info size
+		UINTN infoSize = 0;
+		status = file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, nullptr);
+		if (status != EFI_BUFFER_TOO_SMALL)
 		{
-			ReturnIfNotSuccess(pFile->SetPosition(pFile, section[i].PointerToRawData));
-			ReturnIfNotSuccess(pFile->Read(pFile, &rawSize, (void*)destination));
+			ReturnIfNotSuccess(status);
 		}
+
+		//Allocate space for file info
+		EFI_FILE_INFO* fileInfo;
+		ReturnIfNotSuccess(BS->AllocatePool(allocationType, infoSize, (void**)&fileInfo));
+
+		//Get file info
+		ReturnIfNotSuccess(file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, (void*)fileInfo));
+		sizeOut = fileInfo->FileSize;
+
+		//Allocate space for file
+		ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, allocationType, x64::SizeToPages(sizeOut), &addressOut));
+
+		//Read file into memory
+		ReturnIfNotSuccess(file->Read(file, &sizeOut, (void*)addressOut));
+
+		return EFI_SUCCESS;
 	}
 
-	//TODO: Remove relocation logic, it has no meaning as we are allocating in Identity Paging
-	bool relocate = pNtHeader->OptionalHeader.ImageBase != KernelBaseAddress;
-	Assert(!relocate);
-	//Update NTHeader to point to new virtual address
-	pNtHeader->OptionalHeader.ImageBase = KernelBaseAddress;
-
-	//Relocate image to KernelSpace. It gets allocated at KernelStart + ImageBase
-	IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-	if (relocationDirectory.Size)
+	//This method should check the memory map file and ensure nobody else has this reservation
+	EFI_STATUS MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& entryPointOut, EFI_PHYSICAL_ADDRESS& physicalImageBaseOut)
 	{
-		PIMAGE_BASE_RELOCATION pBaseRelocation = (PIMAGE_BASE_RELOCATION)(physicalImageBaseOut + relocationDirectory.VirtualAddress);
+		EFI_STATUS status;
 
-		//Calculate relative shift by subtracing location live ImageBase from ImageBase first read from image
-		UINT64 delta = (UINT64)pNtHeader->OptionalHeader.ImageBase - (UINT64)peHeader.OptionalHeader.ImageBase;
+		//Dos header
+		UINTN size = sizeof(IMAGE_DOS_HEADER);
+		IMAGE_DOS_HEADER dosHeader;
+		ReturnIfNotSuccess(pFile->Read(pFile, &size, &dosHeader));
+		ReturnIfNotSuccess(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
-		while (pBaseRelocation->VirtualAddress)
+		//NT Header
+		size = sizeof(IMAGE_NT_HEADERS64);
+		IMAGE_NT_HEADERS64 peHeader;
+		ReturnIfNotSuccess(pFile->SetPosition(pFile, (UINT64)dosHeader.e_lfanew));
+		ReturnIfNotSuccess(pFile->Read(pFile, &size, &peHeader));
+
+		//Verify image
+		if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
+			peHeader.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
+			peHeader.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC ||
+			peHeader.OptionalHeader.Subsystem != IMAGE_SUBSYSTEM_NATIVE)
+			return EFI_UNSUPPORTED;
+
+		//Kernel cant have imports yet
+		if (peHeader.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size != 0)
+			ReturnIfNotSuccess(EFI_UNSUPPORTED);
+
+		//Allocate pages for full image
+		ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, x64::SizeToPages((UINTN)peHeader.OptionalHeader.SizeOfImage), &physicalImageBaseOut));
+
+		//Read headers into memory
+		size = peHeader.OptionalHeader.SizeOfHeaders;
+		ReturnIfNotSuccess(pFile->SetPosition(pFile, 0));
+		ReturnIfNotSuccess(pFile->Read(pFile, &size, (void*)physicalImageBaseOut));
+
+		//Pointer into NTHeader loaded in memory
+		PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(physicalImageBaseOut + dosHeader.e_lfanew);
+
+		//Write sections into memory
+		PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
+		for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 		{
-			PBYTE locationBase = (PBYTE)(physicalImageBaseOut + pBaseRelocation->VirtualAddress);
-			PWORD locationData = (PWORD)((UINT64)pBaseRelocation + sizeof(IMAGE_BASE_RELOCATION));
+			EFI_PHYSICAL_ADDRESS destination = physicalImageBaseOut + section[i].VirtualAddress;
 
-			for (DWORD i = 0; i < (pBaseRelocation->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD); i++, locationData++)
+			//If physical size is non-zero, read data to allocated address
+			UINTN rawSize = section[i].SizeOfRawData;
+			if (rawSize != 0)
 			{
-				int type = (*locationData >> 12);
-				int offset = (*locationData & 0x0FFF);
-
-				switch (type)
-				{
-				case IMAGE_REL_BASED_ABSOLUTE:
-					break;
-
-				case IMAGE_REL_BASED_HIGHLOW:
-					*(DWORD*)(locationBase + offset) += (DWORD)delta;
-					break;
-
-				case IMAGE_REL_BASED_DIR64:
-					*(UINT64*)(locationBase + offset) += delta;
-					break;
-				}
+				ReturnIfNotSuccess(pFile->SetPosition(pFile, section[i].PointerToRawData));
+				ReturnIfNotSuccess(pFile->Read(pFile, &rawSize, (void*)destination));
 			}
-
-			pBaseRelocation = (PIMAGE_BASE_RELOCATION)((UINT64)pBaseRelocation + pBaseRelocation->SizeOfBlock);
 		}
-	}
 
-	//Populate return variables
-	imageSizeOut = pNtHeader->OptionalHeader.SizeOfImage;
-	entryPointOut = pNtHeader->OptionalHeader.ImageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint;
+		//TODO: Remove relocation logic, it has no meaning as we are allocating in Identity Paging
+		bool relocate = pNtHeader->OptionalHeader.ImageBase != KernelBase;
+		Assert(!relocate);
+		//Update NTHeader to point to new virtual address
+		pNtHeader->OptionalHeader.ImageBase = KernelBase;
 
-	Print(L"  ImageBase: 0x%016x ImageSize: 0x%08x\r\n", KernelBaseAddress, imageSizeOut);
-	Print(L"  Entry: 0x%016x Physical: 0x%016x\r\n", entryPointOut, physicalImageBaseOut);
-
-	return EFI_SUCCESS;
-}
-
-//This function doesn't do any error checking, should it?
-EFI_STATUS EfiLoader::CrtInitialization(const uintptr_t imageBase)
-{
-	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)imageBase;
-	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)(imageBase + dosHeader->e_lfanew);
-
-	//Find CRT section
-	PIMAGE_SECTION_HEADER crtSection = nullptr;
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
-	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
-	{
-		if (strcmp((char*)& section[i].Name, ".CRT") == 0)
+		//Relocate image to KernelSpace. It gets allocated at KernelStart + ImageBase
+		IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
+		if (relocationDirectory.Size)
 		{
-			crtSection = &section[i];
-			break;
+			PIMAGE_BASE_RELOCATION pBaseRelocation = (PIMAGE_BASE_RELOCATION)(physicalImageBaseOut + relocationDirectory.VirtualAddress);
+
+			//Calculate relative shift by subtracing location live ImageBase from ImageBase first read from image
+			UINT64 delta = (UINT64)pNtHeader->OptionalHeader.ImageBase - (UINT64)peHeader.OptionalHeader.ImageBase;
+
+			while (pBaseRelocation->VirtualAddress)
+			{
+				PBYTE locationBase = (PBYTE)(physicalImageBaseOut + pBaseRelocation->VirtualAddress);
+				PWORD locationData = (PWORD)((UINT64)pBaseRelocation + sizeof(IMAGE_BASE_RELOCATION));
+
+				for (DWORD i = 0; i < (pBaseRelocation->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD); i++, locationData++)
+				{
+					int type = (*locationData >> 12);
+					int offset = (*locationData & 0x0FFF);
+
+					switch (type)
+					{
+						case IMAGE_REL_BASED_ABSOLUTE:
+							break;
+
+						case IMAGE_REL_BASED_HIGHLOW:
+							*(DWORD*)(locationBase + offset) += (DWORD)delta;
+							break;
+
+						case IMAGE_REL_BASED_DIR64:
+							*(UINT64*)(locationBase + offset) += delta;
+							break;
+					}
+				}
+
+				pBaseRelocation = (PIMAGE_BASE_RELOCATION)((UINT64)pBaseRelocation + pBaseRelocation->SizeOfBlock);
+			}
 		}
-	}
-	if (crtSection == nullptr)
-		return EFI_NOT_FOUND;
-	
-	//https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-initialization?view=vs-2019
-	//https://docs.microsoft.com/en-us/cpp/error-messages/tool-errors/linker-tools-warning-lnk4210?view=vs-2019
-	//.CRT seems to be a list of function pointers (see asm). Loop through each one and invoke them
-	CrtInitializer* initializer = (CrtInitializer*)(imageBase + crtSection->VirtualAddress);
-	while (*initializer)
-	{
-		(*initializer)();
-		initializer++;
+
+		//Populate return variables
+		imageSizeOut = pNtHeader->OptionalHeader.SizeOfImage;
+		entryPointOut = pNtHeader->OptionalHeader.ImageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint;
+
+		Print(L"  ImageBase: 0x%016x ImageSize: 0x%08x\r\n", KernelBase, imageSizeOut);
+		Print(L"  Entry: 0x%016x Physical: 0x%016x\r\n", entryPointOut, physicalImageBaseOut);
+
+		return EFI_SUCCESS;
 	}
 
-	return EFI_SUCCESS;
-}
-
-void* EfiLoader::GetProcAddress(void* const imageBase, const std::string& procName)
-{
-	//Headers
-	PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(imageBase);
-	AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
-
-	PIMAGE_NT_HEADERS64 ntHeader = MakePointer<PIMAGE_NT_HEADERS64>(imageBase, dosHeader->e_lfanew);
-	AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
-
-	Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
-
-	PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-	if ((directory->Size == 0) || (directory->VirtualAddress == 0))
-		return NULL;
-
-	PIMAGE_EXPORT_DIRECTORY exportDirectory = MakePointer<PIMAGE_EXPORT_DIRECTORY>(imageBase, directory->VirtualAddress);
-
-	PDWORD pNames = MakePointer<PDWORD>(imageBase, exportDirectory->AddressOfNames);
-	PWORD pOrdinals = MakePointer<PWORD>(imageBase, exportDirectory->AddressOfNameOrdinals);
-	PDWORD pFunctions = MakePointer<PDWORD>(imageBase, exportDirectory->AddressOfFunctions);
-
-	uintptr_t search = 0;
-	for (DWORD i = 0; i < exportDirectory->NumberOfNames; i++)
+	//This function doesn't do any error checking, should it?
+	EFI_STATUS CrtInitialization(const void* const imageBase)
 	{
-		char* name = MakePointer<char*>(imageBase, pNames[i]);
-		if (procName == name)
+		//Find CRT section
+		const IMAGE_SECTION_HEADER* crtSection = WinPE::GetPESection(imageBase, ".CRT");
+		if (crtSection == nullptr)
+			return EFI_NOT_FOUND;
+
+		//https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-initialization?view=vs-2019
+		//https://docs.microsoft.com/en-us/cpp/error-messages/tool-errors/linker-tools-warning-lnk4210?view=vs-2019
+		//.CRT seems to be a list of function pointers (see asm). Loop through each one and invoke them
+		CrtInitializer* initializer = (CrtInitializer*)((uintptr_t)imageBase + crtSection->VirtualAddress);
+		while (*initializer)
 		{
-			WORD ordinal = pOrdinals[i];
-			search = MakePointer<uintptr_t>(imageBase, pFunctions[ordinal]);
+			(*initializer)();
+			initializer++;
 		}
+
+		return EFI_SUCCESS;
 	}
 
-	//Check if forwarded
-	uintptr_t base = (uintptr_t)imageBase + directory->VirtualAddress;
-	if ((search >= base) && (search < (base + directory->Size)))
+	void* GetProcAddress(void* const imageBase, const CString& procName)
 	{
-		return NULL;
+		//Headers
+		PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(imageBase);
+		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
+
+		PIMAGE_NT_HEADERS64 ntHeader = MakePointer<PIMAGE_NT_HEADERS64>(imageBase, dosHeader->e_lfanew);
+		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
+
+		Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
+
+		PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+		if ((directory->Size == 0) || (directory->VirtualAddress == 0))
+			return NULL;
+
+		PIMAGE_EXPORT_DIRECTORY exportDirectory = MakePointer<PIMAGE_EXPORT_DIRECTORY>(imageBase, directory->VirtualAddress);
+
+		PDWORD pNames = MakePointer<PDWORD>(imageBase, exportDirectory->AddressOfNames);
+		PWORD pOrdinals = MakePointer<PWORD>(imageBase, exportDirectory->AddressOfNameOrdinals);
+		PDWORD pFunctions = MakePointer<PDWORD>(imageBase, exportDirectory->AddressOfFunctions);
+
+		uintptr_t search = 0;
+		for (DWORD i = 0; i < exportDirectory->NumberOfNames; i++)
+		{
+			char * const name = MakePointer<char*>(imageBase, pNames[i]);
+			if (procName == CString(name))
+			{
+				WORD ordinal = pOrdinals[i];
+				search = MakePointer<uintptr_t>(imageBase, pFunctions[ordinal]);
+			}
+		}
+
+		//Check if forwarded
+		uintptr_t base = (uintptr_t)imageBase + directory->VirtualAddress;
+		if ((search >= base) && (search < (base + directory->Size)))
+		{
+			return NULL;
+		}
+
+		//If function is forwarded, (PCHAR)search is its name
+		//DWORD base = (DWORD)hModule + directory->VirtualAddress;
+		//if ((search >= base) && (search < (base + directory->Size)))
+		//{
+		//    char* name = (char*)search;
+		//    char* copy = (char*)malloc((strlen(name) + 1) * sizeof(char));
+		//    strcpy(copy, name);
+		//    char* library = strtok(copy, ".");
+		//    char* function = strtok(NULL, ".");
+
+		//    HMODULE hLibrary = LoadLibrary(library);//Get the address
+		//    return GetExportAddress(hLibrary, function);
+		//}
+
+		return (void*)search;
 	}
-
-	//If function is forwarded, (PCHAR)search is its name
-	//DWORD base = (DWORD)hModule + directory->VirtualAddress;
-	//if ((search >= base) && (search < (base + directory->Size)))
-	//{
-	//    char* name = (char*)search;
-	//    char* copy = (char*)malloc((strlen(name) + 1) * sizeof(char));
-	//    strcpy(copy, name);
-	//    char* library = strtok(copy, ".");
-	//    char* function = strtok(NULL, ".");
-
-	//    HMODULE hLibrary = LoadLibrary(library);//Get the address
-	//    return GetExportAddress(hLibrary, function);
-	//}
-
-	return (void*)search;
 }

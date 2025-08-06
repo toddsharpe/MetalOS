@@ -1,755 +1,534 @@
-#include "Kernel/Kernel.h"
-#include "Assert.h"
+#include "kernel/Kernel.h"
 
-#define PACKED
-#include <tianocore-edk2/IndustryStandard/PlatformAcpi.h>
-#include <intrin.h>
-#include <cstdarg>
-#include "Main.h"
-#include <functional>
-#include "Kernel/Devices/AcpiDevice.h"
-#include "Drivers/UartDriver.h"
-#include "RuntimeSupport.h"
-#include "PortableExecutable.h"
-#include "HyperVTimer.h"
-#include "HyperV.h"
-#include "KernelHeap.h"
-#include "BootHeap.h"
-#include "StackWalk.h"
-#include "Kernel/Objects/KSemaphore.h"
-#include "Drivers/RamDriveDriver.h"
-#include "Kernel/Devices/SoftwareDevice.h"
-#include "Drivers/IoApicDriver.h"
-#include "Loader.h"
-#include <string>
-#include "KThread.h"
-#include "MetalOS.Arch.h"
-#include "PageTables.h"
-#include "Path.h"
-#include "MetalOS.Internal.h"
-#include "EarlyUart.h"
-#include "Kernel/Objects/UserPipe.h"
-#include "Kernel/Objects/UPipe.h"
+//Core crt
+#include "core_crt/core_crt.c"
 
-Kernel::Kernel(const LoaderParams& params, BootHeap& bootHeap) :
-	//Boot params
-	m_params(params),
-	m_runtime(*params.Runtime),
-	m_bootHeap(bootHeap),
+//Platform
+#include "kernel/HyperV/Interrupts.cpp"
+#include "kernel/HyperV/Timer.cpp"
+#include "kernel/HyperV/Tsc.cpp"
 
-	//Basic output drivers
-	m_display((void*)KernelGraphicsDevice, params.Display.VerticalResolution, params.Display.HorizontalResolution),
-	m_loadingScreen(m_display),
-	m_uart(ComPort::Com1),
-	m_printer(&m_uart),
+//Architecture
+#include "x64/CpuId.cpp"
+#include "x64/PageTables.cpp"
+#include "x64/PageTablesPool.cpp"
 
-	//Page tables
-	m_pool((void*)KernelPageTablesPool, params.PageTablesPoolAddress, params.PageTablesPoolPageCount),
+//Kernel
+#include "kernel/VirtualMemoryManager.cpp"
+#include "kernel/PhysicalMemoryManager.cpp"
+#include "kernel/Scheduler.cpp"
+#include "kernel/ConfigTables.cpp"
+#include "kernel/KThread.cpp"
+#include "kernel/KProcess.cpp"
+#include "kernel/UProcess.cpp"
+#include "kernel/LoadingScreen.cpp"
+#include "kernel/Syscalls.cpp"
+#include "kernel/UObject.cpp"
+#include "kernel/WindowingSystem.cpp"
+#include "kernel/Objects/KPipe.cpp"
+#include "kernel/Debugger.cpp"
 
-	//Memory and Heap
-	m_memoryMap(params.MemoryMap.Table, params.MemoryMap.Size, params.MemoryMap.DescriptorSize),
-	m_physicalMemory((void*)KernelPageFrameDBStart, params.PageFrameCount),
-	m_heap(m_physicalMemory, (void*)KernelHeapStart, (void*)KernelHeapEnd),
-	m_virtualMemory(m_physicalMemory),
+//Drivers
+#include "kernel/Drivers/VmBusDriver.cpp"
+#include "kernel/Drivers/HyperVChannel.cpp"
+#include "kernel/Drivers/HyperVRingBuffer.cpp"
+#include "kernel/Drivers/HyperVKeyboardDriver.cpp"
+#include "kernel/Drivers/HyperVMouseDriver.cpp"
 
-	//Copy before PT switch
-	m_configTables(params.ConfigTables, params.ConfigTablesCount),
-	
-	m_librarySpace(KernelLibraryStart, KernelLibraryEnd, true),
-	m_pdbSpace(KernelPdbStart, KernelPdbEnd, true),
-	m_stackSpace(KernelStackStart, KernelStackEnd, true),
-	m_runtimeSpace(KernelRuntimeStart, KernelRuntimeEnd, true),
-	m_windowsSpace(KernelWindowsStart, KernelWindowsEnd, true),
+//Kd64
+#include "kernel/Kd64/cpu.cpp"
+#include "kernel/Kd64/kdapi.cpp"
+#include "kernel/Kd64/kdbreak.cpp"
+#include "kernel/Kd64/kddata.cpp"
+#include "kernel/Kd64/kdinit.cpp"
+#include "kernel/Kd64/kdlock.cpp"
+#include "kernel/Kd64/kdprint.cpp"
+#include "kernel/Kd64/kdtrap.cpp"
+#include "kernel/Kd64/kdx64.cpp"
+#include "kernel/Kd64/mmdbg.cpp"
+#include "kernel/MetalOSkd.cpp"
 
-	m_interruptHandlers(),
+/*
+ * Bootloader parameters.
+ */
+LoaderParams BootParams;
 
-	m_scheduler(),
-	m_processes(),
-	m_objectsRingBuffers(),
+/*
+ * Kernel parameters.
+ */
+static constexpr size_t KernelArenaSize = PageSize << 10; //4MB Kernel Arena
+static constexpr size_t AcpiArenaSize = PageSize << 8; //1MB ACPI Arena
+static constexpr size_t TempArenaSize = PageSize << 10; //4MB Temp Arena
+static constexpr size_t SharedArenaSize = PageSize << 10; //4MB Shared Arena
+static constexpr size_t MaxUProcess = 32;
+static constexpr CString RuntimeDLL = "mosrt.dll";
 
-	m_modules(),
-
-	m_hyperV(),
-
-	m_deviceTree(),
-
-	m_timer(0),
-
-	m_windows(m_display),
-
-	m_debugger()
+namespace
 {
+	/*
+	 * Prototypes.
+	 */
+	void OnTimer0(void* const arg);
+	uint32_t IdleThread(void* unused);
 
-}
+	/*
+	 * Kernel Arenas.
+	 */
+	KERNEL_PAGE_ALIGN static StaticArena<KernelArenaSize> m_kernelArena;
+	KERNEL_PAGE_ALIGN static StaticArena<AcpiArenaSize> m_acpiArena;
+	KERNEL_PAGE_ALIGN static StaticArena<TempArenaSize> m_tempArena;
+	KERNEL_PAGE_ALIGN static StaticArena<SharedArenaSize> m_sharedArena;
 
-void Kernel::Initialize()
-{
-	ArchInitialize();
+	ObjectPool<UProcess, MaxUProcess> m_procArena;
 
-	//Initialize Display
-	m_loadingScreen.Initialize();
-
-	//Page tables
-	m_pool.Initialize();
-	PageTables::Pool = &m_pool;
-
-	//Memory and Heap
-	m_memoryMap.Display(); //These strings go on boot heap
-	m_physicalMemory.Initialize(m_memoryMap);
-
-	//Copy from UEFI to kernel boot heap
-	m_memoryMap.Reallocate();
-	m_configTables.Reallocate();
-
-	//Build new page table with just Kernel space
-	PageTables pageTables;
-	pageTables.CreateNew();
-	pageTables.MapPages(KernelBaseAddress, m_params.KernelAddress, SizeToPages(m_params.KernelImageSize), true);
-	pageTables.MapPages(KernelPageTablesPool, m_params.PageTablesPoolAddress, m_params.PageTablesPoolPageCount, true);
-	pageTables.MapPages(KernelGraphicsDevice, m_params.Display.FrameBufferBase, SizeToPages(m_params.Display.FrameBufferSize), true);
-	pageTables.MapPages(KernelPageFrameDBStart, m_params.PageFrameAddr, SizeToPages(m_physicalMemory.GetSize()), true);
-	pageTables.MapPages(KernelKernelPdb, m_params.PdbAddress, SizeToPages(m_params.PdbSize), true);
-	m_memoryMap.MapRuntime(pageTables);
-	ArchSetPagingRoot(pageTables.GetRoot());
-
-	//Initialize heap now that paging works
-	m_heap.Initialize();
-
-	Printf("MetalOS.Kernel - Base:0x%16x Size: 0x%x\n", m_params.KernelAddress, m_params.KernelImageSize);
-	Printf("  PhysicalAddressSize: 0x%16x\n", m_memoryMap.GetPhysicalAddressSize());
-
-	//Test UEFI runtime access
-	EFI_TIME time;
-	m_runtime.GetTime(&time, nullptr);
-	Printf("  Date: %02d-%02d-%02d %02d:%02d:%02d\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+	/*
+	* Kernel loader data.
+	*/
+	const LoaderParams& m_params(BootParams);
+	EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);
+	Graphics::FrameBuffer m_display((Graphics::Color*)KernelGraphicsDevice, BootParams.Display.VerticalResolution, BootParams.Display.HorizontalResolution);
+	PageTablesPool m_pool((void*)KernelPageTablesPool, BootParams.PageTablesPoolAddress, BootParams.PageTablesPoolPageCount);
+	ConfigTables m_configTables(BootParams.ConfigTables, BootParams.ConfigTablesCount);
 	
-	//Initialize address spaces
-	m_librarySpace.Initialize();
-	m_pdbSpace.Initialize();
-	m_stackSpace.Initialize();
-	m_runtimeSpace.Initialize();
-	m_windowsSpace.Initialize();
+	//Memory
+	MemoryMap m_memoryMap(BootParams.MemoryMap.Table, BootParams.MemoryMap.Size, BootParams.MemoryMap.DescriptorSize);
+	PhysicalMemoryManager m_physicalMemory((PageFrame*)KernelPageFrameDBStart, BootParams.PageFrameCount);
 
+	//Basic output
+	DirectUart m_uart(DirectUart::ComPort::Com1);
+	LoadingScreen m_loadingScreen(m_display);
 
-	//Interrupts
-	m_interruptHandlers = new std::map<X64_INTERRUPT_VECTOR, InterruptContext>();
-	m_interruptHandlers->insert({ X64_INTERRUPT_VECTOR::Timer0, { &Kernel::OnTimer0, this} });
-	m_interruptHandlers->insert({ X64_INTERRUPT_VECTOR::Breakpoint, { [](void* arg) { ((Kernel*)arg)->Printf("Debug Breakpoint Exception\n"); }, this} });
+	//System
+	InterruptTable<InterruptVector, IrqN> m_irqs;
+	Scheduler m_scheduler(&HyperV::Tsc::ReadTsc);
+	DeviceTree m_deviceTree;
+	KProcess m_process(KProcessType::Kernel);
+	WindowingSystem m_windows(m_display);
+	Debugger m_debugger;
 
-	//Test interrupts
-	//__debugbreak();
-
-	//Process and thread containers
-	m_scheduler.Init();
-	KeCreateThread(&Kernel::IdleThread, this, "Idle");
-
-	m_processes = new std::list<std::shared_ptr<UserProcess>>();
-	m_objectsRingBuffers = new std::map<std::string, UserRingBuffer*>();
-
-	//Modules
-	m_modules = new std::list<KeModule>();
-	auto pdb = new Pdb((void*)KernelKernelPdb, (Handle*)KernelBaseAddress);
-	const KeModule kernel = { "moskrnl.exe", (Handle)KernelBaseAddress, pdb };
-	m_modules->push_back(kernel);
-
-	//Initialize Platform
-	m_hyperV.Initialize();
-
-	//Initialized IO
-	this->InitializeAcpi();
-
-	//Devices
-	m_deviceTree.Populate();
-
-	if (m_params.RamDriveAddress != NULL)
-		m_deviceTree.AddRootDevice(*new SoftwareDevice(RamDriveHid, (void*)m_params.RamDriveAddress));
-
-	//Swap output to uart
-	Device* com1 = m_deviceTree.GetDeviceByName("COM1");
-	Assert(com1 != nullptr);
-	this->m_printer = ((UartDriver*)com1->GetDriver());
-
-	//Output full current state
-	m_memoryMap.Display();
-	//m_configTables->Dump();
-	//m_deviceTree.Display();
-	//m_heap->PrintHeap();
-	pageTables.DisplayRoot();
-
-	//Scheduler (needed to load VMBus driver)
-	m_scheduler.Enabled = true;
-	m_timer.Enable(Second / 512, (uint8_t)X64_INTERRUPT_VECTOR::Timer0);
-	//m_timer.Enable(Second / 32, (uint8_t)X64_INTERRUPT_VECTOR::Timer0);
-
-	//Attach drivers and enumerate tree
-	m_deviceTree.EnumerateChildren();
-	m_deviceTree.Display();
-
-	//Install interrupts
-	//Device* com2;
-	//Assert(m_deviceTree.GetDeviceByName("COM2", &com2));
-	//UartDriver* com2Driver = ((UartDriver*)com2->GetDriver());
-	//m_interruptHandlers->insert({ X64_INTERRUPT_VECTOR::COM2, { &UartDriver::OnInterrupt, com2Driver} });
-
-	//Device* ioapic;
-	//Assert(m_deviceTree.GetDeviceByName("IOAPIC", &ioapic));
-	//IoApicDriver* ioapicDriver = ((IoApicDriver*)ioapic->GetDriver());
-	//ioapicDriver->MapInterrupt(X64_INTERRUPT_VECTOR::COM2, 3);//TODO: find a way to get 3 from ACPI
-	//ioapicDriver->UnmaskInterrupt(3);
-
-	m_windows.Initialize();
-	
-	//Debugger
-	m_debugger.Initialize();
-	m_debugger.AddModule(kernel);
-
-	//Done
-	this->Printf("Kernel Initialized\n");
-}
-
-void Kernel::HandleInterrupt(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame)
-{
-	if (vector == X64_INTERRUPT_VECTOR::DoubleFault)
+	void Initialize()
 	{
-		KePauseSystem();
-		__halt();
-	}
+		//Initialize architecture
+		ArchInitialize();
 
-	//Break into kernel debugger if not user code
-	if (m_debugger.Enabled() && vector == X64_INTERRUPT_VECTOR::Breakpoint)
-	{
-		m_debugger.DebuggerEvent(vector, frame);
-		return;
-	}
+		//Initialize Display
+		m_loadingScreen.Initialize();
 
-	const auto& it = m_interruptHandlers->find(vector);
-	if (it != m_interruptHandlers->end())
-	{
-		InterruptContext ctx = it->second;
-		ctx.Handler(ctx.Context);
-		HyperV::EOI();
-		return;
-	}
+		//Initialize components that copy from UEFI space
+		m_configTables.Initialize(m_kernelArena);
+		m_memoryMap.Initialize(m_kernelArena);
 
-	//Show interrupt context
-	this->Printf("ISR: 0x%x, Code: %x\n", vector, frame->ErrorCode);
-	this->Printf("    RIP: 0x%016x\n", frame->RIP);
-	this->Printf("    RBP: 0x%016x\n", frame->RBP);
-	this->Printf("    RSP: 0x%016x\n", frame->RSP);
-	this->Printf("    RAX: 0x%016x\n", frame->RAX);
-	this->Printf("    RBX: 0x%016x\n", frame->RBX);
-	this->Printf("    RCX: 0x%016x\n", frame->RCX);
-	this->Printf("    RDX: 0x%016x\n", frame->RDX);
-	this->Printf("    CS: 0x%x, SS: 0x%x\n", frame->CS, frame->SS);
+		//Initialize paging
+		m_pool.Initialize();
+		PageTables::Pool = &m_pool;
 
-	switch (vector)
-	{
-	case X64_INTERRUPT_VECTOR::PageFault:
-		this->Printf("    CR2: 0x%16x\n", __readcr2());
-		if (__readcr2() == 0)
-			this->Printf("        Null pointer\n");
-	}
+		//Create kernel space and switch to it
+		m_process.Initialize();
 
-	//Build context
-	X64_CONTEXT context = {};
-	context.Rip = frame->RIP;
-	context.Rsp = frame->RSP;
-	context.Rbp = frame->RBP;
+		/*
+		 * Manually construct reservations/mappings for Kernel/PageTables pool.
+		 * This avoids chicken/egg with VMM code executing and mapping from pool.
+		 */
+		PageTables pageTables;
+		pageTables.CreateNew();
+		pageTables.MapPages(KernelBase, m_params.KernelAddress, x64::SizeToPages(m_params.KernelImageSize), true);
+		pageTables.MapPages(KernelPageTablesPool, m_params.PageTablesPoolAddress, m_params.PageTablesPoolPageCount, true);
+		ArchSetPagingRoot(pageTables.GetRoot());
 
-	if (IsValidUserPointer((void*)frame->RIP))
-	{
-		//Interrupt is in userspace. Write Stack to stdout, write message, kill process.
-		UserProcess& proc = m_scheduler.GetCurrentProcess();
-		std::shared_ptr<UObject> uObject = proc.GetObject((Handle)StandardHandle::Output);
-		if (uObject)
+		m_process.Reserve(KernelBase, x64::SizeToPages(m_params.KernelImageSize));
+		m_process.Reserve(KernelPageTablesPool, m_params.PageTablesPoolPageCount);
+
+		/*
+		 * Use VMM to map/reserve the rest.
+		 */
+		Assert(VMM::MapContiguous(m_process, (void*)KernelGraphicsDevice, m_params.Display.FrameBufferBase, x64::SizeToPages(m_params.Display.FrameBufferSize)));
+		Assert(VMM::MapContiguous(m_process, (void*)KernelPageFrameDBStart, m_params.PageFrameAddr, x64::SizeToPages(BootParams.PageFrameCount * sizeof(PageFrame))));
+		Assert(VMM::MapContiguous(m_process, (void*)KernelPdb, m_params.PdbAddress, x64::SizeToPages(m_params.PdbSize)));
+		m_memoryMap.MapRuntime(m_process);
+		
+		//Continue initializing system
+		m_physicalMemory.Initialize(m_memoryMap, m_kernelArena);
+		m_irqs.Add(InterruptVector::Timer0, {&OnTimer0, nullptr});
+		m_scheduler.Initialize();
+		m_process.AddModule("moskrnl.exe", (void*)KernelBase);
+
+		//Initialize Platform (HyperV)
+		HyperV::Initialize();
+		HyperV::Timer::Enable(Second / 128, 0, (uint8_t)InterruptVector::Timer0);
+
+		//Welcome display
+		m_loadingScreen.Printf("MetalOS.Kernel - Base:0x%016x Size: 0x%0X\n", m_params.KernelAddress, m_params.KernelImageSize);
+		m_loadingScreen.Printf("  PhysicalAddressSize: 0x%016x\n", m_memoryMap.GetPhysicalAddressSize());
+
+		//Test UEFI runtime access
+		EFI_TIME time;
+		m_runtime.GetTime(&time, nullptr);
+		m_loadingScreen.Printf("  Date: %02d-%02d-%02d %02d:%02d:%02d\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+
+		//Initialize scheduler and create idle thread. Allows device enumeration to block for interrupts if needed
+		KeCreateThread(&IdleThread, nullptr, "Idle");
+		m_scheduler.Enabled = true;
+
+		//Initialize ACPI/HW
+		InitializeAcpi();
+		m_deviceTree.Enumerate(m_kernelArena);
+		if (BootParams.RamDriveAddress)
 		{
-			//Write stack
-			AssertEqual(uObject->Type, UObjectType::Pipe);
-			const UPipe* uPipe = (UPipe*)uObject.get();
-			UserPipe& pipe = *uPipe->Pipe.get();
-
-			//Write exception
-			if (vector == X64_INTERRUPT_VECTOR::DivideError)
-				pipe.Printf("Exception: Divide by zero\n");
-			else if (vector == X64_INTERRUPT_VECTOR::Breakpoint)
-				pipe.Printf("Exception: Breakpoint\n");
-			else if (vector == X64_INTERRUPT_VECTOR::PageFault && __readcr2() == 0)
-				pipe.Printf("Exception: Null pointer dereference\n");
-			
-			//Convert to unwind context
-			CONTEXT ctx = { 0 };
-			ctx.Rip = context.Rip;
-			ctx.Rsp = context.Rsp;
-			ctx.Rbp = context.Rbp;
-
-			//Unwind stack, writing to process stdout
-			StackWalk sw(&ctx);
-			while (sw.HasNext())
-			{
-				PdbFunctionLookup lookup = {};
-				Assert(IsValidUserPointer((void*)ctx.Rip));
-				ResolveUserIP(ctx.Rip, lookup);
-
-				Module* module = proc.GetModule(ctx.Rip);
-
-				pipe.Printf("    %s::%s (%d)\n", module->Name, lookup.Name.c_str(), lookup.LineNumber);
-				pipe.Printf("        IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", ctx.Rip, lookup.Base, lookup.RVA);
-
-				if (lookup.Base == nullptr)
-					break;
-
-				sw.Next((uintptr_t)lookup.Base);
-			}
+			KDevice* ramDrive = m_kernelArena.Allocate<KDevice>();
+			Assert(ramDrive);
+			ramDrive->Hid = m_kernelArena.Copy(RamDriveHid);
+			ramDrive->Type = KDeviceType::Software;
+			ramDrive->Context = (void*)BootParams.RamDriveAddress;
+			m_deviceTree.AddRootChild(*ramDrive, m_kernelArena);
 		}
 
-		m_scheduler.KillCurrentProcess();
-		return;
+		m_process.Display();
+		m_debugger.Initialize();
+		Trace();
+		m_debugger.AddModule(*m_process.GetModule("moskrnl.exe"));
+		Trace();
+
+		//Initialize windowing system
+		m_windows.Initialize();
+		Trace();
+
+		//System displays
+		m_kernelArena.Display();
+		m_acpiArena.Display();
+		m_scheduler.Display();
+		m_deviceTree.Display();
+
+		Printf("MetalOS Initialized!\n");
+		PrintStack();
+
+		//Start
+		m_windows.Enabled = true;
 	}
-	else
-	{
-		this->ShowStack(&context);
 
-		//Bugcheck
-		Fatal("Unhandled exception");
+	void OnTimer0(void* arg)
+	{
+		HyperV::Interrupts::EOI();
+		if (m_scheduler.Enabled)
+			m_scheduler.Schedule();
 	}
-}
 
-void Kernel::Bugcheck(const char* file, const char* line, const char* format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	Bugcheck(file, line, format, args);
-	va_end(args);
-}
-
-void Kernel::Bugcheck(const char* file, const char* line, const char* format, va_list args)
-{
-	static bool inBugcheck = false;
-	this->KePauseSystem();
-
-	if (inBugcheck)
+	uint32_t IdleThread(void* unused)
 	{
-		//Bugcheck during bugcheck, print what's available and bail
-		this->Printf("\n%s\n%s\n", file, line);
-		this->Printf(format, args);
-		this->Printf("\n");
-
+		UNUSED(unused);
 		while (true)
 			ArchWait();
 	}
-	inBugcheck = true;
-
-	this->Printf("Kernel Bugcheck\n");
-	this->Printf("\n%s\n%s\n", file, line);
-
-	this->Printf(format, args);
-	this->Printf("\n");
-
-	/*
-	if (m_debugger.Enabled())
-	{
-		__debugbreak();
-		return;
-	}
-	*/
-	X64_CONTEXT context = {};
-	ArchSaveContext(&context);
-	this->ShowStack(&context);
-
-	if (m_scheduler.Enabled)
-	{
-		KThread& thread = m_scheduler.GetCurrentThread();
-		thread.Display();
-	}
-
-	//Pause
-	while (true)
-		ArchWait();
 }
 
-void Kernel::ShowStack(const X64_CONTEXT* context)
+void KePauseSystem()
 {
-	//Convert to unwind context
-	//NOTE(tsharpe): Convert unwind code to work on X64_CONTEXT
-	CONTEXT ctx = { 0 };
-	ctx.Rip = context->Rip;
-	ctx.Rsp = context->Rsp;
-	ctx.Rbp = context->Rbp;
-
-	this->Printf("Call Stack\n");
-	StackWalk sw(&ctx);
-	while (sw.HasNext())
-	{
-		PdbFunctionLookup lookup = {};
-		ResolveIP(ctx.Rip, lookup);
-
-		kernel.Printf("    %s (%d)\n", lookup.Name.c_str(), lookup.LineNumber);
-		kernel.Printf("        IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", ctx.Rip, lookup.Base, lookup.RVA);
-
-		if (lookup.Base == nullptr)
-			break;
-		
-		sw.Next((uintptr_t)lookup.Base);
-	}
+	ArchDisableInterrupts();
+	m_scheduler.Enabled = false;
 }
 
-bool Kernel::ResolveIP(const uintptr_t ip, PdbFunctionLookup& lookup)
+void KeResumeSystem()
 {
-	const KeModule* module = KeGetModule(ip);
-	if (!module)
-		return false;
-
-	if (!module->Pdb)
-		return false;
-
-	lookup.Base = module->ImageBase;
-	lookup.RVA = (uint32_t)(ip - (uintptr_t)lookup.Base);
-	return module->Pdb->ResolveFunction(lookup.RVA, lookup);
+	m_scheduler.Enabled = true;
+	ArchEnableInterrupts();
 }
 
-bool Kernel::ResolveUserIP(const uintptr_t ip, PdbFunctionLookup& lookup)
+bool KeIsValid(const void* address)
 {
-	kernel.Printf("ResolveUserIP: 0x%016x\n", ip);
-	const UserProcess& proc = m_scheduler.GetCurrentUserThread().Process;
-	proc.DisplayDetails();
-	Module* module = proc.GetModule(ip);
-	if (!module)
-		return false;
-	Assert(module);
-
-	if (!module->PDB)
-	{
-		//Attempt to load PDB.
-		const char* fullPath = PortableExecutable::GetPdbName(module->ImageBase);
-		Assert(fullPath);
-		const char* pdbName = GetFileName(fullPath);
-		Assert(pdbName);
-		kernel.Printf("Loading: %s\n", pdbName);
-		const void* const address = KeLoadPdb(pdbName);
-		Assert(address);
-		module->PDB = new Pdb(address, module->ImageBase);
-	}
-
-	if (!module->PDB)
-		return false;
-
-	lookup.Base = module->ImageBase;
-	lookup.RVA = (uint32_t)(ip - (uintptr_t)lookup.Base);
-	return reinterpret_cast<Pdb*>(module->PDB)->ResolveFunction(lookup.RVA, lookup);
+	return m_process.IsValidPointer(address);
 }
 
-void Kernel::Printf(const char* format, ...)
+/*
+ * Globals with C++ linkage.
+ */
+paddr_t KePhysicalAlloc()
 {
-	va_list args;
+	paddr_t address = 0;
+	Assert(m_physicalMemory.Allocate(address));
 
-	va_start(args, format);
-	this->Printf(format, args);
-	va_end(args);
+	return address;
 }
 
-void Kernel::Printf(const char* format, va_list args)
+paddr_t KePhysicalAlloc(const size_t count)
 {
-	//if ((m_debugger != nullptr) && m_debugger->IsBrokenIn())
-		//m_debugger->KdpDprintf(format, args);
-	m_printer->Printf(format, args);
-}
-
-void Kernel::InitializeAcpi()
-{
-	ACPI_STATUS Status;
-	Status = AcpiInitializeSubsystem();
-	if (ACPI_FAILURE(Status))
-	{
-		this->Printf("Could not AcpiInitializeSubsystem: %d\n", Status);
-		ArchWait();
-	}
-
-	Status = AcpiInitializeTables(nullptr, 16, FALSE);
-	if (ACPI_FAILURE(Status))
-	{
-		this->Printf("Could not AcpiInitializeTables: %d\n", Status);
-		ArchWait();
-	}
-
-	//TODO: notify handlers
-
-	/* Install the default address space handlers. */
-	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_SYSTEM_MEMORY, ACPI_DEFAULT_HANDLER, NULL, NULL);
-	if (ACPI_FAILURE(Status))
-	{
-		this->Printf("Could not initialise SystemMemory handler, %s!", AcpiFormatException(Status));
-		ArchWait();
-	}
-
-	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_SYSTEM_IO, ACPI_DEFAULT_HANDLER, NULL, NULL);
-	if (ACPI_FAILURE(Status))
-	{
-		this->Printf("Could not initialise SystemIO handler, %s!", AcpiFormatException(Status));
-		ArchWait();
-	}
-
-	Status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_PCI_CONFIG, ACPI_DEFAULT_HANDLER, NULL, NULL);
-	if (ACPI_FAILURE(Status))
-	{
-		this->Printf("Could not initialise PciConfig handler, %s!", AcpiFormatException(Status));
-		ArchWait();
-	}
-
-	Status = AcpiLoadTables();
-	if (ACPI_FAILURE(Status))
-	{
-		this->Printf("Could not AcpiLoadTables: %d\n", Status);
-		ArchWait();
-	}
-
-	//Local handlers should be installed here
-
-	Status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-	if (ACPI_FAILURE(Status))
-	{
-		this->Printf("Could not AcpiEnableSubsystem: %d\n", Status);
-		ArchWait();
-	}
-
-	Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
-	if (ACPI_FAILURE(Status))
-	{
-		this->Printf("Could not AcpiInitializeObjects: %d\n", Status);
-		ArchWait();
-	}
-
-	this->Printf("ACPI Finished\n");
-}
-
-void Kernel::OnTimer0()
-{
-	if (m_scheduler.Enabled)
-		m_scheduler.Schedule();
-}
-
-std::shared_ptr<KThread> Kernel::KeCreateThread(const ThreadStart start, void* const arg, const std::string& name)
-{
-	//Add kernel thread
-	std::shared_ptr<KThread> thread = std::make_shared<KThread>(start, arg);
-	thread->Init(&Kernel::KernelThreadInitThunk);
-	thread->Name = name;
-	Printf("    Name: %s\n", name.c_str());
-	m_scheduler.AddReady(thread);
-
-	return thread;
-}
-
-void Kernel::KeExitThread()
-{
-	this->Printf("Kernel::KeThreadExit\n");
-
-	m_scheduler.KillCurrentThread();
-}
-
-std::shared_ptr<KThread> Kernel::CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry)
-{
-	//Create kernel thread
-	std::shared_ptr<KThread> thread = KeCreateThread(&Kernel::UserThreadInitThunk, nullptr);
-
-	//Attach user thread
-	thread->UserThread = new UserThread(startAddress, arg, entry, stackSize, process);;
-	thread->Name = process.Name + "[" + std::to_string(thread->UserThread->Id) + "]";
-	process.AddThread(*thread);
-
-	return thread;
-}
-
-KeModule& Kernel::KeLoadLibrary(const std::string& path)
-{
-	void* library = Loader::LoadKernelLibrary(path);
-
-	const char* fullPath = PortableExecutable::GetPdbName(library);
-	Assert(fullPath);
-	const char* pdbName = GetFileName(fullPath);
-	Assert(pdbName);
-
-	const void* address = KeLoadPdb(pdbName);
-	Pdb* pdb = nullptr;
-	pdb = new Pdb(address, (void*)library);
-	this->Printf("KeLoadLibrary %s (0x%016x), %s (0x%016x)\n", path.c_str(), (uintptr_t)library, pdbName, address);
-
-	KeModule KeModule = { path, library, pdb };
-	m_modules->push_back(KeModule);
-
-	m_debugger.AddModule(KeModule);
-
-	return m_modules->back();
-}
-
-const KeModule* Kernel::KeGetModule(const uintptr_t address) const
-{
-	for (const auto& module : *m_modules)
-	{
-		const uintptr_t imageBase = (uintptr_t)module.ImageBase;
-		const size_t imageSize = PortableExecutable::GetSizeOfImage(module.ImageBase);
-
-		if ((address >= imageBase) && (address < imageBase + imageSize))
-			return &module;
-	}
-	return nullptr;
-}
-
-KeModule* Kernel::KeGetModule(const std::string& path) const
-{
-	for (auto& module : *m_modules)
-	{
-		if (module.Name == path)
-			return &module;
-	}
-	return nullptr;
-}
-
-void Kernel::KernelThreadInitThunk()
-{
-	kernel.Printf("Kernel::KernelThreadInitThunk\n");
-
-	KThread& current = kernel.m_scheduler.GetCurrentThread();
-	current.Display();
+	paddr_t address = 0;
+	Assert(m_physicalMemory.Allocate(address, count));
 	
-	//Run thread
-	current.Run();
-	kernel.Printf("Thread exit: %d\n", current.Id);
-
-	//Exit thread
-	kernel.KeExitThread();
+	return address;
 }
 
-size_t Kernel::UserThreadInitThunk(void* unused)
+void KePhysicalFree(const paddr_t address, const size_t count)
 {
-	kernel.Printf("Kernel::UserThreadInitThunk\n");
-
-	UserThread& user = kernel.m_scheduler.GetCurrentUserThread();
-	user.Display();
-	user.DisplayDetails();
-
-	//Run thread
-	user.Run();
-	kernel.Printf("User thread exit: %d\n", user.Id);
-
-	return 0;
+	Assert(false);
 }
 
-void Kernel::KeSleepThread(const nano_t value)
+milli_t KeGetTicks()
 {
-	m_scheduler.Sleep(value);
+	const nano100_t tsc = HyperV::Tsc::ReadTsc();
+	return ToMilli(tsc);
 }
 
-void Kernel::KeGetSystemTime(SystemTime& time) const
+nano_t KeGetNanoseconds()
 {
-	EFI_TIME efiTime = { };
-	//Assert(!EFI_ERROR(m_runtime.GetTime(&efiTime, nullptr)));
+	const nano100_t tsc = HyperV::Tsc::ReadTsc();
+	return tsc * 100;
+}
+
+void KeGetSystemTime(KSystemTime& time)
+{
+	EFI_TIME efiTime = {};
 	m_runtime.GetTime(&efiTime, nullptr);
 
 	time.Year = efiTime.Year;
 	time.Month = efiTime.Month;
-	//TODO: day of the week
 	time.Day = efiTime.Day;
 	time.Hour = efiTime.Hour;
 	time.Minute = efiTime.Minute;
 	time.Second = efiTime.Second;
 	time.Milliseconds = efiTime.Nanosecond / 1000;
+	time.Nanoseconds = efiTime.Nanosecond;
 }
 
-void* Kernel::Allocate(const size_t size)
+void* KeVirtualAlloc(const size_t size)
 {
-	if (m_heap.IsInitialized())
-		return m_heap.Allocate(size);
+	return KeVirtualAlloc(m_process, nullptr, size);
+}
+
+void* KeVirtualAlloc(const void* address, const size_t size)
+{
+	return KeVirtualAlloc(m_process, address, size);
+}
+
+void* KeVirtualAlloc(KProcess& process, const void* address, const size_t size)
+{
+	const size_t count = x64::SizeToPages(size);
+	if (!address)
+	{
+		return VMM::Allocate(process, count);
+	}
 	else
-		return m_bootHeap.Allocate(size);
+	{
+		return VMM::Allocate(process, address, count);
+	}
 }
 
-//TODO(tsharpe): Really needs to call deallocate of the heap that originally allocated it
-//Could add a heapblock tag to determine location?
-void Kernel::Deallocate(void* const address)
+void* KeHeapAlloc(const size_t size, const HeapAllocType type)
 {
-	if (m_heap.IsInitialized())
-		m_heap.Deallocate(address);
-	else
-		return m_bootHeap.Deallocate(address);
+	switch (type)
+	{
+		case HeapAllocType::Acpi:
+			return m_acpiArena.Allocate(size);
+			break;
+
+		default:
+			NotImplemented();
+			return nullptr;
+	}
 }
 
-void* Kernel::AllocateLibrary(const void* address, const size_t count)
+void KeHeapFree(void* ptr, const HeapAllocType type)
 {
-	return m_virtualMemory.Allocate(address, count, m_librarySpace);
+	switch (type)
+	{
+		case HeapAllocType::Acpi:
+			return m_acpiArena.Deallocate(ptr);
+			break;
+
+		default:
+			NotImplemented();
+	}
 }
 
-void* Kernel::AllocatePdb(const size_t count)
+KThread* KeCreateThread(const KThreadStart start, void* const arg, const CString& name)
 {
-	return m_virtualMemory.Allocate(0, count, m_pdbSpace);
+	KThread* ret = m_scheduler.CreateReady(start, arg, name);
+	return ret;
 }
 
-void* Kernel::AllocateStack(const size_t count)
+void KeExitThread()
 {
-	return m_virtualMemory.Allocate(0, count, m_stackSpace);
+	KThread& current = m_scheduler.GetThread();
+	KeExitThread(current);
 }
 
-void* Kernel::AllocateWindows(const size_t count)
+void KeExitThread(KThread& thread)
 {
-	return m_virtualMemory.Allocate(0, count, m_windowsSpace);
+	m_scheduler.KillThread(thread);
 }
 
-WaitStatus Kernel::KeWait(KSignalObject& obj, const milli_t timeout)
+void KeSleepThread(const nano_t time)
 {
-	WaitStatus status = m_scheduler.ObjectWait(obj, ToNano(timeout));
-	return status;
+	m_scheduler.Sleep(time);
 }
 
-void Kernel::KeRegisterInterrupt(const X64_INTERRUPT_VECTOR interrupt, const InterruptContext& context)
+void KeYield()
 {
-	Assert(m_interruptHandlers->find(interrupt) == m_interruptHandlers->end());
-	m_interruptHandlers->insert({ interrupt, context });
+	m_scheduler.Schedule();
 }
 
-paddr_t Kernel::AllocatePhysical(const size_t count)
+void KThreadInit()
 {
-	paddr_t address;
-	Assert(m_physicalMemory.AllocateContiguous(address, count));
-	return address;
+	KThread& current = m_scheduler.GetCurrentThread();
+
+	//Run thread
+	current.Start();
+	Printf("Thread exit: %d\n", current.Id);
+
+	//Exit thread
+	KeExitThread();
+
+	Unreachable();
 }
 
-void* Kernel::VirtualMap(const void* address, const std::vector<paddr_t>& addresses)
+//If entry is null, use InitProcess. Otherwise use InitThread with this as its arg
+UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThreadStart entry, void* const arg)
 {
-	return m_virtualMemory.VirtualMap(address, addresses, m_runtimeSpace);
+	//Create kernel thread
+	KThread* kThread = KeCreateThread(&UThreadInit, nullptr, "");
+	Assert(kThread);
+	kThread->UserThread = process.CreateThread(*kThread, stackSize, entry, arg);
+	return kThread->UserThread;
 }
 
-void* Kernel::VirtualMap(UserProcess& process, const void* address, const std::vector<paddr_t>& addresses)
+uint32_t UThreadInit(void* const arg)
 {
-	return m_virtualMemory.VirtualMap(address, addresses, process.GetAddressSpace());
+	UNUSED(arg);
+
+	KThread& current = m_scheduler.GetCurrentThread();
+	Assert(current.UserThread);
+	UThread& user = *current.UserThread;
+	user.Start();
+
+	//TODO(tsharpe): Exit code
+	return 0;
 }
 
-Device* Kernel::KeGetDevice(const std::string& path) const
+KModule* KeLoadLibrary(const CString& name)
 {
-	return m_deviceTree.GetDevice(path);
+	Printf("LoadLibrary: %s\n", name.c_str());
+
+	//Check if module exists in process
+	KModule* search = m_process.GetModule(name);
+	if (search != nullptr)
+		return search;
+
+	//If it doesnt exists attempt to load it
+	void* address = Loader::Load(m_process, name);
+	if (!address)
+		return nullptr;
+
+	KModule* created = m_process.AddModule(name, address);
+	return created;
 }
 
-void* Kernel::KeLoadPdb(const std::string& path)
+//Since this method changes page tables, make sure every return restores original
+UProcess* KeCreateProcess(const CString& cmd)
 {
-	KFile file;
-	Assert(KeCreateFile(file, path, GenericAccess::Read));
+	//TODO(tsharpe): Make this not necessary
+	PageTables current; 
+	current.OpenCurrent();
+
+	//Get path
+	size_t i = 0;
+	while (i < cmd.Length && cmd[i] != '\0' && cmd[i] !=' ')
+		i++;
+	Assert(i > 0);
+
+	StaticString<64> path;
+	path.Append(CString(cmd.c_str(), i));
+
+	//Create UProcess
+	UProcess* created = m_procArena.Allocate(path);
+	Assert(created);
+	created->Initialize();
+
+	//Initialize and switch to new page tables
+	created->Tables.CreateNew();
+	created->Tables.LoadKernelMappings();
+	ArchSetPagingRoot(created->Tables.GetRoot());
+
+	//Load exe and runtime into process
+	void* address = Loader::Load(*created, path);
+	if (!address)
+	{
+		ArchSetPagingRoot(current.GetRoot());
+		return nullptr;
+	}
+	Printf("Image: 0x%016X\n", address);
+
+	void* runtime = Loader::Load(*created, RuntimeDLL);
+	if (!runtime)
+	{
+		ArchSetPagingRoot(current.GetRoot());
+		return nullptr;
+	}
+	Printf("runtime: 0x%016X\n", runtime);
+
+	//Resolve runtime imports
+	Loader::ResolveImports(address, runtime, RuntimeDLL);
+
+	//Init pointers
+	created->InitProcess = WinPE::GetProcAddress(runtime, "InitProcess");
+	Assert(created->InitProcess);
+	created->InitThread = WinPE::GetProcAddress(runtime, "InitThread");
+	Assert(created->InitThread);
 	
-	void* const address = AllocatePdb(SizeToPages(file.Length));
-	Assert(KeReadFile(file, address, file.Length, nullptr));
-	return address;
+	//Update process structures
+	created->InContextInit(address, cmd);
+
+	created->AddModule(path, address);
+	created->AddModule(RuntimeDLL, runtime);
+
+	created->IsConsole = WinPE::IsConsole(address);
+
+	//Create main process thread
+	const size_t stackSize = WinPE::GetStackSize(address);
+	KeCreateUThread(*created, stackSize);
+	ArchSetPagingRoot(current.GetRoot());
+
+	//Add debug output as stdout for now
+	created->CreateObject(UObjectType::Debug, Handles::StdOut);
+	created->CreateObject(UObjectType::Debug, Handles::StdErr);
+
+	return created;
 }
 
-bool Kernel::KeCreateFile(KFile& file, const std::string& path, const GenericAccess access) const
+void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 {
-	const Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
-	const RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver();
-	return hdd->OpenFile(file, path, access) == Result::Success ? true : false;
+	Printf("Process: %s exited with code 0x%x\n", process.Name.c_str(), exitCode);
+	
+	//Close all objects
+	UObject* top = process.GetObject();
+	while (top != nullptr)
+	{
+		//TODO(tsharpe): Should this call internal method?
+		CloseHandle((Handle)top->Handle);
+
+		//Get next object
+		top = process.GetObject();
+	}
+
+	//Kill all KThreads in process
+	m_scheduler.KillProcess(process);
 }
 
-bool Kernel::KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead) const
+bool KeCreateFile(KFile& file, const CString& path, const KFileAccess access)
 {
-	const Device* device = m_deviceTree.GetDeviceByType(DeviceType::Harddrive);
-	const RamDriveDriver* hdd = (RamDriveDriver*)device->GetDriver();
+	const KDevice* device = m_deviceTree.GetDeviceByClass(KDeviceClass::Storage);
+	Assert(device);
+	StorageDriver* const storage = (StorageDriver*)device->Driver;
+	Assert(storage);
+	const Result result = storage->OpenFile(file, path, access);
+	file.Driver = storage;
+	
+	return result == Result::Success ? true : false;
+}
 
-	const size_t read = hdd->ReadFile(file, buffer, bufferSize);
+bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead)
+{
+	const StorageDriver* storage = (StorageDriver*)file.Driver;
+	Assert(storage);
+
+	const size_t read = storage->ReadFile(file, buffer, bufferSize);
 	file.Position += read;
 
 	if (bytesRead != nullptr)
@@ -757,7 +536,7 @@ bool Kernel::KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size
 	return true;
 }
 
-bool Kernel::KeSetFilePosition(KFile& file, const size_t position) const
+bool KeSetFilePosition(KFile& file, const size_t position)
 {
 	if (position >= file.Length)
 		return false;
@@ -765,183 +544,472 @@ bool Kernel::KeSetFilePosition(KFile& file, const size_t position) const
 	file.Position = position;
 	return true;
 }
-//TODO: fold into syscall function
-UserProcess* Kernel::KeCreateProcess(const std::string& commandLine)
-{
-	this->Printf("CreateProcess %s\n", commandLine);
 
-	//Parse command line
-	std::vector<std::string> args;
+void* KeLoadFile(const CString& path)
+{
+	KFile file = {};
+	Assert(KeCreateFile(file, path, KFileAccess::Read));
+
+	void* const address = KeVirtualAlloc(nullptr, file.Length);
+	Assert(KeReadFile(file, address, file.Length, nullptr));
+	return address;
+}
+
+//Should be deprecated for VirtualMap
+void* MapPages(const paddr_t address, const size_t pageCount, const MapType type)
+{
+	//TODO(tsharpe): this should be calling into VMM
+	uintptr_t virtualBase = 0;
+	switch (type)
 	{
-		size_t start = 0;
-		size_t i = 0;
-		while (commandLine[i] != '\0')
+		case MapType::Acpi:
+			virtualBase = KernelAcpiStart;
+			break;
+
+		case MapType::Driver:
+			virtualBase = KernelIoStart;
+			break;
+
+		default:
+			NotImplemented();
+			return nullptr;
+	}
+
+	PageTables tables;
+	tables.OpenCurrent();
+	Assert(tables.MapPages(virtualBase + address, address, pageCount, true));
+	return (void *)(virtualBase + address);
+}
+
+void* KeVirtualMap(const paddr_t* addresses, const size_t count)
+{
+	return KeVirtualMap(m_process, addresses, count);
+}
+
+void* KeVirtualMap(KProcess& process, const paddr_t* addresses, const size_t count)
+{
+	return VMM::VirtualMap(process, addresses, count);
+}
+
+KWaitResult KeWait(KSignalObject& obj, const milli_t timeout)
+{
+	return m_scheduler.ObjectWait(obj, timeout);
+}
+
+KPipe* KeCreatePipe(const size_t size)
+{
+	KPipe* created = m_sharedArena.Allocate<KPipe>(size);
+	created->Init();
+	return created;
+}
+
+void PrintStack()
+{
+	Context context = {};
+	ArchSaveContext(&context);
+	PrintStack(&context, m_process);
+}
+
+void PrintStack(const Context* context, const KProcess& process)
+{
+	//Convert to unwind context
+	//NOTE(tsharpe): Convert unwind code to work on X64_CONTEXT
+	CONTEXT ctx = {};
+	ctx.Rip = context->Rip;
+	ctx.Rsp = context->Rsp;
+	ctx.Rbp = context->Rbp;
+
+	Arena& arena = m_tempArena;
+	arena.Reset();
+	StaticMap<KModule*, PdbFile*, 32> map;
+
+	Printf("Call Stack\n");
+	StackWalk sw(&ctx);
+	while (sw.HasNext())
+	{
+		//Get module
+		KModule* module = process.GetModule(ctx.Rip);
+		Printf("name: %s\n", module->Name.c_str());
+		if (module)
 		{
-			if (commandLine[i] == ' ')
+			PdbFile* pdb = nullptr;
+			if (!map.Get(module, pdb))
 			{
-				args.push_back(std::string(&commandLine[start], (i - start)));
-				i++;
-				start = i;
+				//Get PDB name
+				const char* fullPath = WinPE::GetPdbName(module->ImageBase);
+				Assert(fullPath);
+				const char* pdbName = GetFileName(fullPath);
+				Assert(pdbName);
+
+				//Load PDB into memory
+				void* const loaded = KeLoadFile(CString(pdbName));
+
+				//Load PdbFile
+				pdb = arena.Allocate<PdbFile>();
+				pdb->Open(loaded, module->ImageBase, arena);
+				map.Add(module, pdb);
+			}
+
+			//Calculate RVA
+			const uint32_t rva = (uint32_t)(ctx.Rip - (uintptr_t)module->ImageBase);
+
+			//Lookup in PDB
+			PdbLookup lookup = {};
+			bool success = pdb->Resolve(rva, lookup);
+			if (success)
+			{
+				Printf("    %s (%d)\n", lookup.Function.c_str(), lookup.Line);
 			}
 			else
 			{
-				i++;
+				Printf("    <resolve failed>\n");
 			}
+			Printf("        IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", ctx.Rip, module->ImageBase, rva);
 		}
-		args.push_back(std::string(&commandLine[start], (i - start)));
-	}
-	const std::string path = args[0];
-
-	KFile file;
-	Assert(KeCreateFile(file, path, GenericAccess::Read));
-
-	size_t read;
-
-	//Dos header
-	IMAGE_DOS_HEADER dosHeader = {};
-	Assert(KeReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
-	Assert(read == sizeof(IMAGE_DOS_HEADER));
-	Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
-
-	//NT Header
-	IMAGE_NT_HEADERS64 peHeader = {};
-	Assert(KeSetFilePosition(file, dosHeader.e_lfanew));
-	Assert(KeReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
-	Assert(read == sizeof(IMAGE_NT_HEADERS64));
-
-	//Verify image
-	Assert(peHeader.Signature == IMAGE_NT_SIGNATURE);
-	Assert(peHeader.FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64);
-	Assert(peHeader.OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC);
-	
-	//Create new process to create new address space
-	const bool isConsole = peHeader.OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI;
-	UserProcess* process = new UserProcess(path, isConsole);
-
-	//Swap to new process address space to load file
-	//TODO: page into kernel, load, then remove and page into process so we dont switch address space
-	ArchSetPagingRoot(process->GetCR3());
-	this->Printf("NewCr3: 0x%016x\n", process->GetCR3());
-
-	this->Printf("Base: 0x%016x\n", peHeader.OptionalHeader.ImageBase);
-
-	//Allocate pages
-	void* address = VirtualAlloc(*process, (void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage);
-	Assert(address);
-
-	//Init in context of address space
-	process->Init(address, args);
-	process->AddModule(path.c_str(), address);
-
-	//Read headers
-	Assert(KeSetFilePosition(file, 0));
-	Assert(KeReadFile(file, address, peHeader.OptionalHeader.SizeOfHeaders, &read));
-	Assert(read == peHeader.OptionalHeader.SizeOfHeaders);
-
-	PIMAGE_NT_HEADERS64 pNtHeader = MakePointer<PIMAGE_NT_HEADERS64>(address, dosHeader.e_lfanew);
-
-	//Write sections into memory
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
-	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
-	{
-		uintptr_t destination = (uintptr_t)address + section[i].VirtualAddress;
-
-		//If physical size is non-zero, read data to allocated address
-		DWORD rawSize = section[i].SizeOfRawData;
-		if (rawSize != 0)
+		else
 		{
-			Assert(KeSetFilePosition(file, section[i].PointerToRawData));
-			Assert(KeReadFile(file, (void*)destination, rawSize, &read));
-			Assert(read == section[i].SizeOfRawData);
+			//No module info for the IP, print it and exit
+			Printf("    IP: 0x%016x\n", ctx.Rip);
+			break;
 		}
+		sw.Next((uintptr_t)module->ImageBase);
+	}
+}
+
+void KeRegisterInterrupt(const InterruptVector interrupt, const ActionContext& context)
+{
+	Assert(!m_irqs.Contains(interrupt));
+	m_irqs.Add(interrupt, context);
+}
+
+void* GetAcpiTable()
+{
+	return m_configTables.GetAcpiTable();
+}
+
+//This works for static code/data that is part of kernel image
+paddr_t ResolveImageVA(void* const address)
+{
+	const uint64_t rva = (uintptr_t)address - KernelBase;
+	Assert(rva < BootParams.KernelImageSize);
+	return m_params.KernelAddress + rva;
+}
+
+void Printf(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	
+	Printf(format, args);
+
+	va_end(args);
+}
+
+void Printf(const char* format, va_list args)
+{
+	char buffer[1024];
+	int retval = vsprintf(buffer, format, args);
+	buffer[retval] = '\0';
+	m_uart.Write(buffer);
+}
+
+void CPrintf(const bool enabled, const char* format, ...)
+{
+	if (!enabled)
+		return;
+
+	va_list args;
+	va_start(args, format);
+	Printf(format, args);
+	va_end(args);
+}
+
+void PrintBytes(const void* data, const size_t length)
+{
+	const uint32_t width = 16;
+	const uint8_t* pData = reinterpret_cast<const uint8_t*>(data);
+	
+	//Print headers
+	Printf("A: 0x%016x S: 0x%016x\n", data, length);
+	Printf("---- ");
+	for (size_t i = 0; i < width; i++)
+	{
+		Printf("%02x ", (unsigned char)i);
+	}
+	Printf("\n");
+
+	char line[width] = { 0 };
+	for (size_t i = 0; i < length; i++)
+	{
+		if (i != 0 && i % width == 0)
+		{
+			//Print characters
+			Printf(" | ");
+			for (const auto c : line)
+			{
+				Printf("%c", isprint(c) ? c : '.');
+			}
+
+			memset(line, 0, width);
+			Printf("\n");
+		}
+
+		if (i % width == 0)
+			Printf("%02x - ", (i / width) << 4);
+
+		Printf("%02x ", (unsigned char)pData[i]);
+		line[i % width] = (unsigned char)pData[i];
 	}
 
-	//Load KernelAPI
-	Handle api = Loader::LoadLibrary(*process, "mosrt.dll");
-	this->Printf("mosrt loaded at 0x%016x\n", api);
+	//Print the rest of the line
+	if ((length % width) != 0)
+		for (size_t i = 0; i < width - (length % width); i++)
+		{
+			Printf("   ");
+		}
 
-	//Save init pointers in library
-	process->InitProcess = PortableExecutable::GetProcAddress(api, "InitProcess");
-	process->InitThread = PortableExecutable::GetProcAddress(api, "InitThread");
-	this->Printf("Proc: 0x%016x Thread: 0x%016x\n", process->InitProcess, process->InitThread);
+	//Print characters
+	Printf(" | ");
+	for (size_t i = 0; i < (length % width); i++)
+	{
+		char c = line[i];
+		Printf("%c", isprint(c) ? c : '.');
+	}
 
-	//Patch imports of process for just mosrt
-	Loader::KernelExports(address, api, "mosrt.dll");
-
-	//TODO(tsharpe): These processes don't have STD handles
-
-	//Create thread TODO: reserve vs commit stack size
-	CreateThread(*process, pNtHeader->OptionalHeader.SizeOfStackReserve, nullptr, nullptr, process->InitProcess);
-
-	return process;
+	Printf("\n");
 }
 
-void* Kernel::VirtualAlloc(UserProcess& process, const void* address, const size_t size)
+void Bugcheck(const char* file, const char* line, const char* format, ...)
 {
-	kernel.Printf("VirtualAlloc: 0x%016x, Size: 0x%x\n", address, size);
-	void* allocated = m_virtualMemory.Allocate(address, SizeToPages(size), process.GetAddressSpace());
-	Assert(allocated);
-	return allocated;
+	va_list args;
+	va_start(args, format);
+	Bugcheck(file, line, format, args);
+	va_end(args);
 }
 
-void Kernel::KePostMessage(Message& msg)
+void Bugcheck(const char* file, const char* line, const char* format, va_list args)
+{
+	static bool inBugcheck = false;
+	KePauseSystem();
+
+	if (inBugcheck)
+	{
+		//Bugcheck during bugcheck, print what's available and bail
+		Printf("Double bug check!\n");
+		Printf("\n%s\n%s\n", file, line);
+		Printf(format, args);
+		Printf("\n");
+
+		while (true)
+			ArchWait();
+	}
+	inBugcheck = true;
+	
+	Printf("Bugcheck\r\n");
+	Printf("    %s\n", file);
+	Printf("    %s\n", line);
+	
+	Printf(format, args);
+	Printf("\n");
+
+	Context context = {};
+	ArchSaveContext(&context);
+	PrintStack(&context, m_process);
+
+	while(true);
+}
+
+UWindow* CreateWindow(UThread& owner)
+{
+	return m_windows.CreateWindow(owner);
+}
+
+void Delete(UWindow& window)
+{
+	Assert(m_windows.Delete(&window));
+}
+
+//TODO(tsharpe): Should efi display be in the device tree?
+Rectangle GetScreenRect2()
+{
+	return {0, 0, m_display.Width, m_display.Height};
+}
+
+KDevice* KeGetDevice(const CString& path)
+{
+	return m_deviceTree.GetDevice(path);
+}
+
+void KePostMessage(Message& msg)
 {
 	m_windows.PostMessage(msg);
 }
 
-bool Kernel::IsValidUserPointer(const void* p)
+/*
+ * Globals with C linkage.
+ */
+extern "C"
 {
-	if (!p)
-		return false;
-	
-	//Make sure pointer is in User's address half
-	if ((uintptr_t)p > UserStop)
-		return false;
-
-	//Make sure pointer is User's address space
-	UserProcess& process = m_scheduler.GetCurrentProcess();
-	return process.GetAddressSpace().IsValidPointer(p);
-}
-
-bool Kernel::IsValidKernelPointer(const void* p)
-{
-	if (!p)
-		return false;
-	
-	//Make sure pointer is in Kernel's space
-	if ((uintptr_t)p < KernelStart)
-		return false;
-
-	std::vector<VirtualAddressSpace*> addressSpaces = {
-		&m_librarySpace,
-		&m_pdbSpace,
-		&m_stackSpace,
-		&m_runtimeSpace,
-		&m_windowsSpace
-	};
-
-	//Check every address space
-	for (auto& space : addressSpaces)
+	void KeInterrupt(const InterruptVector vector, InterruptFrame& frame)
 	{
-		if (space->IsValidPointer(p))
-			return true;
+		if (vector == InterruptVector::DoubleFault)
+		{
+			Printf("DOUBLE FAULT RIP=0x%016x RSP=0x%016x\n", frame.RIP, frame.RSP);
+			KePauseSystem();
+			__halt();
+		}
+
+		if (m_irqs.Contains(vector))
+		{
+			const ActionContext ctx = m_irqs[vector];
+			ctx.Invoke();
+			return;
+		}
+
+		//Check if interrupt is in user code or kernel code
+		KThread& current = m_scheduler.GetCurrentThread();
+		if (current.UserThread && current.UserThread->Process.IsValidPointer((void*)frame.RIP))
+		{
+			UProcess& proc = current.UserThread->Process;
+			UObject* obj = proc.GetObject((handle_t)Handles::StdOut);
+			if (obj && obj->Type == UObjectType::Pipe)
+			{
+				KPipe& pipe = obj->Pipe->KPipe;
+
+				//Write exception
+				switch (vector)
+				{
+					case InterruptVector::DivideError:
+						pipe.Print("Exception: Divide by zero\n");
+						break;
+
+					case InterruptVector::Breakpoint:
+						pipe.Print("Exception: Breakpoint\n");
+						break;
+
+					case InterruptVector::PageFault:
+						const uint64_t addr = __readcr2();
+						pipe.Print("Exception: Invalid virtual address: 0x%016x. %s\n", addr, addr == 0 ? "Null pointer" : "");
+						break;
+				}
+
+				//Convert context
+				//TODO(tsharpe): Remove this
+				CONTEXT ctx = {};
+				ctx.Rip = frame.RIP;
+				ctx.Rsp = frame.RSP;
+				ctx.Rbp = frame.RBP;
+
+				//Reset temp arena
+				m_tempArena.Reset();
+
+				//Print stack
+				StaticMap<KModule*, PdbFile*, 32> map;
+				StackWalk sw(&ctx);
+				while (sw.HasNext())
+				{
+					//Get module
+					KModule* module = proc.GetModule(ctx.Rip);
+					if (module)
+					{
+						PdbFile* pdb = nullptr;
+						if (!map.Get(module, pdb))
+						{
+							//Get PDB name
+							const char* fullPath = WinPE::GetPdbName(module->ImageBase);
+							Assert(fullPath);
+							const char* pdbName = GetFileName(fullPath);
+							Assert(pdbName);
+
+							//Load PDB into memory
+							void* const loaded = KeLoadFile(CString(pdbName));
+
+							//Load PdbFile
+							pdb = m_tempArena.Allocate<PdbFile>();
+							pdb->Open(loaded, module->ImageBase, m_tempArena);
+							map.Add(module, pdb);
+						}
+
+						//Calculate RVA
+						const uint32_t rva = (uint32_t)(ctx.Rip - (uintptr_t)module->ImageBase);
+
+						//Lookup in PDB
+						PdbLookup lookup = {};
+						bool success = pdb->Resolve(rva, lookup);
+						if (success)
+						{
+							pipe.Print("    %s (%d)\n", lookup.Function.c_str(), lookup.Line);
+						}
+						else
+						{
+							pipe.Print("    <resolve failed>\n");
+						}
+						pipe.Print("        IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", ctx.Rip, module->ImageBase, rva);
+					}
+					else
+					{
+						//No module info for the IP, print it and exit
+						pipe.Print("    IP: 0x%016x\n", ctx.Rip);
+						break;
+					}
+					sw.Next((uintptr_t)module->ImageBase);
+				}
+			}
+
+			//Kill process
+			KeTerminateProcess(proc, -1);
+			Unreachable();
+		}
+		else
+		{
+			//Show context
+			Printf("Vector: %d\n", vector);
+			Printf("ISR: 0x%x, Code: %x\n", vector, frame.ErrorCode);
+			Printf("    RIP: 0x%016x\n", frame.RIP);
+			Printf("    RBP: 0x%016x\n", frame.RBP);
+			Printf("    RSP: 0x%016x\n", frame.RSP);
+			Printf("    RAX: 0x%016x\n", frame.RAX);
+			Printf("    RBX: 0x%016x\n", frame.RBX);
+			Printf("    RCX: 0x%016x\n", frame.RCX);
+			Printf("    RDX: 0x%016x\n", frame.RDX);
+			Printf("    CS: 0x%x, SS: 0x%x\n", frame.CS, frame.SS);
+
+			switch (vector)
+			{
+			case InterruptVector::PageFault:
+				Printf("    CR2: 0x%16x\n", __readcr2());
+				if (__readcr2() == 0)
+					Printf("        Null pointer\n");
+			}
+
+			//Attempt to pass to debugger
+			if (m_debugger.Enabled())
+			{
+				m_debugger.DebuggerEvent(vector, frame);
+				return;
+			}
+			
+			//Build context
+			Context context = {};
+			context.Rip = frame.RIP;
+			context.Rsp = frame.RSP;
+			context.Rbp = frame.RBP;
+
+			//Interrupt originated in kernel
+			PrintStack(&context, m_process);
+			Fatal("Unhandled exception");
+		}
 	}
 
-	return false;
-}
+	int KeMain()
+	{
+		Initialize();
 
-void Kernel::KePauseSystem()
-{
-	ArchDisableInterrupts();
-	m_timer.Disable();
+		//TODO: start init process
 
-	m_scheduler.Enabled = false;
-}
+		KeCreateProcess("init.exe from_kernel");
+		KeExitThread();
 
-void Kernel::KeResumeSystem()
-{
-	m_scheduler.Enabled = true;
-	ArchEnableInterrupts();
-	//TODO(tsharpe): Enable timer
-	//m_timer.Enable();
+		return 0;
+	}
 }

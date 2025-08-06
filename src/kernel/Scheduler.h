@@ -1,46 +1,43 @@
 #pragma once
 
-#include "Kernel/MetalOS.Kernel.h"
-#include "HyperV.h"
-#include "Kernel/Objects/KSemaphore.h"
-#include "KThread.h"
-#include "Kernel/Objects/UserPipe.h"
-#include "Kernel/Objects/KSignalObject.h"
-#include "Kernel/Objects/KPredicate.h"
+#include "new.h"
+#include "kernel/KThread.h"
+#include "Lib/StaticVector.h"
+#include "Lib/List.h"
 
-#include <map>
-#include <vector>
+typedef nano100_t (*ReadTsc)();
 
+//TODO(tsharpe): Scheduler should be a namespace not a class!
+class KProcess;
 class Scheduler
 {
 public:
-	static KThread* GetThread();
-	Scheduler();
+	static KThread& GetThread();
+	static UThread& GetUThread();
+	static UProcess& GetUProcess();
 
-	void Init();
+	Scheduler(const ReadTsc readTsc);
+
+	void Initialize();
+	KThread* CreateReady(const KThreadStart start, void* const arg, const CString& name);
 	void Schedule();
 
-	//Currently running threads
+	//Currently running thread
 	KThread& GetCurrentThread();
-	UserThread& GetCurrentUserThread();
-	UserProcess& GetCurrentProcess();
 
-	//General thread ops
-	void AddReady(std::shared_ptr<KThread>& thread);
 	void Sleep(const nano_t value);
-	void KillThread(KThread& thread);
-	void KillCurrentThread();
-	void KillCurrentProcess();
+	KWaitResult ObjectWait(KSignalObject& object, const milli_t timeout = TimeoutMax);
 
-	//Waits
-	//NOTE(tsharpe): Signals were removed in favor of a simplied scheduler. This may or may not have been smart.
-	WaitStatus ObjectWait(KSignalObject& object, const milli_t timeout = std::numeric_limits<milli_t>::max());
+	void KillThread(KThread& thread);
+	void KillProcess(UProcess& process);
 
 	void Display() const;
 
 	bool Enabled;
 
 private:
+	static constexpr size_t MaxKThreads = 32;
+
 	struct CpuContext
 	{
 		CpuContext() :
@@ -51,16 +48,17 @@ private:
 		const CpuContext& SelfPointer;
 		KThread* Thread;
 	};
-
-	//Reference to clock
-	HyperV m_hyperv;
+	static_assert(offsetof(CpuContext, SelfPointer) == 0, "x64_SYSTEMCALL asm invalid");
+	static_assert(offsetof(CpuContext, Thread) == 8, "x64_SYSTEMCALL asm invalid");
 
 	//Cpu context
 	CpuContext m_cpu;
 
+	//Platform
+	ReadTsc m_readTsc;
+
 	//Threads and current thread
 	size_t m_threadIndex;
-	std::vector<std::shared_ptr<KThread>> m_threads;
-
-	::NO_COPY_OR_ASSIGN(Scheduler);
+	StaticVector<KThread*, MaxKThreads> m_threads;
+	ObjectPool<KThread, MaxKThreads> m_threadPool;
 };

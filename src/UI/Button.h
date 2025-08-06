@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Graphics/Types.h>
-#include <UI/Control.h>
+#include "Graphics/Types.h"
+#include "Graphics/Draw2D.h"
+#include "UI/Control.h"
 
 namespace UI
 {
@@ -13,7 +14,7 @@ namespace UI
 	class Button : public Control
 	{
 	public:
-		Button(const std::string& text, const Rectangle& bounds) :
+		Button(const CString& text, const Rectangle& bounds) :
 			Control(),
 			Bounds(bounds),
 			Text(text),
@@ -24,12 +25,12 @@ namespace UI
 
 		virtual void Draw(FrameBuffer& frame) override
 		{
-			frame.DrawBorder(Foreground, Bounds, 3);
-			frame.DrawText({ Bounds.X + 5, Bounds.Y + 5 }, Text.c_str(), Foreground);
+			Draw2D::DrawBorder(frame, Foreground, Bounds, 3);
+			Draw2D::DrawText(frame, { Bounds.X + 5, Bounds.Y + 5 }, Text, Foreground);
 		}
 
 		Rectangle Bounds;
-		std::string Text;
+		StaticString<64> Text;
 		ButtonClick Click;
 	};
 }

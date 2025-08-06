@@ -1,10 +1,9 @@
 #pragma once
 
-#include <UI/Control.h>
-#include <Graphics/Types.h>
-#include <Graphics/Framebuffer.h>
-
-#include <string>
+#include "Lib/String.h"
+#include "UI/Control.h"
+#include "Graphics/Types.h"
+#include "Graphics/Draw2D.h"
 
 namespace UI
 {
@@ -13,7 +12,7 @@ namespace UI
 	class Label : public Control
 	{
 	public:
-		Label(const std::string& text, const Rectangle& bounds) :
+		Label(const CString& text, const Rectangle& bounds) :
 			Control(),
 			Bounds(bounds),
 			Text(text)
@@ -23,11 +22,11 @@ namespace UI
 
 		virtual void Draw(FrameBuffer& frame) override
 		{
-			frame.DrawRectangle(Background, Bounds);
-			frame.DrawText({ Bounds.X + 5, Bounds.Y + 5 }, Text.c_str(), Foreground);
+			Draw2D::DrawRectangle(frame, Background, Bounds);
+			Draw2D::DrawText(frame, { Bounds.X + 5, Bounds.Y + 5 }, Text, Foreground);
 		}
 
 		Rectangle Bounds;
-		std::string Text;
+		StaticString<512> Text;
 	};
 }

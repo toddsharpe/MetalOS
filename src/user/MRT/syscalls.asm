@@ -1,6 +1,6 @@
 .code
 
-x64SysCall MACRO name, id
+x64Syscall MACRO name, id
 &name& PROC
 	mov r10, rcx
 	mov rax, id
@@ -9,52 +9,65 @@ x64SysCall MACRO name, id
 &name& ENDP
 ENDM
 
-; This needs to be kept consistent with SystemCall in MetalOS.Internal.h. Figure out how
-x64SysCall <GetTickCount>, 100h
-x64SysCall <GetSystemTime>, 102h
+;
+; Keep in sync with MetalOS.Syscalls.h
+;
 
-x64SysCall <GetCurrentThread>, 200h
-x64SysCall <CreateProcess>, 201h
-x64SysCall <CreateThread>, 202h
-x64SysCall <GetThreadId>, 203h
-x64SysCall <Sleep>, 204h
-x64SysCall <SwitchToThread>, 205h
-x64SysCall <SuspendThread>, 206h
-x64SysCall <ResumeThread>, 207h
-x64SysCall <ExitProcess>, 208h
-x64SysCall <ExitThread>, 209h
+; 0x100: System
+x64Syscall <GetTickCount>, 100h
+x64Syscall <GetSystemTime>, 101h
 
-x64SysCall <AllocWindow>, 300h
-x64SysCall <PaintWindow>, 301h
-x64SysCall <MoveWindow>, 302h
-x64SysCall <GetWindowRect>, 303h
-x64SysCall <GetMessage>, 304h
-x64SysCall <PeekMessage>, 305h
-x64SysCall <GetScreenRect>, 306h
+; 0x200: Threads/Processes
+x64Syscall <GetCurrentThread>, 200h
+x64Syscall <CreateProcess>, 201h
+x64Syscall <CreateThread>, 202h
+x64Syscall <GetThreadId>, 203h
+x64Syscall <Sleep>, 204h
+x64Syscall <SwitchToThread>, 205h
+x64Syscall <SuspendThread>, 206h
+x64Syscall <ResumeThread>, 207h
+x64Syscall <TerminateProcess>, 208h
+x64Syscall <ExitProcess>, 209h
+x64Syscall <TerminateThread>, 20Ah
+x64Syscall <ExitThread>, 20Bh
 
-x64SysCall <CreateFile>, 400h
-x64SysCall <CreatePipe>, 401h
-x64SysCall <ReadFile>, 402h
-x64SysCall <WriteFile>, 403h
-x64SysCall <SetFilePointer>, 404h
-x64SysCall <CloseFile>, 405h
-x64SysCall <MoveFile>, 406h
-x64SysCall <DeleteFile>, 407h
-x64SysCall <CreateDirectory>, 408h
-x64SysCall <WaitForSingleObject>, 409h
-x64SysCall <GetPipeInfo>, 40Ah
-x64SysCall <CloseHandle>, 40Bh
-x64SysCall <CreateEvent>, 40Ch
-x64SysCall <ResetEvent>, 40Dh
-x64SysCall <SetEvent>, 40Eh
+; 0x300: Windowing
+x64Syscall <AllocWindow>, 300h
+x64Syscall <PaintWindow>, 301h
+x64Syscall <MoveWindow>, 302h
+x64Syscall <GetWindowRect>, 303h
+x64Syscall <GetMessage>, 304h
+x64Syscall <PeekMessage>, 305h
+x64Syscall <GetScreenRect>, 306h
 
-x64SysCall <VirtualAlloc>, 500h
-x64SysCall <CreateRingBuffer>, 501h
-x64SysCall <CreateSharedMemory>, 502h
-x64SysCall <MapObject>, 503h
-x64SysCall <MapSharedObject>, 504h
+; 0x400: Files/pipes
+x64Syscall <CreateFile>, 400h
+x64Syscall <ReadFile>, 401h
+x64Syscall <WriteFile>, 402h
+x64Syscall <SetFilePointer>, 403h
+x64Syscall <MoveFile>, 404h
+x64Syscall <DeleteFile>, 405h
+x64Syscall <CreateDirectory>, 406h
+x64Syscall <CreatePipe>, 407h
+x64Syscall <PeekNamedPipe>, 408h
+x64Syscall <CloseHandle>, 409h
 
-x64SysCall <DebugPrint>, 600h
-x64SysCall <DebugPrintBytes>, 601h
+; 0x500: Syncronization
+x64Syscall <WaitForSingleObject>, 500h
+x64Syscall <CreateEvent>, 501h
+x64Syscall <SetEvent>, 502h
+x64Syscall <ResetEvent>, 503h
+
+; 0x600: Memory
+x64Syscall <VirtualAlloc>, 600h
+;x64Syscall <CreateRingBuffer>, 601h
+;x64Syscall <CreateSharedMemory>, 602h
+;x64Syscall <MapObject>, 603h
+;x64Syscall <MapSharedObject>, 604h
+
+; 0x700: Debug
+x64Syscall <DebugPrint>, 700h
+x64Syscall <DebugPrintBytes>, 701h
+x64Syscall <DebugPrintStack>, 702h
 
 end

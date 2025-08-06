@@ -1,5 +1,5 @@
-#include "msvc.h"
 #include "FireScreen.h"
+#include "Graphics/Draw2D.h"
 
 #include "Assert.h"
 #include <stdlib.h>
@@ -30,10 +30,10 @@ void FireScreen::Update()
 {
 	for (size_t x = 0; x < m_width; x++)
 		for (size_t y = 1; y < m_height; y++)
-			SpreadFire({ x, y });
+			SpreadFire({ static_cast<int32_t>(x), static_cast<int32_t>(y) });
 }
 
-void FireScreen::SpreadFire(Point2D point)
+void FireScreen::SpreadFire(const Point2D point)
 {
 	size_t index = m_indexes[point.Y * m_width + point.X];
 	if (index == 0)
@@ -54,7 +54,7 @@ void FireScreen::SpreadFire(Point2D point)
 			dstX++;
 		}
 
-		const Point2D dstPoint = { dstX, point.Y - 1 };
+		const Point2D dstPoint = { static_cast<int32_t>(dstX), point.Y - 1 };
 		m_indexes[dstPoint.Y * m_width + dstPoint.X] = index - (randIndex & 1);
 	}
 }
@@ -68,6 +68,6 @@ void FireScreen::Draw(FrameBuffer& frameBuffer)
 			const size_t index = m_indexes[y * m_width + x];
 			const Color color = FireColors[index];
 
-			frameBuffer.DrawRectangle(color, { x * PixelSize, y * PixelSize, PixelSize, PixelSize });
+			Draw2D::DrawRectangle(frameBuffer, color, { static_cast<int32_t>(x * PixelSize), static_cast<int32_t>(y * PixelSize), PixelSize, PixelSize });
 		}
 }

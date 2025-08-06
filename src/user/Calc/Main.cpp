@@ -1,8 +1,12 @@
-#include <user/MetalOS.h>
-#include <user/MetalOS.UI.h>
+#include "user/MetalOS.h"
+#include "user/MetalOS.UI.h"
+#include "user/GUI.h"
 
-#include <string>
-#include <vector>
+int __cdecl _purecall(void)
+{
+	Assert(false);
+	return 0;
+}
 
 using namespace Graphics;
 using namespace UI;
@@ -43,7 +47,7 @@ void B7Pressed(Button& button)
 int main(int argc, char** argv)
 {
 	ProcessInfo procInfo;
-	GetProcessInfo(procInfo);
+	GetProcessInfo(&procInfo);
 
 	DebugPrint("Hi From calc!\n");
 	
@@ -57,38 +61,40 @@ int main(int argc, char** argv)
 	gui.Initialize();
 
 	Button b7("7", { 5, 25, 20, 20 });
-	gui.Children.push_back(&b7);
+	gui.Children.Add(&b7);
 	b7.Click = &B7Pressed;
 
 	Button b8("8", { 30, 25, 20, 20 });
-	gui.Children.push_back(&b8);
+	gui.Children.Add(&b8);
 
 	Button b9("9", { 55, 25, 20, 20 });
-	gui.Children.push_back(&b9);
+	gui.Children.Add(&b9);
 
 	Button b4("4", { 5, 50, 20, 20 });
-	gui.Children.push_back(&b4);
+	gui.Children.Add(&b4);
 
 	Button b5("5", { 30, 50, 20, 20 });
-	gui.Children.push_back(&b5);
+	gui.Children.Add(&b5);
 
 	Button b6("6", { 55, 50, 20, 20 });
-	gui.Children.push_back(&b6);
+	gui.Children.Add(&b6);
 
 	Button b1("1", { 5, 75, 20, 20 });
-	gui.Children.push_back(&b1);
+	gui.Children.Add(&b1);
 
 	Button b2("2", { 30, 75, 20, 20 });
-	gui.Children.push_back(&b2);
+	gui.Children.Add(&b2);
 
 	Button b3("3", { 55, 75, 20, 20 });
-	gui.Children.push_back(&b3);
+	gui.Children.Add(&b3);
 
 	Label l1("HI!", {5, 175, 20, 20});
-	gui.Children.push_back(&l1);
+	gui.Children.Add(&l1);
 
 #if TEST_MODE
 	CreateThread(0, MoveThread, (void*)&gui);
 #endif
 	gui.Run();
+
+	return 0;
 }

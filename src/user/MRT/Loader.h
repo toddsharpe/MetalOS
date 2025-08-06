@@ -1,10 +1,17 @@
 #pragma once
 
-#include <MetalOS.h>
+#include "windows/types.h"
+#include "windows/winnt.h"
+#include "user/MetalOS.Types.h"
 
-class Loader
+namespace Loader
 {
-public:
-	static Handle LoadLibrary(const char* lpLibFileName);
-	static void CrtInit(Handle moduleBase);
-};
+	typedef void (*CrtInitializer)();
+	void CrtInit(const void* const imageBase);
+}
+
+extern "C"
+{
+	HModule LoadLibrary(char* lpLibFileName);
+	uintptr_t GetProcAddress(HModule hModule, const char* lpProcName);
+}

@@ -1,8 +1,15 @@
-#include "user/MetalOS.Types.h"
-#include "MetalOS.h"
-#include "user/Assert.h"
+#include "MRT.h"
 
-size_t DllMain(Handle handle, DllEntryReason reason)
+//Core crt
+#include "core_crt/core_crt.c"
+
+#include "user/MRT/Init.cpp"
+#include "user/MRT/Debug.cpp"
+#include "user/MRT/Loader.cpp"
+#include "user/MRT/Runtime.cpp"
+#include "user/MRT/Errno.cpp"
+
+size_t DllMain(HModule handle)
 {
 	//Do nothing
 	return true;

@@ -2,8 +2,57 @@
 
 //Include UI libraries
 #include "UI/Window.h"
-#include <UI/Button.h>
+#include "UI/Button.h"
 #include "UI/Label.h"
 
-//Include Userspace libraries
-#include <user/GUI.h>
+typedef uint16_t VirtualKey;
+
+enum class MessageType
+{
+	KeyEvent,
+	MouseEvent,
+	PaintEvent,
+};
+
+struct MessageHeader
+{
+	MessageType MessageType;
+};
+
+struct KeyEvent
+{
+	VirtualKey Key;
+	struct
+	{
+		uint16_t Pressed : 1;
+	} Flags;
+};
+
+struct MouseButtonState
+{
+	uint8_t LeftPressed : 1;
+	uint8_t RightPressed : 1;
+};
+
+struct MouseEvent
+{
+	MouseButtonState Buttons;
+	uint16_t XPosition;
+	uint16_t YPosition;
+};
+
+struct PaintEvent
+{
+	Graphics::Rectangle Region;
+};
+
+struct Message
+{
+	MessageHeader Header;
+	union
+	{
+		KeyEvent KeyEvent;
+		MouseEvent MouseEvent;
+		PaintEvent PaintEvent;
+	};
+};

@@ -1,65 +1,59 @@
 #pragma once
 
-#include "UserThread.h"
-#include "EfiDisplay.h"
-#include <Graphics/Types.h>
-#include <Graphics/DynamicFrameBuffer.h>
-#include <string>
-#include <memory>
+#include "Lib/ObjectPool.h"
+#include "Lib/StaticStack.h"
+#include "Graphics/Types.h"
+#include "user/MetalOS.Types.h"
+#include "kernel/UWindow.h"
+#include "Lib/StaticQueue.h"
+#include "kernel/Objects/KSpinLock.h"
 
 //Simple windowing system. Windows are drawn in order, top window is back of m_windows.
-//NOTE(tsharpe): Handles are just kernel pointers. This should be fixed.
-//NOTE(tsharpe): Enforcing one thread per window would make handle tracking easier
+class UThread;
 class WindowingSystem
 {
 private:
-	static size_t ThreadLoop(void* arg);
+	static uint32_t ThreadLoop(void* arg);
 
 public:
-	WindowingSystem(EfiDisplay& display);
+	WindowingSystem(Graphics::FrameBuffer& display);
+
 	void Initialize();
+	UWindow* CreateWindow(UThread& owner);
+	bool Delete(UWindow* window);
 
-	//Systemcalls
-	HWindow AllocWindow(UserThread& thread, const Graphics::Rectangle& bounds);
-	bool PaintWindow(const HWindow handle, const ReadOnlyBuffer& buffer);
-	bool MoveWindow(const HWindow handle, const Graphics::Rectangle& bounds);
-	bool GetWindowRect(const HWindow handle, Graphics::Rectangle& bounds);
-
+	//Messages
 	void PostMessage(Message& message);
 
-	bool ThreadHasWindow(const UserThread& thread) const;
-	void FreeWindow(const UserThread& thread);
-	void FreeWindows(const UserProcess& proc);
+	bool Enabled;
 
 private:
-	struct Window
-	{
-		Window(UserThread& thread) :
-			Thread(thread),
-			Bounds(),
-			FrameBuffer()
-		{};
+	uint32_t ThreadLoop();
 
-		UserThread& Thread;
-		Graphics::Rectangle Bounds;
-		Buffer FrameBuffer;
-	};
+	void ProcessMessages();
+	UWindow* GetWindow(const Graphics::Point2D& point) const;
 
-	size_t ThreadLoop();
+	//Display/back buffer
+	Graphics::FrameBuffer& m_display;
+	Graphics::FrameBuffer m_backBuffer;
 
-	std::shared_ptr<Window> GetWindow(const Graphics::Point2D& point) const;
-	bool HandleValid(const HWindow handle) const;
+	//Window pool/list
+	ListHead2<UWindow> m_windows;
+	ObjectPool<UWindow, 16> m_windowPool;
 
-	EfiDisplay& m_display;
-	DynamicFrameBuffer m_frameBuffer;
-	std::unique_ptr<std::list<std::shared_ptr<Window>>> m_windows;
+	//Message queue
+	KSpinLock m_messagesLock;
+	StaticQueue<Message, 16> m_messages;
 
 	//Mouse
 	Graphics::Point2D m_mousePos;
 	MouseButtonState m_prevMouseButtons;
 
 	//Drag
-	std::shared_ptr<Window> m_dragWindow;
-	std::shared_ptr<Window> m_focusWindow;
+	UWindow* m_dragWindow;
+	UWindow* m_focusWindow;
+
+	uint32_t m_postCount;
+	uint32_t m_dropCount;
 };
 

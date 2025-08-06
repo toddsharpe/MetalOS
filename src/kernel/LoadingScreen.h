@@ -1,18 +1,21 @@
 #pragma once
 
-#include "UI/Window.h"
-#include "UI/Label.h"
-#include "StringPrinter.h"
+#include "core_crt/stdarg.h"
+#include "core_crt/stdio.h"
+#include "Lib/System.h"
+#include "Lib/String.h"
+#include "Graphics/Types.h"
+#include "Graphics/Draw2D.h"
 
-//This method is called early on during boot (before a proper heap) and therefore
-//writes to the screen directly (versus buffering in UI constructs like window or control).
-class LoadingScreen : public StringPrinter
+class LoadingScreen
 {
 public:
 	LoadingScreen(Graphics::FrameBuffer& frameBuffer);
 
 	void Initialize();
-	virtual void Write(const std::string& string) override;
+
+	void Printf(const char* format, ...);
+	void Write(const CString& string);
 
 private:
 	static constexpr Graphics::Color Foreground = Graphics::Colors::White;

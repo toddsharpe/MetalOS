@@ -24,14 +24,13 @@ jobs:
       with:
         submodules: true
 
-    # Runs a single command using the runners shell
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.3
-      with:
-            vs-prerelease: true
-      env:
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+    # This action sets up cl.exe and MSVC paths automatically
+    - name: Set up MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Create output directory
+      run: mkdir build
 
     # Runs a set of commands using the runners shell
-    - name: MSBuild
-      run: msbuild src/MetalOS.sln /p:Configuration=Debug /p:Platform=x64
+    - name: Build
+      run: cd src; .\build.bat

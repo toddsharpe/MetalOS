@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-
 #include <Graphics/Framebuffer.h>
 
 // Constant: font8x8_basic

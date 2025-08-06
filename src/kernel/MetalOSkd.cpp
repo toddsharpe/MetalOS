@@ -1,10 +1,9 @@
 #include "Kernel.h"
 #include "Assert.h"
 
-#include <sal.h>
-#include <cstdint>
-#include <intrin.h>
-#include <ntstatus.h>
+#include "core_crt/stdint.h"
+#include "x64/intrin.h"
+#include <reactos/ntstatus.h>
 #include <windows/types.h>
 #include <reactos/ioaccess.h>
 #include <windows/winnt.h>
@@ -13,8 +12,6 @@
 #include <reactos/windbgkd.h>
 #include <coreclr/list.h>
 #include "kddll.h"
-#include "MetalOS.Arch.h"
-#include "MetalOS.Internal.h"
 #include <reactos/amd64/ke.h>
 #include "Kernel/Kd64/kd64.h"
 #include "Kernel/MetalOSkd.h"
@@ -53,19 +50,19 @@ void KeBugCheck()
 
 ULONG64 KeGetCurrentThread()
 {
-	return (ULONG64)Scheduler::GetThread();
+	return (ULONG64)&Scheduler::GetThread();
 }
 
 bool IsValidKernelPointer(const void* address)
 {
-	return kernel.IsValidKernelPointer(address);
+	return KeIsValid(address);
 }
 
 BOOLEAN
 NTAPI
 KeFreezeExecution(IN PKTRAP_FRAME TrapFrame, IN PKEXCEPTION_FRAME ExceptionFrame)
 {
-	kernel.KePauseSystem();
+	KePauseSystem();
 	return TRUE;
 }
 
@@ -73,7 +70,7 @@ VOID
 NTAPI
 KeThawExecution(IN BOOLEAN Enable)
 {
-	kernel.KeResumeSystem();
+	KeResumeSystem();
 }
 
 struct _KPRCB* KeGetCurrentPrcb(VOID)
@@ -85,6 +82,6 @@ void KePrintf(const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	kernel.Printf(format, args);
+	Printf(format, args);
 	va_end(args);
 }

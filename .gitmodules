@@ -1,7 +1,6 @@
-[submodule "acpica"]
-	path = external/acpica
-	url = https://github.com/toddsharpe/acpica.git
-
-[submodule "external/doom"]
-	path = external/doom
-	url = https://github.com/toddsharpe/MetalOS.Apps.Doom.git
+[submodule "src/External/uACPI"]
+	path = src/External/uACPI
+	url = https://github.com/toddsharpe/uACPI.git
+[submodule "src/External/MetalOS.Doom"]
+	path = src/External/MetalOS.Doom
+	url = https://github.com/toddsharpe/MetalOS.Doom.git

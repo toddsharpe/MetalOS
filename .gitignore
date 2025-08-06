@@ -5,6 +5,10 @@
 # VS Code
 .vscode
 
+# Jetbrains Rider
+.idea
+
 # build folders
 obj/
 build/
+build_tests/

@@ -1,6 +1,7 @@
 #pragma once
-#include "MsfStream.h"
 
+#include "Lib/StaticMap.h"
+#include "MsfStream.h"
 
 //https://llvm.org/docs/PDB/HashTable.html
 //TODO: template for key/value length
@@ -8,29 +9,41 @@
 class PdbHashTable
 {
 public:
-	PdbHashTable();
-	void Load(MsfStream& stream);
-	bool GetValue(const uint32_t key, uint32_t& value) const;
+	PdbHashTable() :
+		m_size(),
+		m_capacity(),
+		m_vectorLength(),
+		m_items()
+	{
+
+	}
+
+	void Load(MsfStream& stream)
+	{
+		m_size = stream.Read<uint32_t>();
+		m_capacity = stream.Read<uint32_t>();
+		m_vectorLength = stream.Read<uint32_t>();
+
+		//Skip both Present and Deleted bitvectors
+		stream.Skip<uint32_t>(m_vectorLength * 2);
+
+		for (size_t i = 0; i < m_size; i++)
+		{
+			const uint32_t key = stream.Read<uint32_t>();
+			const uint32_t value = stream.Read<uint32_t>();
+			m_items.Add(key, value );
+		}
+		stream.SkipAlign<uint16_t>();
+	}
+
+	bool GetValue(const uint32_t key, uint32_t& value) const
+	{
+		return m_items.Get(key, value);
+	}
 
 private:
-	/*
-	struct Table
-	{
-		uint32_t Size;
-		uint32_t Capacity;
-		uint32_t BitVectorSize;
-		uint32_t Present[BitVectorSize];
-		uint32_t Deleted[BitVectorSize];
-		struct
-		{
-			uint32_t Key;
-			TValue Value;
-		} Buckets[Size]; - only present buckets are written to disk
-	};
-	*/
-
 	uint32_t m_size;
 	uint32_t m_capacity;
 	uint32_t m_vectorLength;
-	std::vector<std::pair<uint32_t, uint32_t>> m_items;
+	StaticMap<uint32_t, uint32_t, 512> m_items;
 };

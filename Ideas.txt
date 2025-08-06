@@ -1,0 +1,9 @@
+Memory
+* Create growing arena, which reserves 4mb and allocatges physical as it needs to
+
+Links
+* https://n4r1b.com/posts/2019/03/part-1-digging-deep-into-loadlibrary/
+
+TODO
+* Fix KProcess/UProcess modules
+* Fix buffers/constant buffers. Same with string

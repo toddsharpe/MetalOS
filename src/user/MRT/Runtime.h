@@ -1,11 +1,19 @@
 #pragma once
 
-#include "user/MetalOS.Types.h"
+#include "user/MetalOS.h"
 
-class Runtime
+namespace Runtime
 {
-public:
-	static ThreadEnvironmentBlock* GetTEB();
-	static ProcessEnvironmentBlock* GetPEB();
-	static Module* GetLoadedModule(const char* name);
-};
+	ThreadEnvironmentBlock* GetTEB();
+	ProcessEnvironmentBlock* GetPEB();
+	Module* GetLoadedModule(const char* name);
+	bool IsDebug();
+}
+
+extern "C"
+{
+	SyscallResult GetProcessInfo(ProcessInfo* info);
+	uint32_t GetCurrentThreadId();
+	uint32_t GetLastError();
+	void SetLastError(uint32_t errorCode);
+}

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <Graphics/Color.h>
-#include <Graphics/Types.h>
-#include <UI/Control.h>
-
-#include <string>
-#include <vector>
+#include "Lib/StaticVector.h"
+#include "Graphics/Types.h"
+#include "Graphics/Draw2D.h"
+#include "UI/Control.h"
 
 namespace UI
 {
@@ -24,7 +22,7 @@ namespace UI
 		static constexpr Color BorderColor = Colors::Blue;
 
 	public:
-		Window(const std::string& title, const WindowStyle& style = Default) :
+		Window(const CString& title, const WindowStyle& style = Default) :
 			Background(Colors::White),
 			Children(),
 			Title(title),
@@ -36,14 +34,14 @@ namespace UI
 		void Draw(FrameBuffer& frame)
 		{
 			//Clear frame
-			frame.FillScreen(Background);
+			Draw2D::FillScreen(frame, Background);
 			
 			//Draw border
 			if (m_style.IsBordered)
 			{
-				frame.DrawFrameBorder(BorderColor, 3);
-				frame.DrawText({ 9, 9 }, Title, BorderColor);
-				frame.DrawRectangle(BorderColor, { 0, 20, frame.GetWidth(), 3 });
+				Draw2D::DrawFrameBorder(frame, BorderColor, 3);
+				Draw2D::DrawText(frame, { 9, 9 }, Title, BorderColor);
+				Draw2D::DrawRectangle(frame, BorderColor, { 0, 20, frame.Width, 3 });
 			}
 
 			//Draw children
@@ -54,8 +52,8 @@ namespace UI
 		}
 
 		Color Background;
-		std::vector<Control*> Children;
-		std::string Title;
+		StaticVector<Control*, 16> Children;
+		StaticString<32> Title;
 
 	private:
 		WindowStyle m_style;

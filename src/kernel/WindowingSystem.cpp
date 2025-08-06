@@ -1,277 +1,212 @@
-#include "WindowingSystem.h"
-
-#include "Kernel/Kernel.h"
+#include "kernel/WindowingSystem.h"
+#include "kernel/Api.h"
+#include "Graphics/Draw2D.h"
+#include "new.h"
 #include "Assert.h"
-#include <limits>
+#include "core_crt/stdint.h"
 
 using namespace Graphics;
 
-size_t WindowingSystem::ThreadLoop(void* arg)
+uint32_t WindowingSystem::ThreadLoop(void* arg)
 {
 	return static_cast<WindowingSystem*>(arg)->ThreadLoop();
 };
 
-WindowingSystem::WindowingSystem(EfiDisplay& display) :
+WindowingSystem::WindowingSystem(Graphics::FrameBuffer& display) :
+	Enabled(),
 	m_display(display),
-	m_frameBuffer(),
+	m_backBuffer(nullptr, display.Height, display.Width),
 	m_windows(),
+	m_windowPool(),
+	m_messages(),
 	m_mousePos(),
 	m_prevMouseButtons(),
 	m_dragWindow(),
-	m_focusWindow()
+	m_focusWindow(),
+	m_postCount(),
+	m_dropCount()
 {
 
 }
 
 void WindowingSystem::Initialize()
 {
-	//Initialize Framebuffer
-	m_frameBuffer.Initialize(m_display.GetHeight(), m_display.GetWidth());
+	//Initialize back buffer
+	m_backBuffer.Buffer = (Color*)KeVirtualAlloc(m_backBuffer.Size());
 
-	//Initialize window list
-	m_windows = std::make_unique<std::list<std::shared_ptr<Window>>>();
-	
 	//Create thread
-	kernel.KeCreateThread(&WindowingSystem::ThreadLoop, this, "WindowingSystem::ThreadLoop");
+	KeCreateThread(&WindowingSystem::ThreadLoop, this, "WindowingSystem::ThreadLoop");
+
+	m_windows.Initialize();
 }
 
-HWindow WindowingSystem::AllocWindow(UserThread& thread, const Rectangle& bounds)
+UWindow* WindowingSystem::CreateWindow(UThread& owner)
 {
-	Printf("AllocWindow\n");
+	//Allocate window
+	UWindow* window = m_windowPool.Allocate(owner);
+	Assert(window);
 	
-	//Allocate framebuffer on page boundaries
-	//Map into process directly one day?
-	const size_t bytes = bounds.Height * bounds.Width * sizeof(Color);
-	const size_t count = SizeToPages(bytes);
-	void* buffer = kernel.AllocateWindows(count);
+	//Add to list
+	m_windows.InsertHead(*window);
 
-	//Create window, focused
-	std::shared_ptr<Window> window = std::make_shared<Window>(thread);
-	window->Bounds = bounds;
-	window->FrameBuffer = { buffer, bytes };
-
-	m_windows->push_back(window);
+	//Set it as focus
 	m_focusWindow = window;
 
-	return static_cast<HWindow>(window.get());
+	return window;
 }
 
-bool WindowingSystem::PaintWindow(const HWindow handle, const ReadOnlyBuffer& buffer)
+bool WindowingSystem::Delete(UWindow* window)
 {
-	if (!HandleValid(handle))
-		return false;
+	//If window is focused or dragged clear it
+	if (m_dragWindow == window)
+		m_dragWindow = nullptr;
+	if (m_focusWindow == window)
+		m_focusWindow = nullptr;
 
-	Window* window = static_cast<Window*>(handle);
-	if (window->FrameBuffer.Length != buffer.Length)
-		return false;
+	//Remove from list
+	m_windows.Remove(*window);
 
-	memcpy(window->FrameBuffer.Data, buffer.Data, buffer.Length);
-	return true;
-}
+	//Deallocate
+	m_windowPool.Deallocate(window);
 
-bool WindowingSystem::MoveWindow(const HWindow handle, const Rectangle& bounds)
-{
-	if (!HandleValid(handle))
-		return false;
-
-	//NOTE(tsharpe): Old buffers can't be deallocated yet.
-	//Therefore resize isn't supported and windows are enforced to be the same size.
-	Window* window = static_cast<Window*>(handle);
-	Assert(bounds.Height == window->Bounds.Height);
-	Assert(bounds.Width == window->Bounds.Width);
-	window->Bounds = bounds;
-
-	return true;
-}
-
-bool WindowingSystem::GetWindowRect(const HWindow handle, Rectangle& bounds)
-{
-	if (!HandleValid(handle))
-		return false;
-
-	Window* window = static_cast<Window*>(handle);
-	bounds = window->Bounds;
 	return true;
 }
 
 void WindowingSystem::PostMessage(Message& message)
 {
-	switch (message.Header.MessageType)
-	{
-	case MessageType::MouseEvent:
-
-		//Save cursor position
-		constexpr uint16_t maxX = std::numeric_limits<int16_t>::max();
-		constexpr uint16_t maxY = std::numeric_limits<int16_t>::max();
-		uint16_t absX = m_display.GetWidth() * message.MouseEvent.XPosition / maxX;
-		uint16_t absY = m_display.GetHeight() * message.MouseEvent.YPosition / maxX;
-		Point2D mousePos = { absX , absY };
-
-		//Detect focus/drag
-		if (message.MouseEvent.Buttons.LeftPressed)
-		{
-			//Focus window
-			m_focusWindow = GetWindow(mousePos);
-			if (m_focusWindow)
-			{
-				m_windows->remove(m_focusWindow);
-				m_windows->push_back(m_focusWindow);
-			}
-
-			if (m_dragWindow == nullptr)
-			{
-				m_dragWindow = GetWindow(mousePos);
-			}
-
-			//Verify we have a window to move
-			if (m_dragWindow != nullptr)
-			{
-				//Calculate difference between old mouse and new mouse
-				int deltaX = (int)(mousePos.X - m_mousePos.X);
-				int deltaY = (int)(mousePos.Y - m_mousePos.Y);
-
-				//Update window position
-				m_dragWindow->Bounds.X += deltaX;
-				m_dragWindow->Bounds.Y += deltaY;
-			}
-		}
-		else
-		{
-			m_dragWindow = nullptr;
-		}
-
-		//Update old mouse position
-		m_mousePos = mousePos;
-		break;
-	}
-
-	if (m_focusWindow != nullptr)
-	{
-		m_focusWindow->Thread.EnqueueMessage(message);
-	}
+	const cpu_flags_t flags = m_messagesLock.Acquire();
+	if (!m_messages.Enqueue(message))
+		m_dropCount++;
+	else
+		m_postCount++;
+	m_messagesLock.Release(flags);
 }
 
-bool WindowingSystem::ThreadHasWindow(const UserThread& thread) const
-{
-	for (const std::shared_ptr<Window>& window : *m_windows)
-	{
-		if (&window->Thread == &thread)
-			return true;
-	}
-
-	return false;
-}
-
-void WindowingSystem::FreeWindow(const UserThread& thread)
-{
-	for (const std::shared_ptr<Window>& window : *m_windows)
-	{
-		if (&window->Thread != &thread)
-			continue;
-		
-		//Release focus
-		if (m_focusWindow == window)
-			m_focusWindow.reset();
-		if (m_dragWindow = window)
-			m_dragWindow.reset();
-
-		m_windows->remove(window);
-		return;
-	}
-	
-	Assert(false);
-}
-
-void WindowingSystem::FreeWindows(const UserProcess& proc)
-{
-	auto it = m_windows->begin();
-	while (it != m_windows->end())
-	{
-		const std::shared_ptr<Window>& item = *it;
-		if (&item->Thread.Process == &proc)
-		{
-			//Release focus
-			if (m_focusWindow == item)
-				m_focusWindow.reset();
-			if (m_dragWindow = item)
-				m_dragWindow.reset();
-			
-			it = m_windows->erase(it);
-		}
-		else
-		{
-			it++;
-		}
-	}
-}
-
-size_t WindowingSystem::ThreadLoop()
+uint32_t WindowingSystem::ThreadLoop()
 {
 	while (true)
 	{
-		m_frameBuffer.FillScreen(Colors::Black);
-
-		//Draw windows
-		for (const std::shared_ptr<Window>& window : *m_windows)
+		if (Enabled)
 		{
-			if (window != m_focusWindow)
+			//Clear screen
+			Draw2D::FillScreen(m_backBuffer, Colors::Black);
+
+			//Process current messages
+			ProcessMessages();
+
+			//Draw windows back to front
+			m_windows.ForEachReverse<WindowingSystem>([](const UWindow& window, WindowingSystem& context)
 			{
-				m_frameBuffer.WriteFrameGrayscale(window->Bounds, window->FrameBuffer.Data);
+				if (&window == context.m_focusWindow)
+				{
+					Draw2D::WriteFrame(context.m_backBuffer, window.GetBounds(), window.Frame.Buffer);
+				}
+				else
+				{
+					Draw2D::WriteFrameGrayscale(context.m_backBuffer, window.GetBounds(), window.Frame.Buffer);
+				}
+			}, *this);
+
+			//Write to graphics device
+			memcpy(m_display.Buffer, m_backBuffer.Buffer, m_backBuffer.Size());
+
+			//Request repaints
+			//TODO(tsharpe): Only changed regions
+			m_windows.ForEach<WindowingSystem&>([](const UWindow& window, WindowingSystem& context)
+			{
+				Message message = {};
+				message.Header.MessageType = MessageType::PaintEvent;
+				message.PaintEvent.Region = window.GetBounds();
+				window.Thread.Enqueue(message);
+			}, *this);
+		}
+
+		KeSleepThread(Second / 30);
+	}
+
+	return 0;
+}
+
+void WindowingSystem::ProcessMessages()
+{
+	// Drain the queue under a single brief lock window so interrupt context
+	// (PostMessage) never spins waiting for us to finish processing a message.
+	Message pending[16] = {};
+	size_t pendingCount = 0;
+
+	const cpu_flags_t flags = m_messagesLock.Acquire();
+	while (!m_messages.IsEmpty())
+		pending[pendingCount++] = m_messages.Dequeue();
+	m_messagesLock.Release(flags);
+
+	for (size_t i = 0; i < pendingCount; i++)
+	{
+		const Message& message = pending[i];
+		switch (message.Header.MessageType)
+		{
+		case MessageType::MouseEvent:
+			//Save cursor position
+			const uint16_t absX = m_display.Width * message.MouseEvent.XPosition / INT16_MAX;
+			const uint16_t absY = m_display.Height * message.MouseEvent.YPosition / INT16_MAX;
+			const Point2D mousePos = { absX , absY };
+
+			const bool clicked = message.MouseEvent.Buttons.LeftPressed && !m_prevMouseButtons.LeftPressed;
+
+			//Detect click
+			if (clicked)
+			{
+				m_focusWindow = GetWindow(mousePos);
+				m_dragWindow = m_focusWindow;
+
+				if (m_focusWindow != nullptr)
+				{
+					//Remove from list, push on top
+					m_windows.Remove(*m_focusWindow);
+					m_windows.InsertHead(*m_focusWindow);
+
+				}
+			}
+			//Detect drag
+			else if (message.MouseEvent.Buttons.LeftPressed)
+			{
+				if (m_dragWindow)
+				{
+					//Calculate difference between old mouse and new mouse
+					const int deltaX = (int)(mousePos.X - m_mousePos.X);
+					const int deltaY = (int)(mousePos.Y - m_mousePos.Y);
+
+					//Update window position
+					m_dragWindow->Point.X += deltaX;
+					m_dragWindow->Point.Y += deltaY;
+				}
 			}
 			else
 			{
-				//Focus window gets color
-				m_frameBuffer.WriteFrame(window->Bounds, window->FrameBuffer.Data);
+				m_dragWindow = nullptr;
 			}
+
+			//Save previous mouse
+			m_mousePos = mousePos;
+			m_prevMouseButtons = message.MouseEvent.Buttons;
+			break;
 		}
-
-		//Draw cursor
-		m_frameBuffer.DrawCursor({ m_mousePos.X, m_mousePos.Y }, Colors::Red);
-
-		//Send to graphics device
-		m_display.Write(m_frameBuffer);
-
-		//Request repaints
-		//TODO(tsharpe): Only changed regions
-		for (const std::shared_ptr<Window>& window : *m_windows)
+		
+		if (m_focusWindow)
 		{
-			Assert(!window->Thread.Deleted);
-
-			UserProcess& proc = window->Thread.Process;
-			Assert(!proc.IsSignalled());
-
-			Message message = {};
-			message.Header.MessageType = MessageType::PaintEvent;
-			message.PaintEvent.Region = window->Bounds;
-			window->Thread.EnqueueMessage(message);
-		}
-
-		kernel.KeSleepThread(Second / 30);
-	}
-}
-
-std::shared_ptr<WindowingSystem::Window> WindowingSystem::GetWindow(const Point2D& point) const
-{
-	for (auto it = m_windows->rbegin(); it != m_windows->rend(); it++)
-	{
-		std::shared_ptr<Window>& window = *it;
-		if (window->Bounds.Contains(point))
-		{
-			return window;
+			m_focusWindow->Thread.Enqueue(message);
 		}
 	}
-
-	return nullptr;
 }
 
-bool WindowingSystem::HandleValid(const HWindow handle) const
+UWindow* WindowingSystem::GetWindow(const Point2D& point) const
 {
-	for (const std::shared_ptr<Window>& window : *m_windows)
+	//Printf("Get: X: %d, Y: %d\n", point.X, point.Y);
+	UWindow* found = m_windows.First<const Point2D>([](const UWindow& window, const Point2D& point)
 	{
-		if (window.get() == handle)
-			return true;
-	}
-	return false;
+		//Printf("--X: %d, Y: %d, W: %d, H:%d\n", window.GetBounds().X, window.GetBounds().Y, window.GetBounds().Width, window.GetBounds().Height);
+		const bool r = window.GetBounds().Contains(point);
+		//Printf("----R: %d\n", r);
+		return r;
+	}, point);
+	return found;
 }
-
-

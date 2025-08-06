@@ -1,297 +1,71 @@
 #pragma once
 
-#include <efi.h>
-#include "EfiDisplay.h"
-#include "MemoryMap.h"
-#include "ConfigTables.h"
-extern "C"
-{
-#include <acpi.h>
-}
-#include <vector>
-#include <list>
-#include <map>
-#include "BootHeap.h"
-#include "Debugger.h"
-#include "DeviceTree.h"
-#include "HyperVTimer.h"
-#include "HyperV.h"
-#include "PhysicalMemoryManager.h"
-#include "VirtualAddressSpace.h"
-#include "VirtualMemoryManager.h"
-#include "Scheduler.h"
-#include "KernelHeap.h"
-#include <queue>
-#include "Pdb/Pdb.h"
-#include "KThread.h"
-#include "UserProcess.h"
-#include "WindowingSystem.h"
-#include "Kernel/Objects/KEvent.h"
-#include "MetalOS.Arch.h"
-#include "user/MetalOS.Types.h"
-#include "user/MetalOS.h"
-#include "LoadingScreen.h"
-#include "LoaderParams.h"
-#include "Kernel/EarlyUart.h"
-#include "PageTablesPool.h"
+//CRT
+#include "core_crt/stdint.h"
+#include "core_crt/stdarg.h"
+#include "core_crt/stdlib.h"
+#include "core_crt/stdio.h"
+#include "core_crt/wchar.h"
+#include "core_crt/string.h"
+#include "core_crt/ctype.h"
 
-#include <memory>
+//MetalOS defines
+#include "kernel/Arch.h"
+#include "MetalOS.Loader.h"
+#include "MetalOS.Space.h"
 
+//Windows PE types
+#include "windows/types.h"
+#include "windows/winnt.h"
 
-class Kernel
-{
-	friend Debugger;
-public:
-	Kernel(const LoaderParams& params, BootHeap& heap);
+//Lib includes
+#include "Lib/Bitset.h"
+#include "Lib/Buffer.h"
+#include "Lib/List.h"
+#include "Lib/Math.h"
+#include "Lib/ObjectPool.h"
+#include "Lib/Path.h"
+#include "Lib/Arena.h"
+#include "Lib/StaticMap.h"
+#include "Lib/StaticVector.h"
+#include "Lib/String.h"
+#include "Lib/System.h"
+#include "Lib/Time.h"
+#include "WinPE.h"
 
-	void Initialize();
+//Graphics lib
+#include "Graphics/Types.h"
 
-	void HandleInterrupt(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame);
-	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* format, ...);
-	__declspec(noreturn) void Bugcheck(const char* file, const char* line, const char* format, va_list args);
-	void ShowStack(const X64_CONTEXT* context);
-	bool ResolveIP(const uintptr_t ip, PdbFunctionLookup& lookup);
-	bool ResolveUserIP(const uintptr_t ip, PdbFunctionLookup& lookup);
+//Kernel includes
+#include "kernel/KeDisable.h"
+#include "kernel/ConfigTables.h"
+#include "kernel/KThread.h"
+#include "kernel/UThread.h"
+#include "kernel/KProcess.h"
+#include "kernel/UProcess.h"
+#include "kernel/Scheduler.h"
+#include "kernel/PhysicalMemoryManager.h"
+#include "kernel/VirtualMemoryManager.h"
+#include "kernel/LoadingScreen.h"
+#include "kernel/InterruptTable.h"
+#include "kernel/DeviceTree.h"
+#include "kernel/KernelAcpi.h"
+#include "kernel/Loader.h"
+#include "kernel/WindowingSystem.h"
+#include "kernel/Objects/KPipe.h"
+#include "kernel/Debugger.h"
 
-	void Printf(const char* format, ...);
-	void Printf(const char* format, va_list args);
-	void PrintBytes(const char* buffer, const size_t length)
-	{
-		this->m_printer->PrintBytes(buffer, length);
-	}
+//Platform
+#include "kernel/HyperV/HyperV.h"
 
-	//This method only works because the loader ensures we are physically contiguous
-	paddr_t VirtualToPhysical(uintptr_t virtualAddress)
-	{
-		//TODO: assert
-		uint64_t rva = virtualAddress - KernelBaseAddress;
-		return m_params.KernelAddress + rva;
-	}
+//PDB
+#include "kernel/Pdb/PdbFile.h"
 
-#pragma region Heap Interface
-	void* Allocate(const size_t size);
-	void Deallocate(void* const address);
-#pragma endregion
+//Drivers
+#include "Drivers/DirectUart.h"
+#include "Drivers/RamDrive.h"
 
-#pragma region Virtual Memory Interface
-	paddr_t AllocatePhysical(const size_t count);
-	void* AllocateLibrary(const void* address, const size_t count);
-	void* AllocatePdb(const size_t count);
-	void* AllocateStack(const size_t count);
-	void* AllocateWindows(const size_t count);
-	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses);
-
-	//User process address space
-	void* VirtualAlloc(UserProcess& process, const void* address, const size_t size);
-	void* VirtualMap(UserProcess& process, const void* address, const std::vector<paddr_t>& addresses);
-#pragma endregion
-
-#pragma region ACPI
-	ACPI_STATUS AcpiOsInitialize();
-	ACPI_STATUS AcpiOsTerminate();
-	ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer();
-	ACPI_STATUS AcpiOsPredefinedOverride(const ACPI_PREDEFINED_NAMES* PredefinedObject, ACPI_STRING* NewValue);
-	ACPI_STATUS AcpiOsTableOverride(ACPI_TABLE_HEADER* ExistingTable, ACPI_TABLE_HEADER** NewTable);
-	void* AcpiOsMapMemory(ACPI_PHYSICAL_ADDRESS PhysicalAddress, ACPI_SIZE Length);
-	void AcpiOsUnmapMemory(void* where, ACPI_SIZE length);
-	ACPI_STATUS AcpiOsGetPhysicalAddress(void* LogicalAddress, ACPI_PHYSICAL_ADDRESS* PhysicalAddress);
-	void* AcpiOsAllocate(ACPI_SIZE Size);
-	void AcpiOsFree(void* Memory);
-	BOOLEAN AcpiOsReadable(void* Memory, ACPI_SIZE Length);
-	BOOLEAN AcpiOsWritable(void* Memory, ACPI_SIZE Length);
-	ACPI_THREAD_ID AcpiOsGetThreadId();
-	ACPI_STATUS AcpiOsExecute(ACPI_EXECUTE_TYPE Type, ACPI_OSD_EXEC_CALLBACK Function, void* Context);
-	void AcpiOsSleep(UINT64 Milliseconds);
-	void AcpiOsStall(UINT32 Microseconds);
-	ACPI_STATUS AcpiOsCreateSemaphore(UINT32 MaxUnits, UINT32 InitialUnits, ACPI_SEMAPHORE* OutHandle);
-	ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle);
-	void AcpiOsVprintf(const char* Format, va_list Args);
-	ACPI_STATUS AcpiOsWaitSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units, UINT16 Timeout);
-	ACPI_STATUS AcpiOsSignalSemaphore(ACPI_SEMAPHORE Handle, UINT32 Units);
-	ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK* OutHandle);
-	void AcpiOsDeleteLock(ACPI_SPINLOCK Handle);
-	ACPI_CPU_FLAGS AcpiOsAcquireLock(ACPI_SPINLOCK Handle);
-	void AcpiOsReleaseLock(ACPI_SPINLOCK Handle, ACPI_CPU_FLAGS Flags);
-	ACPI_STATUS AcpiOsSignal(UINT32 Function, void* Info);
-	ACPI_STATUS AcpiOsReadMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64* Value, UINT32 Width);
-	ACPI_STATUS AcpiOsWriteMemory(ACPI_PHYSICAL_ADDRESS Address, UINT64 Value, UINT32 Width);
-	ACPI_STATUS AcpiOsReadPort(ACPI_IO_ADDRESS Address, UINT32* Value, UINT32 Width);
-	ACPI_STATUS AcpiOsWritePort(ACPI_IO_ADDRESS Address, UINT32 Value, UINT32 Width);
-	UINT64 AcpiOsGetTimer();
-	void AcpiOsWaitEventsComplete();
-	ACPI_STATUS AcpiOsReadPciConfiguration(ACPI_PCI_ID* PciId, UINT32 Reg, UINT64* Value, UINT32 Width);
-	ACPI_STATUS AcpiOsWritePciConfiguration(ACPI_PCI_ID* PciId, UINT32 Reg, UINT64 Value, UINT32 Width);
-	ACPI_STATUS AcpiOsInstallInterruptHandler(UINT32 InterruptLevel, ACPI_OSD_HANDLER Handler, void* Context);
-	ACPI_STATUS AcpiOsRemoveInterruptHandler(UINT32 InterruptNumber, ACPI_OSD_HANDLER Handler);
-	ACPI_STATUS AcpiOsPhysicalTableOverride(ACPI_TABLE_HEADER* ExistingTable, ACPI_PHYSICAL_ADDRESS* NewAddress, UINT32* NewTableLength);
-#pragma endregion
-
-#pragma region Driver Interface
-	void* DriverMapPages(paddr_t address, size_t count);
-#pragma endregion
-
-#pragma region ThreadStarts
-	__declspec(noreturn) static void KernelThreadInitThunk();
-	__declspec(noreturn) static size_t UserThreadInitThunk(void* unused);
-#pragma endregion
-
-#pragma region Kernel Debugger
-	void KePauseSystem();
-	void KeResumeSystem();
-#pragma endregion
-
-#pragma region Internal Interface
-	//Processes
-	UserProcess* KeCreateProcess(const std::string& commandLine);
-	
-	//Threads
-	std::shared_ptr<KThread> KeCreateThread(const ThreadStart start, void* const arg, const std::string& name = "");
-	void KeSleepThread(const nano_t value);
-	void KeExitThread();
-	std::shared_ptr<KThread> CreateThread(UserProcess& process, size_t stackSize, ThreadStart startAddress, void* arg, void* entry);
-
-	//Libraries
-	KeModule& KeLoadLibrary(const std::string& path);
-	void* KeLoadPdb(const std::string& path);
-	KeModule* KeGetModule(const std::string& path) const;
-	const KeModule* KeGetModule(const uintptr_t address) const;
-
-	//Files
-	bool KeCreateFile(KFile& file, const std::string& path, const GenericAccess access) const;
-	bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead) const;
-	bool KeSetFilePosition(KFile& file, const size_t position) const;
-
-	//Wait/Signals
-	WaitStatus KeWait(KSignalObject& obj, const milli_t timeout = std::numeric_limits<milli_t>::max());
-
-	void KeGetSystemTime(SystemTime& time) const;
-
-	void KeRegisterInterrupt(const X64_INTERRUPT_VECTOR interrupt, const InterruptContext& context);
-
-	Device* KeGetDevice(const std::string& path) const;
-
-	uint64_t Syscall(X64_SYSCALL_FRAME* frame);
-	bool IsValidUserPointer(const void* p);
-	bool IsValidKernelPointer(const void* p);
-	void KePostMessage(Message& msg);
-
-#pragma endregion
-
-#pragma region System Calls
-	size_t GetTickCount();
-	SystemCallResult GetSystemTime(SystemTime* time);
-
-	HThread GetCurrentThread();
-	SystemCallResult CreateProcess(const char* commandLine, const CreateProcessArgs* args, CreateProcessResult* result);
-	HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg);
-	uint32_t GetThreadId(const Handle handle);
-	void Sleep(const uint32_t milliseconds);
-	void SwitchToThread();
-	SystemCallResult ExitProcess(const uint32_t exitCode);
-	SystemCallResult ExitThread(const uint32_t exitCode);
-
-	SystemCallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* bounds);
-	SystemCallResult PaintWindow(HWindow handle, const ReadOnlyBuffer* buffer);
-	SystemCallResult MoveWindow(HWindow handle, const Graphics::Rectangle* bounds);
-	SystemCallResult GetWindowRect(HWindow handle, Graphics::Rectangle* bounds);
-	SystemCallResult GetMessage(Message* message);
-	SystemCallResult PeekMessage(Message* message);
-	SystemCallResult GetScreenRect(Graphics::Rectangle* rect);
-
-	HFile CreateFile(const char* name, const GenericAccess access);
-	SystemCallResult CreatePipe(HFile* readHandle, HFile* writeHandle);
-	SystemCallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
-	SystemCallResult WriteFile(const HFile handle, const void* lpBuffer, const size_t bufferSize, size_t* bytesWritten);
-	SystemCallResult SetFilePointer(const HFile handle, const size_t position, const FilePointerMove moveType, size_t* newPosition);
-	SystemCallResult CloseFile(const HFile handle);
-	SystemCallResult MoveFile(const char* existingFileName, const char* newFileName);
-	SystemCallResult DeleteFile(const char* fileName);
-	SystemCallResult CreateDirectory(const char* path);
-	SystemCallResult WaitForSingleObject(const Handle handle, const uint32_t milliseconds, WaitStatus* status);
-	SystemCallResult GetPipeInfo(const HFile handle, PipeInfo* info);
-	SystemCallResult CloseHandle(const Handle handle);
-	SystemCallResult CreateEvent(HEvent* handle, const bool manual, const bool initial);
-	SystemCallResult SetEvent(const HEvent handle);
-	SystemCallResult ResetEvent(const HEvent handle);
-
-	void* VirtualAlloc(const void* address, const size_t size);
-	HRingBuffer CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize);
-	HSharedMemory CreateSharedMemory(const char* name, const size_t size);
-	void* MapObject(const void* address, Handle handle);
-	void* MapSharedObject(const void* address, const char* name);
-
-	SystemCallResult DebugPrint(const char* s);
-	SystemCallResult DebugPrintBytes(const char* buffer, const size_t length);
-#pragma endregion
-
-private:
-	static size_t IdleThread(void* unused)
-	{
-		while (true)
-			ArchWait();
-	}
-
-	void InitializeAcpi();
-
-	static void OnTimer0(void* arg) { ((Kernel*)arg)->OnTimer0(); };
-	void OnTimer0();
-
-private:
-	//Boot params
-	const LoaderParams& m_params;
-	EFI_RUNTIME_SERVICES m_runtime;
-	BootHeap& m_bootHeap;
-
-	//Basic output drivers
-	EfiDisplay m_display;
-	LoadingScreen m_loadingScreen;
-	EarlyUart m_uart;
-	StringPrinter* m_printer;
-
-	//Page tables
-	PageTablesPool m_pool;
-
-	//Memory and Heap
-	MemoryMap m_memoryMap;
-	PhysicalMemoryManager m_physicalMemory;
-	KernelHeap m_heap;
-	VirtualMemoryManager m_virtualMemory;
-
-	//Create virtual address spaces
-	//TODO(tsharpe): Condense into one?
-	VirtualAddressSpace m_librarySpace;
-	VirtualAddressSpace m_pdbSpace;
-	VirtualAddressSpace m_stackSpace;
-	VirtualAddressSpace m_runtimeSpace;
-	VirtualAddressSpace m_windowsSpace;
-
-	//Copy to kernel heap
-	ConfigTables m_configTables;
-
-	//Interrupts
-	std::map<X64_INTERRUPT_VECTOR, InterruptContext>* m_interruptHandlers;
-
-	//Process and Thread management
-	Scheduler m_scheduler;
-	std::map<std::string, UserRingBuffer*> *m_objectsRingBuffers;
-	std::list<std::shared_ptr<UserProcess>>* m_processes;
-
-	//Libraries
-	std::list<KeModule>* m_modules;
-
-	//Platform
-	HyperV m_hyperV;
-
-	//IO
-	DeviceTree m_deviceTree;
-	HyperVTimer m_timer;
-
-	//UI
-	WindowingSystem m_windows;
-
-	Debugger m_debugger;
-
-	::NO_COPY_OR_ASSIGN(Kernel);
-};
-extern Kernel kernel;
-
+//Kd64
+#include "reactos/amd64\ke.h"
+#include "reactos/amd64/ketypes.h"
+#include "kernel/Kd64/kd64.h"

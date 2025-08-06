@@ -1,7 +1,6 @@
 #pragma once
 
-#include <Graphics/Color.h>
-#include <Graphics/Framebuffer.h>
+#include "Graphics/Types.h"
 
 namespace UI
 {

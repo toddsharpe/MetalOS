@@ -1,6 +1,6 @@
 #pragma once
 
-#include "KSignalObject.h"
+#include "Kernel/Objects/KSignalObject.h"
 
 class KEvent : public KSignalObject
 {

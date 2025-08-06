@@ -1,55 +1,64 @@
-#include "Runtime.h"
+#pragma once
 
-#include <intrin.h>
-#include <stddef.h>
-#include <string.h>
+#include "user/MRT/Runtime.h"
+#include "user/MetalOS.h"
+#include "x64/intrin.h"
+#include "core_crt/stddef.h"
 
-#include "user/MetalOS.Types.h"
-#include "MetalOS.h"
-
-ThreadEnvironmentBlock* Runtime::GetTEB()
+namespace Runtime
 {
-	return (ThreadEnvironmentBlock*)__readgsqword(offsetof(ThreadEnvironmentBlock, SelfPointer));
-}
-
-ProcessEnvironmentBlock* Runtime::GetPEB()
-{
-	ThreadEnvironmentBlock* teb = GetTEB();
-	return teb->PEB;
-}
-
-Module* Runtime::GetLoadedModule(const char* name)
-{
-	ProcessEnvironmentBlock* peb = GetPEB();
-	for (size_t i = 0; i < peb->ModuleIndex; i++)
+	ThreadEnvironmentBlock* GetTEB()
 	{
-		if (_stricmp(name, peb->LoadedModules[i].Name) == 0)
-			return &peb->LoadedModules[i];
+		return (ThreadEnvironmentBlock*)__readgsqword(offsetof(ThreadEnvironmentBlock, SelfPointer));
 	}
 
-	return nullptr;
+	ProcessEnvironmentBlock* GetPEB()
+	{
+		ThreadEnvironmentBlock* teb = GetTEB();
+		return teb->PEB;
+	}
+
+	Module* Runtime::GetLoadedModule(const char* name)
+	{
+		ProcessEnvironmentBlock* peb = GetPEB();
+		for (size_t i = 0; i < peb->ModuleIndex; i++)
+		{
+			if (_stricmp(name, peb->LoadedModules[i].Name) == 0)
+				return &peb->LoadedModules[i];
+		}
+
+		return nullptr;
+	}
+
+	bool IsDebug()
+	{
+		return GetPEB()->Debug;
+	}
 }
 
-extern "C" SystemCallResult GetProcessInfo(ProcessInfo& info)
+SyscallResult GetProcessInfo(ProcessInfo* info)
 {
+	if (!info)
+		return SyscallResult::Failed;
+	
 	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
-	info.Id = peb->ProcessId;
-	return SystemCallResult::Success;
+	info->Id = peb->ProcessId;
+	return SyscallResult::Success;
 }
 
-extern "C" uint64_t GetCurrentThreadId()
+uint32_t GetCurrentThreadId()
 {
 	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
 	return teb->ThreadId;
 }
 
-extern "C" uint32_t GetLastError()
+uint32_t GetLastError()
 {
 	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
 	return teb->Error;
 }
 
-extern "C" void SetLastError(uint32_t errorCode)
+void SetLastError(uint32_t errorCode)
 {
 	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
 	teb->Error = errorCode;

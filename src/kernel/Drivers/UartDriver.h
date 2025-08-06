@@ -1,28 +1,64 @@
 #pragma once
-#include <cstdint>
-#include <string>
-#include "Kernel/Driver.h"
-#include "Kernel/Devices/Device.h"
-#include "Kernel/KRingBuffer.h"
-#include "Kernel/StringPrinter.h"
+
+#include "kernel/KDevice.h"
+#include "kernel/Drivers/Driver.h"
 
 //PNP0501 - Generic 16550A-compatible COM port
 //http://caro.su/msx/ocm_de1/16550.pdf . Page 9/18. Table 2.
 //Bit field note: https://docs.microsoft.com/en-us/cpp/cpp/cpp-bit-fields?view=vs-2019
 //Microsoft Specific: The ordering of data declared as bit fields is from low to high bit, as shown in the figure above.
-class UartDriver : public Driver, public StringPrinter
+class UartDriver : public IoDriver
 {
 public:
-	UartDriver(Device& device);
+	UartDriver(KDevice& device) :
+		IoDriver(device),
+		m_port()
+	{
 
-	Result Initialize() override;
-	Result Read(char* buffer, size_t length, size_t* bytesRead = nullptr) override;
-	Result Write(const char* buffer, size_t length) override;
-	Result EnumerateChildren() override;
+	}
 
-	static void OnInterrupt(void* arg) { ((UartDriver*)arg)->OnInterrupt(); };
+	Result Initialize(Arena& arena) override
+	{
+		uacpi_resources *res;
+		uacpi_status ret = uacpi_get_current_resources(m_device.AcpiNode, &res);
+		if (uacpi_unlikely_error(ret)) {
+			Printf("unable to retrieve resources: %s", uacpi_status_to_string(ret));
+			return Result::Failed;
+		}
 
-	virtual void Write(const std::string& string) override;
+		//Loop for IO device
+		uacpi_status loop = uacpi_for_each_resource(res, [](void *user, uacpi_resource *resource)
+		{
+			if (resource->type != UACPI_RESOURCE_TYPE_IO)
+				return UACPI_ITERATION_DECISION_CONTINUE;
+
+			((UartDriver*)user)->m_port = resource->io.minimum;
+			return UACPI_ITERATION_DECISION_BREAK;
+		}, this);
+
+		uacpi_free_resources(res);
+		return Result::Success;
+	}
+
+	Result Read(char* buffer, size_t length, size_t* bytesRead = nullptr) override
+	{
+		return Result::NotImplemented;
+	}
+
+	Result Write(const char* buffer, size_t length) override
+	{
+		for (size_t i = 0; i < length; i++)
+		{
+			Write(Reg::TransmitterHolding, static_cast<uint8_t>(buffer[i]));
+		}
+
+		return Result::Success;
+	}
+
+	Result Enumerate(Arena& arena) override
+	{
+		return Result::NotImplemented;
+	}
 
 private:
 	enum class Reg
@@ -46,171 +82,11 @@ private:
 		ScratchPad = 0b111 //RW (SPR)
 	};
 
-	struct InterruptEnableReg
+	void Write(Reg reg, uint8_t value)
 	{
-		union
-		{
-			struct
-			{
-				uint8_t DataReady : 1;
-				uint8_t ThrEmpty : 1;
-				uint8_t ReceiverLineStatus : 1;
-				uint8_t ModemStatus : 1;
-				uint8_t Reserved : 2;
-				uint8_t DmaRxEnd : 1;
-				uint8_t DmaTxEnd : 1;
-			};
-			uint8_t AsUint8;
-		};
-	};
-	static_assert(sizeof(InterruptEnableReg) == sizeof(uint8_t));
-
-	enum class InterruptType : uint8_t
-	{
-		ReceiverLineStatus = 0b011,
-		ReceivedDataReady = 0b010,
-		ReceptionTimeout = 0b110,
-		ThrEmpty = 0b001,
-		ModemStatus = 0b000,
-		DmaReceptionEndOfTranfer = 0b111,
-		DmaTransmissionEndOfTranfer = 0b101,
-	};
-
-	struct InterruptStatusReg
-	{
-		union
-		{
-			struct
-			{
-				uint8_t Status : 1;
-				InterruptType Type : 3;
-				uint8_t DmaRxEnd : 1;
-				uint8_t DmaTxEnd : 1;
-				uint8_t FifoEnabled : 2;
-			};
-			uint8_t AsUint8;
-		};
-	};
-	static_assert(sizeof(InterruptStatusReg) == sizeof(uint8_t));
-
-	enum class FifoTriggerLevel : uint8_t
-	{
-		Byte = 0b00,
-		DWord = 0b01,
-		QWord = 0b10,
-		FourteenBytes = 0b11
-	};
-
-	struct FifoControlReg
-	{
-		union
-		{
-			struct
-			{
-				uint8_t Enable : 1;
-				uint8_t RxReset : 1;
-				uint8_t TxReset : 1;
-				uint8_t DmaMode : 1;
-				uint8_t EnableDmaEnd : 1;
-				uint8_t Reserved : 1;
-				FifoTriggerLevel TriggerLevel : 2;
-			};
-			uint8_t AsUint8;
-		};
-	};
-	static_assert(sizeof(FifoControlReg) == sizeof(uint8_t));
-
-	enum LcrWordLength : uint8_t
-	{
-		Five = 0b00,
-		Six = 0b01,
-		Seven = 0b10,
-		Eight = 0b00
-	};
-	
-	struct LineControlReg
-	{
-		union
-		{
-			struct
-			{
-				LcrWordLength WordLength : 2;
-				uint8_t StopBits : 1;
-				uint8_t ParityEnabled : 1;
-				uint8_t EvenParity : 1;
-				uint8_t ForceParity : 1;
-				uint8_t SetBreak : 1;
-				uint8_t DivisorLatchAccess : 1; //DLAB
-			};
-			uint8_t AsUint8;
-		};
-	};
-	static_assert(sizeof(LineControlReg) == sizeof(uint8_t));
-
-	struct ModemControlReg
-	{
-		union
-		{
-			struct
-			{
-				uint8_t DTR : 1;
-				uint8_t RTS : 1;
-				uint8_t Out1 : 1;
-				uint8_t Out2IntEnable : 1;
-				uint8_t LoopBack : 1;
-				uint8_t Reserved : 3;
-			};
-			uint8_t AsUint8;
-		};
-	};
-	static_assert(sizeof(ModemControlReg) == sizeof(uint8_t));
-
-	struct LineStatusReg
-	{
-		union
-		{
-			struct
-			{
-				uint8_t DataReady : 1;
-				uint8_t OverrunError : 1;
-				uint8_t ParityError : 1;
-				uint8_t FramingError : 1;
-				uint8_t BreakInterrupt : 1;
-				uint8_t ThrEmpty : 1;
-				uint8_t TransmitterEmpty : 1;
-				uint8_t FifoDataError : 1;
-			};
-			uint8_t AsUint8;
-		};
-	};
-	static_assert(sizeof(LineStatusReg) == sizeof(uint8_t));
-
-	struct ModemStatusReg
-	{
-		union
-		{
-			struct
-			{
-				uint8_t DeltaCTS : 1;
-				uint8_t DeltaDSR : 1;
-				uint8_t TrailingEdgeRI : 1;
-				uint8_t DeltaCD : 1;
-				uint8_t CTS : 1;
-				uint8_t DSR : 1;
-				uint8_t RI : 1;
-				uint8_t CD : 1;
-			};
-			uint8_t AsUint8;
-		};
-	};
-	static_assert(sizeof(ModemStatusReg) == sizeof(uint8_t));
-
-	void OnInterrupt();
-	uint8_t Read(Reg reg);
-	void Write(Reg reg, uint8_t value);
+		ArchWritePort(m_port + static_cast<uint8_t>(reg), value, 8);
+	}
 
 	uint16_t m_port;
-	size_t m_index;
-	KRingBuffer<uint8_t, 0x100> m_rxBuffer;
 };
 

@@ -1,8 +1,9 @@
-#include "msvc.h"
-#include <user/MetalOS.h>
-#include <user/MetalOS.UI.h>
+#include "user/MetalOS.h"
+#include "user/GUI.h"
+#include "User/Fire/FireScreen.h"
 
-#include "FireScreen.h"
+#include "user/Fire/FireScreen.cpp"
+#include "user/CRT.cpp"
 
 using namespace UI;
 using namespace Graphics;
@@ -15,10 +16,12 @@ bool UICallback(GUI& window, Message& message)
 	{
 	case MessageType::PaintEvent:
 	{
-		FrameBuffer& frame = window.GetFrameBuffer();
+		FrameBuffer& frame = window.Frame;
 		screen->Update();
 		screen->Draw(frame);
-		AssertSuccess(PaintWindow(window.GetHandle(), { frame.GetBuffer(), frame.Size()}));
+
+		Buffer buff((uint8_t*)frame.Buffer, frame.Size());
+		AssertSuccess(PaintWindow(window.GetHandle(), &buff));
 		return true;
 	}
 	break;
@@ -32,10 +35,10 @@ bool UICallback(GUI& window, Message& message)
 int main(int argc, char** argv)
 {
 	ProcessInfo procInfo;
-	GetProcessInfo(procInfo);
+	GetProcessInfo(&procInfo);
 	
 	Rectangle frame;
-	GetScreenRect(frame);
+	GetScreenRect(&frame);
 	frame.Width /= 2;
 	frame.Height /= 2;
 	frame.X = frame.Width;
@@ -51,4 +54,6 @@ int main(int argc, char** argv)
 	gui.Initialize();
 
 	gui.Run();
+
+	return 0;
 }

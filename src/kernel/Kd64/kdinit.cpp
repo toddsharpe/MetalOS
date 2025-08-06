@@ -9,8 +9,7 @@
 
  /* INCLUDES ******************************************************************/
 
-#include <sal.h>
-#include <cstdint>
+#include "core_crt/stdint.h"
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include <reactos/ketypes.h>

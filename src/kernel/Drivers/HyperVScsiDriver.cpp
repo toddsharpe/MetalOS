@@ -1,4 +1,3 @@
-#include "Kernel/Kernel.h"
 #include <Assert.h>
 
 #include "Kernel/Drivers/HyperVScsiDriver.h"
@@ -96,54 +95,56 @@ void HyperVScsiDriver::OnCallback() //storvsc_on_channel_callback
 	uint32_t length = sizeof(vmpacket_descriptor);
 	//The nuance here is that this structure vmpacket_descriptor is what is sent, which has an extra field (transactionid)
 	//compared to what is received. the code uses the offset field from desc pointer to compensate for this, but it should really be refactored
-	while ((packet = (vmpacket_descriptor*)m_channel.ReadPacket(length)) != nullptr)
+	do
 	{
-		Transaction* transaction = (Transaction*)packet->trans_id;
-		void* data = (void*)((uintptr_t)packet + (packet->offset8 << 3));
-
-		//kernel.Printf("Rec: 0x%x Small: 0x%x Large: 0x%x\n", packet->len8 << 3, (sizeof(struct vstor_packet) - vmscsi_size_delta), sizeof(struct vstor_packet));
-		//kernel.PrintBytes((char*)data, packet->len8 << 3);
-
-		//Switch on request
-		if (transaction->Request.operation == VSTOR_OPERATION_BEGIN_INITIALIZATION ||
-			transaction->Request.operation == VSTOR_OPERATION_QUERY_PROTOCOL_VERSION ||
-			transaction->Request.operation == VSTOR_OPERATION_QUERY_PROPERTIES ||
-			transaction->Request.operation == VSTOR_OPERATION_END_INITIALIZATION)
+		while ((packet = (vmpacket_descriptor*)m_channel.ReadPacket(length)) != nullptr)
 		{
-			//These are during init
-			memcpy(&transaction->Response, data, (sizeof(struct vstor_packet) - vmscsi_size_delta));
-			transaction->Event->Set();
-		}
-		else
-		{
-			//storvsc_on_receive
-			memcpy(&transaction->Response, data, sizeof(struct vstor_packet));
+			Transaction* transaction = (Transaction*)packet->trans_id;
+			void* data = (void*)((uintptr_t)packet + (packet->offset8 << 3));
 
-			switch (transaction->Response.operation)
+			//kernel.Printf("Rec: 0x%x Small: 0x%x Large: 0x%x\n", packet->len8 << 3, (sizeof(struct vstor_packet) - vmscsi_size_delta), sizeof(struct vstor_packet));
+			//kernel.PrintBytes((char*)data, packet->len8 << 3);
+
+			//Switch on request
+			if (transaction->Request.operation == VSTOR_OPERATION_BEGIN_INITIALIZATION ||
+				transaction->Request.operation == VSTOR_OPERATION_QUERY_PROTOCOL_VERSION ||
+				transaction->Request.operation == VSTOR_OPERATION_QUERY_PROPERTIES ||
+				transaction->Request.operation == VSTOR_OPERATION_END_INITIALIZATION)
 			{
-			case VSTOR_OPERATION_COMPLETE_IO:
-				Assert(transaction->Response.vm_srb.scsi_status == 0 && transaction->Response.vm_srb.srb_status == SRB_STATUS_SUCCESS);
+				//These are during init
+				memcpy(&transaction->Response, data, (sizeof(struct vstor_packet) - vmscsi_size_delta));
 				transaction->Event->Set();
-				break;
-
-			case VSTOR_OPERATION_REMOVE_DEVICE:
-			case VSTOR_OPERATION_ENUMERATE_BUS:
-				Assert(false);
-				break;
-
-			case VSTOR_OPERATION_FCHBA_DATA:
-				Assert(false);
-				break;
-
-			default:
-				Assert(false);
-				break;
 			}
-		}
+			else
+			{
+				//storvsc_on_receive
+				memcpy(&transaction->Response, data, sizeof(struct vstor_packet));
 
-		m_channel.NextPacket(packet->len8 << 3);
-	}
-	m_channel.StopRead();
+				switch (transaction->Response.operation)
+				{
+				case VSTOR_OPERATION_COMPLETE_IO:
+					Assert(transaction->Response.vm_srb.scsi_status == 0 && transaction->Response.vm_srb.srb_status == SRB_STATUS_SUCCESS);
+					transaction->Event->Set();
+					break;
+
+				case VSTOR_OPERATION_REMOVE_DEVICE:
+				case VSTOR_OPERATION_ENUMERATE_BUS:
+					Assert(false);
+					break;
+
+				case VSTOR_OPERATION_FCHBA_DATA:
+					Assert(false);
+					break;
+
+				default:
+					Assert(false);
+					break;
+				}
+			}
+
+			m_channel.NextPacket(packet->len8 << 3);
+		}
+	} while (m_channel.StopRead());
 }
 
 void HyperVScsiDriver::Execute(Transaction* transaction, bool status_check)

@@ -1,39 +1,45 @@
-#include "Kernel/Kernel.h"
-#include <Assert.h>
-#include <linux/hyperv.h>
+#include "kernel/Drivers/HyperVRingBuffer.h"
+#include "kernel/Drivers/HyperVChannel.h"
 
-#include "HyperVRingBuffer.h"
-#include "HyperVChannel.h"
-
-HyperVRingBuffer::HyperVRingBuffer(const paddr_t address, const uint32_t count, HyperVChannel& channel) :
+HyperVRingBuffer::HyperVRingBuffer(const uint32_t size, HyperVChannel& channel) :
+	Size(size),
+	DataSize(size - PageSize),
 	m_channel(channel),
-	m_size(count << PageShift),
-	m_iterator(),
-	m_dataSize(((uint32_t)count - 1) << PageShift)
+	m_header(),
+	m_iterator()
 {
-	std::vector<paddr_t> addresses;
-	addresses.push_back(address);//hv page
+	
+}
+
+void HyperVRingBuffer::Initialize(const paddr_t address)
+{
+	//Number of pages
+	const size_t count = SizeToPages(Size);
+
+	//TODO(tsharpe): Temp arena/growing vector
+	StaticVector<paddr_t, 32> addresses;
+	addresses.Add(address);//hv page
 
 	//Push physical addresses twice (for wraparound)
 	for (size_t i = 0; i < count - 1; i++)
 	{
-		addresses.push_back(address + ((i + 1) << PageShift));
+		addresses.Add(address + ((i + 1) << PageShift));
 	}
 	for (size_t i = 0; i < count - 1; i++)
 	{
-		addresses.push_back(address + ((i + 1) << PageShift));
+		addresses.Add(address + ((i + 1) << PageShift));
 	}
-	Assert(addresses.size() == 2 * count - 1);
+	Assert(addresses.Count() == 2 * count - 1);
 
-	void* base = kernel.VirtualMap(nullptr, addresses);
-	memset(base, 0, count << PageShift);
+	void* const base = KeVirtualMap(addresses.begin(), addresses.Count());
+	memset(base, 0, Size);
 
-	kernel.Printf("Virtual 0x%016x, Physical: 0x%016x, Size: 0x%x\n", base, address, m_size);
+	Printf("Virtual 0x%016x, Physical: 0x%016x, Size: 0x%x\n", base, address, Size);
 	m_header = (volatile hv_ring_buffer * )base;
 	m_header->feature_bits.value = 1;
 }
 
-void HyperVRingBuffer::Write(const ReadOnlyBuffer* buffers, const size_t count)
+void HyperVRingBuffer::Write(const CBuffer* buffers, const size_t count)
 {
 	//TODO: buffer full etc
 
@@ -68,20 +74,9 @@ void HyperVRingBuffer::Write(const ReadOnlyBuffer* buffers, const size_t count)
 	}
 }
 
-//Copies and returns next location
-uint32_t HyperVRingBuffer::Copy(const uint32_t location, const void* buffer, const uint32_t length)
+void HyperVRingBuffer::Increment(const uint32_t length)
 {
-	memcpy((void*)&m_header->buffer[location], buffer, length);
-	return (location + length) % m_dataSize;
-}
-
-void HyperVRingBuffer::Display()
-{
-	kernel.Printf("Read: 0x%08x\n", m_header->read_index);
-	kernel.Printf("Iterator: 0x%08x\n", m_iterator);
-	kernel.Printf("Write: 0x%08x\n", m_header->write_index);
-	kernel.Printf("Mask: 0x%08x\n", m_header->interrupt_mask);
-	kernel.PrintBytes((const char*)&m_header->buffer[0], 256);
+	m_iterator = (m_iterator + length) % DataSize;
 }
 
 void* HyperVRingBuffer::Read(const uint32_t length)
@@ -93,24 +88,36 @@ void* HyperVRingBuffer::Read(const uint32_t length)
 	return top;
 }
 
-void HyperVRingBuffer::Increment(const uint32_t length)
-{
-	m_iterator = (m_iterator + length) % m_dataSize;
-}
-
-void HyperVRingBuffer::CommitRead()
+bool HyperVRingBuffer::CommitRead()
 {
 	__faststorefence();
 	m_header->read_index = m_iterator;
-	
-	//Ring buffer is not blocked, don't signal
-	if (!m_header->pending_send_sz)
-		return;
-
 	__faststorefence();
 
-	//Do math to figure out if blocked
+	// Host may have written after our last Read() check but before read_index was committed.
+	// If so, the host saw the ring as non-empty and suppressed its SINT.
+	// Return true so the caller loops and drains the new data without waiting for an interrupt.
+	const bool more = (m_header->write_index != m_iterator);
+
+	if (!m_header->pending_send_sz)
+		return more;
 
 	m_channel.SetEvent();
+	return more;
 }
 
+//Copies and returns next location
+uint32_t HyperVRingBuffer::Copy(const uint32_t location, const void* buffer, const uint32_t length)
+{
+	memcpy((void*)&m_header->buffer[location], buffer, length);
+	return (location + length) % DataSize;
+}
+
+void HyperVRingBuffer::Display()
+{
+	Printf("Read: 0x%08x\n", m_header->read_index);
+	Printf("Iterator: 0x%08x\n", m_iterator);
+	Printf("Write: 0x%08x\n", m_header->write_index);
+	Printf("Mask: 0x%08x\n", m_header->interrupt_mask);
+	PrintBytes((const char*)&m_header->buffer[0], 256);
+}

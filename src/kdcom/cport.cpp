@@ -31,7 +31,7 @@
   /* INCLUDES *******************************************************************/
 
 #include <ntdef.h>
-#include <ntstatus.h>
+#include <reactos/ntstatus.h>
 #include "cportlib.h"
 #include "ns16550.h"
 #include <intrin.h>

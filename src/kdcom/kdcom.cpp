@@ -6,11 +6,8 @@
  * PROGRAMMER:      Timo Kreuzer (timo.kreuzer@reactos.org)
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <ntdef.h>
-#include <ntstatus.h>
-#include <rtltypes.h>
+#include <reactos/ntstatus.h>
 #include <windbgkd.h>
 #include "cportlib.h"
 #include "kdcom.h"
@@ -47,6 +44,17 @@ const ULONG BaseArray[] = { 0, 0xF1012000 };
 #endif
 
 #define MAX_COM_PORTS   (sizeof(BaseArray) / sizeof(BaseArray[0]) - 1)
+
+#define UlongToPtr(ul) ULongToPtr(ul)
+__inline
+void *
+ULongToPtr(
+    const unsigned long ul
+    )
+// Caution: ULongToPtr() zero-extends the unsigned long value.
+{
+    return( (void *)(ULONG_PTR)ul );
+}
 
 /* GLOBALS ********************************************************************/
 

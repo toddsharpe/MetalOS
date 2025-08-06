@@ -1,7 +1,6 @@
 #include "UserPipe.h"
 
 #include "Kernel/MetalOS.Kernel.h"
-#include "Kernel/Kernel.h"
 #include <vector>
 
 bool UserPipe::EventSignal(void* const arg)
@@ -54,7 +53,7 @@ bool UserPipe::Read(void* const buffer, const size_t length, size_t& read)
 		return false;
 
 	//Determine size to read. Will be length if pipe isn't broken (checked above)
-	read = std::max(m_count, length);
+	read = std::clamp(m_count, 0, length);
 
 	//Read data
 	const void* source = MakePointer<void*>(m_buffer, m_readIndex);

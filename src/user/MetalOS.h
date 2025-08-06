@@ -4,57 +4,34 @@
 /*MetalOS Public Facing Header*/
 /******************************/
 
+#include "Lib/String.h"
+#include "Lib/List.h"
+
+#include "user/MetalOS.Keys.h"
+#include "user/MetalOS.Types.h"
+#include "user/MetalOS.UI.h"
+
 //System Call interface is kept as C-compatible despite this header not being C-friendly
 //This is to allow potential C# interop to be clean
 
-#include <cstdint>
-#include "Graphics/Types.h"
-#include "MetalOS.Keys.h"
-#include "MetalOS.Types.h"
-#include "MetalOS.System.h"
+#define RetNullIfNot(x) if (!(x)) return nullptr;
+#define RetNullIfFailed(x) if ((x) != SyscallResult::Success) return nullptr;
 
-struct ProcessInfo
-{
-	uint32_t Id;
-};
+#define AssertSuccess(EXP) \
+	{ \
+		const SyscallResult r = (EXP); \
+		if (r != SyscallResult::Success) \
+		{ \
+			DebugPrintf("SyscallResult: %d\n", r); \
+			Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  "Assert: " #EXP ", Result: 0x%x", r); \
+		} \
+	}
 
-enum class SystemArchitecture : uint32_t
-{
-	Unknown = 0,
-	x64 = 1
-};
-
-struct SystemInfo
-{
-	uint32_t PageSize;
-	SystemArchitecture Architecture;
-	uint32_t NumberOfProcessors;
-	uint32_t AllocationGranularity;
-	uintptr_t MinimumApplicationAddress;
-	uintptr_t MaximumApplicationAddress;
-};
-
-constexpr bool CanRead(GenericAccess access)
-{
-	return access == GenericAccess::Read || access == GenericAccess::ReadWrite;
-}
-
-constexpr bool CanWrite(GenericAccess access)
-{
-	return access == GenericAccess::Write || access == GenericAccess::ReadWrite;
-}
-
-enum class FilePointerMove
-{
-	Begin,
-	Current,
-	End
-};
-
-enum class SystemCallResult
+enum class SyscallResult
 {
 	Success = 0,
 	InvalidPointer,
+	InvalidArg,
 	InvalidHandle,
 	InvalidObject,
 	BrokenPipe,
@@ -62,126 +39,76 @@ enum class SystemCallResult
 	NotImplemented
 };
 
-struct CreateProcessArgs
-{
-	HFile StdInput;
-	HFile StdOutput;
-	HFile StdError;
-};
-
-struct CreateProcessResult
-{
-	HProcess Process;
-};
-
-struct PipeInfo
-{
-	size_t BytesAvailable;
-	bool IsBroken;
-};
-
+//TODO(tsharpe): Convert pointers to references where able
 extern "C"
 {
-	//Info
-	size_t GetTickCount();
-	SystemCallResult GetSystemTime(SystemTime& time);
-
-	SystemCallResult GetProcessInfo(ProcessInfo& info);
-
-
-	//Process/Thread
-	SystemCallResult CreateProcess(const char* commandLine, const CreateProcessArgs* args, CreateProcessResult* result);
-	uint32_t GetThreadId(HThread thread);
-	HThread GetCurrentThread();
-	uint64_t GetCurrentThreadId();
-	HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg);
-	void Sleep(const uint32_t milliseconds);
-	void SwitchToThread();
-	SystemCallResult ExitProcess(const uint32_t exitCode);
-	SystemCallResult ExitThread(const uint32_t exitCode);
-
+	//Provided by runtime
+	uintptr_t GetProcAddress(HModule hModule, const char* lpProcName);
+	SyscallResult GetProcessInfo(ProcessInfo* info);
+	uint32_t GetCurrentThreadId();
 	uint32_t GetLastError();
 	void SetLastError(uint32_t errorCode);
+	void DebugBreak();
+	void DebugPrintf(const char* format, ...);
+	void CDebugPrintf(const bool enabled, const char* format, ...);
+	void Bugcheck(const char* file, const char* line, const char* format, ...);
+	HModule LoadLibrary(char* lpLibFileName);
+	uint32_t GetErrno();
+	
+	//0x100: System
+	milli_t GetTickCount();
+	SyscallResult GetSystemTime(SystemTime* time);
+	
+	//0x200: Threads/Processes
+	HThread GetCurrentThread();
+	SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* args, CreateProcessResult* result);
+	HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg);
+	uint32_t GetThreadId(HThread thread);
+	void Sleep(const milli_t time);
+	void SwitchToThread();
+	SyscallResult SuspendThread(const HThread file);
+	SyscallResult ResumeThread(const HThread file);
+	SyscallResult TerminateProcess(const HProcess proc, const uint32_t exitCode);
+	void ExitProcess(const uint32_t exitCode);
+	SyscallResult TerminateThread(const HThread thread, const uint32_t exitCode);
+	void ExitThread(const uint32_t exitCode);
 
-	//Semaphores
-	//Handle CreateSemaphore(size_t initial, size_t maximum, const char* name);
-	//SYSTEMCALL ReleaseSemaphore(Handle hSemaphore, size_t releaseCount, size_t* previousCount);
+	//0x300: Windowing
+	SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame);
+	SyscallResult PaintWindow(HWindow handle, const Buffer* buffer);
+	SyscallResult MoveWindow(HWindow handle, const Graphics::Rectangle* frame);
+	SyscallResult GetWindowRect(HWindow handle, Graphics::Rectangle* frame);
+	SyscallResult GetMessage(Message* message);
+	SyscallResult PeekMessage(Message* message);
+	SyscallResult GetScreenRect(Graphics::Rectangle* rect);
 
-	//Windows
-	SystemCallResult AllocWindow(HWindow& handle, const Graphics::Rectangle& frame);
-	//SystemCallResult GetWindowInfo(HWindow handle, Rectangle& frame, WindowStyle& style);
-	SystemCallResult PaintWindow(HWindow handle, const ReadOnlyBuffer& buffer);
-	SystemCallResult MoveWindow(HWindow handle, const Graphics::Rectangle& frame);
-	SystemCallResult GetWindowRect(HWindow handle, Graphics::Rectangle& frame);
-	SystemCallResult GetMessage(Message& message);
-	SystemCallResult PeekMessage(Message& message);
-	SystemCallResult GetScreenRect(Graphics::Rectangle& rect);
+	//0x400: Files/pipes
+	HFile CreateFile(const char* path, const FileAccess access);
+	SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
+	SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t bufferSize, size_t* bytesWritten);
+	SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const Seek seek, size_t* newPosition);
+	SyscallResult MoveFile(const char* existingFileName, const char* newFileName);
+	SyscallResult DeleteFile(const char* fileName);
+	SyscallResult CreateDirectory(const char* path);
+	SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle);
+	SyscallResult PeekNamedPipe(const HFile file, size_t* bytesAvailable);
+	SyscallResult CloseHandle(const Handle handle);
 
-	//Files, Pipes
-	HFile CreateFile(const char* path, const GenericAccess access);
-	SystemCallResult CreatePipe(HFile& readHandle, HFile& writeHandle);
-	SystemCallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
-	SystemCallResult WriteFile(const HFile handle, const void* buffer, const size_t bufferSize, size_t* bytesWritten);
-	SystemCallResult SetFilePointer(const HFile handle, const size_t position, const FilePointerMove moveType, size_t* newPosition);
-	SystemCallResult CloseFile(const HFile handle);
-	SystemCallResult MoveFile(const char* existingFileName, const char* newFileName);
-	SystemCallResult DeleteFile(const char* fileName);
-	SystemCallResult CreateDirectory(const char* path);
-	SystemCallResult WaitForSingleObject(const Handle handle, const uint32_t milliseconds, WaitStatus& status);
-	SystemCallResult GetPipeInfo(const HFile handle, PipeInfo& info);
-	SystemCallResult CloseHandle(const Handle handle);
+	//0x500: Syncronization
+	SyscallResult WaitForSingleObject(const Handle handle, const milli_t time, WaitStatus* status);
+	SyscallResult CreateEvent(HEvent* event, const bool manual, const bool initial);
+	SyscallResult SetEvent(const HEvent event);
+	SyscallResult ResetEvent(const HEvent event);
 
-	SystemCallResult CreateEvent(HEvent& event, const bool manual, const bool initial);
-	SystemCallResult SetEvent(const HEvent event);
-	SystemCallResult ResetEvent(const HEvent event);
-
+	//0x600: Memory
 	void* VirtualAlloc(const void* address, const size_t size);
-	HRingBuffer CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize);
-	HSharedMemory CreateSharedMemory(const char* name, const size_t size);
-	void* MapObject(const void* address, Handle handle);
-	void* MapSharedObject(const void* address, const char* name);
-
-	SystemCallResult DebugPrint(const char* s);
-	SystemCallResult DebugPrintBytes(const char* s, const size_t length);
-
-	Handle LoadLibrary(const char* lpLibFileName);
-	uintptr_t GetProcAddress(Handle hModule, const char* lpProcName);
+	//HRingBuffer CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize);
+	//HSharedMemory CreateSharedMemory(const char* name, const size_t size);
+	//void* MapObject(const void* address, Handle handle);
+	//void* MapSharedObject(const void* address, const char* name);
+	
+	//0x700: Debug
+	SyscallResult DebugPrint(const char* s);
+	SyscallResult DebugPrintBytes(const void* s, const size_t length);
+	SyscallResult DebugPrintStack();
 }
-
-
-enum class DllEntryReason
-{
-	ProcessAttach,
-	ProcessDetach,
-	ThreadAttach,
-	ThreadDetach
-};
-
-//True - LoadLibrary returns handle
-//False - DLL is unloaded
-typedef size_t (*DllMainCall)(Handle hinstDLL, enum DllEntryReason fdwReason);
-const char DllMainName[] = "DllMain";
-
-struct RingBufferHeader
-{
-	size_t Capacity;
-	size_t ReadIndex;
-	size_t WriteIndex;
-	Handle ReadWriteLock;
-};
-
-constexpr size_t UIChannelSize = 2 * PageSize;
-
-struct Channel
-{
-	struct
-	{
-		RingBufferHeader* Header;
-		char* Buffer;
-	} Inbound;
-	struct
-	{
-		RingBufferHeader* Header;
-		char* Buffer;
-	} Outbound;
-};

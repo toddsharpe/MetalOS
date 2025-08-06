@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include "core_crt/string.h"
 
 int memcmp(void const* _Buf1, void const* _Buf2, size_t _Size)
 {
@@ -222,9 +222,9 @@ char* strcpy(char* _Destination, char const* _Source)
 	return strncpy(_Destination, _Source, strlen(_Source));
 }
 
-char const* strchr(char* const _String, int const _Ch)
+char * strchr(const char* _String, const int _Ch)
 {
-	char* s = _String;
+	const char* s = _String;
 	while (*s != (char)_Ch)
 		if (!*s++)
 			return 0;
@@ -242,11 +242,11 @@ char* strrchr(char* const _String, int const _Ch)
 	return ret;
 }
 
-char* strstr(char* const _String, char const* const _SubString)
+const char* strstr(const char* const _String, char const* const _SubString)
 {
 	size_t n = strlen(_SubString);
 
-	char* s = _String;
+	const char* s = _String;
 	while (*_String)
 	{
 		if (!memcmp(_String, _SubString, n)) {

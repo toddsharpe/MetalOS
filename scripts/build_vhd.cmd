@@ -1,6 +1,6 @@
 @set VHD=%CD%\build\MetalOS.vhdx
 @set VHD_SCRIPT=%CD%\build\diskpart.txt
-@set BUILD_OUT=%CD%\build\x64\Debug
+@set BUILD_OUT=%CD%\build\
 @del %VHD% >nul 2>&1
 @del %VHD_SCRIPT% >nul 2>&1
 
@@ -64,4 +64,4 @@ diskpart /s %VHD_SCRIPT%
 
 @rem Fix Perms
 @rem Get-VM 'MetalOS' | Select-Object VMID
-icacls %VHD% /grant 64add3ec-4f98-4f26-9636-60239c6350e5:F
+icacls %VHD% /grant 586ce92d-0116-4bc6-a768-34376e124099:F

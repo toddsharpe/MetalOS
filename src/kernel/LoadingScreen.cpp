@@ -1,9 +1,6 @@
-#include "LoadingScreen.h"
-
-using namespace Graphics;
+#include "kernel/LoadingScreen.h"
 
 LoadingScreen::LoadingScreen(Graphics::FrameBuffer& frameBuffer) :
-	StringPrinter(),
 	m_frameBuffer(frameBuffer),
 	yPos(25)
 {
@@ -13,15 +10,28 @@ LoadingScreen::LoadingScreen(Graphics::FrameBuffer& frameBuffer) :
 void LoadingScreen::Initialize()
 {
 	//Clear frame and draw border
-	m_frameBuffer.FillScreen(Background);
+	Graphics::Draw2D::FillScreen(m_frameBuffer, Background);
 
-	m_frameBuffer.DrawFrameBorder(Border, 3);
-	m_frameBuffer.DrawText({ 9, 9 }, "MetalOS", Border);
-	m_frameBuffer.DrawRectangle(Border, { 0, 20, m_frameBuffer.GetWidth(), 3 });
+	Graphics::Draw2D::DrawFrameBorder(m_frameBuffer, Border, 3);
+	Graphics::Draw2D::DrawText(m_frameBuffer, { 9, 9 }, "MetalOS", Border);
+	Graphics::Draw2D::DrawRectangle(m_frameBuffer, Border, { 0, 20, m_frameBuffer.Width, 3 });
 }
 
-void LoadingScreen::Write(const std::string& string)
+void LoadingScreen::Printf(const char* format, ...)
 {
-	Point2D point = m_frameBuffer.DrawText({ 5, yPos }, string, Colors::White);
-	yPos = point.Y;
+	va_list args;
+	va_start(args, format);
+	
+	char buffer[1024];
+	int retval = vsprintf(buffer, format, args);
+	buffer[retval] = '\0';
+	Write({buffer, static_cast<size_t>(retval)});
+
+	va_end(args);
+}
+
+void LoadingScreen::Write(const CString& string)
+{
+	Graphics::Point2D point = Graphics::Draw2D::DrawText(m_frameBuffer, { 5, static_cast<int32_t>(yPos) }, string, Graphics::Colors::White);
+	yPos = static_cast<size_t>(point.Y);
 }

@@ -1,28 +1,75 @@
 #pragma once
 
-#include "Kernel/Devices/Device.h"
-#include "Kernel/Driver.h"
-#include "Kernel/Drivers/HardDriveDriver.h"
+#include "kernel/KDevice.h"
+#include "Drivers/RamDrive.h"
+#include "Lib/Math.h"
 
-#include "RamDrive.h"
-#include "Kernel/Objects/KFile.h"
-
-#include <memory>
-
-static const char* RamDriveHid = "RDRV";
-
-class RamDriveDriver : public Driver, public HardDriveDriver
+static constexpr CString RamDriveHid = "RDRV";
+class RamDriveDriver : public StorageDriver
 {
 public:
-	RamDriveDriver(Device& device);
 
-	Result Initialize() override;
-	Result Read(char* buffer, size_t length, size_t* bytesRead = nullptr) override;
-	Result Write(const char* buffer, size_t length) override;
-	Result EnumerateChildren() override;
+	RamDriveDriver(KDevice& device) : StorageDriver(device)
+	{
 
-	Result OpenFile(KFile& file, const std::string& path, const GenericAccess access) const override;
-	size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const override;
+	}
+
+	Result Initialize(Arena& arena) override
+	{
+		//Map space
+		const paddr_t address = (paddr_t)m_device.Context;
+		Assert(address);
+		constexpr size_t pages = x64::SizeToPages(RamDriveSize);
+		const void* virtualAddress = MapPages(address, pages, MapType::Driver);
+		
+		//Create underlying driver
+		m_ramDrive = arena.Allocate<RamDrive>(virtualAddress, pages);
+		Assert(m_ramDrive);
+
+		//Set properties
+		m_device.Class = KDeviceClass::Storage;
+		m_device.Name = arena.Copy("RamDrive");
+
+		char buffer[64] = { 0 };
+		sprintf(buffer, "Ram Drive - Files: %zu", m_ramDrive->FileCount());
+		m_device.Description = arena.Copy(buffer);
+
+		return Result::Success;
+	}
+
+	Result Enumerate(Arena& arena) override
+	{
+		return Result::Success;
+	}
+
+	Result OpenFile(KFile& file, const CString& path, const KFileAccess access) const override
+	{
+		Assert(access == KFileAccess::Read);
+		
+		void* address;
+		size_t length;
+		const bool result = m_ramDrive->Open(path.c_str(), address, length);
+		if (!result)
+			return Result::Failed;
+		
+		file = KFile();
+		file.Context = address;
+		file.Length = length;
+		file.Access = access;
+		file.Position = 0;
+
+		return Result::Success;
+	}
+
+	size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const override
+	{
+		AssertOp(handle.Position, <, handle.Length);
+
+		const size_t read = Min(bytesToRead, handle.Length - handle.Position);
+		const void* source = MakePointer<void*>(handle.Context, handle.Position);
+		memcpy(buffer, source, read);
+		return read;
+	}
 
 private:
 	RamDrive* m_ramDrive;

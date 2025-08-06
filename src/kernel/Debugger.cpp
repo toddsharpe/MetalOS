@@ -1,10 +1,8 @@
-#include "Kernel/Kernel.h"
 #include "Assert.h"
 
-#include <algorithm>
+
 #include <windows/types.h>
-#include <sal.h>
-#include <ntstatus.h>
+#include <reactos/ntstatus.h>
 #include <windows/types.h>
 #include <reactos/ioaccess.h>
 #include <windows/winnt.h>
@@ -14,16 +12,14 @@
 #include <reactos/windbgkd.h>
 #include <coreclr/list.h>
 #include "kddll.h"
-namespace Kd64
-{
-	#include "Kd64/kd64.h"
-	extern "C" KdDll m_dll;
-}
+#include "kernel/Kd64/kd64.h"
+extern "C" KdDll m_dll;
 #include "Debugger.h"
 #include "Loader.h"
-#include "PortableExecutable.h"
+#include "WinPE.h"
+#include "MetalOS.Space.h"
 
-size_t Debugger::ThreadLoop(void* arg)
+uint32_t Debugger::ThreadLoop(void* arg)
 {
 	return static_cast<Debugger*>(arg)->ThreadLoop();
 };
@@ -31,59 +27,58 @@ size_t Debugger::ThreadLoop(void* arg)
 Debugger::Debugger()
 {
 	/* Fill out the KD Version Block */
-	Kd64::KdVersionBlock.MajorVersion = DBGKD_MAJOR_EFI;
-	Kd64::KdVersionBlock.MinorVersion = 7601;
+	KdVersionBlock.MajorVersion = DBGKD_MAJOR_EFI;
+	KdVersionBlock.MinorVersion = 7601;
 	
 	/* Set protocol limits */
-	Kd64::KdVersionBlock.MaxStateChange = DbgKdMaximumStateChange -
+	KdVersionBlock.MaxStateChange = DbgKdMaximumStateChange -
 		DbgKdMinimumStateChange;
-	Kd64::KdVersionBlock.MaxManipulate = DbgKdMaximumManipulate -
+	KdVersionBlock.MaxManipulate = DbgKdMaximumManipulate -
 		DbgKdMinimumManipulate;
-	Kd64::KdVersionBlock.Unused[0] = 0;
+	KdVersionBlock.Unused[0] = 0;
 
-	Kd64::KdVersionBlock.KernBase = KernelBaseAddress;
-	Kd64::KdVersionBlock.PsLoadedModuleList = (ULONG64)(LONG_PTR)&PsLoadedModuleList;
+	KdVersionBlock.KernBase = KernelBase;
+	KdVersionBlock.PsLoadedModuleList = (ULONG64)(LONG_PTR)&PsLoadedModuleList;
 
 	InitializeListHead(&PsLoadedModuleList);
 }
 
 void Debugger::Initialize()
 {
-	KeModule& kddll = kernel.KeLoadLibrary("kdcom.dll");
+	KModule* kddll = KeLoadLibrary("kdcom.dll");
 
 	//Load pointers
-	Kd64::m_dll.KdInitialize = static_cast<OnKdInitialize>(PortableExecutable::GetProcAddress(kddll.ImageBase, "KdInitialize"));
-	Kd64::m_dll.KdReceivePacket = static_cast<OnKdReceivePacket>(PortableExecutable::GetProcAddress(kddll.ImageBase, "KdReceivePacket"));
-	Kd64::m_dll.KdSendPacket = static_cast<OnKdSendPacket>(PortableExecutable::GetProcAddress(kddll.ImageBase, "KdSendPacket"));
+	m_dll.KdInitialize = static_cast<OnKdInitialize>(WinPE::GetProcAddress(kddll->ImageBase, "KdInitialize"));
+	m_dll.KdReceivePacket = static_cast<OnKdReceivePacket>(WinPE::GetProcAddress(kddll->ImageBase, "KdReceivePacket"));
+	m_dll.KdSendPacket = static_cast<OnKdSendPacket>(WinPE::GetProcAddress(kddll->ImageBase, "KdSendPacket"));
 
-	kernel.Printf("KdInitialize loaded at 0x%016x\n", Kd64::m_dll.KdInitialize);
-	kernel.Printf("KdReceivePacket loaded at 0x%016x\n", Kd64::m_dll.KdReceivePacket);
-	kernel.Printf("KdSendPacket loaded at 0x%016x\n", Kd64::m_dll.KdSendPacket);
+	Printf("KdInitialize loaded at 0x%016x\n", m_dll.KdInitialize);
+	Printf("KdReceivePacket loaded at 0x%016x\n", m_dll.KdReceivePacket);
+	Printf("KdSendPacket loaded at 0x%016x\n", m_dll.KdSendPacket);
 
-	NTSTATUS result = Kd64::m_dll.KdInitialize(2);
-	kernel.Printf("KdInitialized %d\n", result);
+	NTSTATUS result = m_dll.KdInitialize(2);
+	Printf("KdInitialized %d\n", result);
 
-	kernel.KeCreateThread(Debugger::ThreadLoop, this, "Debugger::ThreadLoop");
+	KeCreateThread(Debugger::ThreadLoop, this, "Debugger::ThreadLoop");
 
-	Kd64::KdInitSystem();
-	Kd64::KdDebuggerEnabled = TRUE;
-	Kd64::KdDebuggerNotPresent = FALSE;
-	Kd64::KdpDprintf("MetalOS::KdCom initialized!\n");
+	KdInitSystem();
+	KdDebuggerEnabled = TRUE;
+	KdDebuggerNotPresent = FALSE;
 }
 
-void Debugger::AddModule(const KeModule& library)
+void Debugger::AddModule(const KModule& library)
 {
-	LDR_DATA_TABLE_ENTRY* entry = new LDR_DATA_TABLE_ENTRY();
+	LDR_DATA_TABLE_ENTRY* entry = m_arena.Allocate<LDR_DATA_TABLE_ENTRY>();
 
 	entry->DllBase = (void*)library.ImageBase;
-	entry->EntryPoint = (void*)((uintptr_t)library.ImageBase + PortableExecutable::GetEntryPoint(library.ImageBase));
-	entry->SizeOfImage = PortableExecutable::GetSizeOfImage(library.ImageBase);
+	entry->EntryPoint = (void*)((uintptr_t)library.ImageBase + WinPE::GetEntryPoint(library.ImageBase));
+	entry->SizeOfImage = WinPE::GetSizeOfImage(library.ImageBase);
 	entry->LoadCount = 1;
 
 	//Allocate name unicode strings
-	size_t length = library.Name.length();
+	size_t length = library.Name.Length;
 	size_t wideLength = (length + 1) * 2;
-	wchar_t* s = new wchar_t[wideLength];
+	wchar_t* s = (wchar_t*)m_arena.Allocate(sizeof(wchar_t) * wideLength);
 	mbstowcs(s, library.Name.c_str(), wideLength);
 	s[length] = '\0';
 
@@ -93,7 +88,7 @@ void Debugger::AddModule(const KeModule& library)
 	InsertHeadList(&PsLoadedModuleList, &entry->InLoadOrderLinks);
 }
 
-void Debugger::DebuggerEvent(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame)
+void Debugger::DebuggerEvent(InterruptVector vector, InterruptFrame& frame)
 {
 	KTRAP_FRAME TrapFrame = { 0 }; //Unused?
 	KEXCEPTION_FRAME ExceptionFrame = { 0 }; //Unused?
@@ -102,44 +97,53 @@ void Debugger::DebuggerEvent(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* f
 	KPROCESSOR_MODE PreviousMode = KernelMode;
 	BOOLEAN SecondChanceException = false;
 
-	Assert(vector == X64_INTERRUPT_VECTOR::Breakpoint);
 	ExceptionRecord.ExceptionCode = STATUS_BREAKPOINT;
 	ExceptionRecord.NumberParameters = 3;
 	ExceptionRecord.ExceptionInformation[0] = BREAKPOINT_BREAK;
-	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)&kernel.m_scheduler.GetCurrentThread();
+	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)&Scheduler::GetThread();
 	ExceptionRecord.ExceptionInformation[2] = 0;
 
-	ConvertToContext(frame, &ContextRecord);
+	ConvertToContext(&frame, &ContextRecord);
 
-	BOOLEAN handled = Kd64::KdpTrap(&TrapFrame, &ExceptionFrame, &ExceptionRecord, &ContextRecord, PreviousMode, SecondChanceException);
-	kernel.Printf("Debugger Event: %d\n", handled);
+	BOOLEAN handled = KdpTrap(&TrapFrame, &ExceptionFrame, &ExceptionRecord, &ContextRecord, PreviousMode, SecondChanceException);
+	Printf("Debugger Event: %d\n", handled);
+}
+
+void Debugger::KdpDprintf(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	
+	KdpDprintf(format, args);
+
+	va_end(args);
 }
 
 void Debugger::KdpDprintf(const char* format, va_list args)
 {
-	Kd64::VaKdpDprintf(format, args);
+	VaKdpDprintf(format, args);
 }
 
 bool Debugger::Enabled()
 {
-	return Kd64::KdDebuggerEnabled;
+	return KdDebuggerEnabled;
 }
 
-size_t Debugger::ThreadLoop()
+uint32_t Debugger::ThreadLoop()
 {
 	while (true)
 	{
-		if (Kd64::KdPollBreakIn())
+		if (KdPollBreakIn())
 		{
 			__debugbreak();
 		}
-		kernel.Sleep(50);
+		Sleep(50);
 	}
 
 	return 0;
 }
 
-void Debugger::ConvertToContext(X64_INTERRUPT_FRAME* frame, PCONTEXT context)
+void Debugger::ConvertToContext(InterruptFrame* frame, PCONTEXT context)
 {
 	context->SegCs = (WORD)frame->CS;
 	context->SegFs = (WORD)frame->FS;

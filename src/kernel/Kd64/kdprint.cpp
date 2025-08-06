@@ -9,33 +9,30 @@
 
  /* INCLUDES ******************************************************************/
 
-#include <cstdint>
-#include <sal.h>
-#include <ntstatus.h>
+#include "core_crt/stdint.h"
+#include <reactos/ntstatus.h>
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include <reactos/windbgkd.h>
 #include "kddll.h"
-#include <algorithm>
+
 #include <coreclr/list.h>
 #include <reactos/ketypes.h>
 #include <reactos/amd64/ketypes.h>
 #include <reactos/amd64/ke.h>
-#include <stdarg.h>
+#include "core_crt/stdarg.h"
 #include "kd64.h"
 #include <reactos/ke.h>
 #include "Kernel/MetalOSkd.h"
 
 #define KD_PRINT_MAX_BYTES 512
 
-#define KeProcessorLevel 0
-
 /* FUNCTIONS *****************************************************************/
 
 BOOLEAN
 NTAPI
 KdpPrintString(
-	_In_ PSTRING Output)
+	PSTRING Output)
 {
 	STRING Data, Header;
 	DBGKD_DEBUG_IO DebugIo;
@@ -56,7 +53,7 @@ KdpPrintString(
 
 	/* Build the packet header */
 	DebugIo.ApiNumber = DbgKdPrintStringApi;
-	DebugIo.ProcessorLevel = (USHORT)KeProcessorLevel;
+	DebugIo.ProcessorLevel = (USHORT)0;
 	DebugIo.Processor = 0;
 	DebugIo.u.PrintString.LengthOfString = Length;
 	Header.Length = sizeof(DBGKD_DEBUG_IO);
@@ -76,8 +73,8 @@ KdpPrintString(
 BOOLEAN
 NTAPI
 KdpPromptString(
-	_In_ PSTRING PromptString,
-	_In_ PSTRING ResponseString)
+	PSTRING PromptString,
+	PSTRING ResponseString)
 {
 	STRING Data, Header;
 	DBGKD_DEBUG_IO DebugIo;
@@ -99,7 +96,7 @@ KdpPromptString(
 
 	/* Build the packet header */
 	DebugIo.ApiNumber = DbgKdGetStringApi;
-	DebugIo.ProcessorLevel = (USHORT)KeProcessorLevel;
+	DebugIo.ProcessorLevel = (USHORT)0;
 	DebugIo.Processor = 0;
 	DebugIo.u.GetString.LengthOfPromptString = Length;
 	DebugIo.u.GetString.LengthOfStringRead = ResponseString->MaximumLength;
@@ -134,7 +131,7 @@ KdpPromptString(
 	} while (Status != KdPacketReceived);
 
 	/* Don't copy back a larger response than there is room for */
-	Length = std::min(Length,
+	Length = Min<ULONG>(Length,
 		(ULONG)ResponseString->MaximumLength);
 
 	/* Copy back the string and return the length */
@@ -230,13 +227,13 @@ KdpSymbol(IN PSTRING DllPath,
 USHORT
 NTAPI
 KdpPrompt(
-	_In_reads_bytes_(PromptLength) PCHAR PromptString,
-	_In_ USHORT PromptLength,
-	_Out_writes_bytes_(MaximumResponseLength) PCHAR ResponseString,
-	_In_ USHORT MaximumResponseLength,
-	_In_ KPROCESSOR_MODE PreviousMode,
-	_In_ PKTRAP_FRAME TrapFrame,
-	_In_ PKEXCEPTION_FRAME ExceptionFrame)
+	PCHAR PromptString,
+	USHORT PromptLength,
+	PCHAR ResponseString,
+	USHORT MaximumResponseLength,
+	KPROCESSOR_MODE PreviousMode,
+	PKTRAP_FRAME TrapFrame,
+	PKEXCEPTION_FRAME ExceptionFrame)
 {
 	STRING PromptBuffer, ResponseBuffer;
 	BOOLEAN Enable, Resend;
@@ -245,9 +242,9 @@ KdpPrompt(
 	CHAR SafeResponseBuffer[KD_PRINT_MAX_BYTES];
 
 	/* Normalize the lengths */
-	PromptLength = std::min(PromptLength,
+	PromptLength = Min<USHORT>(PromptLength,
 		(USHORT)sizeof(CapturedPrompt));
-	MaximumResponseLength = std::min(MaximumResponseLength,
+	MaximumResponseLength = Min<USHORT>(MaximumResponseLength,
 		(USHORT)sizeof(SafeResponseBuffer));
 
 	/* Check if we need to verify the string */
@@ -285,14 +282,14 @@ KdpPrompt(
 NTSTATUS
 NTAPI
 KdpPrint(
-	_In_ ULONG ComponentId,
-	_In_ ULONG Level,
-	_In_reads_bytes_(Length) PCHAR String,
-	_In_ USHORT Length,
-	_In_ KPROCESSOR_MODE PreviousMode,
-	_In_ PKTRAP_FRAME TrapFrame,
-	_In_ PKEXCEPTION_FRAME ExceptionFrame,
-	_Out_ PBOOLEAN Handled)
+	ULONG ComponentId,
+	ULONG Level,
+	PCHAR String,
+	USHORT Length,
+	KPROCESSOR_MODE PreviousMode,
+	PKTRAP_FRAME TrapFrame,
+	PKEXCEPTION_FRAME ExceptionFrame,
+	PBOOLEAN Handled)
 {
 	NTSTATUS Status;
 	BOOLEAN Enable;
@@ -302,7 +299,7 @@ KdpPrint(
 	*Handled = FALSE;
 
 	/* Normalize the length */
-	Length = std::min(Length, (USHORT)KD_PRINT_MAX_BYTES);
+	Length = Min<USHORT>(Length, (USHORT)KD_PRINT_MAX_BYTES);
 
 	/* Setup the output string */
 	OutputString.Buffer = String;
@@ -344,7 +341,7 @@ KdpPrint(
 VOID
 __cdecl
 KdpDprintf(
-	_In_ PCCH Format,
+	PCCH Format,
 	...)
 {
 	va_list ap;
@@ -356,8 +353,8 @@ KdpDprintf(
 VOID
 __cdecl
 VaKdpDprintf(
-	_In_ PCCH Format,
-	_In_ va_list Args
+	PCCH Format,
+	va_list Args
 )
 {
 	STRING String;

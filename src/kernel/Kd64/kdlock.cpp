@@ -8,8 +8,7 @@
 
  /* INCLUDES ******************************************************************/
 
-#include <sal.h>
-#include <cstdint>
+#include "core_crt/stdint.h"
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include <reactos/ketypes.h>
@@ -17,8 +16,6 @@
 #include <reactos/windbgkd.h>
 #include <coreclr/list.h>
 #include "kddll.h"
-#include "MetalOS.Arch.h"
-#include "MetalOS.Internal.h"
 #include <reactos/amd64/ke.h>
 #include "kd64.h"
 

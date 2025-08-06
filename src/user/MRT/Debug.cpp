@@ -1,15 +1,30 @@
-#include "MetalOS.h"
-#include "user/MetalOS.Types.h"
-#include <stdarg.h>
-#include <stdio.h>
-#include <intrin.h>
+#include "user/MRT/Debug.h"
 
-extern "C" void DebugBreak()
+#include "core_crt/stdio.h"
+#include "user/MetalOS.h"
+
+void DebugBreak()
 {
 	__debugbreak();
 }
 
-extern "C" void DebugPrintf(const char* format, ...)
+void CDebugPrintf(const bool enabled, const char* format, ...)
+{
+	if (!enabled)
+		return;
+	
+	va_list args;
+	va_start(args, format);
+
+	char buffer[512];
+	int retval = vsprintf(buffer, format, args);
+	buffer[retval] = '\0';
+	va_end(args);
+
+	DebugPrint(buffer);
+}
+
+void DebugPrintf(const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -22,7 +37,7 @@ extern "C" void DebugPrintf(const char* format, ...)
 	DebugPrint(buffer);
 }
 
-extern "C" void Bugcheck(const char* file, const char* line, const char* format, ...)
+void Bugcheck(const char* file, const char* line, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
@@ -36,5 +51,8 @@ extern "C" void Bugcheck(const char* file, const char* line, const char* format,
 	DebugPrintf("%s\n", file);
 	DebugPrintf("%s\n", line);
 	DebugPrintf("%s\n", buffer);
+
+	DebugPrintStack();
+
 	ExitProcess(-1);
 }

@@ -230,7 +230,7 @@ typedef struct _KD_CONTEXT
 //
 // Control Sets for Supported Architectures
 //
-#include <pshpack4.h>
+#include <reactos/pshpack4.h>
 typedef struct _X86_DBGKD_CONTROL_SET
 {
 	ULONG TraceFlag;
@@ -277,7 +277,7 @@ typedef struct _DBGKD_ANY_CONTROL_SET
 		ARM_DBGKD_CONTROL_SET ARMControlSet;
 	};
 } DBGKD_ANY_CONTROL_SET, * PDBGKD_ANY_CONTROL_SET;
-#include <poppack.h>
+#include <reactos/poppack.h>
 
 #if defined(_M_IX86)
 typedef X86_DBGKD_CONTROL_SET DBGKD_CONTROL_SET, * PDBGKD_CONTROL_SET;
@@ -559,7 +559,7 @@ typedef struct _DBGKD_CONTINUE
 	NTSTATUS ContinueStatus;
 } DBGKD_CONTINUE, * PDBGKD_CONTINUE;
 
-#include <pshpack4.h>
+#include <reactos/pshpack4.h>
 typedef struct _DBGKD_CONTINUE2
 {
 	NTSTATUS ContinueStatus;
@@ -569,7 +569,7 @@ typedef struct _DBGKD_CONTINUE2
 		DBGKD_ANY_CONTROL_SET AnyControlSet;
 	};
 } DBGKD_CONTINUE2, * PDBGKD_CONTINUE2;
-#include <poppack.h>
+#include <reactos/poppack.h>
 
 typedef struct _DBGKD_READ_WRITE_IO32
 {

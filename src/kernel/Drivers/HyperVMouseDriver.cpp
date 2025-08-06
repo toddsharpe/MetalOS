@@ -1,12 +1,14 @@
-#include "Kernel/Kernel.h"
+#include "HyperVMouseDriver.h"
+#include "kernel/KDevice.h"
 #include <Assert.h>
+#include "user/MetalOS.Types.h"
+#include "user/MetalOS.UI.h"
+#include "kernel/Api.h"
 
-#include "Kernel/Drivers/HyperVMouseDriver.h"
-#include "Kernel/Devices/HyperVDevice.h"
 
 //TODO: could be refactored into HID + HyperV portions
 //For now it does both
-HyperVMouseDriver::HyperVMouseDriver(Device& device) :
+HyperVMouseDriver::HyperVMouseDriver(KDevice& device) :
 	Driver(device),
 	m_response(),
 	m_event(false, false),
@@ -15,19 +17,17 @@ HyperVMouseDriver::HyperVMouseDriver(Device& device) :
 
 }
 
-Result HyperVMouseDriver::Initialize()
+Result HyperVMouseDriver::Initialize(Arena& arena)
 {
-	kernel.Printf("HyperVMouseDriver::Initialize\n");
+	Printf("HyperVMouseDriver::Initialize\n");
+	m_device.Class = KDeviceClass::Mouse;
 
-	m_device.Type = DeviceType::Mouse;
-
-	HyperVDevice* device = (HyperVDevice*)&m_device;
-	uint32_t childRelid = *(uint32_t*)device->GetResource(HyperVDevice::ResourceType::ChildRelid);
-	uint32_t connectionId = *(uint32_t*)device->GetResource(HyperVDevice::ResourceType::ConnectionId);
-	vmbus_channel_offer_channel* offerChannel = (vmbus_channel_offer_channel*)device->GetResource(HyperVDevice::ResourceType::OfferChannel);
+	uint32_t childRelid = m_device.child_relid;
+	uint32_t connectionId = m_device.m_msg_conn_id;
+	HyperV::vmbus_channel_offer_channel offerChannel = (HyperV::vmbus_channel_offer_channel)m_device.m_channel;
 
 	//Initialize channel
-	m_channel.Initialize(offerChannel);
+	m_channel.Initialize(&offerChannel);
 
 	//Initialize keyboard
 	mousevsc_prt_msg request;
@@ -38,11 +38,11 @@ Result HyperVMouseDriver::Initialize()
 	request.request.header.size = sizeof(unsigned int);
 	request.request.version_requested.version = SYNTHHID_INPUT_VERSION;
 
-	this->m_channel.SendPacket(&request, sizeof(struct pipe_prt_msg) - sizeof(unsigned char) + sizeof(struct synthhid_protocol_request),
-		(uint64_t)&request, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
+	m_channel.SendPacket(&request, sizeof(struct pipe_prt_msg) - sizeof(unsigned char) + sizeof(struct synthhid_protocol_request),
+		(uint64_t)&request, HyperV::VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 
 	//Wait for SYNTH_HID_PROTOCOL_RESPONSE and SYNTH_HID_INITIAL_DEVICE_INFO
-	kernel.KeWait(m_event);
+	KeWait(m_event);
 
 	//Send info ack
 	mousevsc_prt_msg ack;
@@ -53,58 +53,50 @@ Result HyperVMouseDriver::Initialize()
 	ack.ack.header.size = 1;
 	ack.ack.reserved = 0;
 
-	this->m_channel.SendPacket(&ack, sizeof(struct pipe_prt_msg) - sizeof(unsigned char) + sizeof(struct synthhid_device_info_ack),
-		(uint64_t)&ack, VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
+	m_channel.SendPacket(&ack, sizeof(struct pipe_prt_msg) - sizeof(unsigned char) + sizeof(struct synthhid_device_info_ack),
+		(uint64_t)&ack, HyperV::VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 
 	return Result::Success;
 }
 
-Result HyperVMouseDriver::Read(char* buffer, size_t length, size_t* bytesRead)
-{
-	return Result::NotImplemented;
-}
-
-Result HyperVMouseDriver::Write(const char* buffer, size_t length)
-{
-	return Result::NotImplemented;
-}
-
-Result HyperVMouseDriver::EnumerateChildren()
+Result HyperVMouseDriver::Enumerate(Arena& arena)
 {
 	return Result::NotImplemented;
 }
 
 void HyperVMouseDriver::OnCallback()
 {
-	vmpacket_descriptor* packet;
-	uint32_t length = sizeof(vmpacket_descriptor);
+	HyperV::vmpacket_descriptor* packet;
+	const uint32_t length = sizeof(HyperV::vmpacket_descriptor);
 	//The nuance here is that this structure vmpacket_descriptor is what is sent, which has an extra field (transactionid)
 	//compared to what is received. the code uses the offset field from desc pointer to compensate for this, but it should really be refactored
-	while ((packet = (vmpacket_descriptor*)m_channel.ReadPacket(length)) != nullptr)
+	do
 	{
-		switch (packet->type)
+		while ((packet = (HyperV::vmpacket_descriptor*)m_channel.ReadPacket(length)) != nullptr)
 		{
-		case VM_PKT_COMP:
+			switch (packet->type)
+			{
+			case HyperV::VM_PKT_COMP:
+				break;
+
+			case HyperV::VM_PKT_DATA_INBAND:
+			{
+				const uint32_t size = (packet->len8 << 3) - (packet->offset8 << 3);
+				Assert(size >= sizeof(struct pipe_prt_msg));
+
+				pipe_prt_msg* mouseMessage = (pipe_prt_msg*)((uintptr_t)packet + (packet->offset8 << 3));
+				ProcessMessage(mouseMessage, size);
+			}
 			break;
 
-		case VM_PKT_DATA_INBAND:
-		{
-			const uint32_t size = (packet->len8 << 3) - (packet->offset8 << 3);
-			Assert(size >= sizeof(struct pipe_prt_msg));
+			default:
+				Assert(false);
+				break;
+			}
 
-			pipe_prt_msg* mouseMessage = (pipe_prt_msg*)((uintptr_t)packet + (packet->offset8 << 3));
-			ProcessMessage(mouseMessage, size);
+			m_channel.NextPacket(packet->len8 << 3);
 		}
-		break;
-
-		default:
-			Assert(false);
-			break;
-		}
-
-		m_channel.NextPacket(packet->len8 << 3);
-	}
-	m_channel.StopRead();
+	} while (m_channel.StopRead());
 }
 
 //Messages consist of |pipe_prt_msg|synthhid_msg|
@@ -120,7 +112,7 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 	case SYNTH_HID_PROTOCOL_RESPONSE:
 	{
 		const uint32_t innerSize = msg->size + sizeof(struct pipe_prt_msg) - sizeof(unsigned char);
-		kernel.Printf("innerSize %d struct %d\n", innerSize, sizeof(mousevsc_prt_msg));
+		Printf("innerSize %d struct %d\n", innerSize, sizeof(mousevsc_prt_msg));
 		Assert(innerSize == sizeof(mousevsc_prt_msg));
 		memcpy(&m_response, msg, innerSize);
 		Assert(m_response.response.approved);
@@ -131,25 +123,25 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 	case SYNTH_HID_INITIAL_DEVICE_INFO:
 	{
 		Assert(msg->size >= sizeof(struct hv_input_dev_info));
-		kernel.Printf("SYNTH_HID_INITIAL_DEVICE_INFO\n");
+		Printf("SYNTH_HID_INITIAL_DEVICE_INFO\n");
 
 		synthhid_device_info* info = (synthhid_device_info*)msg->data;
-		kernel.Printf("Vendor 0x%x Product: 0x%x Version 0x%x\n", info->hid_dev_info.vendor, info->hid_dev_info.product, info->hid_dev_info.version);
+		Printf("Vendor 0x%x Product: 0x%x Version 0x%x\n", info->hid_dev_info.vendor, info->hid_dev_info.product, info->hid_dev_info.version);
 
 		//HID 1.1 E.8 HID Descriptor (Mouse)
-		Assert(info->hid_descriptor.bLength = 0x9);
+		Assert(info->hid_descriptor.bLength == 0x9);
 		Assert(info->hid_descriptor.bDescriptorType == HID_DT_HID);
 		Assert(info->hid_descriptor.bcdHID == 0x101);
 		Assert(info->hid_descriptor.bNumDescriptors == 1); //Report descriptor
 
 		const uint32_t innerSize = msg->size + sizeof(struct pipe_prt_msg) - sizeof(unsigned char);
-		kernel.Printf("MsgSize 0x%x, Inner? 0x%x\n", msg->size, innerSize);
+		Printf("MsgSize 0x%x, Inner? 0x%x\n", msg->size, innerSize);
 		
 		//msg->size = sizeof(synthhid_device_info) + wDescriptorLength
 
-		kernel.Printf("Info 0x%x\n", sizeof(synthhid_device_info));
+		Printf("Info 0x%x\n", sizeof(synthhid_device_info));
 
-		kernel.Printf("T: 0x%x, L: 0x%x\n", info->hid_descriptor.desc[0].bDescriptorType, info->hid_descriptor.desc[0].wDescriptorLength);
+		Printf("T: 0x%x, L: 0x%x\n", info->hid_descriptor.desc[0].bDescriptorType, info->hid_descriptor.desc[0].wDescriptorLength);
 
 		//TODO: actually parse the report
 		//char* start = (char*)&info->hid_descriptor + info->hid_descriptor.bLength;
@@ -176,20 +168,18 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 		Assert(report->header.size == 0x7);
 
 		//Parse
-		bool leftClick = report->buffer[0] & 1;
-		bool rightClick = report->buffer[0] & 2;
-		uint16_t x = *(uint16_t*)&report->buffer[1];
-		uint16_t y = *(uint16_t*)&report->buffer[3];
-		uint16_t wheel = *(uint16_t*)&report->buffer[5];
-		//kernel.Printf("X: %d, Y: %d, Wheel: %d, L: %d R: %d\n", x, y, wheel, leftClick, rightClick);
-
+		const bool leftClick = report->buffer[0] & 1;
+		const bool rightClick = report->buffer[0] & 2;
+		const uint16_t x = *(uint16_t*)&report->buffer[1];
+		const uint16_t y = *(uint16_t*)&report->buffer[3];
+		const uint16_t wheel = *(uint16_t*)&report->buffer[5];
 		Message message = {};
 		message.Header.MessageType = MessageType::MouseEvent;
 		message.MouseEvent.Buttons.LeftPressed = leftClick;
 		message.MouseEvent.Buttons.RightPressed = rightClick;
 		message.MouseEvent.XPosition = x;
 		message.MouseEvent.YPosition = y;
-		kernel.KePostMessage(message);
+		KePostMessage(message);
 		break;
 	}
 	break;

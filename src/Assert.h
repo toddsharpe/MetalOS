@@ -1,8 +1,17 @@
 #pragma once
 
-void Bugcheck(const char* file, const char* line, const char* format, ...);
-void Printf(const char* format, ...);
-void CPrintf(const bool enable, const char* format, ...);
+//NOTE(tsharpe): Having these be C-compat means these functions can be provided locally by binary or across DLL boundary (user code)
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+	void Bugcheck(const char* file, const char* line, const char* format, ...);
+	void Printf(const char* format, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #define UNUSED(x) ((void)(x))
 
@@ -34,4 +43,6 @@ void CPrintf(const bool enable, const char* format, ...);
 	}
 #define Fatal(x) Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x);
 #define NotImplemented() Fatal(Not Implemented);
+#define Unreachable() Fatal(Unreachable);
 #define Trace() Printf(__FILE__ "-" STR(__LINE__) "\n");
+#define DebugTrace() DebugPrintf(__FILE__ "-" STR(__LINE__) "\n");

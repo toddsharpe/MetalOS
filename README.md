@@ -145,3 +145,36 @@ May need to set sympath force kernel symbol:
 .reload /f /i moskrnl.exe=0xffff800001000000
 dx -r1 (*((moskrnl!Kernel *)0xffff8000011cf030))
 ```
+
+Viewing kernel modules
+```
+dt moskrnl!KModule 0xffff800001db7258 -l Link.FLink
+```
+
+Viewing kernel threads
+```
+dt -r2 moskrnl!KThread 0xffff8000018b2160 -l Link.FLink
+```
+Viewing windows:
+```
+dt moskrnl!UWindow 0xffff8000014b05c0 -l Link.FLink
+```
+
+Viewing stack trace:
+```
+kd> k
+ # Child-SP          RetAddr               Call Site
+00 ffff8000`20c1f208 ffff8000`0103abc4     nt!ListRemoveEntry+0x2c [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\Lib\List.h @ 47] 
+01 ffff8000`20c1f228 ffff8000`0103ecd0     nt!ListRemoveEntry+0x54 [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\Lib\List.h @ 59] 
+02 ffff8000`20c1f258 ffff8000`0102edf8     nt!ListHead2<UWindow>::Remove+0x20 [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\Lib\List.h @ 289] 
+03 ffff8000`20c1f288 ffff8000`0102ed7a     nt!WindowingSystem::Delete+0x48 [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\kernel\WindowingSystem.cpp @ 63] 
+04 ffff8000`20c1f2c8 ffff8000`01042056     nt!Delete+0x1a [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\Kernel\Kernel.cpp @ 848] 
+05 ffff8000`20c1f2f8 ffff8000`0103a3d9     nt!CloseHandle+0x76 [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\kernel\Syscalls.cpp @ 795] 
+06 ffff8000`20c1f348 ffff8000`01042970     nt!KeTerminateProcess+0x59 [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\Kernel\Kernel.cpp @ 507] 
+07 ffff8000`20c1f388 ffff8000`0102f278     nt!ExitProcess+0x20 [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\kernel\Syscalls.cpp @ 395] 
+08 ffff8000`20c1f3c8 ffff8000`010434e3     nt!Dispatch+0x2c8 [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\kernel\Syscalls.cpp @ 99] 
+09 ffff8000`20c1f418 ffff8000`01047622     nt!KeSyscall+0x13 [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\kernel\Syscalls.cpp @ 199] 
+0a ffff8000`20c1f458 ffff8000`20c1f478     nt!x64_SYSTEMCALL+0x4f
+0b ffff8000`20c1f460 ffff8000`010280b3     0xffff8000`20c1f478
+0c ffff8000`20c1f468 00000000`00000000     nt!ListForEach<KThread,unsigned __int64>+0x73 [C:\Users\todds\GitHub\toddsharpe\MetalOS\src\Lib\List.h @ 140] 
+```

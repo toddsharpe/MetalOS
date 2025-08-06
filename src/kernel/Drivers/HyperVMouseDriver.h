@@ -1,11 +1,8 @@
 #pragma once
-#include "Kernel/Devices/Device.h"
-#include "Kernel/Driver.h"
-#include "Kernel/Drivers/HyperVChannel.h"
-#include "Kernel/Objects/KEvent.h"
 
-#include <queue>
-
+#include "kernel/Drivers/Driver.h"
+#include "kernel/Drivers/HyperVChannel.h"
+#include "user/MetalOS.Keys.h"
 
 namespace
 {
@@ -55,7 +52,7 @@ namespace
 	 */
 	struct synthhid_msg_hdr {
 		enum synthhid_msg_type type;
-		u32 size;
+		uint32_t size;
 	};
 
 	struct synthhid_msg {
@@ -65,10 +62,10 @@ namespace
 
 	union synthhid_version {
 		struct {
-			u16 minor_version;
-			u16 major_version;
+			uint16_t minor_version;
+			uint16_t major_version;
 		};
-		u32 version;
+		uint32_t version;
 	};
 
 	/*
@@ -131,13 +128,13 @@ namespace
 
 	struct pipe_prt_msg {
 		enum pipe_prot_msg_type type;
-		u32 size;
+		uint32_t size;
 		char data[1];
 	};
 
 	struct  mousevsc_prt_msg {
 		enum pipe_prot_msg_type type;
-		u32 size;
+		uint32_t size;
 		union {
 			struct synthhid_protocol_request request;
 			struct synthhid_protocol_response response;
@@ -149,12 +146,10 @@ namespace
 class HyperVMouseDriver : public Driver
 {
 public:
-	HyperVMouseDriver(Device& device);
+	HyperVMouseDriver(KDevice& device);
 
-	Result Initialize() override;
-	Result Read(char* buffer, size_t length, size_t* bytesRead = nullptr) override;
-	Result Write(const char* buffer, size_t length) override;
-	Result EnumerateChildren() override;
+	Result Initialize(Arena& arena) override;
+	Result Enumerate(Arena& arena) override;
 
 	static void Callback(void* context) { ((HyperVMouseDriver*)context)->OnCallback(); };
 

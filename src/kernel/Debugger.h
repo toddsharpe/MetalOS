@@ -6,7 +6,6 @@
 #include <windows/winnt.h>
 #include <reactos/windbgkd.h>
 #include "kddll.h"
-#include <map>
 #include "KThread.h"
 
 //ReactOS::ntoskrnl\kd64\kdapi.c
@@ -17,17 +16,20 @@ public:
 	Debugger();
 	void Initialize();
 
-	void AddModule(const KeModule& library);
+	void AddModule(const KModule& library);
 
-	void DebuggerEvent(X64_INTERRUPT_VECTOR vector, X64_INTERRUPT_FRAME* frame);
+	void DebuggerEvent(InterruptVector vector, InterruptFrame& frame);
+	void KdpDprintf(const char* format, ...);
 	void KdpDprintf(const char* format, va_list args);
 	bool Enabled();
 
 private:
-	static size_t ThreadLoop(void* arg);
-	size_t ThreadLoop();
+	static uint32_t ThreadLoop(void* arg);
+	uint32_t ThreadLoop();
 
-	void ConvertToContext(X64_INTERRUPT_FRAME* frame, PCONTEXT context);
+	void ConvertToContext(InterruptFrame* frame, PCONTEXT context);
+
+	StaticArena<PageSize> m_arena;
 
 	LIST_ENTRY PsLoadedModuleList;
 };

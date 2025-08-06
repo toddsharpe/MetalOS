@@ -8,9 +8,9 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "reactos/amd64/ketypes.h"
+#include "reactos/ketypes.h"
+#include "reactos/amd64/ke.h"
 
  //
  // Default size of the DbgPrint log buffer
@@ -208,26 +208,26 @@ KdDisableDebuggerWithLock(
 NTSTATUS
 NTAPI
 KdpPrint(
-    _In_ ULONG ComponentId,
-    _In_ ULONG Level,
-    _In_reads_bytes_(Length) PCHAR String,
-    _In_ USHORT Length,
-    _In_ KPROCESSOR_MODE PreviousMode,
-    _In_ PKTRAP_FRAME TrapFrame,
-    _In_ PKEXCEPTION_FRAME ExceptionFrame,
-    _Out_ PBOOLEAN Handled
+    ULONG ComponentId,
+    ULONG Level,
+    PCHAR String,
+    USHORT Length,
+    KPROCESSOR_MODE PreviousMode,
+    PKTRAP_FRAME TrapFrame,
+    PKEXCEPTION_FRAME ExceptionFrame,
+    PBOOLEAN Handled
 );
 
 USHORT
 NTAPI
 KdpPrompt(
-    _In_reads_bytes_(PromptLength) PCHAR PromptString,
-    _In_ USHORT PromptLength,
-    _Out_writes_bytes_(MaximumResponseLength) PCHAR ResponseString,
-    _In_ USHORT MaximumResponseLength,
-    _In_ KPROCESSOR_MODE PreviousMode,
-    _In_ PKTRAP_FRAME TrapFrame,
-    _In_ PKEXCEPTION_FRAME ExceptionFrame
+    PCHAR PromptString,
+    USHORT PromptLength,
+    PCHAR ResponseString,
+    USHORT MaximumResponseLength,
+    KPROCESSOR_MODE PreviousMode,
+    PKTRAP_FRAME TrapFrame,
+    PKEXCEPTION_FRAME ExceptionFrame
 );
 
 VOID
@@ -342,12 +342,12 @@ KdpAllowDisable(
 NTSTATUS
 NTAPI
 KdpCopyMemoryChunks(
-    _In_ ULONG64 Address,
-    _In_ PVOID Buffer,
-    _In_ ULONG TotalSize,
-    _In_ ULONG ChunkSize,
-    _In_ ULONG Flags,
-    _Out_opt_ PULONG ActualSize
+    ULONG64 Address,
+    PVOID Buffer,
+    ULONG TotalSize,
+    ULONG ChunkSize,
+    ULONG Flags,
+    PULONG ActualSize
 );
 
 //
@@ -356,16 +356,16 @@ KdpCopyMemoryChunks(
 VOID
 NTAPI
 KdpMoveMemory(
-    _In_ PVOID Destination,
-    _In_ PVOID Source,
-    _In_ SIZE_T Length
+    PVOID Destination,
+    PVOID Source,
+    SIZE_T Length
 );
 
 VOID
 NTAPI
 KdpZeroMemory(
-    _In_ PVOID Destination,
-    _In_ SIZE_T Length
+    PVOID Destination,
+    SIZE_T Length
 );
 
 //
@@ -507,15 +507,15 @@ KdpSysCheckLowMemory(
 VOID
 __cdecl
 KdpDprintf(
-    _In_ PCCH Format,
+    PCCH Format,
     ...
 );
 
 VOID
 __cdecl
 VaKdpDprintf(
-    _In_ PCCH Format,
-    _In_ va_list Args
+    PCCH Format,
+    va_list Args
 );
 
 //
@@ -558,7 +558,3 @@ extern ULONG TraceDataBuffer[40];
 extern ULONG TraceDataBufferPosition;
 
 extern BOOLEAN KdDebuggerNotPresent;
-
-#ifdef __cplusplus
-}
-#endif

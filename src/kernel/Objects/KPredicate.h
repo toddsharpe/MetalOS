@@ -9,7 +9,9 @@ public:
 	KPredicate(const SignalPredicate predicate, void* const arg) :
 		m_predicate(predicate),
 		m_arg(arg)
-	{ }
+	{
+		
+	}
 
 	virtual bool IsSignalled() const override
 	{

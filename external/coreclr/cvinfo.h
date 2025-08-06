@@ -17,7 +17,7 @@
  *
  */
 
-#include <cstdint>
+#include "core_crt/stdint.h"
 
 #pragma once
 
@@ -1163,7 +1163,7 @@ typedef struct TYPTYPE {
     unsigned char   data[CV_ZEROLEN];
 } TYPTYPE;          // general types record
 
-__INLINE char *NextType ( _In_ char * pType) {
+__INLINE char *NextType ( char * pType) {
     return (pType + ((TYPTYPE *)pType)->len + sizeof(unsigned short));
 }
 

@@ -1,0 +1,52 @@
+#pragma once
+
+#include "kernel/Types.h"
+
+enum class Result
+{
+	Success,
+	Failed,
+	NotImplemented
+};
+
+class KDevice;
+class Driver
+{
+public:
+	Driver(KDevice& device) :
+		m_device(device)
+	{
+
+	}
+
+	//TODO(tsharpe): Decide how to deal with these arenas, these call could fail and then memory isnt cleaned up?
+	virtual Result Initialize(Arena& arena) = 0;
+	virtual Result Enumerate(Arena& arena) = 0;
+
+protected:
+	KDevice& m_device;
+};
+
+class IoDriver : public Driver
+{
+public:
+	IoDriver(KDevice& device) : Driver(device)
+	{
+
+	}
+
+	virtual Result Read(char* const buffer, size_t length, size_t* bytesRead = nullptr) = 0;
+	virtual Result Write(const char* const buffer, const size_t length) = 0;
+};
+
+class StorageDriver : public Driver
+{
+public:
+	StorageDriver(KDevice& device) : Driver(device)
+	{
+
+	}
+
+	virtual Result OpenFile(KFile& file, const CString& path, const KFileAccess access) const = 0;
+	virtual size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const = 0;
+};

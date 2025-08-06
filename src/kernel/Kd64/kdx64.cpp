@@ -8,11 +8,10 @@
 
  /* INCLUDES *****************************************************************/
 
-#include <sal.h>
-#include <cstdint>
-#include <intrin.h>
-#include <ntstatus.h>
-#include <algorithm>
+#include "core_crt/stdint.h"
+#include "x64/intrin.h"
+#include <reactos/ntstatus.h>
+
 #include <windows/types.h>
 #include <reactos/ioaccess.h>
 #include <windows/winnt.h>
@@ -21,8 +20,6 @@
 #include <reactos/windbgkd.h>
 #include <coreclr/list.h>
 #include "kddll.h"
-#include "MetalOS.Arch.h"
-#include "MetalOS.Internal.h"
 #include <reactos/amd64/ke.h>
 #include "kd64.h"
 #include "Kernel/MetalOSkd.h"
@@ -204,7 +201,7 @@ KdpSysReadControlSpace(IN ULONG Processor,
 	}
 
 	/* Copy the memory */
-	RtlCopyMemory(Buffer, ControlStart, std::min(Length, *ActualLength));
+	RtlCopyMemory(Buffer, ControlStart, Min(Length, *ActualLength));
 
 	/* Finish up */
 	return STATUS_SUCCESS;
@@ -236,7 +233,7 @@ KdpSysWriteControlSpace(IN ULONG Processor,
 	}
 
 	/* Copy the memory */
-	RtlCopyMemory(ControlStart, Buffer, std::min(Length, *ActualLength));
+	RtlCopyMemory(ControlStart, Buffer, Min(Length, *ActualLength));
 
 	return STATUS_SUCCESS;
 }

@@ -1,22 +1,12 @@
 #pragma once
 
-#include "PhysicalMemoryManager.h"
-#include <intrin.h>
-#include <cstdint>
-#include "VirtualAddressSpace.h"
+#include "kernel/KProcess.h"
 
-//Ask address space for block
-//Request physical pages
-//Map
-
-class VirtualMemoryManager
+//Reserves space in calling process, acquires physical pages, maps into page tables
+namespace VMM
 {
-public:
-	VirtualMemoryManager(PhysicalMemoryManager& physicalMemory);
+	void* Allocate(KProcess& process, const size_t count);
 
-	void* Allocate(const void* address, const size_t count, VirtualAddressSpace& addressSpace);
-	void* VirtualMap(const void* address, const std::vector<paddr_t>& addresses, VirtualAddressSpace& addressSpace);
-
-private:
-	PhysicalMemoryManager& m_physicalMemory;
+	bool MapContiguous(KProcess& process, const void* const virtualAddr, const paddr_t physicaAddr, const size_t count);
+	void* VirtualMap(KProcess& process, const paddr_t* addresses, const size_t count);
 };

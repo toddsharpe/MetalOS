@@ -9,9 +9,8 @@
 
  /* INCLUDES ******************************************************************/
 
-#include <sal.h>
-#include <cstdint>
-#include <ntstatus.h>
+#include "core_crt/stdint.h"
+#include <reactos/ntstatus.h>
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include <reactos/kdtypes.h>
@@ -26,36 +25,10 @@
 #include "Kernel/MetalOSkd.h"
 
 //
-// Retrieves the ComponentId and Level for BREAKPOINT_PRINT
-// and OutputString and OutputStringLength for BREAKPOINT_PROMPT.
-//
-#if defined(_X86_)
-
-//
-// EBX/EDI on x86
-//
-#define KdpGetParameterThree(Context)  ((Context)->Ebx)
-#define KdpGetParameterFour(Context)   ((Context)->Edi)
-
-#elif defined(_AMD64_)
-
-//
 // R8/R9 on AMD64
 //
 #define KdpGetParameterThree(Context)  ((Context)->R8)
 #define KdpGetParameterFour(Context)   ((Context)->R9)
-
-#elif defined(_ARM_)
-
-//
-// R3/R4 on ARM
-//
-#define KdpGetParameterThree(Context)  ((Context)->R3)
-#define KdpGetParameterFour(Context)   ((Context)->R4)
-
-#else
-#error Unsupported Architecture
-#endif
 
 /* FUNCTIONS *****************************************************************/
 

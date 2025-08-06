@@ -1,7 +1,5 @@
-#include "ConfigTables.h"
-
+#include "kernel/ConfigTables.h"
 #include "Assert.h"
-#include <string>
 
 ConfigTables::ConfigTables(const EFI_CONFIGURATION_TABLE* const configTables, const size_t count) :
 	m_tables(configTables),
@@ -10,37 +8,24 @@ ConfigTables::ConfigTables(const EFI_CONFIGURATION_TABLE* const configTables, co
 
 }
 
-//Reallocates and copies config tables. Used to move from UEFI space to Kernel
-void ConfigTables::Reallocate()
+//Copy tables to kernel memory
+void ConfigTables::Initialize(Arena& arena)
 {
-	EFI_CONFIGURATION_TABLE* const newTables = new EFI_CONFIGURATION_TABLE[m_count];
-	Assert(newTables);
+	const size_t size = sizeof(EFI_CONFIGURATION_TABLE) * m_count;
+	EFI_CONFIGURATION_TABLE* const allocated = reinterpret_cast<EFI_CONFIGURATION_TABLE*>(arena.Allocate(size));
+	Assert(allocated);
 
-	memcpy(newTables, m_tables, m_count * sizeof(EFI_CONFIGURATION_TABLE));
-	m_tables = newTables;
+	memcpy(allocated, m_tables, size);
+	m_tables = allocated;
 }
 
 void* ConfigTables::GetAcpiTable() const
 {
 	void* table = nullptr;
-	const EFI_GUID guid = ACPI_20_TABLE_GUID;
+	constexpr EFI_GUID guid = { 0x8868e871, 0xe4f1, 0x11d3, {0xbc, 0x22, 0x0, 0x80, 0xc7, 0x3c, 0x88, 0x81} };
 	Assert(GetTableByGuid(guid, table));
 
 	return table;
-}
-
-bool ConfigTables::GetTableByGuid(const EFI_GUID& guid, void*& vendorTable) const
-{
-	for (size_t i = 0; i < m_count; i++)
-	{
-		if (memcmp(&m_tables[i].VendorGuid, &guid, sizeof(EFI_GUID)) != 0)
-			continue;
-
-		vendorTable = m_tables[i].VendorTable;
-		return true;
-	}
-
-	return false;
 }
 
 void ConfigTables::Display() const
@@ -57,4 +42,18 @@ void ConfigTables::Display() const
 			address
 		);
 	}
+}
+
+bool ConfigTables::GetTableByGuid(const EFI_GUID& guid, void*& vendorTable) const
+{
+	for (size_t i = 0; i < m_count; i++)
+	{
+		if (memcmp(&m_tables[i].VendorGuid, &guid, sizeof(EFI_GUID)) != 0)
+			continue;
+
+		vendorTable = m_tables[i].VendorTable;
+		return true;
+	}
+
+	return false;
 }

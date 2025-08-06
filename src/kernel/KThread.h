@@ -1,12 +1,11 @@
 #pragma once
 
-#include "Kernel/MetalOS.Kernel.h"
-#include "UserThread.h"
-#include "Kernel/Objects/KSignalObject.h"
-#include "user/MetalOS.Types.h"
-#include <cstdint>
+#include "core_crt/stdint.h"
+#include "core_crt/stddef.h"
+#include "kernel/UThread.h"
+#include "kernel/Objects/KSignalObject.h"
 
-enum class ThreadState
+enum class KThreadState
 {
 	Ready,
 	Running,
@@ -15,39 +14,46 @@ enum class ThreadState
 	Terminated
 };
 
+class Scheduler;
 class KThread
 {
 	friend class Scheduler;
 
 public:
-	KThread(const ThreadStart start, void* const arg);
-	~KThread();
+	KThread(const KThreadStart start, void* const arg, const CString& name);
 
 	void Init(void* const entry);
-	void Run();
-	
+	void Start();
+
 	void Display() const;
 
+	ListEntry Link;
+	void* ContextPtr;
+	UThread* UserThread;
 	const uint32_t Id;
-
-	X64_CONTEXT* Context;
-	UserThread* UserThread;
-	std::string Name;
 
 private:
 	static uint32_t LastId;
-	static constexpr size_t StackPages = 8;
-	
-	const ThreadStart m_start;
+	static constexpr size_t StackSize = PageSize << 8; // 1MB stack
+
+	const KThreadStart m_start;
 	void* const m_arg;
 	void* m_stack;
 	void* m_stackPointer;
 
 	//Scheduler
-	ThreadState m_state;
-	WaitStatus m_waitStatus;
+	KThreadState m_state;
+	KWaitResult m_waitResult;
 	nano100_t m_timeout;
 	KSignalObject* m_signal;
+	nano_t m_scheduleTime;
+	nano_t m_totalCpuTime;
 
-	::NO_COPY_OR_ASSIGN(KThread);
+	//Storage
+	Context m_context;
+	StaticString<32> m_name; //TODO(tsharpe): Shouldnt be a static string, just string
 };
+
+//Assert assembly offsets
+static_assert(offsetof(KThread, ContextPtr) == 16, "x64_SYSTEMCALL asm invalid");
+static_assert(offsetof(KThread, UserThread) == 24, "x64_SYSTEMCALL asm invalid");

@@ -1,8 +1,8 @@
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include "core_crt/stdlib.h"
+#include "core_crt/wchar.h"
+#include "core_crt/string.h"
 
-//https://wiki.osdev.org/Random_Number_Generator
+// https://wiki.osdev.org/Random_Number_Generator
 static unsigned long int next = 1;
 
 #define RAND_MAX 0x7fff
@@ -23,7 +23,7 @@ int abs(int n)
 	return n > 0 ? n : -n;
 }
 
-int atoi(const char* str)
+int atoi(const char *str)
 {
 	int ret = 0;
 
@@ -33,7 +33,7 @@ int atoi(const char* str)
 	return ret;
 }
 
-size_t mbstowcs(wchar_t* _Dest, char const* _Source, size_t _MaxCount)
+size_t mbstowcs(wchar_t *_Dest, char const *_Source, size_t _MaxCount)
 {
 	size_t len = strlen(_Source);
 	if (_MaxCount < len)
@@ -47,7 +47,7 @@ size_t mbstowcs(wchar_t* _Dest, char const* _Source, size_t _MaxCount)
 	return len;
 }
 
-size_t wcstombs(char* _Dest, const wchar_t* _Source, size_t _MaxCount)
+size_t wcstombs(char *_Dest, const wchar_t *_Source, size_t _MaxCount)
 {
 	const size_t len = wcslen(_Source);
 	if (_MaxCount < len)

@@ -1,108 +1,115 @@
-#include "Scheduler.h"
-
+#include "kernel/Scheduler.h"
+#include "kernel/Api.h"
 #include "Assert.h"
-#include "Kernel/Objects/KSemaphore.h"
-#include "StackWalk.h"
-#include "PortableExecutable.h"
-#include "MetalOS.Arch.h"
-#include "Kernel/Objects/UPipe.h"
+#include "kernel/KThread.h"
 
-KThread* Scheduler::GetThread()
+KThread& Scheduler::GetThread()
 {
 	Assert(_readgsbase_u64() != 0);
 	CpuContext* ctx = (CpuContext*)__readgsqword(offsetof(CpuContext, SelfPointer));
 	Assert(ctx->Thread);
-	return ctx->Thread;
+	return *ctx->Thread;
 }
 
-Scheduler::Scheduler() :
+UThread& Scheduler::GetUThread()
+{
+	KThread& current = Scheduler::GetThread();
+	Assert(current.UserThread);
+	UThread& user = *current.UserThread;
+	return user;
+}
+
+UProcess& Scheduler::GetUProcess()
+{
+	UThread& user = Scheduler::GetUThread();
+	return user.Process;
+}
+
+Scheduler::Scheduler(const ReadTsc readTsc) :
 	Enabled(),
-	m_hyperv(),
 	m_cpu(),
+	m_readTsc(readTsc),
 	m_threadIndex(),
-	m_threads()
+	m_threads(),
+	m_threadPool()
 {
 
 }
 
-void Scheduler::Init()
+void Scheduler::Initialize()
 {
 	//Make boot thread
-	std::shared_ptr<KThread> boot = std::make_shared<KThread>(nullptr, nullptr);
-	boot->Name = "Boot";
-	boot->m_state = ThreadState::Running;
-	m_threads.push_back(boot);
+	KThread* boot = m_threadPool.Allocate(nullptr, nullptr, "Boot");
+	m_threads.Add(boot);
+	boot->m_state = KThreadState::Running;
 
 	//Write to CPU state
 	ArchSetUserCpuContext(&m_cpu);
+	m_cpu.Thread = boot;
+}
+
+KThread* Scheduler::CreateReady(const KThreadStart start, void* const arg, const CString& name)
+{
+	//Construct
+	KThread* thread = m_threadPool.Allocate(start, arg, name);
+	thread->Init(&KThreadInit);
+
+	//Sanity check this thread isn't already in the ready queue
+	for (size_t i = 0; i < m_threads.Count(); i++)
+	{
+		KThread* current = m_threads[i];
+		AssertNotEqual(current->Id, thread->Id);
+	}
+
+	m_threads.Add(thread);
+	return thread;
 }
 
 void Scheduler::Schedule()
 {
-	Assert(Enabled);
+	const cpu_flags_t flags = ArchDisableInterrupts();
+	const nano100_t tsc = m_readTsc();
+	KThread* current = m_cpu.Thread;
+	Assert(current);
 
-	const uint64_t tsc = m_hyperv.ReadTsc();
-	KThread& current = GetCurrentThread();
-
-	//Purge deleted threads if its not the executing one
-	auto it = m_threads.begin();
-	while (it != m_threads.end())
+	//Find threads which can be set to ready now
+	for (size_t i = 0; i < m_threads.Count(); i++)
 	{
-		Assert(it->get());
-		KThread& thread = *it->get();
-
-		if ((thread.m_state == ThreadState::Terminated) && (thread.Id != current.Id))
-		{
-			if (thread.UserThread != nullptr)
-				Assert(thread.UserThread->Deleted);
-
-			it = m_threads.erase(it);
-		}
-		else
-		{
-			it++;
-		}
-	}
-
-	//Iterate through threads and update their status
-	for (std::shared_ptr<KThread>& item : m_threads)
-	{
-		Assert(item.get());
-		KThread& thread = *item.get();
-
-		switch (thread.m_state)
+		KThread* const thread = m_threads[i];
+		switch (thread->m_state)
 		{
 			//Check timeout
-			case ThreadState::Sleeping:
+			case KThreadState::Sleeping:
 			{
-				Assert(thread.m_timeout != 0);
-				if (thread.m_timeout <= tsc)
+				Assert(thread->m_timeout != 0);
+				if (thread->m_timeout <= tsc)
 				{
-					thread.m_timeout = 0;
-					thread.m_state = ThreadState::Ready;
-					thread.m_waitStatus = WaitStatus::None;
+					thread->m_timeout = 0;
+					thread->m_state = KThreadState::Ready;
+					thread->m_waitResult = KWaitResult::None;
 				}
 			}
 			break;
 
 			//Check if timeout has expired or status of signal object
-			case ThreadState::SignalWait:
+			case KThreadState::SignalWait:
 			{
-				Assert(thread.m_signal);
-				KSignalObject* signal = thread.m_signal;
+				Assert(thread->m_signal);
+				KSignalObject* signal = thread->m_signal;
 
-				if (thread.m_timeout <= tsc)
+				if (thread->m_timeout <= tsc)
 				{
-					thread.m_timeout = 0;
-					thread.m_state = ThreadState::Ready;
-					thread.m_waitStatus = WaitStatus::Timeout;
+					thread->m_timeout = 0;
+					thread->m_signal = nullptr;
+					thread->m_state = KThreadState::Ready;
+					thread->m_waitResult = KWaitResult::Timeout;
 				}
 				else if (signal->IsSignalled())
 				{
-					thread.m_timeout = 0;
-					thread.m_signal = nullptr;
-					thread.m_state = ThreadState::Ready;
-					thread.m_waitStatus = WaitStatus::Signaled;
+					thread->m_timeout = 0;
+					thread->m_signal = nullptr;
+					thread->m_state = KThreadState::Ready;
+					thread->m_waitResult = KWaitResult::Signaled;
 
 					signal->Observed();
 				}
@@ -112,95 +119,80 @@ void Scheduler::Schedule()
 	}
 
 	//Mark current thread as ready
-	if (current.m_state == ThreadState::Running)
-		current.m_state = ThreadState::Ready;
+	if (current->m_state == KThreadState::Running)
+		current->m_state = KThreadState::Ready;
 
 	// Select new thread, round robin
-	while (true)
+	for (size_t i = 0; i < m_threads.Count(); i++)
 	{
-		m_threadIndex = (m_threadIndex + 1) % m_threads.size();
-
-		if (m_threads[m_threadIndex]->m_state == ThreadState::Ready)
+		m_threadIndex = (m_threadIndex + 1) % m_threads.Count();
+		if (m_threads[m_threadIndex]->m_state == KThreadState::Ready)
 			break;
 	}
 
 	//Mark next thread as running
-	KThread& next = *m_threads[m_threadIndex].get();
-	next.m_state = ThreadState::Running;
+	KThread& next = *m_threads[m_threadIndex];
+	next.m_scheduleTime = tsc * 100;
+	Assert(next.m_state == KThreadState::Ready);
+	next.m_state = KThreadState::Running;
+
+	//Add to total cpu time
+	if (current->m_scheduleTime)
+		current->m_totalCpuTime += (tsc * 100) - current->m_scheduleTime;
 
 	//If both threads are the same short-circuit context switch
-	if (next.Id == current.Id)
-		return;
-
-#if FALSE
-	Printf("Scheduler: %d (%s) -> %d (%s)\n", current.Id, current.Name.c_str(), next.Id, next.Name.c_str());
-
-	//Save current context
-	Printf("Old Ctx: 0x%016x (0x%016x), New Ctx: 0x%016x (0x%016x)\n", current.Context, current.Context->Rsp, next.Context, next.Context->Rsp);
-	if (current.UserThread)
-		Printf("    Old User Stack: 0x%016x\n", current.UserThread->Stack);
-	if (next.UserThread)
-		Printf("    New User Stack: 0x%016x\n", next.UserThread->Stack);
-#endif
-
-	if (ArchSaveContext(current.Context) == 0)
+	if (next.Id != current->Id)
 	{
-		//Switch cr3 if changing processes
-		UserThread* userThread = next.UserThread;
-		if (userThread != nullptr)
+#if 0
+		Printf("Scheduler: %d (%s) -> %d (%s)\n", current->Id, current->m_name.c_str(), next.Id, next.m_name.c_str());
+		Printf("Old Ctx: 0x%016x (0x%016x), New Ctx: 0x%016x (0x%016x)\n", current->ContextPtr, current->m_context.Rsp, next.ContextPtr, next.m_context.Rsp);
+#endif
+		if (ArchSaveContext(current->ContextPtr) == 0)
 		{
-			const uintptr_t cr3 = userThread->Process.GetCR3();
-			ArchSetPagingRoot(cr3);
+			//Switch cr3 if changing processes
+			if (next.UserThread != nullptr)
+				ArchSetPagingRoot(next.UserThread->Process.Tables.GetRoot());
+
+			//Set current thread
+			m_cpu.Thread = &next;
+
+			//Set interrupt stack
+			ArchSetInterruptStack((void*)next.m_stackPointer);
+
+			//Load new context
+			ArchLoadContext(next.ContextPtr);
 		}
-
-		//Set current thread
-		m_cpu.Thread = &next;
-
-		//Set interrupt stack
-		//TODO(tsharpe): Syscall and interrupt handlers have different stack depths. RSP here is effectively reset,
-		//determine if this is right.
-		//ArchSetInterruptStack((void*)next.Context->Rsp);
-		ArchSetInterruptStack((void*)next.m_stackPointer);
-
-		//Load new context
-		ArchLoadContext(next.Context);
+		else
+		{
+			//Restored thread starts from here
+		}
 	}
+
+	//On new thread, purge deleted threads
+	size_t idx = 0;
+	while (idx < m_threads.Count())
+	{
+		KThread* thread = m_threads[idx];
+		if (thread->m_state == KThreadState::Terminated)
+		{
+			m_threads.RemoveAt(idx);
+			m_threadPool.Deallocate(thread);
+		}
+		else
+		{
+			idx++;
+		}
+	}
+	m_threadIndex = Clamp(m_threadIndex, 0ULL, m_threads.Count() - 1);
+
+	ArchRestoreFlags(flags);
 }
 
+//Currently running thread
 KThread& Scheduler::GetCurrentThread()
 {
-	AssertOp(m_threadIndex, <, m_threads.size());
-	KThread& thread = *m_threads[m_threadIndex].get();
-	return thread;
-}
-
-UserThread& Scheduler::GetCurrentUserThread()
-{
-	KThread& current = GetCurrentThread();
-	Assert(current.UserThread);
-	return *current.UserThread;
-}
-
-UserProcess& Scheduler::GetCurrentProcess()
-{
-	UserThread& user = GetCurrentUserThread();
-
-	return user.Process;
-}
-
-void Scheduler::AddReady(std::shared_ptr<KThread>& thread)
-{
-	//Mark thread ready
-	thread.get()->m_state = ThreadState::Ready;
-
-	//Sanity check this thread isn't already in the ready queue
-	for (size_t i = 0; i < m_threads.size(); i++)
-	{
-		AssertNotEqual(m_threads[i]->Id, thread->Id);
-	}
-
-	//Add to threads
-	m_threads.push_back(thread);
+	Assert(m_cpu.Thread);
+	return *m_cpu.Thread;
 }
 
 void Scheduler::Sleep(nano_t value)
@@ -208,129 +200,83 @@ void Scheduler::Sleep(nano_t value)
 	KThread& current = GetCurrentThread();
 
 	//Set wakeup
-	const nano100_t tscStart = m_hyperv.ReadTsc();
+	const nano100_t tscStart = m_readTsc();
 	const nano100_t deadline = tscStart + value / 100;
 	current.m_timeout = deadline;
-	current.m_state = ThreadState::Sleeping;
+	current.m_state = KThreadState::Sleeping;
 
-	//Context switch
 	this->Schedule();
 }
 
-void Scheduler::KillThread(KThread& thread)
-{
-	Printf("KillThread %x\n", thread.Id);
-
-	//Mark thread deleted
-	thread.m_state = ThreadState::Terminated;
-
-	//Mark user thread deleted
-	UserThread* user = thread.UserThread;
-	if (user)
-	{
-		user->Deleted = true;
-	}
-}
-
-void Scheduler::KillCurrentThread()
+KWaitResult Scheduler::ObjectWait(KSignalObject& object, const milli_t timeout)
 {
 	KThread& current = GetCurrentThread();
-
-	this->KillThread(current);
-	Assert(current.m_state == ThreadState::Terminated);
-
-	this->Schedule();
-	Fatal("Unreachable");
-}
-
-void Scheduler::KillCurrentProcess()
-{
-	UserProcess& process = GetCurrentProcess();
-
-	//Kill threads
-	for (auto& thread : process.m_threads)
-	{
-		this->KillThread(*thread);
-	}
-
-	//Handle pipe reader/writer counts
-	for (auto& item : process.m_objects)
-	{
-		std::shared_ptr<UObject> uObject = item.second;
-		
-		if (uObject->Type == UObjectType::Pipe)
-		{
-			UPipe* uPipe = (UPipe*)uObject.get();
-			if (uPipe->Op == PipeOp::Read)
-			{
-				uPipe->Pipe->Readers--;
-			}
-			else
-			{
-				Assert(uPipe->Op == PipeOp::Write);
-				uPipe->Pipe->Writers--;
-			}
-		}
-	}
-
-	//Clear up these objects
-	process.m_objects.clear();
-
-	//TODO: clean up process?
-
-	//Signal process
-	process.m_state = ProcessState::Terminated;
-
-	this->Schedule();
-	Fatal("Unreachable");
-}
-
-WaitStatus Scheduler::ObjectWait(KSignalObject& object, const milli_t timeout)
-{
-	KThread& current = GetCurrentThread();
-	AssertEqual(current.m_state, ThreadState::Running);
+	AssertEqual(current.m_state, KThreadState::Running);
 	AssertEqual(current.m_signal, nullptr);
 
-	//Don't block if object is signalled
+	//Disable interrupts so the signal check and the SignalWait arm are atomic.
+	//Without this, a timer could fire between IsSignalled()=false and
+	//m_state=SignalWait, context-switch to the windowing thread, enqueue a
+	//message, and Schedule() would not see this thread in SignalWait - missing
+	//the wakeup until the next timer tick.
+	const cpu_flags_t flags = ArchDisableInterrupts();
+
 	if (object.IsSignalled())
 	{
 		object.Observed();
-		return WaitStatus::Signaled;
+		ArchRestoreFlags(flags);
+		return KWaitResult::Signaled;
 	}
 
-	//Calculate deadline
-	const nano100_t tscStart = m_hyperv.ReadTsc();
+	const nano100_t tscStart = m_readTsc();
 	const nano100_t deadline = tscStart + ToNano(timeout) / 100;
 
-	//Set signal
-	current.m_state = ThreadState::SignalWait;
+	//m_signal and m_timeout must be written before m_state=SignalWait so that
+	//any Schedule() seeing SignalWait always finds a valid m_signal.
 	current.m_signal = &object;
 	current.m_timeout = deadline;
+	current.m_state = KThreadState::SignalWait;
+
+	ArchRestoreFlags(flags);
+	this->Schedule();
+	return current.m_waitResult;
+}
+void Scheduler::KillThread(KThread& thread)
+{
+	const bool isRunning = &thread == &GetCurrentThread();
+
+	thread.m_state = KThreadState::Terminated;
+	if (!isRunning)
+		return;
 
 	this->Schedule();
-	return current.m_waitStatus;
+	Fatal("Unreachable");
 }
 
-/*
-WaitStatus Scheduler::SemaphoreWait(KSemaphore& semaphore, nano100_t timeout)
+void Scheduler::KillProcess(UProcess& process)
 {
-	const bool wasSignaled = semaphore.IsSignalled();
-	semaphore.Wait();
+	const bool isRunning = &process == &GetUProcess();
+	
+	ListForEach<UThread>(process.m_threads, [](const ListEntry&, const UThread& thread)
+	{
+		KThread& kThread = thread.Thread;
+		kThread.m_state = KThreadState::Terminated;
+	});
 
-	if (wasSignaled)
-		return WaitStatus::Signaled;
+	if (!isRunning)
+		return;
 
-	return this->ObjectWait(semaphore, timeout * 100);
+	this->Schedule();
+	Fatal("Unreachable");
 }
-*/
 
 void Scheduler::Display() const
 {
 	Printf("Scheduler::Display\n");
-	Printf("    Threads: %d\n", m_threads.size());
-
-	for (size_t i = 0; i < m_threads.size(); i++)
+	Printf("    Threads:\n");
+	for (size_t i = 0; i < m_threads.Count(); i++)
 	{
-		m_threads[i]->Display();
+		KThread* thread = m_threads[i];
+		thread->Display();
 	}
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 #ifndef CONST
 #define CONST               const
 #endif

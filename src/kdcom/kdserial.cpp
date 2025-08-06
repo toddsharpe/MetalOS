@@ -7,7 +7,7 @@
  */
 
 #include <ntdef.h>
-#include <ntstatus.h>
+#include <reactos/ntstatus.h>
 #include <rtltypes.h>
 #include <windbgkd.h>
 #include "kdcom.h"

@@ -1,0 +1,67 @@
+EXPORTS
+	DllMain
+
+	; Provided by runtime
+	GetProcAddress
+	GetProcessInfo
+	GetCurrentThreadId
+	GetLastError
+	SetLastError
+	DebugBreak
+	DebugPrintf
+	CDebugPrintf
+	Bugcheck
+	GetErrno
+
+	; 0x100: System
+	GetTickCount
+	GetSystemTime
+
+	; 0x200: Threads/Processes
+	GetCurrentThread
+	CreateProcess
+	CreateThread
+	GetThreadId
+	Sleep
+	SwitchToThread
+	SuspendThread
+	ResumeThread
+	TerminateProcess
+	ExitProcess
+	TerminateThread
+	ExitThread
+
+	; 0x300
+	AllocWindow
+	PaintWindow
+	MoveWindow
+	GetWindowRect
+	GetMessage
+	PeekMessage
+	GetScreenRect
+
+	; 0x400
+	CreateFile
+	ReadFile
+	WriteFile
+	SetFilePointer
+	MoveFile
+	DeleteFile
+	CreateDirectory
+	CreatePipe
+	PeekNamedPipe
+	CloseHandle
+
+	; 0x500
+	WaitForSingleObject
+	CreateEvent
+	SetEvent
+	ResetEvent
+
+	; 0x600
+	VirtualAlloc
+
+	; 0x700
+	DebugPrint
+	DebugPrintBytes
+	DebugPrintStack

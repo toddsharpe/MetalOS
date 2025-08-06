@@ -1,6 +1,8 @@
 #ifndef __NTOSKRNL_INCLUDE_INTERNAL_AMD64_KE_H
 #define __NTOSKRNL_INCLUDE_INTERNAL_AMD64_KE_H
 
+#include "reactos/amd64/ketypes.h"
+
 #define X86_EFLAGS_TF           0x00000100 /* Trap flag */
 #define X86_EFLAGS_IF           0x00000200 /* Interrupt Enable flag */
 #define X86_EFLAGS_IOPL         0x00003000 /* I/O Privilege Level bits */
@@ -92,7 +94,7 @@ typedef struct _KIDT_INIT
 	PVOID ServiceRoutine;
 } KIDT_INIT, * PKIDT_INIT;
 
-#include <pshpack1.h>
+#include <reactos/pshpack1.h>
 typedef struct _KI_INTERRUPT_DISPATCH_ENTRY
 {
 	UCHAR _Op_nop;
@@ -101,7 +103,7 @@ typedef struct _KI_INTERRUPT_DISPATCH_ENTRY
 	UCHAR _Op_jmp;
 	ULONG RelativeAddress;
 } KI_INTERRUPT_DISPATCH_ENTRY, * PKI_INTERRUPT_DISPATCH_ENTRY;
-#include <poppack.h>
+#include <reactos/poppack.h>
 
 extern ULONG KeI386NpxPresent;
 extern ULONG KeI386XMMIPresent;

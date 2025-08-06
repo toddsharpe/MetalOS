@@ -1,9 +1,8 @@
 #pragma once
 
-#include "HyperVRingBuffer.h"
-#include "VmBusDriver.h"
-#include "Kernel/Kernel.h"
-#include <linux\hyperv.h>
+#include "kernel/Drivers/HyperVRingBuffer.h"
+#include "kernel/Drivers/VmBusDriver.h"
+#include "kernel/HyperV/VmBus.h"
 
 //Channel allocates one contigious section of memory
 //Builds outbound and inbound ring buffers
@@ -15,16 +14,15 @@
 class HyperVChannel
 {
 public:
-	HyperVChannel(uint32_t sendSize, uint32_t receiveSize, CallContext callback);
+	HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize, const ActionContext callback);
 
-	void Initialize(vmbus_channel_offer_channel* offerChannel, const ReadOnlyBuffer* buffer = nullptr);
+	void Initialize(HyperV::vmbus_channel_offer_channel* offerChannel, const CBuffer* buffer = nullptr);
+	//TODO(tsharpe): Close (vmbus_close_internal)
 
-	void SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const vmbus_packet_type type, const uint32_t flags);
-
-	//start read
+	void SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint32_t flags);
 	void* ReadPacket(const uint32_t length);
 	void NextPacket(const uint32_t length);
-	void StopRead();
+	bool StopRead();
 
 	void SetEvent();
 
@@ -32,18 +30,12 @@ public:
 
 
 private:
-	uint32_t m_sendCount;
-	uint32_t m_receiveCount;
-	paddr_t m_address;
-	CallContext m_callback;
+	ActionContext m_callback;
 
 	HyperVRingBuffer m_inbound;
 	HyperVRingBuffer m_outbound;
 
+	HyperV::vmbus_channel_offer_channel* m_channel;
 	uint32_t m_gpadlHandle;
-
-	vmbus_channel_offer_channel* m_channel;
-
-	VmBusDriver* m_vmbus;
 };
 

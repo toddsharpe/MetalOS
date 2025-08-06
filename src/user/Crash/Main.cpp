@@ -1,6 +1,5 @@
-#include <MetalOS.h>
+#include "user/MetalOS.h"
 #include <stdio.h>
-#include <string.h>
 
 void DivZero()
 {
@@ -23,13 +22,15 @@ void DebugBreak()
 
 int main(int argc, char** argv)
 {
+	printf("Userspace crash demo.");
 	printf("argc: %d\n", argc);
 	for (int i = 0; i < argc; i++)
 		printf("argv[%d]: %s\n", i, argv[i]);
+	printf("\n");
 	
 	if (argc < 2)
 	{
-		printf("Usage: crash [null, div0]");
+		printf("Usage: crash [null, div0, brk]");
 		return -1;
 	}
 
@@ -49,4 +50,6 @@ int main(int argc, char** argv)
 	{
 		printf("Unknown type: %s\n", argv[1]);
 	}
+
+	return 0;
 }

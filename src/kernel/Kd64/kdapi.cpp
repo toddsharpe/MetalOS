@@ -8,11 +8,7 @@
  */
 
  /* INCLUDES ******************************************************************/
-#include <string>
-#include <sal.h>
-#include <cstdint>
-#include <algorithm>
-#include <ntstatus.h>
+#include <reactos/ntstatus.h>
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include <reactos/ketypes.h>
@@ -24,7 +20,6 @@
 #include <reactos/amd64/ke.h>
 #include "kd64.h"
 #include "Kernel/MetalOSkd.h"
-#include "MetalOS.Internal.h"
 
 VOID NTAPI PspDumpThreads(BOOLEAN SystemThreads);
 
@@ -34,7 +29,6 @@ VOID NTAPI PspDumpThreads(BOOLEAN SystemThreads);
 
 #define KeNumberProcessors 1
 #define KeProcessor 0
-#define KeProcessorLevel 1
 #define Isa 1
 
 const char* DbgKdApis[] =
@@ -96,9 +90,9 @@ static_assert(sizeof(DbgKdApis) / sizeof(DbgKdApis[0]) == DbgKdMaximumManipulate
 VOID
 NTAPI
 KdpMoveMemory(
-	_In_ PVOID Destination,
-	_In_ PVOID Source,
-	_In_ SIZE_T Length)
+	PVOID Destination,
+	PVOID Source,
+	SIZE_T Length)
 {
 	PCHAR DestinationBytes, SourceBytes;
 
@@ -111,8 +105,8 @@ KdpMoveMemory(
 VOID
 NTAPI
 KdpZeroMemory(
-	_In_ PVOID Destination,
-	_In_ SIZE_T Length)
+	PVOID Destination,
+	SIZE_T Length)
 {
 	PCHAR DestinationBytes;
 
@@ -124,12 +118,12 @@ KdpZeroMemory(
 NTSTATUS
 NTAPI
 KdpCopyMemoryChunks(
-	_In_ ULONG64 Address,
-	_In_ PVOID Buffer,
-	_In_ ULONG TotalSize,
-	_In_ ULONG ChunkSize,
-	_In_ ULONG Flags,
-	_Out_opt_ PULONG ActualSize)
+	ULONG64 Address,
+	PVOID Buffer,
+	ULONG TotalSize,
+	ULONG ChunkSize,
+	ULONG Flags,
+	PULONG ActualSize)
 {
 	NTSTATUS Status;
 	ULONG RemainingLength, CopyChunk;
@@ -465,7 +459,7 @@ KdpSetCommonState(IN ULONG NewState,
 
 	/* Setup common stuff available for all CPU architectures */
 	WaitStateChange->NewState = NewState;
-	WaitStateChange->ProcessorLevel = KeProcessorLevel;
+	WaitStateChange->ProcessorLevel = 1;
 	WaitStateChange->Processor = KeProcessor;
 	WaitStateChange->NumberProcessors = (ULONG)KeNumberProcessors;
 	WaitStateChange->Thread = (ULONG64)(LONG_PTR)KeGetCurrentThread();
@@ -661,6 +655,7 @@ KdpReadPhysicalMemory(IN PDBGKD_MANIPULATE_STATE64 State,
 	}
 
 	/* Do the read */
+	KePrintf("KdpReadPhysicalMemory A:0x%016x S:0x%x\n", ReadMemory->TargetBaseAddress, ReadMemory->TransferCount);
 	State->ReturnStatus = KdpCopyMemoryChunks(ReadMemory->TargetBaseAddress,
 		Data->Buffer,
 		Length,
@@ -1769,7 +1764,7 @@ KdpReportCommandStringStateChange(IN PSTRING NameString,
 			sizeof(DBGKD_COMMAND_STRING));
 
 		/* Normalize name string to max */
-		Length = std::min((USHORT)(128 - 1), NameString->Length);
+		Length = Min<USHORT>((USHORT)(128 - 1), NameString->Length);
 
 		/* Copy it to the message buffer */
 		KdpCopyMemoryChunks((ULONG_PTR)NameString->Buffer,

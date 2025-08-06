@@ -4,7 +4,7 @@
 #include "KSignalObject.h"
 
 #include "Assert.h"
-#include <cstdint>
+#include "core_crt/stdint.h"
 #include <string>
 
 //Count decremented each time thread completes a wait

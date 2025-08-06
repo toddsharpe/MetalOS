@@ -1,75 +1,77 @@
 #pragma once
 
+#include "Graphics/Types.h"
 #include "UI/Window.h"
-#include <user/MetalOS.h>
-#include "UserFrameBuffer.h"
+#include "user/MetalOS.h"
+#include "Assert.h"
 
 class GUI;
 
-typedef bool(*MessageCallback)(GUI& window, Message& message);
+typedef bool (*MessageCallback)(GUI &window, Message &message);
 
-class GUI: public UI::Window
+class GUI : public UI::Window
 {
 public:
-	GUI(const std::string& title, const Graphics::Rectangle& rect, UI::WindowStyle& style, const MessageCallback& callback) : 
-		Window(title, style),
-		m_frameBuffer(rect),
-		m_rect(rect),
-		m_callback(callback),
-		m_prevMouseButtons(),
-		m_handle()
+	GUI(const CString &title, const Graphics::Rectangle &rect, UI::WindowStyle &style, const MessageCallback &callback) : Window(title, style),
+																														  Frame(nullptr, rect.Height, rect.Width),
+																														  m_callback(callback),
+																														  m_point({rect.X, rect.Y}),
+																														  m_prevMouseButtons(),
+																														  m_handle()
 	{
-
 	}
 
 	void Initialize()
 	{
-		AssertSuccess(AllocWindow(m_handle, m_rect));
-		m_frameBuffer.Initialize();
+		// Allocate
+		Graphics::Rectangle rect = {m_point.X, m_point.Y, Frame.Width, Frame.Height};
+		AssertSuccess(AllocWindow(&m_handle, &rect));
+
+		Frame.Buffer = (Graphics::Color *)VirtualAlloc(nullptr, Frame.Size());
+		Assert(Frame.Buffer);
 	}
 
 	void Run()
 	{
 		Message message = {};
-		while (GetMessage(message) == SystemCallResult::Success)
+		while (GetMessage(&message) == SyscallResult::Success)
 		{
 			if (!m_callback(*this, message))
 				DefaultCallback(message);
 		}
 	}
 
-	void DefaultCallback(Message& message)
+	void DefaultCallback(Message &message)
 	{
 		switch (message.Header.MessageType)
 		{
 		case MessageType::PaintEvent:
-			Draw(m_frameBuffer);
-			AssertSuccess(PaintWindow(m_handle, {m_frameBuffer.GetBuffer(), m_frameBuffer.Size()}));
-			break;
-		case MessageType::MouseEvent:
-			//todo: clicked?
-			if (message.MouseEvent.Buttons.LeftPressed && !m_prevMouseButtons.LeftPressed)
-				DebugPrintf("%s: Mouse clicked\n", Title.c_str());
+		{
+			Draw(Frame);
+			Buffer buff((uint8_t *)Frame.Buffer, Frame.Size());
+			AssertSuccess(PaintWindow(m_handle, &buff));
+		}
+		break;
 
+		case MessageType::MouseEvent:
 			m_prevMouseButtons = message.MouseEvent.Buttons;
 			break;
 		}
 	}
 
-	void GetRectangle(Graphics::Rectangle& frame)
+	void GetRectangle(Graphics::Rectangle &frame)
 	{
-		//GetWindowRect?
-		frame = m_rect;
+		// GetWindowRect?
+		frame = Frame.GetBounds();
 	}
 
-	void Move(const Graphics::Rectangle& frame)
+	void Move(const Graphics::Rectangle &frame)
 	{
-		//Implement these later
-		Assert(frame.Height == m_rect.Height);
-		Assert(frame.Width == m_rect.Width);
+		// Implement these later
+		Assert(frame.Height == Frame.Height);
+		Assert(frame.Width == Frame.Width);
 
-		MoveWindow(m_handle, frame);
-		this->m_rect = frame;
+		MoveWindow(m_handle, &frame);
 	}
 
 	HWindow GetHandle() const
@@ -77,16 +79,12 @@ public:
 		return m_handle;
 	}
 
-	UserFrameBuffer& GetFrameBuffer()
-	{
-		return m_frameBuffer;
-	}
+	Graphics::FrameBuffer Frame;
 
 private:
-	UserFrameBuffer m_frameBuffer;
-	Graphics::Rectangle m_rect;
-	const MessageCallback& m_callback;
+	const MessageCallback &m_callback;
 
+	Graphics::Point2D m_point;
 	MouseButtonState m_prevMouseButtons;
 	HWindow m_handle;
 };

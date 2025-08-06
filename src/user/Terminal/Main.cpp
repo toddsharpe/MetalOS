@@ -1,9 +1,14 @@
-#include <user/MetalOS.h>
-#include <user/MetalOS.UI.h>
+#include "user/MetalOS.h"
+#include "user/MetalOS.UI.h"
+#include "user/GUI.h"
+#include <stdlib.h>
 #include "Assert.h"
 
-#include <string>
-#include <vector>
+int __cdecl _purecall(void)
+{
+	Assert(false);
+	return 0;
+}
 
 using namespace Graphics;
 using namespace UI;
@@ -12,14 +17,14 @@ HFile stdIn;
 HFile stdOut;
 HFile stdError;
 
-Label* label;
+Label label("MetalOS Terminal.\nTry typing doom.exe\n>", { 5, 25, 790, 370 });
 
-void LaunchProcess(const std::string& cmd)
+void LaunchProcess(const CString& cmd)
 {
 	CreateProcessArgs args = {};
-	AssertSuccess(CreatePipe(args.StdInput, stdIn));
-	AssertSuccess(CreatePipe(stdOut, args.StdOutput));
-	AssertSuccess(CreatePipe(stdError, args.StdError));
+	AssertSuccess(CreatePipe(&args.StdInput, &stdIn));
+	AssertSuccess(CreatePipe(&stdOut, &args.StdOutput));
+	AssertSuccess(CreatePipe(&stdError, &args.StdError));
 
 	CreateProcessResult result = {};
 	AssertSuccess(CreateProcess(cmd.c_str(), &args, &result));
@@ -30,29 +35,24 @@ void LaunchProcess(const std::string& cmd)
 
 bool ReadStdOut()
 {
-	PipeInfo info = {};
-	AssertSuccess(GetPipeInfo(stdOut, info));
+	size_t bytesAvailable = 0;
+	SyscallResult result = PeekNamedPipe(stdOut, &bytesAvailable);
+	if (result != SyscallResult::BrokenPipe)
+		AssertSuccess(result);
 	
-	char* buffer = (char*)malloc(info.BytesAvailable);
-	size_t read;
-
-	SystemCallResult result = ReadFile(stdOut, buffer, info.BytesAvailable, &read);
-	if (result != SystemCallResult::BrokenPipe)
+	char* buffer = (char*)malloc(bytesAvailable);
+	size_t read = 0;
+	result = ReadFile(stdOut, buffer, bytesAvailable, &read);
+	if (result != SyscallResult::BrokenPipe)
 		AssertSuccess(result);
 
-	size_t index = 0;
-	while (index < read)
-	{
-		char* start = (buffer + index);
-		index += strlen(start) + 1;
-		label->Text += start;
-	}
-	free(buffer);
+	//Append
+	label.Text.Append(CString(buffer, bytesAvailable));
 
-	return info.IsBroken;
+	return result == SyscallResult::BrokenPipe;
 }
 
-std::string command;
+StaticString<1024> command;
 
 HEvent startEvent;
 HEvent endEvent;
@@ -72,7 +72,7 @@ enum class State
 	Finished
 };
 
-size_t TerminalThread(void* arg)
+uint32_t TerminalThread(void* arg)
 {
 	State state = State::Prompt;
 	while (true)
@@ -83,7 +83,7 @@ size_t TerminalThread(void* arg)
 			{
 				//Wait for start
 				WaitStatus status;
-				AssertSuccess(WaitForSingleObject(startEvent, UINT32_MAX, status));
+				AssertSuccess(WaitForSingleObject(startEvent, UINT32_MAX, &status));
 				state = State::CreateProcess;
 			}
 			break;
@@ -97,13 +97,15 @@ size_t TerminalThread(void* arg)
 
 			case State::ReadStdout:
 			{
-				PipeInfo info = {};
-				AssertSuccess(GetPipeInfo(stdOut, info));
-				
+				size_t bytesAvailable = 0;
+				SyscallResult result = PeekNamedPipe(stdOut, &bytesAvailable);
+				if (result != SyscallResult::BrokenPipe)
+					AssertSuccess(result);
+				const bool isBroken = result == SyscallResult::BrokenPipe;
 
-				if (!info.BytesAvailable)
+				if (!bytesAvailable)
 				{
-					if (info.IsBroken)
+					if (isBroken)
 						state = State::Finished;
 					else
 						Sleep(100);
@@ -141,28 +143,28 @@ bool UICallback(GUI& gui, Message& message)
 				if (command != "")
 				{
 					//Launch process
-					label->Text += "\n";
+					label.Text.Append('\n');
 					AssertSuccess(SetEvent(startEvent));
 
 					//Wait for it to finish
 					WaitStatus status;
-					AssertSuccess(WaitForSingleObject(endEvent, UINT32_MAX, status));
+					AssertSuccess(WaitForSingleObject(endEvent, UINT32_MAX, &status));
 				}
-				label->Text += "\n>";
-				command = "";
+				label.Text.Append("\n>");
+				command.Set("");
 			}
 			else if (message.KeyEvent.Key == VK_BACK)
 			{
-				if (command.length() == 0)
+				if (command.Count() == 0)
 					break;
-				command.pop_back();
-				label->Text.pop_back();
+				command.Pop();
+				label.Text.Pop();
 			}
 			else
 			{
 				char c = tolower((char)message.KeyEvent.Key);
-				command += c;
-				label->Text += c;
+				command.Append(c);
+				label.Text.Append(c);
 			}
 		}
 		break;
@@ -177,7 +179,7 @@ bool UICallback(GUI& gui, Message& message)
 int main(int argc, char** argv)
 {
 	ProcessInfo procInfo;
-	GetProcessInfo(procInfo);
+	GetProcessInfo(&procInfo);
 
 	DebugPrint("Hi From terminal!\n");
 
@@ -189,16 +191,17 @@ int main(int argc, char** argv)
 	GUI gui("Terminal", rectangle, style, UICallback);
 	gui.Initialize();
 
-	label = new Label("MetalOS Terminal.\nTry typing doom.exe\n>", { 5, 25, 790, 370 });
-	label->Background = Colors::Black;
-	label->Foreground = Colors::White;
-	gui.Children.push_back(label);
+	label.Background = Colors::Black;
+	label.Foreground = Colors::White;
+	gui.Children.Add(&label);
 
-	AssertSuccess(CreateEvent(startEvent, false, false));
-	AssertSuccess(CreateEvent(endEvent, false, false));
+	AssertSuccess(CreateEvent(&startEvent, false, false));
+	AssertSuccess(CreateEvent(&endEvent, false, false));
 
 	CreateThread(0, TerminalThread, nullptr);
 	gui.Run();
+
+	return 0;
 }
 
 int atexit(void(__cdecl* func)(void))

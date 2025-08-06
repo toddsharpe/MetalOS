@@ -1,96 +1,82 @@
-#include <windows/types.h>
-#include <windows/winnt.h>
-#include "Runtime.h"
-#include "user/Assert.h"
-#include <string.h>
-#include "user/MetalOS.Types.h"
-#include "MetalOS.h"
-#include "Loader.h"
+#pragma once
 
-#define ReturnNullIfNot(x) if (!(x)) return nullptr;
-#define RetNullIfFailed(x) if ((x) != SystemCallResult::Success) return nullptr;
+#include "core_crt/string.h"
+#include "Lib/System.h"
+#include "user/MRT/Loader.h"
+#include "user/MRT/Runtime.h"
+#include "user/MetalOS.h"
+#include "WinPE.h"
 
-PIMAGE_SECTION_HEADER GetPESection(Handle imageBase, const char* name)
+
+namespace Loader
 {
-	PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)imageBase;
-	PIMAGE_NT_HEADERS64 pNtHeader = (PIMAGE_NT_HEADERS64)((uint64_t)imageBase + dosHeader->e_lfanew);
-
-	//Find section
-	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
-	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
+	static const char DllMainName[] = "DllMain";
+	
+	typedef void (*CrtInitializer)();
+	void CrtInit(const void* const imageBase)
 	{
-		if (strcmp((char*)&section[i].Name, name) == 0)
-			return &section[i];
-	}
-
-	return nullptr;
-}
-
-typedef void (*CrtInitializer)();
-//Initializes C++ statics
-void Loader::CrtInit(Handle moduleBase)
-{
-	PIMAGE_SECTION_HEADER crtSection = GetPESection(moduleBase, ".CRT");
-	if (crtSection != nullptr)
-	{
-		CrtInitializer* initializer = (CrtInitializer*)((uintptr_t)moduleBase + crtSection->VirtualAddress);
-		while (*initializer)
+		const IMAGE_SECTION_HEADER* crtSection = WinPE::GetPESection(imageBase, ".CRT");
+		if (crtSection != nullptr)
 		{
-			(*initializer)();
-			initializer++;
+			CrtInitializer* initializer = (CrtInitializer*)((uintptr_t)imageBase + crtSection->VirtualAddress);
+			while (*initializer)
+			{
+				(*initializer)();
+				initializer++;
+			}
 		}
 	}
 }
 
-Handle Loader::LoadLibrary(const char* lpLibFileName)
+HModule LoadLibrary(char* lpLibFileName)
 {
-	DebugPrintf("LoadLibrary: %s\n", lpLibFileName);
+	CDebugPrintf(Runtime::IsDebug(), "LoadLibrary: %s\n", lpLibFileName);
 	
 	//Check if module is already loaded
 	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
 	Module* module = Runtime::GetLoadedModule(lpLibFileName);
 	if (module != nullptr)
 	{
-		DebugPrintf("  Loaded at: 0x%016x\n", module);
-		return module->ImageBase;
+		CDebugPrintf(Runtime::IsDebug(), "  Loaded at: 0x%016x\n", module->ImageBase);
+		return (HModule)module->ImageBase;
 	}
 	
 	//Load it
-	Handle file = CreateFile(lpLibFileName, GenericAccess::Read);
-	ReturnNullIfNot(file);
+	HFile file = CreateFile(lpLibFileName, FileAccess::Read);
+	RetNullIfNot(file);
 
 	size_t read;
 
 	//Dos header
 	IMAGE_DOS_HEADER dosHeader;
 	RetNullIfFailed(ReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
-	ReturnNullIfNot(read == sizeof(IMAGE_DOS_HEADER));
-	ReturnNullIfNot(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
+	RetNullIfNot(read == sizeof(IMAGE_DOS_HEADER));
+	RetNullIfNot(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 	//NT Header
 	IMAGE_NT_HEADERS64 peHeader;
-	RetNullIfFailed(SetFilePointer(file, dosHeader.e_lfanew, FilePointerMove::Begin, nullptr));
+	RetNullIfFailed(SetFilePointer(file, dosHeader.e_lfanew, Seek::Begin, nullptr));
 	RetNullIfFailed(ReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS64), &read));
-	ReturnNullIfNot(read == sizeof(IMAGE_NT_HEADERS64));
+	RetNullIfNot(read == sizeof(IMAGE_NT_HEADERS64));
 
 	//Verify image
 	if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
 		peHeader.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
 		peHeader.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
 	{
-		ReturnNullIfNot(false);
+		RetNullIfNot(false);
 	}
 
 	//Reserve space for image
-	Handle moduleBase = VirtualAlloc((void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage);
+	void* moduleBase = VirtualAlloc((void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage);
 	//TODO(tsharpe): Implement relocations (below). Until then assert address is the one in PE header.
-	ReturnNullIfNot(moduleBase)
-	DebugPrintf("  Loading at 0x%016x\n", moduleBase);
+	RetNullIfNot(moduleBase)
+	CDebugPrintf(Runtime::IsDebug(), "  Loading at 0x%016x\n", moduleBase);
 
 	//Read in headers
-	RetNullIfFailed(SetFilePointer(file, 0, FilePointerMove::Begin, nullptr));
+	RetNullIfFailed(SetFilePointer(file, 0, Seek::Begin, nullptr));
 	RetNullIfFailed(ReadFile(file, moduleBase, peHeader.OptionalHeader.SizeOfHeaders, &read));
-	ReturnNullIfNot(read == peHeader.OptionalHeader.SizeOfHeaders);
+	RetNullIfNot(read == peHeader.OptionalHeader.SizeOfHeaders);
 
 	//Update pointer to loaded module
 	PIMAGE_NT_HEADERS64 pNtHeader = MakePointer<PIMAGE_NT_HEADERS64>(moduleBase, dosHeader.e_lfanew);
@@ -99,17 +85,19 @@ Handle Loader::LoadLibrary(const char* lpLibFileName)
 	PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
 	for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
 	{
-		uintptr_t destination = (uintptr_t)moduleBase + section[i].VirtualAddress;
+		void* destination = MakePointer<void*>(moduleBase, section[i].VirtualAddress);
 
 		//If physical size is non-zero, read data to allocated address
 		DWORD rawSize = section[i].SizeOfRawData;
 		if (rawSize != 0)
 		{
-			RetNullIfFailed(SetFilePointer(file, section[i].PointerToRawData, FilePointerMove::Begin, nullptr));
-			RetNullIfFailed(ReadFile(file, (void*)destination, rawSize, &read));
-			ReturnNullIfNot(read == section[i].SizeOfRawData);
+			RetNullIfFailed(SetFilePointer(file, section[i].PointerToRawData, Seek::Begin, nullptr));
+			RetNullIfFailed(ReadFile(file, destination, rawSize, &read));
+			RetNullIfNot(read == section[i].SizeOfRawData);
 		}
 	}
+
+	CloseHandle(file);
 
 	//Imports
 	IMAGE_DATA_DIRECTORY importDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
@@ -120,7 +108,7 @@ Handle Loader::LoadLibrary(const char* lpLibFileName)
 		while (importDescriptor->Name)
 		{
 			char* module = MakePointer<char*>(moduleBase, importDescriptor->Name);
-			Handle hModule = LoadLibrary(module);
+			HModule hModule = LoadLibrary(module);
 			Assert(hModule);
 
 			PIMAGE_THUNK_DATA pThunkData = MakePointer<PIMAGE_THUNK_DATA>(moduleBase, importDescriptor->FirstThunk);
@@ -129,7 +117,7 @@ Handle Loader::LoadLibrary(const char* lpLibFileName)
 				PIMAGE_IMPORT_BY_NAME pImportByName = MakePointer<PIMAGE_IMPORT_BY_NAME>(moduleBase, pThunkData->u1.AddressOfData);
 
 				pThunkData->u1.Function = GetProcAddress(hModule, (char*)pImportByName->Name);
-				DebugPrintf("  Patched %s::%s to 0x%016x\n", module, (char*)pImportByName->Name, pThunkData->u1.Function);
+				CDebugPrintf(Runtime::IsDebug(), "  Patched %s::%s to 0x%016x\n", module, (char*)pImportByName->Name, pThunkData->u1.Function);
 				pThunkData++;
 			}
 			importDescriptor++;
@@ -176,17 +164,22 @@ Handle Loader::LoadLibrary(const char* lpLibFileName)
 	//}
 
 	//Run static initializers
-	CrtInit(moduleBase);
+	Loader::CrtInit(moduleBase);
+
+	//Mark module as in the process
+	peb->LoadedModules[peb->ModuleIndex].ImageBase = moduleBase;
+	strcpy(peb->LoadedModules[peb->ModuleIndex].Name, lpLibFileName);
+	peb->ModuleIndex++;
 
 	//Execute entry point
 	//TODO: thread
-	DllMainCall main = (DllMainCall)GetProcAddress(moduleBase, DllMainName);
-	main(moduleBase, DllEntryReason::ProcessAttach);
+	DllMainCall main = (DllMainCall)GetProcAddress((HModule)moduleBase, Loader::DllMainName);
+	main((HModule)moduleBase);
 
-	return moduleBase;
+	return (HModule)moduleBase;
 }
 
-extern "C" uintptr_t GetProcAddress(Handle hModule, const char* lpProcName)
+uintptr_t GetProcAddress(HModule hModule, const char* lpProcName)
 {
 	//Headers
 	PIMAGE_DOS_HEADER dosHeader = MakePointer<PIMAGE_DOS_HEADER>(hModule, 0);

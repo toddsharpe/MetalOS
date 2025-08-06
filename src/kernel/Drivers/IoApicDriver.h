@@ -3,7 +3,7 @@
 #include "Kernel/Driver.h"
 #include "Kernel/Devices/Device.h"
 #include "Kernel/MetalOS.Kernel.h"
-#include <cstdint>
+#include "core_crt/stdint.h"
 #include <string>
 
 //https://wiki.osdev.org/APIC

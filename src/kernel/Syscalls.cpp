@@ -110,7 +110,7 @@ uint64_t Dispatch(const SyscallFrame& frame)
 			return (uint64_t)AllocWindow((HWindow*)frame.Arg0, (Graphics::Rectangle*)frame.Arg1);
 
 		case Syscall::PaintWindow:
-			return (uint64_t)PaintWindow((HWindow)frame.Arg0, (Buffer*)frame.Arg1);
+			return (uint64_t)PaintWindow((HWindow)frame.Arg0, (CBuffer*)frame.Arg1);
 
 		case Syscall::MoveWindow:
 			return (uint64_t)MoveWindow((HWindow)frame.Arg0, (Graphics::Rectangle*)frame.Arg1);
@@ -443,7 +443,7 @@ SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame)
 	return SyscallResult::Success;
 }
 
-SyscallResult PaintWindow(HWindow handle, const Buffer* buffer)
+SyscallResult PaintWindow(HWindow handle, const CBuffer* buffer)
 {
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!buffer)
@@ -460,7 +460,7 @@ SyscallResult PaintWindow(HWindow handle, const Buffer* buffer)
 	UWindow* window = obj->Window;
 	Assert(window->Frame.Buffer);
 
-	memcpy(window->Frame.Buffer, buffer->Data, buffer->Length);
+	memcpy(window->Frame.Buffer, buffer->Data, buffer->Size);
 	return SyscallResult::Success;
 }
 

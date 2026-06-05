@@ -20,7 +20,7 @@ bool UICallback(GUI& window, Message& message)
 		screen->Update();
 		screen->Draw(frame);
 
-		Buffer buff((uint8_t*)frame.Buffer, frame.Size());
+		CBuffer buff((uint8_t*)frame.Buffer, frame.Size());
 		AssertSuccess(PaintWindow(window.GetHandle(), &buff));
 		return true;
 	}

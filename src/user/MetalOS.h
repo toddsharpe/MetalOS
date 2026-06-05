@@ -75,7 +75,7 @@ extern "C"
 
 	//0x300: Windowing
 	SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame);
-	SyscallResult PaintWindow(HWindow handle, const Buffer* buffer);
+	SyscallResult PaintWindow(HWindow handle, const CBuffer* buffer);
 	SyscallResult MoveWindow(HWindow handle, const Graphics::Rectangle* frame);
 	SyscallResult GetWindowRect(HWindow handle, Graphics::Rectangle* frame);
 	SyscallResult GetMessage(Message* message);
@@ -111,4 +111,10 @@ extern "C"
 	SyscallResult DebugPrint(const char* s);
 	SyscallResult DebugPrintBytes(const void* s, const size_t length);
 	SyscallResult DebugPrintStack();
+
+	//0x800: Network
+	HSocket SocketCreate(int af, int type, int protocol);
+	SyscallResult SocketSendTo(HSocket sock, const void* buf, size_t len, const sockaddr_in* to);
+	SyscallResult SocketRecvFrom(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs);
+	SyscallResult SocketClose(HSocket sock);
 }

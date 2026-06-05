@@ -2,9 +2,9 @@ del "..\build\kernel_acpi.obj"
 del "..\build\kernel_64.obj"
 del "..\build\moskrnl.obj"
 
-set CompileIncludes=-I.\ -I.\..\external
+set CompileIncludes=-I.\ -I.\..\external -I.\std
 
-set CompileFlags=/std:c++17 /GS- /Gy /Gw /GR- /Z7 %CompileIncludes% /X
+set CompileFlags=/std:c++20 /GS- /Gy /Gw /GR- /Z7 %CompileIncludes% /X
 set LinkFlags=/OPT:REF /NODEFAULTLIB /SUBSYSTEM:NATIVE
 
 :: Compile ACPI

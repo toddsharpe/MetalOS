@@ -62,6 +62,25 @@ extern "C"
 	__int64 _InterlockedCompareExchange64(__int64 volatile * _Destination, __int64 _Exchange, __int64 _Comparand);
 	__int64 _InterlockedIncrement64(__int64 volatile * _Addend);
 	__int64 _InterlockedExchange64(__int64 volatile * _Target, __int64 _Value);
+	long _InterlockedIncrement(long volatile * _Addend);
 
 	void __faststorefence(void);
+
+}
+
+inline unsigned short _byteswap_ushort(unsigned short v)
+{
+	return (unsigned short)((v >> 8) | (v << 8));
+}
+
+inline unsigned long _byteswap_ulong(unsigned long v)
+{
+	return ((v & 0xFF000000UL) >> 24) | ((v & 0x00FF0000UL) >> 8)
+	     | ((v & 0x0000FF00UL) << 8)  | ((v & 0x000000FFUL) << 24);
+}
+
+inline unsigned __int64 _byteswap_uint64(unsigned __int64 v)
+{
+	return ((unsigned __int64)_byteswap_ulong((unsigned long)v) << 32)
+	     | (unsigned __int64)_byteswap_ulong((unsigned long)(v >> 32));
 }

@@ -278,6 +278,14 @@ namespace HyperV
 		gpa_range range[];
 	};
 
+	struct vmbus_channel_gpadl_body
+	{
+		vmbus_channel_message_header header;
+		uint32_t msgnumber;
+		uint32_t gpadl;
+		uint64_t pfn[ANYSIZE_ARRAY];
+	};
+
 	enum vmbus_packet_type {
 		VM_PKT_INVALID = 0x0,
 		VM_PKT_SYNCH = 0x1,

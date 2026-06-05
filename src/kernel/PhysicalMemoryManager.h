@@ -19,7 +19,7 @@ public:
 
 private:
 	static constexpr size_t BuddySize = 4;
-	constexpr size_t PhysicalMemoryManager::GetIndex(const PageFrame* entry) const;
+	constexpr size_t GetIndex(const PageFrame* entry) const;
 
 	constexpr size_t GetBuddyIndex(const paddr_t address);
 

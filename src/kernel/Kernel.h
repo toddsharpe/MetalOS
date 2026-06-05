@@ -69,3 +69,6 @@
 #include "reactos/amd64\ke.h"
 #include "reactos/amd64/ketypes.h"
 #include "kernel/Kd64/kd64.h"
+
+//Net
+#include "kernel/Net/NetIf.h"

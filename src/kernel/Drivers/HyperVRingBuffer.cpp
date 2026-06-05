@@ -34,7 +34,6 @@ void HyperVRingBuffer::Initialize(const paddr_t address)
 	void* const base = KeVirtualMap(addresses.begin(), addresses.Count());
 	memset(base, 0, Size);
 
-	Printf("Virtual 0x%016x, Physical: 0x%016x, Size: 0x%x\n", base, address, Size);
 	m_header = (volatile hv_ring_buffer * )base;
 	m_header->feature_bits.value = 1;
 }
@@ -48,11 +47,11 @@ void HyperVRingBuffer::Write(const CBuffer* buffers, const size_t count)
 	uint32_t index = startIndex;
 	for (size_t i = 0; i < count; i++)
 	{
-		index = this->Copy(index, buffers[i].Data, (uint32_t)buffers[i].Length);
+		index = this->Copy(index, buffers[i].Data, (uint32_t)buffers[i].Size);
 	}
 
 	//Write new indexes
-	uint64_t indexes = ((uint64_t)m_header->write_index << 32) + m_header->read_index;
+	uint64_t indexes = (uint64_t)startIndex;
 	index = this->Copy(index, &indexes, sizeof(uint64_t));
 	__faststorefence();
 

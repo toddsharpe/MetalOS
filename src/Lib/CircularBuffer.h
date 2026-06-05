@@ -28,7 +28,7 @@ public:
 		return true;
 	}
 
-	T Peek()
+	T& Peek()
 	{
 		Assert(!IsEmpty());
 

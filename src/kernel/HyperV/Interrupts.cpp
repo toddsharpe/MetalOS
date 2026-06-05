@@ -50,7 +50,7 @@ namespace HyperV::Interrupts
 		reg.AsUint64 = __readmsr(msr);
 		reg.Vector = vector;
 		reg.Masked = false;
-		reg.AutoEOI = true;
+		reg.AutoEOI = false;
 		__writemsr(msr, reg.AsUint64);
 	}
 

@@ -22,6 +22,8 @@ public:
 	Result Enumerate(Arena& arena) override;
 
 	HyperV::HV_HYPERCALL_RESULT_VALUE PostMessage(const uint32_t size, const void* message, HyperV::VmBusResponse& response);
+	uint32_t BeginGpadl(const uint32_t size, void* message, HyperV::VmBusResponse& response, KEvent& event);
+	void PostGpadlBody(const uint32_t size, const void* message);
 	void SetCallback(uint32_t id, const ActionContext& context);
 
 private:

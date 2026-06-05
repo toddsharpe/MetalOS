@@ -48,7 +48,7 @@ public:
 		case MessageType::PaintEvent:
 		{
 			Draw(Frame);
-			Buffer buff((uint8_t *)Frame.Buffer, Frame.Size());
+			CBuffer buff((uint8_t *)Frame.Buffer, Frame.Size());
 			AssertSuccess(PaintWindow(m_handle, &buff));
 		}
 		break;

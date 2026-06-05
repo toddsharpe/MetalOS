@@ -47,6 +47,18 @@ public:
 		return true;
 	}
 
+	bool Contains(const T value) const
+	{
+		size_t index = 0;
+		return Find(value, index);
+	}
+
+	T First() const
+	{
+		Assert(m_count > 0);
+		return m_storage[0];
+	}
+
 	T operator[](const size_t index) const
 	{
 		Assert(index < m_count);
@@ -65,7 +77,7 @@ public:
 	T *end() { return reinterpret_cast<T*>(&m_storage[m_count]); }
 
 private:
-	bool Find(const T value, size_t& idx)
+	bool Find(const T value, size_t& idx) const
 	{
 		for (idx = 0; idx < m_count; idx++)
 		{

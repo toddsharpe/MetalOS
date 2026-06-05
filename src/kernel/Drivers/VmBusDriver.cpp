@@ -104,6 +104,30 @@ HyperV::HV_HYPERCALL_RESULT_VALUE VmBusDriver::PostMessage(const uint32_t size, 
 	return result;
 }
 
+uint32_t VmBusDriver::BeginGpadl(const uint32_t size, void* message, HyperV::VmBusResponse& response, KEvent& event)
+{
+	HyperV::vmbus_channel_gpadl_header* gpadlHeader = (HyperV::vmbus_channel_gpadl_header*)message;
+	gpadlHeader->gpadl = _InterlockedIncrement64((volatile __int64*)&m_nextGpadlHandle);
+	m_requests.Add({ gpadlHeader->gpadl, 0, 0, &event, &response });
+
+	HyperV::HV_CONNECTION_ID connectionId = { 0 };
+	connectionId.Id = m_msg_conn_id;
+	HyperV::HV_HYPERCALL_RESULT_VALUE result = HyperV::Platform::HvPostMessage(connectionId, (HyperV::HV_MESSAGE_TYPE)1, size, message);
+	Assert(HV_SUCCESS(result.Status));
+	return gpadlHeader->gpadl;
+}
+
+void VmBusDriver::PostGpadlBody(const uint32_t size, const void* message)
+{
+	HyperV::HV_CONNECTION_ID connectionId = { 0 };
+	connectionId.Id = m_msg_conn_id;
+	HyperV::HV_HYPERCALL_RESULT_VALUE result;
+	do {
+		result = HyperV::Platform::HvPostMessage(connectionId, (HyperV::HV_MESSAGE_TYPE)1, size, message);
+	} while (result.Status == HyperV::HV_STATUS_INSUFFICIENT_BUFFERS);
+	Assert(HV_SUCCESS(result.Status));
+}
+
 void VmBusDriver::SetCallback(uint32_t id, const ActionContext& context)
 {
 	//Assert(m_channelCallbacks.find(id) == m_channelCallbacks.end());
@@ -147,6 +171,10 @@ void VmBusDriver::OnInterrupt()
 		if (m_channelCallbacks.Get(id, ctx))
 		{
 			ctx.Invoke();
+		}
+		else
+		{
+			Printf("VmBus: unhandled channel event id=%u\n", id);
 		}
 	}
 

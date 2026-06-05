@@ -2,7 +2,7 @@ del "..\build\*.obj"
 
 set CompileIncludes=-I.\ -I.\..\external -I.\User
 
-set CompileFlags=/std:c++17 /GS- /Gy /Gw /GR- /Z7 %CompileIncludes% /X
+set CompileFlags=/std:c++20 /GS- /Gy /Gw /GR- /Z7 %CompileIncludes% /X
 set LinkFlags=/OPT:REF /NODEFAULTLIB
 set UserLibs=..\build\mosrt.lib ..\build\crt.lib
 

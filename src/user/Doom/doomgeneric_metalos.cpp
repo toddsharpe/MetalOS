@@ -83,7 +83,7 @@ static void ProcessMessage(const struct Message &message)
 		//	break;
 	case MessageType::PaintEvent:
 	{
-		Buffer buffer((uint8_t*)DG_ScreenBuffer, DG_BufferSize);
+		CBuffer buffer((uint8_t*)DG_ScreenBuffer, DG_BufferSize);
 		PaintWindow(window, &buffer);
 	}
 	break;

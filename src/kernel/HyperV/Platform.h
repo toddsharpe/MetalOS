@@ -125,7 +125,7 @@ namespace HyperV::Platform
 		input->ConnectionId.AsUint32 = ConnectionId.AsUint32;
 		input->Flag = FlagNumber;
 
-		HV_HYPERCALL_INPUT_VALUE inputValue = { 0 };
+		HV_HYPERCALL_INPUT_VALUE inputValue = {};
 		inputValue.CallCode = HYPERCALL_CODE::HvSignalEvent;
 		inputValue.Fast = true;
 

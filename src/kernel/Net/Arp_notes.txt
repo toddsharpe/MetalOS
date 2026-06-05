@@ -1,0 +1,30 @@
+Address Resolution Protocol (request)
+    Hardware type: Ethernet (1)
+    Protocol type: IPv4 (0x0800)
+    Hardware size: 6
+    Protocol size: 4
+    Opcode: request (1)
+    Sender MAC address: TpLinkPte_6e:46:ef (20:23:51:6e:46:ef)
+    Sender IP address: 192.168.1.1
+    Target MAC address: Broadcast (ff:ff:ff:ff:ff:ff)
+    Target IP address: 192.168.0.56
+
+0000   ff ff ff ff ff ff 20 23 51 6e 46 ef 08 06 00 01
+0010   08 00 06 04 00 01 20 23 51 6e 46 ef c0 a8 01 01
+0020   ff ff ff ff ff ff c0 a8 00 38 00 00 00 00 00 00
+0030   00 00 00 00 00 00 00 00 00 00 00 00
+
+Address Resolution Protocol (reply)
+    Hardware type: Ethernet (1)
+    Protocol type: IPv4 (0x0800)
+    Hardware size: 6
+    Protocol size: 4
+    Opcode: reply (2)
+    Sender MAC address: GigaByteTech_65:49:7c (18:c0:4d:65:49:7c)
+    Sender IP address: 192.168.0.56
+    Target MAC address: TpLinkPte_6e:46:ef (20:23:51:6e:46:ef)
+    Target IP address: 192.168.1.1
+
+0000   20 23 51 6e 46 ef 18 c0 4d 65 49 7c 08 06 00 01
+0010   08 00 06 04 00 02 18 c0 4d 65 49 7c c0 a8 00 38
+0020   20 23 51 6e 46 ef c0 a8 01 01

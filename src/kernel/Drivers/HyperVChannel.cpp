@@ -3,7 +3,7 @@
 #include "kernel/HyperV/Types.h"
 #include "kernel/KDevice.h"
 #include "Kernel/HyperV/HyperV.h"
-#include "Lib/Arena.h"
+#include "Lib/Buffer.h"
 #include "kernel/Drivers/HyperVRingBuffer.h"
 #include "Assert.h"
 
@@ -22,7 +22,7 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	m_channel = offerChannel;
 	
 	if (buffer != nullptr)
-		Assert(buffer->Length <= MAX_USER_DEFINED_BYTES);
+		Assert(buffer->Size <= MAX_USER_DEFINED_BYTES);
 
 	Assert((m_outbound.Size % PageSize) == 0);
 	Assert((m_inbound.Size % PageSize) == 0);
@@ -51,12 +51,11 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	//If this assertion fails, gpadl body message is needed
 	Assert(!(pageCount > pfncount));
 
-	StaticArena<256> arena;
+	StaticBuffer<256> arena;
 
 	//Everything fits in the header
 	const size_t msgsize = sizeof(HyperV::vmbus_channel_gpadl_header) + sizeof(HyperV::gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t);
-	Printf("msg size: %d\n", msgsize);
-	HyperV::vmbus_channel_gpadl_header* msg = (HyperV::vmbus_channel_gpadl_header*)arena.Allocate(msgsize);
+	HyperV::vmbus_channel_gpadl_header* msg = (HyperV::vmbus_channel_gpadl_header*)arena.Data;
 	memset(msg, 0, msgsize);
 	const uint16_t bodySize = (uint16_t)(sizeof(HyperV::gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t));
 	msg->rangecount = 1;
@@ -68,13 +67,10 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 
 	msg->header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_HEADER;
 	msg->child_relid = m_channel->child_relid;
-	Printf("Rel_ID: %d\n", m_channel->child_relid);
 
 	HyperV::VmBusResponse response;
 	HyperV::HV_HYPERCALL_RESULT_VALUE result = vmbus->PostMessage((uint32_t)msgsize, msg, response);
 	m_gpadlHandle = response.gpadl_created.gpadl;
-
-	Printf("GPADL created\n");
 
 	//Open channel
 	HyperV::vmbus_channel_open_channel openChannel;
@@ -85,7 +81,7 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	openChannel.ringbuffer_gpadlhandle = m_gpadlHandle;
 	openChannel.downstream_ringbuffer_pageoffset = (uint32_t)sendCount;
 	if (buffer != nullptr)
-		memcpy(openChannel.userdata, buffer->Data, buffer->Length);
+		memcpy(openChannel.userdata, buffer->Data, buffer->Size);
 	result = vmbus->PostMessage(sizeof(HyperV::vmbus_channel_open_channel), &openChannel, response);
 
 	vmbus->SetCallback(m_channel->child_relid, m_callback);
@@ -109,10 +105,11 @@ void HyperVChannel::SendPacket(const void* buffer, const size_t length, const ui
 	constexpr size_t headerSize = 1;
 	constexpr size_t fullSize = 3;
 
-	StaticArena<sizeof(CBuffer) * fullSize> arena;
-	const CBuffer* buffers = arena.Allocate<CBuffer>(&desc, sizeof(HyperV::vmpacket_descriptor));
-	arena.Pack<CBuffer>(buffer, length);
-	arena.Pack<CBuffer>(&aligned_data, packetlen_aligned - packetlen);
+	const CBuffer buffers[] = {
+		{&desc, sizeof(HyperV::vmpacket_descriptor)},
+		{buffer, length},
+		{&aligned_data, packetlen_aligned - packetlen}
+	};
 	int writeCount = ((length != 0) ? fullSize : headerSize);
 
 	m_outbound.Write(buffers, writeCount);

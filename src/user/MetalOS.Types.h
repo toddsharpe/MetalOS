@@ -115,3 +115,18 @@ enum class WaitStatus
 };
 
 typedef uint64_t milli_t;//Time in milliseconds
+
+typedef void* HSocket;
+static constexpr int AF_INET      = 2;
+static constexpr int SOCK_RAW     = 3;
+static constexpr int IPPROTO_ICMP = 1;
+static constexpr HSocket INVALID_SOCKET = nullptr;
+
+struct in_addr { uint32_t s_addr; };
+struct sockaddr_in
+{
+	uint16_t sin_family;
+	uint16_t sin_port;
+	in_addr  sin_addr;
+	uint8_t  sin_zero[8];
+};

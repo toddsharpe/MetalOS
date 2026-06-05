@@ -4,7 +4,6 @@
 #include "Kernel/Devices/Device.h"
 #include "Kernel/MetalOS.Kernel.h"
 #include "core_crt/stdint.h"
-#include <string>
 
 //https://wiki.osdev.org/APIC
 //ioapic.pdf

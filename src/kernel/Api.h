@@ -119,6 +119,7 @@ void Bugcheck(const char* file, const char* line, const char* format, va_list ar
 void PrintStack();
 void PrintStack(const Context* context, const KProcess& process);
 void PrintBytes(const void* data, const size_t length);
+#define printf Printf
 
 /*
  * Devices.

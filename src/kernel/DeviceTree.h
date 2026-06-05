@@ -13,6 +13,7 @@
 #include "kernel/Drivers/RamDriveDriver.h"
 #include "kernel/Drivers/HyperVKeyboardDriver.h"
 #include "kernel/Drivers/HyperVMouseDriver.h"
+#include "kernel/Drivers/HyperVNic.h"
 #include "Lib/StaticStack.h"
 
 class DeviceTree
@@ -229,6 +230,11 @@ private:
 		else if (device.Hid == "{CFA8B69E-5B4A-4CC0-B98B-8BA1A1F3F95A}")
 		{
 			device.Driver = arena.Allocate<HyperVMouseDriver>(device);
+			Assert(device.Driver);
+		}
+		else if (device.Hid == "{F8615163-DF3E-46C5-913F-F2D2F965ED0E}")
+		{
+			device.Driver = arena.Allocate<HyperVNic>(device);
 			Assert(device.Driver);
 		}
 

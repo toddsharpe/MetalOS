@@ -34,6 +34,7 @@
 #include "kernel/Drivers/HyperVRingBuffer.cpp"
 #include "kernel/Drivers/HyperVKeyboardDriver.cpp"
 #include "kernel/Drivers/HyperVMouseDriver.cpp"
+#include "kernel/Drivers/HyperVNic.cpp"
 
 //Kd64
 #include "kernel/Kd64/cpu.cpp"
@@ -47,6 +48,19 @@
 #include "kernel/Kd64/kdx64.cpp"
 #include "kernel/Kd64/mmdbg.cpp"
 #include "kernel/MetalOSkd.cpp"
+
+//Net
+#include "kernel/Net/Arp.cpp"
+#include "kernel/Net/ArpCache.cpp"
+#include "kernel/Net/Checksum.cpp"
+#include "kernel/Net/Ethernet.cpp"
+#include "kernel/Net/Icmp.cpp"
+#include "kernel/Net/IPv4.cpp"
+#include "kernel/Net/Net.cpp"
+#include "kernel/Net/Router.cpp"
+#include "kernel/Net/Socket.cpp"
+#include "kernel/Net/Udp.cpp"
+#include "kernel/Net/Util.cpp"
 
 /*
  * Bootloader parameters.
@@ -105,6 +119,8 @@ namespace
 	KProcess m_process(KProcessType::Kernel);
 	WindowingSystem m_windows(m_display);
 	Debugger m_debugger;
+
+	Net::NetIf* m_netIf;
 
 	void Initialize()
 	{
@@ -184,13 +200,10 @@ namespace
 
 		m_process.Display();
 		m_debugger.Initialize();
-		Trace();
 		m_debugger.AddModule(*m_process.GetModule("moskrnl.exe"));
-		Trace();
 
 		//Initialize windowing system
 		m_windows.Initialize();
-		Trace();
 
 		//System displays
 		m_kernelArena.Display();
@@ -214,7 +227,6 @@ namespace
 
 	uint32_t IdleThread(void* unused)
 	{
-		UNUSED(unused);
 		while (true)
 			ArchWait();
 	}

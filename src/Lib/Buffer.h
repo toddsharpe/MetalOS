@@ -7,100 +7,80 @@
 //Buffer of fixed length that is read only
 struct CBuffer
 {
-	constexpr CBuffer() : Data(), Length()
+	constexpr CBuffer() : Data(), Size()
 	{
 		
 	}
 	
 	template <size_t N>
-	constexpr CBuffer(const uint8_t (&data)[N]) : Data(data), Length(N)
+	constexpr CBuffer(const uint8_t (&data)[N]) : Data(data), Size(N)
 	{
 		
 	}
 
-	constexpr CBuffer(const uint8_t *const data, const size_t length) : Data(data), Length(length)
+	constexpr CBuffer(const uint8_t *const data, const size_t size) : Data(data), Size(size)
 	{
 		
 	}
 
-	constexpr CBuffer(const void *const data, const size_t length) : Data((uint8_t*)data), Length(length)
+	constexpr CBuffer(const void *const data, const size_t size) : Data((uint8_t*)data), Size(size)
 	{
 		
 	}
 
 	bool operator==(const CBuffer& rhs) const
 	{
-		return this->Length == rhs.Length && memcmp(this->Data, rhs.Data, this->Length) == 0;
+		return this->Size == rhs.Size && memcmp(this->Data, rhs.Data, this->Size) == 0;
 	}
 
 	const uint8_t* Data;
-	const size_t Length;
+	const size_t Size;
 };
 
-//Buffer of fixed length who's contents can be modified
 struct Buffer
 {
-	template <size_t N>
-	constexpr Buffer(uint8_t (&data)[N]) : Data(data), Length(N)
-	{
-		
-	}
-
-	constexpr Buffer(uint8_t *const data, const size_t length) : Data(data), Length(length)
-	{
-		
-	}
-
-	bool operator==(const Buffer& rhs) const
-	{
-		return this->Length == rhs.Length && memcmp(this->Data, rhs.Data, this->Length) == 0;
-	}
-
-	operator CBuffer() const
-	{
-		return {Data, Length};
-	}
-
-	const CBuffer Slice(const size_t length)
-	{
-		Assert(length <= Length);
-		return {Data, length};
-	}
-
-	uint8_t* const Data;
-	const size_t Length;
-};
-
-struct Storage
-{
 public:
+	constexpr Buffer() : Data(), Count(), Capacity()
+	{
+
+	}
+
 	template <size_t N>
-	constexpr Storage(uint8_t (&data)[N]) :
+	constexpr Buffer(uint8_t (&data)[N]) :
 		Data(data),
-		m_count(0),
+		Count(0),
 		Capacity(N)
 	{
 		
 	}
 
-	size_t Count() const
+	constexpr Buffer(uint8_t *const data, const size_t length) : Data(data), Count(), Capacity(length)
 	{
-		return m_count;
+		
 	}
 
-	uint8_t* const Data;
-	const size_t Capacity;
+	bool IsValid() const
+	{
+		return Data != nullptr;
+	}
 
-private:
-	size_t m_count;
+	CBuffer Ref() const
+	{
+		return { Data, Count};
+	}
+
+	uint8_t* Data;
+	size_t Count;
+	size_t Capacity;
 };
 
 template <size_t N>
-struct StaticStorage : public Storage
+struct StaticBuffer : public Buffer
 {
 public:
-	constexpr StaticStorage() :
-		Storage(m_storage)
+	constexpr StaticBuffer() :
+		Buffer(m_storage),
+		m_storage()
 	{
 
 	}
@@ -108,3 +88,23 @@ public:
 private:
 	uint8_t m_storage[N];
 };
+
+inline void Copy(Buffer& to, const CBuffer& from)
+{
+	Assert(to.Capacity >= from.Size);
+	memcpy(to.Data, from.Data, to.Count);
+	to.Count = from.Size;
+}
+
+inline void Copy(Buffer& to, const void* from, const size_t size)
+{
+	Assert(to.Capacity >= size);
+	memcpy(to.Data, from, size);
+	to.Count = size;
+}
+
+inline void Copy(void* const to, const size_t to_size, const CBuffer&& from)
+{
+	Assert(to_size >= from.Size);
+	memcpy(to, from.Data, from.Size);
+}

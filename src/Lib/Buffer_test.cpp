@@ -3,7 +3,7 @@
 void Buffer_test()
 {
 	uint8_t data[16];
-	Storage storage(data);
+	Buffer storage(data);
 
-	StaticStorage<32> storage2;
+	StaticBuffer<32> storage2;
 }

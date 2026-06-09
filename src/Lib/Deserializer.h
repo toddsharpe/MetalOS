@@ -3,9 +3,9 @@
 #include "Assert.h"
 #include "Lib/ByteSwap.h"
 
-#include "core_crt/stdint.h"
-#include "core_crt/stddef.h"
-#include "core_crt/string.h"
+#include <cstdint>
+#include <cstddef>
+#include <cstring>
 
 class Deserializer
 {

@@ -19,9 +19,8 @@ namespace Loader
 		Printf("kernel load: %s\n", path.c_str());
 		
 		KFile file = {};
-		if (!KeCreateFile(file, path, KFileAccess::Read))
+		if (!KeCreateFile(file, path.c_str(), KFileAccess::Read))
 			return nullptr;
-
 		size_t read = 0;
 
 		//Dos header

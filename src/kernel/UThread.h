@@ -93,7 +93,7 @@ private:
 	StaticQueue<Message, 16> m_messages;
 
 	//Storage
-	Context m_context;
+	Arch::Context m_context;
 
 	//Pointers into process address space
 	ThreadEnvironmentBlock& m_teb;

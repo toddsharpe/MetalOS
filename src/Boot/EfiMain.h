@@ -21,7 +21,6 @@
 //Architecture specific
 #include "x64/x64.h"
 #include "x64/CpuId.h"
-#include "x64/PageTablesPool.h"
 #include "x64/PageTables.h"
 
 //Drivers
@@ -36,4 +35,5 @@
 #include "Boot/EfiDevice.h"
 #include "Boot/EfiDump.h"
 #include "Boot/EfiError.h"
+#include "Boot/EfiMemory.h"
 #include "Boot/EfiPrint.h"

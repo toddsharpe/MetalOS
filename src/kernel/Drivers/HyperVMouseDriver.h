@@ -148,8 +148,8 @@ class HyperVMouseDriver : public Driver
 public:
 	HyperVMouseDriver(KDevice& device);
 
-	Result Initialize(Arena& arena) override;
-	Result Enumerate(Arena& arena) override;
+	Result Initialize() override;
+	Result Enumerate() override;
 
 	static void Callback(void* context) { ((HyperVMouseDriver*)context)->OnCallback(); };
 

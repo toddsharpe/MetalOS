@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core_crt/stdint.h"
-#include "core_crt/string.h"
+#include <cstdint>
+#include <cstring>
 #include "Lib/Math.h"
 #include "Lib/System.h"
 #include "Lib/Buffer.h"
@@ -22,7 +22,8 @@ public:
 
 	void* Allocate(const size_t size)
 	{
-		AssertOp(m_count + size, <=, m_size);
+		if (m_count + size > m_size)
+			return nullptr;
 
 		void* const address = (void*)&m_storage[m_count];
 		const size_t alignedSize = ByteAlign(size, Alignment);
@@ -37,7 +38,8 @@ public:
 	{
 		//Acquire memory
 		void* const allocated = Allocate(sizeof(T));
-		Assert(allocated);
+		if (!allocated)
+			return nullptr;
 
 		//Call constructor
 		T* created = new (allocated) T();
@@ -49,7 +51,8 @@ public:
 	{
 		//Acquire memory
 		void* const allocated = Allocate(sizeof(T));
-		Assert(allocated);
+		if (!allocated)
+			return nullptr;
 
 		//Call constructor
 		T* created = new (allocated) T(args...);
@@ -58,7 +61,8 @@ public:
 
 	void* Pack(const size_t size)
 	{
-		Assert(m_count + size <= m_size);
+		if (m_count + size > m_size)
+			return nullptr;
 
 		void* const address = (void*)&m_storage[m_count];
 		m_count += size;
@@ -72,7 +76,8 @@ public:
 	{
 		//Acquire memory
 		void* const allocated = Pack(sizeof(T));
-		Assert(allocated);
+		if (!allocated)
+			return nullptr;
 
 		//Call constructor
 		T* created = new (allocated) T();
@@ -84,7 +89,8 @@ public:
 	{
 		//Acquire memory
 		void* const allocated = Pack(sizeof(T));
-		Assert(allocated);
+		if (!allocated)
+			return nullptr;
 
 		//Call constructor
 		T* created = new (allocated) T(args...);

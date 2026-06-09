@@ -50,7 +50,7 @@ public:
 	}
 
 private:
-	static constexpr size_t ArenaSize = PageSize << 10; // 4MB Kernel Arena
+	static constexpr size_t ArenaSize = Arch::PageSize << 10; // 4MB Kernel Arena
 
 	enum Streams
 	{

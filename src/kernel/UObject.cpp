@@ -12,7 +12,6 @@ constexpr UObject::UObject(const UObjectType type) : UObject(type, LastHandle++)
 }
 
 constexpr UObject::UObject(const UObjectType type, const handle_t handle) :
-	Link(),
 	Handle(handle),
 	Type(type),
 	Thread(),

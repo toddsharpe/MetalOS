@@ -15,8 +15,3 @@ extern "C"
 	//UThreads
 	 void ArchUserThreadStart(void* context, void* teb);
 }
-
-inline constexpr size_t SizeToPages(const size_t bytes)
-{
-	return x64::SizeToPages(bytes);
-}

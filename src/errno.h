@@ -21,6 +21,7 @@
 #define ENODEV          19
 #define ENOTDIR         20
 #define EISDIR          21
+#define EINVAL          22
 #define ENFILE          23
 #define EMFILE          24
 #define ENOTTY          25
@@ -31,10 +32,14 @@
 #define EMLINK          31
 #define EPIPE           32
 #define EDOM            33
+#define ERANGE          34
 #define EDEADLK         36
 #define ENAMETOOLONG    38
 #define ENOLCK          39
 #define ENOSYS          40
 #define ENOTEMPTY       41
 
-#define errno GetErrno()
+uint32_t* GetErrno();
+#if !defined(errno)
+#define errno *GetErrno()
+#endif

@@ -8,23 +8,14 @@ namespace EfiLoader
 {
 	typedef void (*CrtInitializer)();
 
+	//Allocate file info and leave room for path
+	alignas(EFI_FILE_INFO) static uint8_t infoBuffer[sizeof(EFI_FILE_INFO) + 256] = {};
+
 	EFI_STATUS MapFile(EFI_FILE * file, const EFI_MEMORY_TYPE allocationType, EFI_PHYSICAL_ADDRESS& addressOut, size_t& sizeOut)
 	{
-		EFI_STATUS status;
-
-		//Get file info size
-		UINTN infoSize = 0;
-		status = file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, nullptr);
-		if (status != EFI_BUFFER_TOO_SMALL)
-		{
-			ReturnIfNotSuccess(status);
-		}
-
-		//Allocate space for file info
-		EFI_FILE_INFO* fileInfo;
-		ReturnIfNotSuccess(BS->AllocatePool(allocationType, infoSize, (void**)&fileInfo));
-
-		//Get file info
+		//Get file info into a stack buffer (fits EFI_FILE_INFO plus the filename)
+		UINTN infoSize = sizeof(infoBuffer);
+		EFI_FILE_INFO* fileInfo = (EFI_FILE_INFO*)infoBuffer;
 		ReturnIfNotSuccess(file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, (void*)fileInfo));
 		sizeOut = fileInfo->FileSize;
 
@@ -46,7 +37,7 @@ namespace EfiLoader
 		UINTN size = sizeof(IMAGE_DOS_HEADER);
 		IMAGE_DOS_HEADER dosHeader;
 		ReturnIfNotSuccess(pFile->Read(pFile, &size, &dosHeader));
-		ReturnIfNotSuccess(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
+		ASSERT(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 		//NT Header
 		size = sizeof(IMAGE_NT_HEADERS64);

@@ -2,7 +2,6 @@
 
 #include "x64/x64.h"
 #include "x64/CpuId.h"
-#include "x64/PageTablesPool.h"
 #include "x64/PageTables.h"
 #include "x64/intrin.h"
 #include "kernel/Arch_x64/x64Data.h"
@@ -10,14 +9,22 @@
 /*
  * Forward x64 definitions
  */
-typedef x64::InterruptVector InterruptVector;
-typedef x64::InterruptFrame InterruptFrame;
-typedef x64::SyscallFrame SyscallFrame;
-typedef x64::Context Context;
-static constexpr size_t IrqN = x64::IdtCount;
-static constexpr size_t PageSize = x64::PageSize;
-static constexpr size_t PageShift = x64::PageShift;
-static constexpr size_t PageMask = x64::PageMask;
+namespace Arch
+{
+	using InterruptVector = x64::InterruptVector;
+	using InterruptFrame = x64::InterruptFrame;
+	using SyscallFrame = x64::SyscallFrame;
+	using Context = x64::Context;
+	static constexpr size_t IrqN = x64::IdtCount;
+	static constexpr size_t PageSize = x64::PageSize;
+	static constexpr size_t PageShift = x64::PageShift;
+	static constexpr size_t PageMask = x64::PageMask;
+
+	inline constexpr size_t SizeToPages(const size_t bytes)
+	{
+		return x64::SizeToPages(bytes);
+	}
+}
 
 /*
  * Asm declarations.

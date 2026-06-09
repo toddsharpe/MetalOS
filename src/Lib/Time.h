@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_crt/stdint.h"
+#include <cstdint>
 
 typedef uint64_t milli_t;//Time in milliseconds
 static constexpr milli_t TimeoutMax = UINT64_MAX;

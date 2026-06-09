@@ -45,7 +45,7 @@ Debugger::Debugger()
 
 void Debugger::Initialize()
 {
-	KModule* kddll = KeLoadLibrary("kdcom.dll");
+	const KModule* kddll = KeLoadLibrary("kdcom.dll");
 
 	//Load pointers
 	m_dll.KdInitialize = static_cast<OnKdInitialize>(WinPE::GetProcAddress(kddll->ImageBase, "KdInitialize"));
@@ -76,7 +76,7 @@ void Debugger::AddModule(const KModule& library)
 	entry->LoadCount = 1;
 
 	//Allocate name unicode strings
-	size_t length = library.Name.Length;
+	size_t length = library.Name.Count();
 	size_t wideLength = (length + 1) * 2;
 	wchar_t* s = (wchar_t*)m_arena.Allocate(sizeof(wchar_t) * wideLength);
 	mbstowcs(s, library.Name.c_str(), wideLength);
@@ -88,7 +88,7 @@ void Debugger::AddModule(const KModule& library)
 	InsertHeadList(&PsLoadedModuleList, &entry->InLoadOrderLinks);
 }
 
-void Debugger::DebuggerEvent(InterruptVector vector, InterruptFrame& frame)
+void Debugger::DebuggerEvent(Arch::InterruptVector vector, Arch::InterruptFrame& frame)
 {
 	KTRAP_FRAME TrapFrame = { 0 }; //Unused?
 	KEXCEPTION_FRAME ExceptionFrame = { 0 }; //Unused?
@@ -143,7 +143,7 @@ uint32_t Debugger::ThreadLoop()
 	return 0;
 }
 
-void Debugger::ConvertToContext(InterruptFrame* frame, PCONTEXT context)
+void Debugger::ConvertToContext(Arch::InterruptFrame* frame, PCONTEXT context)
 {
 	context->SegCs = (WORD)frame->CS;
 	context->SegFs = (WORD)frame->FS;

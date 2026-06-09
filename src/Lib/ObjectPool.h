@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Lib/Bitset.h"
-#include "core_crt/stdint.h"
-#include "core_crt/string.h"
+#include <cstdint>
+#include <cstring>
 #include "Assert.h"
 
 template <typename T, size_t N>
@@ -18,7 +18,7 @@ public:
 	T* Allocate(A&& ...args)
 	{
 		size_t index = 0;
-		bool first = m_used.FirstClear(index);
+		bool first = m_used.First(index);
 		if (!first)
 			return nullptr;
 

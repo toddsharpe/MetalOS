@@ -13,13 +13,12 @@ static constexpr uintptr_t KernelStart            = 0xFFFF'8000'0000'0000;
 static constexpr uintptr_t KernelBase             = 0xFFFF'8000'0100'0000;
 static constexpr uintptr_t KdCom                  = 0xFFFF'8000'0200'0000;
 static constexpr uintptr_t KernelPdb              = 0xFFFF'8000'1000'0000;
-static constexpr uintptr_t KernelAllocStart       = 0xFFFF'8000'2000'0000;
-static constexpr uintptr_t KernelPageTablesPool   = 0xFFFF'8001'0000'0000;
+static constexpr uintptr_t KernelHeap             = 0xFFFF'8000'2000'0000;
+static constexpr uintptr_t KernelAllocStart       = 0xFFFF'8001'0000'0000;
 static constexpr uintptr_t KernelGraphicsDevice   = 0xFFFF'8002'0000'0000;
 static constexpr uintptr_t KernelPageFrameDBStart = 0xFFFF'8003'0000'0000;
 static constexpr uintptr_t KernelUefiStart        = 0xFFFF'8004'0000'0000;
-static constexpr uintptr_t KernelIoStart          = 0xFFFF'8010'0000'0000;
-static constexpr uintptr_t KernelAcpiStart        = 0xFFFF'8011'0000'0000;
+static constexpr uintptr_t KernelPhysicalStart    = 0xFFFF'8010'0000'0000;
 static constexpr uintptr_t KernelEnd              = 0xFFFF'8080'0000'0000;
 
 //static constexpr uintptr_t KernelMin = 0xFFFF'8000'0000'0000;

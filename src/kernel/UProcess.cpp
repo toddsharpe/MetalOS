@@ -1,7 +1,6 @@
 #pragma once
 
 #include "kernel/UProcess.h"
-#include "kernel/Objects/KSignalObject.h"
 #include "kernel/KProcess.h"
 #include "kernel/UThread.h"
 #include "kernel/KThread.h"
@@ -12,16 +11,14 @@ uint32_t UProcess::LastId = 0;
 
 UProcess::UProcess(const CString& name) :
 	KProcess(KProcessType::User),
-	KSignalObject(),
 	Id(++LastId),
 	InitProcess(),
 	InitThread(),
 	IsConsole(),
-	Tables(),
 	Name(name),
+	Objects(),
 	m_threads(),
 	m_state(),
-	m_objects(),
 	m_peb(),
 	m_userArena()
 {
@@ -30,14 +27,8 @@ UProcess::UProcess(const CString& name) :
 
 void UProcess::Initialize()
 {
-	//Initialize underlying process
-	KProcess::Initialize();
-
 	//Initialize thread lists
 	ListInitializeHead(m_threads);
-
-	//Initialize uobjects list
-	ListInitializeHead(m_objects);
 }
 
 //This has to occur when this process is active (page tables are in use)
@@ -45,7 +36,8 @@ void UProcess::Initialize()
 void UProcess::InContextInit(void* const image, const CString& cmd)
 {
 	//Allocate space in process for OS to manage
-	void* const storage = KeVirtualAlloc(*this, nullptr, KernelReserve);
+	void* const storage = KeVirtualAlloc(*this, KernelReserve);
+	Assert(storage);
 	m_userArena = {reinterpret_cast<uint8_t*>(storage), KernelReserve};
 
 	//Allocate PEB
@@ -55,6 +47,7 @@ void UProcess::InContextInit(void* const image, const CString& cmd)
 	m_peb->CommandLine = m_userArena.Copy(cmd); //Copy string to user address space
 	m_peb->Handle = (HProcess)this;
 	m_peb->ProcessId = Id;
+	m_peb->Debug = false;
 }
 
 UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const UThreadStart userStart, void* const arg)
@@ -65,20 +58,23 @@ UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const 
 	
 	//Allocate TEB for thread
 	ThreadEnvironmentBlock* teb = m_userArena.Allocate<ThreadEnvironmentBlock>();
+	Assert(teb);
 	teb->SelfPointer = teb;
 	teb->PEB = m_peb;
 	teb->ThreadStart = userStart;
 	teb->Arg = arg;
 
 	//Allocate thread
-	void* const mem = m_arena.Allocate(sizeof(UThread));
+	void* const mem = Arena.Allocate(sizeof(UThread));
 	Assert(mem);
 	UThread* thread = new (mem) UThread(*this, backing, *teb);
 	ListInsertTail(m_threads, thread->Link);
 
 	//Allocate thread stack
-	void* m_stack = KeVirtualAlloc(*this, nullptr, UThreadStackSize);
+	void* m_stack = KeVirtualAlloc(*this, UThreadStackSize);
+	Assert(m_stack);
 	void* const stackPointer = MakePointer<void*>(m_stack, UThreadStackSize - ArchStackReserve());
+	Assert(stackPointer);
 
 	//Initialize
 	thread->Initialize(stackPointer, threadStart);
@@ -88,16 +84,15 @@ UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const 
 	//Set name
 	char buffer[128] = {};
 	snprintf(buffer, sizeof(buffer), "%s[%d]", Name.c_str(), thread->Id);
-	thread->Name = m_arena.Copy(buffer);
+	thread->Name = Arena.Copy(buffer);
 
 	return thread;
 }
 
 UObject* UProcess::CreateObject(const UObjectType type)
 {
-	UObject* created = m_arena.Allocate<UObject>(type);
-	Assert(created);
-	ListInsertTail(m_objects, created->Link);
+	UObject* created = KeAlloc<UObject>(AllocType::User, type);
+	Assert(Objects.Add(created));
 	return created;
 }
 
@@ -105,52 +100,26 @@ UObject* UProcess::CreateObject(const UObjectType type, const handle_t handle)
 {
 	Assert((int)handle < (int)UProcessState::Last);
 
-	UObject* created = m_arena.Allocate<UObject>(type, handle);
-	Assert(created);
-	ListInsertTail(m_objects, created->Link);
-	return created;
-}
-
-UObject* UProcess::CreateEvent(const bool manual, const bool initial)
-{
-	UObject* created = CreateObject(UObjectType::Event);
-	created->Event = m_arena.Allocate<KEvent>(manual, initial);
-	return created;
-}
-
-UObject* UProcess::CreatePipe(KPipe& pipe, const KPipeOp op)
-{
-	UObject* created = CreateObject(UObjectType::Pipe);
-	created->Pipe = m_arena.Allocate<UPipe>(pipe, op);
-	return created;
-}
-
-UObject* UProcess::CreatePipe(KPipe& pipe, const KPipeOp op, const handle_t handle)
-{
-	Assert((int)handle < (int)UProcessState::Last);
-	
-	UObject* created = CreateObject(UObjectType::Pipe, handle);
-	created->Pipe = m_arena.Allocate<UPipe>(pipe, op);
+	UObject* created = KeAlloc<UObject>(AllocType::User, type, handle);
+	Assert(Objects.Add(created));
 	return created;
 }
 
 UObject* UProcess::GetObject()
 {
-	if (!m_objects.Count)
-		return nullptr;
-
-	UObject* top = ListGet<UObject>(m_objects, 0);
-	return top;
+	return Objects.First();
 }
 
 UObject* UProcess::GetObject(const handle_t handle)
 {
 	handle_t ctx = handle;
-	UObject* const found = ListFirst<UObject, handle_t>(m_objects, [](const ListEntry&, const UObject& item, handle_t& handle)
+	for (UObject*& obj : Objects)
 	{
-		return item.Handle == handle;
-	}, ctx);
-	return found;
+		if (obj->Handle == handle)
+			return obj;
+	}
+
+	return nullptr;
 }
 
 bool UProcess::CloseObject(const handle_t handle)
@@ -173,19 +142,20 @@ bool UProcess::CloseObject(const handle_t handle)
 			break;
 	}
 
-	//TODO(tsharpe): Free from arena
-	ListRemoveEntry(m_objects, object->Link);
+	Objects.Remove(object);
 	return true;
 }
 
-KModule* UProcess::AddModule(const CString& name, void* image)
+const KModule* UProcess::AddModule(const CString& name, void* image)
 {
-	Assert(Tables.IsActive());
+	//Assert(Tables.IsActive());
 	m_peb->LoadedModules[m_peb->ModuleIndex].ImageBase = image;
 	strcpy(m_peb->LoadedModules[m_peb->ModuleIndex].Name, name.c_str());
 	m_peb->ModuleIndex++;
 
-	return KProcess::AddModule(name, image);
+	KModule* created = KeAlloc<KModule>(AllocType::User, name, image);
+	Assert(this->Modules.Add(created));
+	return created;
 }
 
 void UProcess::Display() const
@@ -197,7 +167,7 @@ void UProcess::Display() const
 	Printf("   Name: %s\n", Name.c_str());
 	Printf("  State: %d\n", m_state);
 
-	if (Tables.IsActive())
+	if (false /*Tables.IsActive()*/)
 	{
 		Printf("   PEB:\n");
 		Printf("    -    Id: %d\n", m_peb->ProcessId);
@@ -206,14 +176,7 @@ void UProcess::Display() const
 	}
 
 	//objects
-	Printf("UObjects: %d\n", m_objects.Count);
-	ListForEach<UObject>(m_objects, [](const ListEntry&, const UObject& item)
-	{
-		item.Display();
-	});
-}
-
-bool UProcess::IsSignalled() const
-{
-	return m_state == UProcessState::Terminated;
+	Printf("UObjects: %d\n", Objects.Count());
+	for (const UObject* obj : Objects)
+		obj->Display();
 }

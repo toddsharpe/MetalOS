@@ -1,7 +1,7 @@
 #pragma once
 
 #include <efi.h>
-#include "core_crt/stdint.h"
+#include <cstdint>
 #include "Lib/System.h"
 #include "Lib/List.h"
 
@@ -22,6 +22,18 @@ struct EFI_MEMORY_MAP
 	size_t Size;
 	size_t DescriptorSize;
 };
+
+//A contiguous physical page range. The bootloader pre-processes the UEFI memory
+//map into these so the kernel never parses EFI descriptors.
+struct MemoryRange
+{
+	paddr_t Start;
+	size_t PageCount;
+};
+
+//Upper bound on pre-processed ranges. Hyper-V's map is small (tens of
+//descriptors); the bootloader asserts it stays within this bound.
+static constexpr size_t MaxMemoryRanges = 32;
 
 enum class PageState
 {
@@ -48,12 +60,12 @@ struct LoaderParams
 	//UEFI Runtime
 	EFI_RUNTIME_SERVICES* Runtime;
 
-	//Memory map
-	EFI_MEMORY_MAP MemoryMap;
-
-	//Page Table Pool
-	paddr_t PageTablesPoolAddress;
-	uint32_t PageTablesPoolPageCount;
+	//Memory map, pre-processed by the bootloader into simple page ranges.
+	//FreeRanges: physical RAM the kernel allocator may use.
+	//RuntimeRanges: EFI runtime regions to map at KernelUefiStart + Start.
+	//Sentinel-terminated: a zero entry (PageCount == 0) marks the end.
+	MemoryRange FreeRanges[MaxMemoryRanges];
+	MemoryRange RuntimeRanges[MaxMemoryRanges];
 
 	//Page Frame DB
 	paddr_t PageFrameAddr;

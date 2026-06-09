@@ -1,233 +1,305 @@
 #pragma once
 
-// Intel SDM Vol3A Chapter 4.5
-// M=48 (MAXPHYADDR)
+#include "x64/x64.h"
 
-// Paging Structures - https://gist.github.com/mvankuipers/
-// https://queazan.wordpress.com/2013/12/21/paging-under-amd64/
-// https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf
-// Class is inherently x64, so use uint64_t instead of uintptr_t
+static constexpr bool IsAligned(const uintptr_t address, const size_t powerOf2)
+{
+	return (address & (powerOf2 - 1)) == 0;
+}
 
-class PageTablesPool;
-class PageTables
+struct PageTablesOps
+{
+	using resolve_t = void *(*)(const paddr_t address);
+	using phy_alloc_t = bool (*)(paddr_t &address);
+
+	resolve_t Resolve;
+	phy_alloc_t PhyAlloc;
+};
+
+struct PageAttr
+{
+	bool CanWrite;
+	bool CanExecute;
+	bool IsGlobal;
+};
+
+//TODO(tsharpe): Kernel is mapped at once and therefore needs all permissions
+static constexpr PageAttr KernelAll =
+{
+	.CanWrite = true,
+	.CanExecute = true,
+	.IsGlobal = true
+};
+
+static constexpr PageAttr UserAll =
+{
+	.CanWrite = true,
+	.CanExecute = true,
+	.IsGlobal = false
+};
+
+/*
+static constexpr PageAttr KernelCode =
+{
+	.CanWrite = false,
+	.CanExecute = true,
+	.IsGlobal = true
+};
+
+static constexpr PageAttr KernelData =
+{
+	.CanWrite = true,
+	.CanExecute = false,
+	.IsGlobal = true
+};
+*/
+template <PageTablesOps T_ops>
+class PageTabes
 {
 public:
-	static PageTablesPool* Pool;
-
-	PageTables();
-	PageTables(const paddr_t root);
-
-	// NOTE(tsharpe): Could be static methods, but don't want to own the allocation
-	void OpenCurrent();
-	void CreateNew();
-	paddr_t GetRoot() const;
-	bool IsActive() const;
-
-	// TODO(tsharpe): page attributes
-	bool MapPages(const uintptr_t virtualBase, const paddr_t physicalBase, const size_t count, const bool global) const;
-	
-	// TODO: unmap
-
-	paddr_t ResolveAddress(const uintptr_t virtualAddress) const;
-
-	// Table manipulation
-	void ClearKernelEntries() const;
-	void LoadKernelMappings() const;
-
-	void Display();
-	void DisplayRoot() const;
-
-private:
-#pragma pack(push, 1)
-	// Intel SDM Vol3A Table 4-14
-	typedef struct _PML4E
+	static PageTabes Current()
 	{
-		union
-		{
-			struct
-			{
-				uint64_t Present : 1;		   // Must be 1, region invalid if 0.
-				uint64_t ReadWrite : 1;		   // If 0, writes not allowed.
-				uint64_t UserSupervisor : 1;   // If 0, user-mode accesses not allowed.
-				uint64_t PageWriteThrough : 1; // Determines the memory type used to access PDPT.
-				uint64_t PageCacheDisable : 1; // Determines the memory type used to access PDPT.
-				uint64_t Accessed : 1;		   // If 0, this entry has not been used for translation.
-				uint64_t Ignored1 : 1;
-				uint64_t PageSize : 1; // Reserved, must be 0 for PML4E.
-				uint64_t Ignored2 : 4;
-				uint64_t PageFrameNumber : 36; // The page frame number of the PDPT of this PML4E.
-				uint64_t Reserved : 4;
-				uint64_t Ignored3 : 11;
-				uint64_t ExecuteDisable : 1; // If 1, instruction fetches not allowed.
-			};
-			uint64_t Value;
-		};
-	} PML4E, *PPML4E;
-	static_assert(sizeof(_PML4E) == sizeof(uintptr_t), "Size mismatch, only 64-bit supported.");
+		return PageTabes(__readcr3());
+	}
 
-	// Intel SDM Vol3A Table 4-15
-	typedef struct _PDPTE_PAGE // Maps 1GB Page
+	static PageTabes CreateNew()
 	{
-		union
-		{
-			struct
-			{
-				uint64_t Present : 1;		   // Must be 1, region invalid if 0.
-				uint64_t ReadWrite : 1;		   // If 0, writes not allowed.
-				uint64_t UserSupervisor : 1;   // If 0, user-mode accesses not allowed.
-				uint64_t PageWriteThrough : 1; // Determines the memory type used to access PD.
-				uint64_t PageCacheDisable : 1; // Determines the memory type used to access PD.
-				uint64_t Accessed : 1;		   // If 0, this entry has not been used for translation.
-				uint64_t Dirty : 1;			   // Ignored if PageSize=0, Dirty if 1GB page
-				uint64_t PageSize : 1;		   // If 1, this entry maps a 1GB page.
-				uint64_t Global : 1;		   // Ignored if PageSize=1, Global if 1GB page
-				uint64_t Ignored1 : 3;		   //
-				uint64_t PageAccessType : 1;   //
-				uint64_t Reserved1 : 17;	   // Reserved (must be 0).
-				uint64_t PageFrameNumber : 18; //
-				uint64_t Reserved2 : 4;
-				uint64_t Ignored2 : 7;
-				uint64_t Ignored3 : 4;
-				uint64_t ExecuteDisable : 1; // If 1, instruction fetches not allowed.
-			};
-			uint64_t Value;
-		};
-	} PDPTE_PAGE, *PPDPTE_PAGE;
-	static_assert(sizeof(_PDPTE_PAGE) == sizeof(uintptr_t), "Incorrect.");
+		paddr_t root;
+		if (!T_ops.PhyAlloc(root))
+			return PageTabes(0);
+		return PageTabes(root);
+	}
 
-	// Intel SDM Vol3A Table 4-16
-	typedef struct _PDPTE_DIR
+	constexpr PageTabes(const paddr_t root = 0) :
+		Root(root)
 	{
-		union
-		{
-			struct
-			{
-				uint64_t Present : 1;		   // Must be 1, region invalid if 0.
-				uint64_t ReadWrite : 1;		   // If 0, writes not allowed.
-				uint64_t UserSupervisor : 1;   // If 0, user-mode accesses not allowed.
-				uint64_t PageWriteThrough : 1; // Determines the memory type used to access PD.
-				uint64_t PageCacheDisable : 1; // Determines the memory type used to access PD.
-				uint64_t Accessed : 1;		   // If 0, this entry has not been used for translation.
-				uint64_t Ignored1 : 1;
-				uint64_t PageSize : 1; // If 1, this entry maps a 1GB page.
-				uint64_t Ignored2 : 4;
-				uint64_t PageFrameNumber : 36; // The page frame number of the PD of this PDPTE.
-				uint64_t Reserved : 4;
-				uint64_t Ignored3 : 11;
-				uint64_t ExecuteDisable : 1; // If 1, instruction fetches not allowed.
-			};
-			uint64_t Value;
-		};
-	} PDPTE_DIR, *PPDPTE_DIR;
-	static_assert(sizeof(_PDPTE_DIR) == sizeof(uintptr_t), "Incorrect.");
+	}
 
-	// Intel SDM Vol3A Table 4-17
-	typedef struct _PDE_PAGE // Maps 2MB page
+	bool MapPages(const uintptr_t virtualBase, const paddr_t physicalBase, const size_t count, const PageAttr attr) const
 	{
-		union
-		{
-			struct
-			{
-				uint64_t Present : 1;		   // Must be 1, region invalid if 0.
-				uint64_t ReadWrite : 1;		   // If 0, writes not allowed.
-				uint64_t UserSupervisor : 1;   // If 0, user-mode accesses not allowed.
-				uint64_t PageWriteThrough : 1; // Determines the memory type used to access PT.
-				uint64_t PageCacheDisable : 1; // Determines the memory type used to access PT.
-				uint64_t Accessed : 1;		   // If 0, this entry has not been used for translation.
-				uint64_t Dirty : 1;
-				uint64_t PageSize : 1; // If 1, this entry maps a 2MB page.
-				uint64_t Global : 1;
-				uint64_t Ignored1 : 3;
-				uint64_t PageAccessType : 1; //
-				uint64_t Reserved1 : 8;
-				uint64_t PageFrameNumber : 27; // The page frame number of the PT of this PDE.
-				uint64_t Reserved2 : 4;
-				uint64_t Ignored2 : 7;
-				uint64_t Ignored3 : 4;
-				uint64_t ExecuteDisable : 1; // If 1, instruction fetches not allowed.
-			};
-			uint64_t Value;
-		};
-	} PDE_PAGE, *PPDE_PAGE;
-	static_assert(sizeof(_PDE_PAGE) == sizeof(uintptr_t), "Incorrect.");
+		return MapPages(virtualBase, physicalBase, count, attr.CanWrite, attr.CanExecute, attr.IsGlobal);
+	}
 
-	// Intel SDM Vol3A Table 4-18
-	typedef struct _PDE_DIR
+	bool MapPages(const uintptr_t virtualBase, const paddr_t physicalBase, const size_t count, const bool write, const bool execute, const bool global) const
 	{
-		union
-		{
-			struct
-			{
-				uint64_t Present : 1;		   // Must be 1, region invalid if 0.
-				uint64_t ReadWrite : 1;		   // If 0, writes not allowed.
-				uint64_t UserSupervisor : 1;   // If 0, user-mode accesses not allowed.
-				uint64_t PageWriteThrough : 1; // Determines the memory type used to access PT.
-				uint64_t PageCacheDisable : 1; // Determines the memory type used to access PT.
-				uint64_t Accessed : 1;		   // If 0, this entry has not been used for translation.
-				uint64_t Ignored1 : 1;
-				uint64_t PageSize : 1; // If 1, this entry maps a 2MB page.
-				uint64_t Ignored2 : 4;
-				uint64_t PageFrameNumber : 36; // The page frame number of the PT of this PDE.
-				uint64_t Reserved : 4;
-				uint64_t Ignored3 : 11;
-				uint64_t ExecuteDisable : 1; // If 1, instruction fetches not allowed.
-			};
-			uint64_t Value;
-		};
-	} PDE_DIR, *PPDE_DIR;
-	static_assert(sizeof(_PDE_DIR) == sizeof(uintptr_t), "Size mismatch, only 64-bit supported.");
+		using namespace x64;
 
-	// Intel SDM Vol3A Table 4-19
-	typedef struct _PTE // Maps a 4KB page
+		static constexpr size_t Pages2M = 512;		 // 2MB in 4KB pages
+		static constexpr size_t Pages1G = 512 * 512; // 1GB in 4KB pages
+
+		size_t remaining = count;
+		uintptr_t virt = virtualBase;
+		paddr_t phys = physicalBase;
+
+		while (remaining > 0)
+		{
+			const VirtualAddress va =
+			{
+				.AsUint64 = virt
+			};
+
+			// PML4 — always needed
+			PML4E *const pml4 = static_cast<PML4E *>(T_ops.Resolve(Root));
+			PML4E &pml4e = pml4[va.index4];
+			if (!pml4e.Present)
+			{
+				paddr_t table;
+				if (!T_ops.PhyAlloc(table))
+					return false;
+				pml4e.Value = table;
+				pml4e.Present = true;
+				pml4e.ReadWrite = true;
+				pml4e.UserSupervisor = !global;
+			}
+
+			// PDPT
+			PDPTE_DIR *const pdpt = static_cast<PDPTE_DIR *>(T_ops.Resolve(pml4e.Value & ~0xFFFull));
+
+			if (remaining >= Pages1G && IsAligned(virt, Pages1G * PageSize) && IsAligned(phys, Pages1G * PageSize))
+			{
+				// 1GB page — leaf at PDPT level
+				PDPTE_PAGE page;
+				page.Value = phys; // 1GB-aligned: bits 0-29 are 0, PFN lands at bits 30-47
+				page.Present = true;
+				page.ReadWrite = write;
+				page.ExecuteDisable = !execute;
+				page.Global = global;
+				page.UserSupervisor = !global;
+				page.PageSize = true;
+				pdpt[va.index3].Value = page.Value;
+
+				virt += Pages1G * PageSize;
+				phys += Pages1G * PageSize;
+				remaining -= Pages1G;
+				continue;
+			}
+
+			PDPTE_DIR &pdpte = pdpt[va.index3];
+			if (!pdpte.Present)
+			{
+				paddr_t table;
+				if (!T_ops.PhyAlloc(table))
+					return false;
+				pdpte.Value = table;
+				pdpte.Present = true;
+				pdpte.ReadWrite = true;
+				pdpte.UserSupervisor = !global;
+			}
+
+			// PD
+			PDE_DIR *const pd = static_cast<PDE_DIR *>(T_ops.Resolve(pdpte.Value & ~0xFFFull));
+
+			if (remaining >= Pages2M && IsAligned(virt, Pages2M * PageSize) && IsAligned(phys, Pages2M * PageSize))
+			{
+				// 2MB page — leaf at PD level
+				PDE_PAGE page;
+				page.Value = phys; // 2MB-aligned: bits 0-20 are 0, PFN lands at bits 21-47
+				page.Present = true;
+				page.ReadWrite = write;
+				page.ExecuteDisable = !execute;
+				page.Global = global;
+				page.UserSupervisor = !global;
+				page.PageSize = true;
+				pd[va.index2].Value = page.Value;
+
+				virt += Pages2M * PageSize;
+				phys += Pages2M * PageSize;
+				remaining -= Pages2M;
+				continue;
+			}
+
+			PDE_DIR &pde = pd[va.index2];
+			if (!pde.Present)
+			{
+				paddr_t table;
+				if (!T_ops.PhyAlloc(table))
+					return false;
+				pde.Value = table;
+				pde.Present = true;
+				pde.ReadWrite = true;
+				pde.UserSupervisor = !global;
+			}
+
+			// PT — 4KB page
+			PTE *const pt = static_cast<PTE *>(T_ops.Resolve(pde.Value & ~0xFFFull));
+			PTE &pte = pt[va.index1];
+			pte.Value = phys; // 4KB-aligned: bits 0-11 are 0, PFN lands at bits 12-47
+			pte.Present = true;
+			pte.ReadWrite = write;
+			pte.ExecuteDisable = !execute;
+			pte.Global = global;
+			pte.UserSupervisor = !global;
+
+			virt += PageSize;
+			phys += PageSize;
+			remaining -= 1;
+		}
+
+		return true;
+	}
+
+	bool UnmapPages(const uintptr_t virtualBase, const size_t count) const
 	{
-		union
-		{
-			struct
-			{
-				uint64_t Present : 1;		   // Must be 1, region invalid if 0.
-				uint64_t ReadWrite : 1;		   // If 0, writes not allowed.
-				uint64_t UserSupervisor : 1;   // If 0, user-mode accesses not allowed.
-				uint64_t PageWriteThrough : 1; // Determines the memory type used to access the memory.
-				uint64_t PageCacheDisable : 1; // Determines the memory type used to access the memory.
-				uint64_t Accessed : 1;		   // If 0, this entry has not been used for translation.
-				uint64_t Dirty : 1;			   // If 0, the memory backing this page has not been written to.
-				uint64_t PageAccessType : 1;   // Determines the memory type used to access the memory.
-				uint64_t Global : 1;		   // If 1 and the PGE bit of CR4 is set, translations are global.
-				uint64_t OSCopyOnWrite : 1;
-				uint64_t OSPrototypePTE : 1;
-				uint64_t OSWrite : 1;
-				uint64_t PageFrameNumber : 36; // The page frame number of the backing physical page.
-				uint64_t Reserved : 4;
-				uint64_t Ignored3 : 7;
-				uint64_t ProtectionKey : 4;	 // If the PKE bit of CR4 is set, determines the protection key.
-				uint64_t ExecuteDisable : 1; // If 1, instruction fetches not allowed.
-			};
-			uint64_t Value;
-		};
-	} PTE, *PPTE;
-	static_assert(sizeof(_PTE) == sizeof(uintptr_t), "Incorrect.");
+		using namespace x64;
 
-	struct VirtualAddress
+		for (size_t i = 0; i < count; i++)
+		{
+			const uintptr_t virt = virtualBase + (i << PageShift);
+			const VirtualAddress va = { .AsUint64 = virt };
+
+			PML4E* const pml4 = static_cast<PML4E*>(T_ops.Resolve(Root));
+			if (!pml4[va.index4].Present)
+				continue;
+
+			PDPTE_DIR* const pdpt = static_cast<PDPTE_DIR*>(T_ops.Resolve(pml4[va.index4].Value & ~0xFFFull));
+			if (!pdpt[va.index3].Present)
+				continue;
+			if (pdpt[va.index3].PageSize)
+			{
+				pdpt[va.index3].Value = 0;
+				__invlpg(reinterpret_cast<void*>(virt));
+				continue;
+			}
+
+			PDE_DIR* const pd = static_cast<PDE_DIR*>(T_ops.Resolve(pdpt[va.index3].Value & ~0xFFFull));
+			if (!pd[va.index2].Present)
+				continue;
+			if (pd[va.index2].PageSize)
+			{
+				pd[va.index2].Value = 0;
+				__invlpg(reinterpret_cast<void*>(virt));
+				continue;
+			}
+
+			PTE* const pt = static_cast<PTE*>(T_ops.Resolve(pd[va.index2].Value & ~0xFFFull));
+			pt[va.index1].Value = 0;
+			__invlpg(reinterpret_cast<void*>(virt));
+		}
+
+		return true;
+	}
+
+	void ClearKernelEntries() const
 	{
-		union
+		using namespace x64;
+		
+		PML4E *const pml4 = static_cast<PML4E *>(T_ops.Resolve(Root));
+
+		const size_t kernelCount = (1 << 8); // high bit gets extended to full 64 bit width with 4 level paging
+		const size_t count = (1 << 9);
+		for (size_t i4 = kernelCount; i4 < count; i4++)
 		{
-			struct
-			{
-				uint64_t offset : 12;
-				uint64_t index1 : 9;
-				uint64_t index2 : 9;
-				uint64_t index3 : 9;
-				uint64_t index4 : 9;
-				uint64_t upper : 16;
-			};
-			uint64_t AsUint64;
-		};
-	};
-	static_assert(sizeof(VirtualAddress) == sizeof(uint64_t), "Size mismatch");
-#pragma pack(pop)
+			pml4[i4].Value = 0;
+		}
+	}
 
-	bool MapPage(const uintptr_t virtualAddress, const paddr_t physicalAddress, const bool global) const;
-	uintptr_t BuildAddress(const size_t i4, const size_t i3, const size_t i2, const size_t i1, const size_t offset) const;
+	void LoadKernelMappings() const
+	{
+		using namespace x64;
+		
+		uintptr_t *const root = (uintptr_t *)T_ops.Resolve(Root);
 
-	paddr_t m_root;
+		PageTabes<T_ops> current = PageTabes<T_ops>::Current();
+		uintptr_t *const currentRoot = (uintptr_t *)T_ops.Resolve(current.Root);
+
+		// Kernel addresses start at high bit set, occupy half of root page
+		constexpr size_t kernelStart = (1 << 8);
+		static_assert(kernelStart * sizeof(uintptr_t) == PageSize / 2, "Invalid region");
+
+		// copy all mappings from current PT's root to this PT's root
+		memcpy(&root[kernelStart], &currentRoot[kernelStart], PageSize / 2);
+	}
+
+	bool IsValid(const void* virtAddr) const
+	{
+		using namespace x64;
+
+		const VirtualAddress va = { .AsUint64 = reinterpret_cast<uint64_t>(virtAddr) };
+
+		PML4E* const pml4 = static_cast<PML4E*>(T_ops.Resolve(Root));
+		if (!pml4[va.index4].Present)
+			return false;
+
+		PDPTE_DIR* const pdpt = static_cast<PDPTE_DIR*>(T_ops.Resolve(pml4[va.index4].Value & ~0xFFFull));
+		if (!pdpt[va.index3].Present)
+			return false;
+		if (pdpt[va.index3].PageSize) // 1GB page
+			return true;
+
+		PDE_DIR* const pd = static_cast<PDE_DIR*>(T_ops.Resolve(pdpt[va.index3].Value & ~0xFFFull));
+		if (!pd[va.index2].Present)
+			return false;
+		if (pd[va.index2].PageSize) // 2MB page
+			return true;
+
+		PTE* const pt = static_cast<PTE*>(T_ops.Resolve(pd[va.index2].Value & ~0xFFFull));
+		return pt[va.index1].Present;
+	}
+
+	bool IsValid() const
+	{
+		return Root != 0;
+	}
+
+	paddr_t Root;
 };

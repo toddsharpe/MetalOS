@@ -222,7 +222,7 @@ char* strcpy(char* _Destination, char const* _Source)
 	return strncpy(_Destination, _Source, strlen(_Source));
 }
 
-char * strchr(const char* _String, const int _Ch)
+char const* strchr(const char* _String, const int _Ch)
 {
 	const char* s = _String;
 	while (*s != (char)_Ch)
@@ -231,7 +231,7 @@ char * strchr(const char* _String, const int _Ch)
 	return (char*)s;
 }
 
-char* strrchr(char* const _String, int const _Ch)
+char const* strrchr(char* const _String, int const _Ch)
 {
 	char* s = _String;
 	char* ret = 0;

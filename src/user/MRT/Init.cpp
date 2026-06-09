@@ -11,6 +11,8 @@
 typedef int (*ProcessEntry)(int argc, char **argv);
 extern "C" __declspec(dllexport) void InitProcess() // Rename: init module?
 {
+	DebugPrint("InitProcess\n");
+	
 	ProcessEnvironmentBlock *peb = Runtime::GetPEB();
 
 	// Headers

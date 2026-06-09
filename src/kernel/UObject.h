@@ -41,8 +41,6 @@ public:
 	bool CanWrite() const;
 	void Display() const;
 
-	ListEntry Link;
-	
 	// UObject
 	const handle_t Handle;
 	const UObjectType Type;

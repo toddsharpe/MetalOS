@@ -1,11 +1,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
-
-//Libs
-#include "core_crt/string.c"
+#include "Assert.h"
 
 //Tests
+#include "kernel/AddressSpace_test.cpp"
 #include "Lib/Arena_test.cpp"
 #include "Lib/Buffer_test.cpp"
 #include "Lib/String_test.cpp"
@@ -16,6 +15,9 @@
 #include "Lib/StaticMap_test.cpp"
 #include "Lib/ObjectPool_test.cpp"
 #include "Lib/RingBuffer_test.cpp"
+#include "Lib/StaticHeap_test.cpp"
+#include "Lib/LinkedList_test.cpp"
+#include "Lib/Linq_test.cpp"
 
 #define Test(name)                     \
 	{                                  \
@@ -27,6 +29,7 @@ int main()
 {
 	printf("Running tests\n");
 
+	Test(AddressSpace);
 	Test(Arena);
 	Test(Buffer);
 	Test(String);
@@ -37,8 +40,22 @@ int main()
 	Test(StaticMap);
 	Test(ObjectPool);
 	Test(RingBuffer);
+	Test(StaticHeap);
+	Test(LinkedList);
+	Test(Linq);
 
 	return 0;
+}
+
+void CPrintf(const bool enabled, const char* format, ...)
+{
+	if (!enabled)
+		return;
+
+	va_list args;
+	va_start(args, format);
+	Printf(format, args);
+	va_end(args);
 }
 
 void Printf(const char* format, ...)

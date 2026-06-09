@@ -10,10 +10,10 @@
 namespace HyperV::Platform
 {
 	//Code page, map as execute
-	volatile HYPERV_PAGE_ALIGN uint8_t HypercallPage[PageSize] = { };
+	volatile HYPERV_PAGE_ALIGN uint8_t HypercallPage[Arch::PageSize] = { };
 	Hypercall hypercall = (Hypercall)(void*)HypercallPage;
 
-	volatile HYPERV_PAGE_ALIGN uint8_t PostMessagePage[PageSize] = {};
+	volatile HYPERV_PAGE_ALIGN uint8_t PostMessagePage[Arch::PageSize] = {};
 
 	char Vendor[13] = { 0 };
 	
@@ -64,7 +64,7 @@ namespace HyperV::Platform
 
 				//7. Write to hypercall reg
 				reg.Enabled = true;
-				reg.HypercallGPFN = ResolveImageVA((void*)HypercallPage) >> PageShift;
+				reg.HypercallGPFN = ResolveImageVA((void*)HypercallPage) >> Arch::PageShift;
 				__writemsr(static_cast<uint32_t>(MSR::HV_X64_MSR_HYPERCALL), reg.AsUint64);
 			}
 		}

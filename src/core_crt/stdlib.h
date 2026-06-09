@@ -20,6 +20,9 @@ extern "C"
 
 	size_t wcstombs(char *_Dest, const wchar_t *_Source, size_t _MaxCount);
 
+	void *malloc( size_t size );
+	void free(void* ptr);
+
 #ifdef __cplusplus
 }
 #endif

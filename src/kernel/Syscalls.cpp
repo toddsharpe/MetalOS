@@ -9,6 +9,7 @@
 #include "kernel/Objects/KPredicate.h"
 #include "kernel/Objects/KPipe.h"
 #include "kernel/Objects/UPipe.h"
+#include "kernel/UWindow.h"
 #include "Assert.h"
 
 //TODO(tsharpe): Syscalls should be going through Kernel Api, but theres no kernel internal use for windows?
@@ -52,7 +53,7 @@ namespace
 //Syscalls that the kernel adds params
 SyscallResult DebugPrintStack(const uint64_t rip);
 
-uint64_t Dispatch(const SyscallFrame& frame)
+uint64_t Dispatch(const Arch::SyscallFrame& frame)
 {
 	Syscall call = static_cast<Syscall>(frame.SystemCall);
 	switch (call)
@@ -193,7 +194,7 @@ uint64_t Dispatch(const SyscallFrame& frame)
 	}
 }
 
-extern "C" uint64_t KeSyscall(const SyscallFrame& frame)
+extern "C" uint64_t KeSyscall(const Arch::SyscallFrame& frame)
 {
 	//Printf("Syscall: 0x%x\n", frame.SystemCall);
 	const uint64_t ret = Dispatch(frame);
@@ -212,7 +213,7 @@ milli_t GetTickCount()
 SyscallResult GetSystemTime(SystemTime* time)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.IsValidPointer(time))
+	if (!proc.Space.IsValidPointer(time))
 		return SyscallResult::InvalidPointer;
 
 	KSystemTime kTime = {};
@@ -241,7 +242,7 @@ HThread GetCurrentThread()
 SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* args, CreateProcessResult* result)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if ((!proc.IsValidPointer(commandLine)) || (args && !proc.IsValidPointer(args)) || (result && !proc.IsValidPointer(result)))
+	if ((!proc.Space.IsValidPointer(commandLine)) || (args && !proc.Space.IsValidPointer(args)) || (result && !proc.Space.IsValidPointer(result)))
 		return SyscallResult::InvalidPointer;
 
 	//Copy string locally to automatically crop it at max bytes
@@ -252,7 +253,7 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 	if (!created)
 		return SyscallResult::Failed;
 
-	if (result && proc.IsValidPointer(result))
+	if (result && proc.Space.IsValidPointer(result))
 	{
 		//Add uobject to calling process
 		UObject* obj = proc.CreateObject(UObjectType::Process);
@@ -264,6 +265,8 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 	//If console application, set standard handles
 	if (created->IsConsole)
 	{
+		Assert(args);
+
 		if (args->StdInput)
 		{
 			UObject* obj = proc.GetObject((handle_t)args->StdInput);
@@ -276,7 +279,9 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 			backing.Readers.Increment();
 
 			//Set stdin to new process
-			created->CreatePipe(backing, KPipeOp::Read, Handles::StdIn);
+			UObject* stdin = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe, Handles::StdIn);
+			stdin->Pipe = KeAlloc<UPipe>(AllocType::User, backing, KPipeOp::Read);
+			Assert(created->Objects.Add(stdin));
 		}
 
 		if (args->StdOutput)
@@ -293,8 +298,10 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 			KPipe& backing = obj->Pipe->KPipe;
 			backing.Writers.Increment();
 
-			//Set stdin to new process
-			created->CreatePipe(backing, KPipeOp::Write, Handles::StdOut);
+			//Set stdout to new process
+			UObject* stdout = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe, Handles::StdOut);
+			stdout->Pipe = KeAlloc<UPipe>(AllocType::User, backing, KPipeOp::Write);
+			Assert(created->Objects.Add(stdout));
 		}
 
 		if (args->StdError)
@@ -311,8 +318,10 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 			KPipe& backing = obj->Pipe->KPipe;
 			backing.Writers.Increment();
 
-			//Set stdin to new process
-			created->CreatePipe(backing, KPipeOp::Write, Handles::StdErr);
+			//Set stderr to new process
+			UObject* stderr = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe, Handles::StdErr);
+			stderr->Pipe = KeAlloc<UPipe>(AllocType::User, backing, KPipeOp::Write);
+			Assert(created->Objects.Add(stderr));
 		}
 	}
 
@@ -322,7 +331,7 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.IsValidPointer(startAddress))
+	if (!proc.Space.IsValidPointer(startAddress))
 		return nullptr;
 
 	UThread* created = KeCreateUThread(proc, stackSize, startAddress, arg);
@@ -427,7 +436,7 @@ SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame)
 	UProcess& proc = thread.Process;
 	if (!handle || !frame)
 		return SyscallResult::InvalidArg;
-	if (!proc.IsValidPointer(handle) || !proc.IsValidPointer(frame))
+	if (!proc.Space.IsValidPointer(handle) || !proc.Space.IsValidPointer(frame))
 		return SyscallResult::InvalidPointer;
 
 	UWindow* window = CreateWindow(thread);
@@ -448,7 +457,7 @@ SyscallResult PaintWindow(HWindow handle, const CBuffer* buffer)
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!buffer)
 		return SyscallResult::InvalidArg;
-	if (!proc.IsValidPointer(buffer))
+	if (!proc.Space.IsValidPointer(buffer))
 		return SyscallResult::InvalidPointer;
 	
 	UObject* obj = proc.GetObject((handle_t)handle);
@@ -469,7 +478,7 @@ SyscallResult MoveWindow(HWindow handle, const Graphics::Rectangle* frame)
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!frame)
 		return SyscallResult::InvalidArg;
-	if (!proc.IsValidPointer(frame))
+	if (!proc.Space.IsValidPointer(frame))
 		return SyscallResult::InvalidPointer;
 	
 	UObject* obj = proc.GetObject((handle_t)handle);
@@ -493,7 +502,7 @@ SyscallResult GetWindowRect(HWindow handle, Graphics::Rectangle* frame)
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!frame)
 		return SyscallResult::InvalidArg;
-	if (!proc.IsValidPointer(frame))
+	if (!proc.Space.IsValidPointer(frame))
 		return SyscallResult::InvalidPointer;
 	
 	UObject* obj = proc.GetObject((handle_t)handle);
@@ -513,7 +522,7 @@ SyscallResult GetMessage(Message* message)
 	UProcess& proc = thread.Process;
 	if (!message)
 		return SyscallResult::InvalidArg;
-	if (!proc.IsValidPointer(message))
+	if (!proc.Space.IsValidPointer(message))
 		return SyscallResult::InvalidPointer;
 
 	//Wait for message
@@ -532,7 +541,7 @@ SyscallResult PeekMessage(Message* message)
 	UProcess& proc = thread.Process;
 	if (!message)
 		return SyscallResult::InvalidArg;
-	if (!proc.IsValidPointer(message))
+	if (!proc.Space.IsValidPointer(message))
 		return SyscallResult::InvalidPointer;
 
 	if (!thread.HasMessage())
@@ -547,10 +556,10 @@ SyscallResult GetScreenRect(Graphics::Rectangle* rect)
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!rect)
 		return SyscallResult::InvalidArg;
-	if (!proc.IsValidPointer(rect))
+	if (!proc.Space.IsValidPointer(rect))
 		return SyscallResult::InvalidPointer;
 	
-	*rect = GetScreenRect2();
+	*rect = GetScreen();
 	Printf("X: %d, Y: %d\n", rect->X, rect->Y);
 	return SyscallResult::Success;
 }
@@ -561,7 +570,7 @@ SyscallResult GetScreenRect(Graphics::Rectangle* rect)
 HFile CreateFile(const char* path, const FileAccess access)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.IsValidPointer(path))
+	if (!proc.Space.IsValidPointer(path))
 		return nullptr;
 
 	UObject* uFile = proc.CreateObject(UObjectType::File);
@@ -572,7 +581,7 @@ HFile CreateFile(const char* path, const FileAccess access)
 	copy.AppendClip(path);
 	copy.ToLower();
 
-	const bool result = KeCreateFile(uFile->File, copy, ToAccess(access));
+	const bool result = KeCreateFile(uFile->File, copy.c_str(), ToAccess(access));
 	if (!result)
 		return nullptr;
 	return (HFile)uFile->Handle;
@@ -581,7 +590,7 @@ HFile CreateFile(const char* path, const FileAccess access)
 SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize, size_t* bytesRead)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.IsValidPointer(buffer) || (bytesRead && !proc.IsValidPointer(bytesRead)))
+	if (!proc.Space.IsValidPointer(buffer) || (bytesRead && !proc.Space.IsValidPointer(bytesRead)))
 		return SyscallResult::InvalidPointer;
 
 	if (!bufferSize)
@@ -635,11 +644,11 @@ SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize
 SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t bufferSize, size_t* bytesWritten)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.IsValidPointer(buffer))
+	if (!proc.Space.IsValidPointer(buffer))
 		return SyscallResult::InvalidPointer;
 	if (!bufferSize)
 		return SyscallResult::InvalidArg;
-	if (bytesWritten && !proc.IsValidPointer(bytesWritten))
+	if (bytesWritten && !proc.Space.IsValidPointer(bytesWritten))
 		return SyscallResult::InvalidPointer;
 
 	UObject* obj = proc.GetObject((handle_t)handle);
@@ -688,7 +697,7 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const Seek seek, size_t* newPosition)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (newPosition && !proc.IsValidPointer(newPosition))
+	if (newPosition && !proc.Space.IsValidPointer(newPosition))
 		return SyscallResult::InvalidPointer;
 
 	UObject* uFile = proc.GetObject((handle_t)handle);
@@ -745,29 +754,42 @@ SyscallResult CreateDirectory(const char* path)
 SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!readHandle || !proc.IsValidPointer(readHandle))
+	if (!readHandle || !proc.Space.IsValidPointer(readHandle))
 		return SyscallResult::InvalidPointer;
-	if (!writeHandle || !proc.IsValidPointer(writeHandle))
+	if (!writeHandle || !proc.Space.IsValidPointer(writeHandle))
 		return SyscallResult::InvalidPointer;
 
-	const size_t pipeSize = PageSize;
-	KPipe* created = KeCreatePipe(pipeSize);
-	created->Readers.Increment();
-	created->Writers.Increment();
-
-	UObject* reader = proc.CreatePipe(*created, KPipeOp::Read);
-	*readHandle = (HFile)reader->Handle;
-
-	UObject* writer = proc.CreatePipe(*created, KPipeOp::Write);
-	*writeHandle = (HFile)writer->Handle;
+	const size_t pipeSize = Arch::PageSize;
 	
+	//Create kernel pipe
+	KPipe* pipe = KeAlloc<KPipe>(AllocType::Shared, pipeSize);
+	pipe->Init();
+	pipe->Readers.Increment();
+	pipe->Writers.Increment();
+
+	//Create reader
+	{
+		UObject* reader = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe);
+		reader->Pipe = KeAlloc<UPipe>(AllocType::User, *pipe, KPipeOp::Read);
+		proc.Objects.Add(reader);
+		*readHandle = (HFile)reader->Handle;
+	}
+
+	//Create writer
+	{
+		UObject* writer = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe);
+		writer->Pipe = KeAlloc<UPipe>(AllocType::User, *pipe, KPipeOp::Write);
+		proc.Objects.Add(writer);
+		*writeHandle = (HFile)writer->Handle;
+	}
+
 	return SyscallResult::Success;
 }
 
 SyscallResult PeekNamedPipe(const HFile file, size_t* bytesAvailable)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!bytesAvailable || !proc.IsValidPointer(bytesAvailable))
+	if (!bytesAvailable || !proc.Space.IsValidPointer(bytesAvailable))
 		return SyscallResult::InvalidPointer;
 
 	UObject* obj = proc.GetObject((handle_t)file);
@@ -837,7 +859,7 @@ SyscallResult CloseHandle(const Handle handle)
 SyscallResult WaitForSingleObject(const Handle handle, const milli_t time, WaitStatus* status)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!status || !proc.IsValidPointer(status))
+	if (!status || !proc.Space.IsValidPointer(status))
 		return SyscallResult::InvalidPointer;
 
 	UObject* obj = proc.GetObject((handle_t)handle);
@@ -846,10 +868,6 @@ SyscallResult WaitForSingleObject(const Handle handle, const milli_t time, WaitS
 
 	switch (obj->Type)
 	{
-		case UObjectType::Process:
-			*status = FromWaitResult(KeWait(*obj->Process, time));
-			break;
-
 		case UObjectType::Event:
 			*status = FromWaitResult(KeWait(*obj->Event, time));
 			break;
@@ -864,13 +882,15 @@ SyscallResult WaitForSingleObject(const Handle handle, const milli_t time, WaitS
 SyscallResult CreateEvent(HEvent* event, const bool manual, const bool initial)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!event || !proc.IsValidPointer(event))
+	if (!event || !proc.Space.IsValidPointer(event))
 		return SyscallResult::InvalidPointer;
 
 	//Create Event
-	UObject* created = proc.CreateEvent(manual, initial);
-	*event = (HEvent)created->Handle;
+	UObject* created = KeAlloc<UObject>(AllocType::User, UObjectType::Event);
+	created->Event = KeAlloc<KEvent>(AllocType::User, manual, initial);
+	proc.Objects.Add(created);
 
+	*event = (HEvent)created->Handle;
 	return SyscallResult::Success;
 }
 
@@ -883,6 +903,7 @@ SyscallResult SetEvent(const HEvent event)
 	if (obj->Type != UObjectType::Event)
 		return SyscallResult::InvalidObject;
 
+	Assert(obj->Event);
 	obj->Event->Set();
 	return SyscallResult::Success;
 }
@@ -896,6 +917,7 @@ SyscallResult ResetEvent(const HEvent event)
 	if (obj->Type != UObjectType::Event)
 		return SyscallResult::InvalidObject;
 
+	Assert(obj->Event);
 	obj->Event->Reset();
 	return SyscallResult::Success;
 }
@@ -908,7 +930,10 @@ void* VirtualAlloc(const void* address, const size_t size)
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!size)
 		return nullptr;
-	
+
+	if (!address)
+		return KeVirtualAlloc(proc, size);
+
 	return KeVirtualAlloc(proc, address, size);
 }
 
@@ -918,7 +943,7 @@ void* VirtualAlloc(const void* address, const size_t size)
 SyscallResult DebugPrint(const char* s)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.IsValidPointer(s))
+	if (!proc.Space.IsValidPointer(s))
 		return SyscallResult::InvalidPointer;
 
 	Printf(s);
@@ -928,7 +953,7 @@ SyscallResult DebugPrint(const char* s)
 SyscallResult DebugPrintBytes(const void* s, const size_t length)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.IsValidPointer(s))
+	if (!proc.Space.IsValidPointer(s))
 		return SyscallResult::InvalidPointer;
 
 	if (!length)
@@ -944,7 +969,7 @@ SyscallResult DebugPrintStack(const uint64_t rip)
 	UThread& thread = Scheduler::GetUThread();
 	thread.Process.Display();
 
-	Context context = {};
+	Arch::Context context = {};
 	context.Rip = rip;
 	context.Rsp = (uintptr_t)thread.Stack;
 	context.Rbp = *(uintptr_t*)thread.Stack;

@@ -124,13 +124,13 @@ x64_SYSTEMCALL PROC
 	; Save user stack
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block (SelfPointer)
 	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
-	mov rbx, qword ptr [rbx+24] ; offsetof(KThread, UserThread)
+	mov rbx, qword ptr [rbx+8] ; offsetof(KThread, UserThread)
 	mov qword ptr [rbx+16], rsp ; offsetof(UThread, Stack)
 
 	; Load kernel stack
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block (SelfPointer)
 	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
-	mov rbx, qword ptr [rbx+16] ; offsetof(KThread, ContextPtr)
+	mov rbx, qword ptr [rbx] ; offsetof(KThread, ContextPtr)
 	mov rbx, qword ptr [rbx+64] ; Get Stack pointer (8th item)
 	mov rsp, rbx ; Set stack
 
@@ -152,13 +152,13 @@ x64_SYSTEMCALL PROC
 	; Save kernel stack
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block (SelfPointer)
 	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
-	mov rbx, qword ptr [rbx+16] ; offsetof(KThread, ContextPtr)
+	mov rbx, qword ptr [rbx] ; offsetof(KThread, ContextPtr)
 	mov qword ptr [rbx+64], rsp ; Set stack
 
 	; Restore stack
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block (SelfPointer)
 	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
-	mov rbx, qword ptr [rbx+24] ; offsetof(KThread, UserThread)
+	mov rbx, qword ptr [rbx+8] ; offsetof(KThread, UserThread)
 	mov rsp, qword ptr [rbx+16] ; offsetof(UThread, Stack)
 
 	POP_NONVOLATILE

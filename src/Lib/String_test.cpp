@@ -11,17 +11,17 @@ void String_test()
 	Assert(s1 == "abc");
 
 	//Assign from char pointer/length
-	static constexpr char* t = "def";
+	static constexpr const char* t = "def";
 	static constexpr CString t1(t, 3);
 	Assert(t1 == "def");
 
 	//Assign from char pointer
-	static constexpr char* n = "123";
+	static constexpr const char* n = "123";
 	static constexpr CString n1(n);
 	Assert(n1 == "123");
 
 	//Assign from char pointer
-	char* m = "123a";
+	const char* m = "123a";
 	StaticString<128> copy = {};
 	copy.AppendClip(m);
 	Assert(copy == "123a");
@@ -49,4 +49,30 @@ void String_test()
 
 	b.Pop();
 	Assert(b == "tes");
+
+	// Set replaces existing content (not appends)
+	StaticString<32> d;
+	d.Set("initial");
+	Assert(d == "initial");
+	Assert(d.Count() == 7);
+	d.Set("replaced");
+	Assert(d == "replaced");
+	Assert(d.Count() == 8);
+
+	// Set with shorter string — old content must not linger
+	d.Set("hi");
+	Assert(d == "hi");
+	Assert(d.Count() == 2);
+
+	// Set from CString
+	static constexpr CString src("hello");
+	StaticString<32> e;
+	e.Set(src);
+	Assert(e == "hello");
+	Assert(e.Count() == 5);
+
+	// Set after Set — count stays correct
+	e.Set("world!");
+	Assert(e == "world!");
+	Assert(e.Count() == 6);
 }

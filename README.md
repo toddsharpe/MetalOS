@@ -51,7 +51,7 @@ Note: All executable formats (``Kernel``, ``Doom``, ``Runtime``, and even ``Boot
 The main purpose of Boot is to load the ``Kernel``, however it must also:
 * Detect Graphics Device from UEFI (using Graphics Output Protocol)
 * Allocate Page Table Pool for Kernel
-* Allocate Page Frame Number Database for Kernel's PhysicalMemoryManager
+* Allocate Page Frame Number Database for Kernel's PhysicalMemory
 * Allocate and load Kernel's PDB into physical memory (to allow for bugcheck stack walks)
 
 See also: [Loader Params](inc/LoaderParams.h)

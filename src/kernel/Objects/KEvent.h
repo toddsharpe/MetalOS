@@ -1,48 +1,24 @@
 #pragma once
 
-#include "Kernel/Objects/KSignalObject.h"
+#include "kernel/Objects/KSignal.h"
 
-class KEvent : public KSignalObject
+class KEvent : public KSignal
 {
 public:
-	KEvent(const bool manualReset, const bool initialState) :
-		KSignalObject(),
-		m_manualReset(manualReset),
-		m_state(initialState)
-	{
-
-	}
+	constexpr KEvent(const bool manualReset, const bool initialState) :
+		KSignal(KSignalType::Event)
+		{
+			Event.ManualReset = manualReset;
+			Event.State = initialState;
+		}
 
 	void Set()
 	{
-		m_state = true;
+		Event.State = true;
 	}
 
 	void Reset()
 	{
-		m_state = false;
+		Event.State = false;
 	}
-
-	virtual bool IsSignalled() const override
-	{
-		return m_state;
-	}
-
-	virtual void Observed() override
-	{
-		Assert(IsSignalled());
-		if (!m_manualReset)
-			m_state = false;
-	}
-
-	virtual void Display() const override
-	{
-		Printf("KEvent\n");
-		Printf("    Manual: %d\n", m_manualReset);
-		Printf("    State: %d\n", m_state);
-	}
-
-private:
-	const bool m_manualReset;
-	bool m_state;
 };

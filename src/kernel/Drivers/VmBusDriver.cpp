@@ -6,12 +6,11 @@
 #include "Assert.h"
 
 //These aren't used
-volatile uint8_t VmBusDriver::MonitorPage1[PageSize] = { 0 }; //Parent->child notifications
-volatile uint8_t VmBusDriver::MonitorPage2[PageSize] = { 0 }; //Child->parent notifications
+volatile uint8_t VmBusDriver::MonitorPage1[Arch::PageSize] = { 0 }; //Parent->child notifications
+volatile uint8_t VmBusDriver::MonitorPage2[Arch::PageSize] = { 0 }; //Child->parent notifications
 
 VmBusDriver::VmBusDriver(KDevice& device) :
 	Driver(device),
-	m_arena(),
 	m_connectEvent(false, false),
 	m_thread(),
 	m_channelCallbacks(),
@@ -22,18 +21,17 @@ VmBusDriver::VmBusDriver(KDevice& device) :
 
 }
 
-Result VmBusDriver::Initialize(Arena& arena)
+Result VmBusDriver::Initialize()
 {
 	return Result::Success;
 }
 
-Result VmBusDriver::Enumerate(Arena& arena)
+Result VmBusDriver::Enumerate()
 {
-	m_arena = &arena;
-	
+
 	//Enable VMBus interrupt
-	HyperV::Interrupts::EnableSintVector(HyperV::VMBUS_MESSAGE_SINT, (uint32_t)InterruptVector::HypervisorVmBus);
-	KeRegisterInterrupt(InterruptVector::HypervisorVmBus, { &VmBusDriver::OnInterrupt, this });
+	HyperV::Interrupts::EnableSintVector(HyperV::VMBUS_MESSAGE_SINT, (uint32_t)Arch::InterruptVector::HypervisorVmBus);
+	KeRegisterInterrupt(Arch::InterruptVector::HypervisorVmBus, { &VmBusDriver::OnInterrupt, this });
 
 	//Initiate connection
 	HyperV::vmbus_channel_initiate_contact msg;
@@ -59,7 +57,6 @@ Result VmBusDriver::Enumerate(Arena& arena)
 	result = HyperV::Platform::HvPostMessage(connectionId, VmbusMessageType, sizeof(HyperV::vmbus_channel_message_header), &header);
 	Assert(KeWait(m_connectEvent) == KWaitResult::Signaled);
 
-	m_arena = nullptr;
 	return Result::Success;
 }
 
@@ -201,8 +198,9 @@ void VmBusDriver::OnInterrupt()
 				Assert(offer->offer.sub_channel_index == 0);
 
 				//Create child device
-				KDevice* device = m_arena->Allocate<KDevice>();
+				KDevice* device = KeAlloc<KDevice>(AllocType::Kernel);
 				m_device.Children.Add(device);
+				device->Type = KDeviceType::HyperV;
 
 				//Populate HID
 				{
@@ -214,14 +212,14 @@ void VmBusDriver::OnInterrupt()
 						if_type.Data3,
 						if_type.Data4[0], if_type.Data4[1], if_type.Data4[2], if_type.Data4[3],
 						if_type.Data4[4], if_type.Data4[5], if_type.Data4[6], if_type.Data4[7]);
-					device->Hid = m_arena->Copy({buffer, length});
+					device->Hid = KeCopy({buffer, length}, AllocType::Kernel);
 				}
 
 				//Populate name and description
 				const DeviceHids::Entry* lookup = DeviceHids::Lookup(device->Hid.c_str());
 				if (lookup)
 				{
-					device->Description = m_arena->Copy(CString(lookup->Description));
+					device->Description = KeCopy(CString(lookup->Description), AllocType::Kernel);
 					device->Name = device->Description;
 				}
 
@@ -229,7 +227,7 @@ void VmBusDriver::OnInterrupt()
 				{
 					char buffer[128] = {};
 					sprintf(buffer, "%s\\%s", m_device.Path.c_str(), device->Hid.c_str());
-					device->Path = m_arena->Copy(buffer);
+					device->Path = KeCopy(buffer, AllocType::Kernel);
 				}
 
 				//Save properties

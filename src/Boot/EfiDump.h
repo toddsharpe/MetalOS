@@ -14,7 +14,5 @@ namespace EfiDump
 	//https://blog.fpmurphy.com/2015/05/check-available-text-and-graphics-modes-from-uefi-shell.html
 	EFI_STATUS DumpGopLocations();
 
-	EFI_STATUS DumpMemoryMap(const EFI_MEMORY_MAP& map);
-
 	EFI_STATUS PrintDirectory(EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir);
 }

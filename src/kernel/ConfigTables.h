@@ -1,15 +1,19 @@
 #pragma once
 
 #include <efi.h>
-#include "Lib/Arena.h"
-#include "kernel/MemoryMap.h"
+#include "kernel/Api.h"
 
 class ConfigTables
 {
 public:
-	ConfigTables(const EFI_CONFIGURATION_TABLE* const configTables, const size_t count);
+	constexpr ConfigTables() :
+		m_tables(),
+		m_count()
+	{
 
-	void Initialize(Arena& arena);
+	}
+
+	void Initialize(const EFI_CONFIGURATION_TABLE* const configTables, const size_t count);
 
 	void* GetAcpiTable() const;
 
@@ -19,5 +23,5 @@ private:
 	bool GetTableByGuid(const EFI_GUID& guid, void*& vendorTable) const;
 
 	const EFI_CONFIGURATION_TABLE* m_tables;
-	const size_t m_count;
+	size_t m_count;
 };

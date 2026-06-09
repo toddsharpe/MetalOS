@@ -23,8 +23,8 @@ constexpr KPipe::KPipe(const size_t size) :
 
 void KPipe::Init()
 {
-	Assert(m_size % PageSize == 0);
-	const size_t count = SizeToPages(m_size);
+	Assert(m_size % Arch::PageSize == 0);
+	const size_t count = Arch::SizeToPages(m_size);
 	
 	//Acquire physical pages
 	StaticVector<paddr_t, 32> addresses;
@@ -42,7 +42,7 @@ void KPipe::Init()
 	}
 
 	//Map into kernel
-	void* const base = KeVirtualMap(addresses.begin(), addresses.Count());
+	void* const base = KeVirtualMap(addresses.begin(), addresses.Count() << Arch::PageShift);
 	m_buffer = reinterpret_cast<uint8_t*>(base);
 }
 

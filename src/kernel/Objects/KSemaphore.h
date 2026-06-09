@@ -1,59 +1,19 @@
 #pragma once
 
+#include "kernel/Objects/KSignal.h"
 
-#include "KSignalObject.h"
-
-#include "Assert.h"
-#include "core_crt/stdint.h"
-#include <string>
-
-//Count decremented each time thread completes a wait
-//Incremented each time thread releases
-//When coult is 0, threads block
-class KSemaphore : public KSignalObject
+class KSemaphore : public KSignal
 {
 public:
-	KSemaphore(const int initial, const int maximum, const std::string& name) :
-		KSignalObject(),
-		Name(name),
-		m_value(initial),
-		m_limit(maximum)
-	{
-
-	}
-
-	int Value() const
-	{
-		return m_value;
-	}
+	constexpr KSemaphore(const int initial, const int max) :
+		KSignal(KSignalType::Semaphore)
+		{
+			Semaphore.Value = initial;
+			Semaphore.Limit = max;
+		}
 
 	void Signal()
 	{
-		m_value++;
+		Semaphore.Value++;
 	}
-
-	virtual bool IsSignalled() const override
-	{
-		return m_value > 0;
-	}
-
-	virtual void Observed() override
-	{
-		Assert(IsSignalled());
-		m_value--;
-	}
-
-	virtual void Display() const override
-	{
-		Printf("KSemaphore\n");
-		Printf("    Value: %d\n", m_value);
-		Printf("    Limit: %d\n", m_limit);
-	}
-
-	const std::string Name;
-
-private:
-	int m_value;
-	int m_limit;
 };
-

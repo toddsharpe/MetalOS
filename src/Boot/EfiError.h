@@ -14,10 +14,10 @@
 #define ReturnIfNotSuccess(x) \
 do \
 { \
-	status = x; \
-	if (EFI_ERROR(status)) \
+	const EFI_STATUS _status = x; \
+	if (EFI_ERROR(_status)) \
 	{ \
-		EfiError::DisplayError(L#x, WFILE, LLINE, status); return status; \
+		EfiError::DisplayError(L#x, WFILE, LLINE, _status); return _status; \
 	} \
 } while (0)
 #define ReturnIfNotSuccessNoDisplay(x) status = x; if (EFI_ERROR(status)) { return status; }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_crt/stdarg.h"
+#include <cstdarg>
 
 EFI_STATUS UartPrintf(const CHAR16* format, ...);
 void UartPrintf(const char* format, ...);

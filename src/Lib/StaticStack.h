@@ -1,6 +1,7 @@
 #pragma once
 
-#include "core_crt/stdint.h"
+#include <cstdint>
+#include <cstring>
 #include "Assert.h"
 
 template <typename T, size_t N>

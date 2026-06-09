@@ -4,7 +4,6 @@
 #include "kernel/KDevice.h"
 #include "kernel/Drivers/VmBusDriver.h"
 #include "kernel/HyperV/VmBus.h"
-#include "Lib/Arena.h"
 #include "Assert.h"
 #include "kernel/Api.h"
 
@@ -26,7 +25,7 @@ HyperVNic::HyperVNic(KDevice& device) :
 {
 }
 
-Result HyperVNic::Initialize(Arena& arena)
+Result HyperVNic::Initialize()
 {
 	m_channel.Initialize(&m_device.m_channel);
 	m_device.Class = KDeviceClass::Nic;
@@ -56,9 +55,9 @@ Result HyperVNic::Initialize(Arena& arena)
 
 	// Step 3: allocate and register receive buffer
 	const paddr_t recvBufAddr = KePhysicalAlloc(NIC_RECV_BUFFER_PAGES);
-	m_recvBuf = (uint8_t*)MapPages(recvBufAddr, NIC_RECV_BUFFER_PAGES, MapType::Driver);
+	m_recvBuf = (uint8_t*)KeVirtualMap(recvBufAddr, NIC_RECV_BUFFER_PAGES * Arch::PageSize);
 	Assert(m_recvBuf);
-	memset(m_recvBuf, 0, NIC_RECV_BUFFER_PAGES * PageSize);
+	memset(m_recvBuf, 0, NIC_RECV_BUFFER_PAGES * Arch::PageSize);
 
 	m_recvBufGpadl = CreateGpadl(recvBufAddr, NIC_RECV_BUFFER_PAGES);
 
@@ -75,9 +74,9 @@ Result HyperVNic::Initialize(Arena& arena)
 	// Step 4: register send buffer — host requires this before activating the RNDIS layer
 	{
 		const paddr_t sendBufAddr = KePhysicalAlloc(NIC_SEND_BUFFER_PAGES);
-		m_sendBuf = (uint8_t*)MapPages(sendBufAddr, NIC_SEND_BUFFER_PAGES, MapType::Driver);
+		m_sendBuf = (uint8_t*)KeVirtualMap(sendBufAddr, NIC_SEND_BUFFER_PAGES * Arch::PageSize);
 		Assert(m_sendBuf);
-		memset(m_sendBuf, 0, NIC_SEND_BUFFER_PAGES * PageSize);
+		memset(m_sendBuf, 0, NIC_SEND_BUFFER_PAGES * Arch::PageSize);
 
 		const uint32_t sendBufGpadl = CreateGpadl(sendBufAddr, NIC_SEND_BUFFER_PAGES);
 
@@ -179,14 +178,14 @@ Result HyperVNic::Initialize(Arena& arena)
 			m_macAddress.bytes[3], m_macAddress.bytes[4], m_macAddress.bytes[5]);
 	}
 
-	m_netIf = arena.Allocate<Net::NetIf>(*this, Net::l2_t::Ethernet);
+	m_netIf = KeAlloc<Net::NetIf>(AllocType::Kernel, *this, Net::l2_t::Ethernet);
 	m_netIf->Init();
 	Net::AddNetIf(*m_netIf);
 
 	return Result::Success;
 }
 
-Result HyperVNic::Enumerate(Arena& arena)
+Result HyperVNic::Enumerate()
 {
 	return Result::Success;
 }
@@ -268,10 +267,10 @@ uint32_t HyperVNic::CreateGpadl(paddr_t address, size_t pageCount)
 	header->child_relid = m_device.child_relid;
 	header->rangecount = 1;
 	header->range_buflen = (uint16_t)(sizeof(HyperV::gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t));
-	header->range[0].byte_count = (uint32_t)(pageCount << PageShift);
+	header->range[0].byte_count = (uint32_t)(pageCount << Arch::PageShift);
 	header->range[0].byte_offset = 0;
 	for (size_t i = 0; i < headerPfns; i++)
-		header->range[0].pfn_array[i] = (address >> PageShift) + i;
+		header->range[0].pfn_array[i] = (address >> Arch::PageShift) + i;
 
 	KEvent event(false, false);
 	HyperV::VmBusResponse response;
@@ -293,7 +292,7 @@ uint32_t HyperVNic::CreateGpadl(paddr_t address, size_t pageCount)
 		body->msgnumber = bodyNum++;
 		body->gpadl = gpadl;
 		for (size_t i = 0; i < batchSize; i++)
-			body->pfn[i] = (address >> PageShift) + pfnsSent + i;
+			body->pfn[i] = (address >> Arch::PageShift) + pfnsSent + i;
 
 		vmbus->PostGpadlBody((uint32_t)bodyMsgSize, body);
 		pfnsSent += batchSize;

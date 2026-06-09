@@ -1,22 +1,16 @@
 #include "kernel/ConfigTables.h"
 #include "Assert.h"
 
-ConfigTables::ConfigTables(const EFI_CONFIGURATION_TABLE* const configTables, const size_t count) :
-	m_tables(configTables),
-	m_count(count)
-{
-
-}
-
 //Copy tables to kernel memory
-void ConfigTables::Initialize(Arena& arena)
+void ConfigTables::Initialize(const EFI_CONFIGURATION_TABLE* const configTables, const size_t count)
 {
-	const size_t size = sizeof(EFI_CONFIGURATION_TABLE) * m_count;
-	EFI_CONFIGURATION_TABLE* const allocated = reinterpret_cast<EFI_CONFIGURATION_TABLE*>(arena.Allocate(size));
+	const size_t size = sizeof(EFI_CONFIGURATION_TABLE) * count;
+	EFI_CONFIGURATION_TABLE* const allocated = reinterpret_cast<EFI_CONFIGURATION_TABLE*>(KeAlloc(size, AllocType::Boot));
 	Assert(allocated);
 
-	memcpy(allocated, m_tables, size);
+	memcpy(allocated, configTables, size);
 	m_tables = allocated;
+	m_count = count;
 }
 
 void* ConfigTables::GetAcpiTable() const

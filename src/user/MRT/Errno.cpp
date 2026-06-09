@@ -2,8 +2,8 @@
 
 extern "C"
 {
-	uint32_t GetErrno()
+	uint32_t* GetErrno()
 	{
-		return Runtime::GetTEB()->Error;
+		return &Runtime::GetTEB()->Error;
 	}
 }

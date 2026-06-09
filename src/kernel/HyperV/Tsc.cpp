@@ -44,7 +44,7 @@ namespace HyperV::Tsc
 		HV_REF_TSC_REG tscReg = { 0 };
 		tscReg.AsUint64 = __readmsr(static_cast<uint32_t>(MSR::HV_X64_MSR_REFERENCE_TSC));
 		tscReg.Enable = true;
-		tscReg.GPAPageNumber = ResolveImageVA((void*)&TscPage) >> PageShift;
+		tscReg.GPAPageNumber = ResolveImageVA((void*)&TscPage) >> Arch::PageShift;
 
 		__writemsr(static_cast<uint32_t>(MSR::HV_X64_MSR_REFERENCE_TSC), tscReg.AsUint64);
 		Printf("  Tsc: 0x%016x\n", ReadTsc());

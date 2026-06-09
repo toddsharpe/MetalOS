@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_crt/stdint.h"
+#include <cstdint>
 #include "Lib/System.h"
 
 // Page0: Superblock

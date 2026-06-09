@@ -36,9 +36,9 @@ extern "C"
 
 	char *strcpy(char *_Destination, char const *_Source);
 
-	char *strchr(const char * _String, const int _Ch);
+	char const *strchr(const char * _String, const int _Ch);
 
-	char *strrchr(char *const _String, int const _Ch);
+	char const *strrchr(char *const _String, int const _Ch);
 
 	const char *strstr(const char *const _String, char const *const _SubString);
 

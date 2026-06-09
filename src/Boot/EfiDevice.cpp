@@ -6,8 +6,6 @@ namespace EfiDevice
 	// Each GOP has one mode. So for now, take the 1 mode discovered via console
 	EFI_STATUS InitializeGraphics(EFI_GRAPHICS_DEVICE& device)
 	{
-		EFI_STATUS status;
-
 		//Get current mode
 		EFI_GRAPHICS_OUTPUT_PROTOCOL* gop = nullptr;
 		ReturnIfNotSuccess(BS->HandleProtocol(ST->ConsoleOutHandle, &gEfiGraphicsOutputProtocolGuid, (void**)&gop));
@@ -28,6 +26,6 @@ namespace EfiDevice
 		device.VerticalResolution = info->VerticalResolution;
 		device.PixelsPerScanLine = info->PixelsPerScanLine;
 
-		return status;
+		return EFI_SUCCESS;
 	}
 }

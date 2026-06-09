@@ -18,15 +18,15 @@ public:
 
 	Scheduler(const ReadTsc readTsc);
 
-	void Initialize();
-	KThread* CreateReady(const KThreadStart start, void* const arg, const CString& name);
+	void Initialize(KProcess& proc);
+	void MakeReady(KThread& thread);
 	void Schedule();
 
 	//Currently running thread
 	KThread& GetCurrentThread();
 
 	void Sleep(const nano_t value);
-	KWaitResult ObjectWait(KSignalObject& object, const milli_t timeout = TimeoutMax);
+	KWaitResult ObjectWait(KSignal& object, const milli_t timeout = TimeoutMax);
 
 	void KillThread(KThread& thread);
 	void KillProcess(UProcess& process);
@@ -60,5 +60,4 @@ private:
 	//Threads and current thread
 	size_t m_threadIndex;
 	StaticVector<KThread*, MaxKThreads> m_threads;
-	ObjectPool<KThread, MaxKThreads> m_threadPool;
 };

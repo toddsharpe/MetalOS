@@ -264,8 +264,8 @@ class HyperVNic : public Driver, public Net::NetDriver
 public:
 	HyperVNic(KDevice& device);
 
-	Result Initialize(Arena& arena) override;
-	Result Enumerate(Arena& arena) override;
+	Result Initialize() override;
+	Result Enumerate() override;
 
 	// NetDriver interface
 	void Receive(Net::NetIf& net_if) override;

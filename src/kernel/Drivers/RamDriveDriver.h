@@ -14,41 +14,41 @@ public:
 
 	}
 
-	Result Initialize(Arena& arena) override
+	Result Initialize() override
 	{
 		//Map space
 		const paddr_t address = (paddr_t)m_device.Context;
 		Assert(address);
 		constexpr size_t pages = x64::SizeToPages(RamDriveSize);
-		const void* virtualAddress = MapPages(address, pages, MapType::Driver);
-		
+		const void* virtualAddress = KeVirtualMap(address, RamDriveSize);
+
 		//Create underlying driver
-		m_ramDrive = arena.Allocate<RamDrive>(virtualAddress, pages);
+		m_ramDrive = KeAlloc<RamDrive>(AllocType::Kernel, virtualAddress, pages);
 		Assert(m_ramDrive);
 
 		//Set properties
 		m_device.Class = KDeviceClass::Storage;
-		m_device.Name = arena.Copy("RamDrive");
+		m_device.Name = KeCopy("RamDrive", AllocType::Kernel);
 
 		char buffer[64] = { 0 };
 		sprintf(buffer, "Ram Drive - Files: %zu", m_ramDrive->FileCount());
-		m_device.Description = arena.Copy(buffer);
+		m_device.Description = KeCopy(buffer, AllocType::Kernel);
 
 		return Result::Success;
 	}
 
-	Result Enumerate(Arena& arena) override
+	Result Enumerate() override
 	{
 		return Result::Success;
 	}
 
-	Result OpenFile(KFile& file, const CString& path, const KFileAccess access) const override
+	Result OpenFile(KFile& file, const char* const path, const KFileAccess access) const override
 	{
 		Assert(access == KFileAccess::Read);
-		
+
 		void* address;
 		size_t length;
-		const bool result = m_ramDrive->Open(path.c_str(), address, length);
+		const bool result = m_ramDrive->Open(path, address, length);
 		if (!result)
 			return Result::Failed;
 		

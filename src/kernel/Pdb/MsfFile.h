@@ -37,7 +37,7 @@ public:
 		m_header = static_cast<const Header*>(m_image);
 		
 		AssertEqual(memcmp((void*)m_image, &Magic, sizeof(Magic)), 0);
-		AssertEqual(m_header->BlockSize, PageSize);
+		AssertEqual(m_header->BlockSize, Arch::PageSize);
 
 		//Create directory
 		void* allocated = arena.Allocate(sizeof(MsfStream));
@@ -105,7 +105,7 @@ public:
 
 	void* GetBlock(const uint32_t blockNumber) const
 	{
-		return (void*)(((uintptr_t)m_header) + ((uintptr_t)blockNumber << PageShift));
+		return (void*)(((uintptr_t)m_header) + ((uintptr_t)blockNumber << Arch::PageShift));
 	}
 
 	uint32_t BlockSize() const

@@ -1,0 +1,80 @@
+#include "kernel/Api.h"
+#include "kernel/Scheduler.h"
+#include "kernel/KThread.h"
+#include "kernel/UThread.h"
+#include "kernel/UProcess.h"
+#include "Assert.h"
+
+KThread* KeCreateThread(const KThreadStart start, void* const arg, const CString& name)
+{
+	KThread* thread = KeAlloc<KThread>(AllocType::Kernel, start, arg, name);
+	thread->Init(&KThreadInit);
+	thread->Process = &m_process;
+
+	m_scheduler.MakeReady(*thread);
+
+	return thread;
+}
+
+void KeExitThread()
+{
+	KThread& current = m_scheduler.GetThread();
+	KeExitThread(current);
+}
+
+void KeExitThread(KThread& thread)
+{
+	m_scheduler.KillThread(thread);
+}
+
+void KeSleepThread(const nano_t time)
+{
+	m_scheduler.Sleep(time);
+}
+
+void KeYield()
+{
+	m_scheduler.Schedule();
+}
+
+void KThreadInit()
+{
+	KThread& current = m_scheduler.GetCurrentThread();
+
+	//Run thread
+	current.Start();
+	Printf("Thread exit: %d\n", current.Id);
+
+	//Exit thread
+	KeExitThread();
+
+	Unreachable();
+}
+
+//If entry is null, use InitProcess. Otherwise use InitThread with this as its arg
+UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThreadStart entry, void* const arg)
+{
+	KThread* kThread = KeCreateThread(&UThreadInit, nullptr, "");
+	Assert(kThread);
+	kThread->Process = &process;
+	kThread->UserThread = process.CreateThread(*kThread, stackSize, entry, arg);
+	return kThread->UserThread;
+}
+
+uint32_t UThreadInit(void* const arg)
+{
+	UNUSED(arg);
+
+	KThread& current = m_scheduler.GetCurrentThread();
+	Assert(current.UserThread);
+	UThread& user = *current.UserThread;
+	user.Start();
+
+	//TODO(tsharpe): Exit code
+	return 0;
+}
+
+KWaitResult KeWait(KSignal& obj, const milli_t timeout)
+{
+	return m_scheduler.ObjectWait(obj, timeout);
+}

@@ -24,9 +24,9 @@ public:
 
 	}
 
-	void Enumerate(Arena& arena)
+	void Enumerate()
 	{
-		AcpiContext context(arena);
+		AcpiContext context;
 		
 		//Add root node
 		uacpi_namespace_node* root = uacpi_namespace_root();
@@ -49,21 +49,21 @@ public:
 		Assert(m_root);
 
 		//Attach drivers
-		AttachDrivers(arena);
+		AttachDrivers();
 	}
 
-	void AddRootChild(KDevice& device, Arena& arena)
+	void AddRootChild(KDevice& device)
 	{
 		//Populate path
 		char buffer[64] = {};
 		sprintf(buffer, "%s%s", m_root->Path.c_str(), device.Hid.c_str());
-		device.Path = arena.Copy(buffer);
+		device.Path = KeCopy(buffer, AllocType::Kernel);
 
 		m_root->Children.Add(&device);
-		AttachDriver(device, arena);
+		AttachDriver(device);
 	}
 
-	void AttachDrivers(Arena& arena)
+	void AttachDrivers()
 	{
 		StaticStack<KDevice*, 32> stack;
 		Assert(stack.Push(m_root));
@@ -71,7 +71,7 @@ public:
 		while (!stack.IsEmpty())
 		{
 			KDevice* current = stack.Pop();
-			AttachDriver(*current, arena);
+			AttachDriver(*current);
 
 			for (auto& child : current->Children)
 				Assert(stack.Push(child));
@@ -146,12 +146,7 @@ public:
 private:
 	struct AcpiContext
 	{
-		AcpiContext(Arena& arena) : Arena(arena), Nodes()
-		{
-
-		}
-		
-		Arena& Arena;
+		AcpiContext() : Nodes() {}
 		StaticMap<uacpi_namespace_node*, KDevice*, 32> Nodes;
 	};
 
@@ -173,19 +168,19 @@ private:
 		//Get context and create KDevice
 		AcpiContext* const context = reinterpret_cast<AcpiContext*>(ctx);
 		Assert(context);
-		KDevice* device = context->Arena.Allocate<KDevice>();
+		KDevice* device = KeAlloc<KDevice>(AllocType::Kernel);
 		Assert(device);
 		context->Nodes.Add(node, device);
 
 		//Populate fields
-		device->Name = context->Arena.Copy(info->name.text);
-		device->Path = context->Arena.Copy(CString(path));
+		device->Name = KeCopy(info->name.text, AllocType::Kernel);
+		device->Path = KeCopy(CString(path), AllocType::Kernel);
 		if (info->flags & UACPI_NS_NODE_INFO_HAS_HID)
 		{
-			device->Hid = context->Arena.Copy({info->hid.value, info->hid.size - 1});
+			device->Hid = KeCopy({info->hid.value, info->hid.size - 1}, AllocType::Kernel);
 			const DeviceHids::Entry* lookup = DeviceHids::Lookup(info->hid.value);
 			if (lookup)
-				device->Description = context->Arena.Copy(CString(lookup->Description));
+				device->Description = KeCopy(CString(lookup->Description), AllocType::Kernel);
 		}
 		device->Type = KDeviceType::Acpi;
 		device->AcpiNode = node;
@@ -205,45 +200,45 @@ private:
 		return UACPI_ITERATION_DECISION_CONTINUE;
 	}
 
-	static void AttachDriver(KDevice& device, Arena& arena)
+	static void AttachDriver(KDevice& device)
 	{
 		if (device.Hid == "VMBUS" || device.Hid == "MSFT1000")
 		{
-			device.Driver = arena.Allocate<VmBusDriver>(device);
+			device.Driver = KeAlloc<VmBusDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
 		else if (device.Hid == "PNP0501")
 		{
-			device.Driver = arena.Allocate<UartDriver>(device);
+			device.Driver = KeAlloc<UartDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
 		else if (device.Hid == RamDriveHid)
 		{
-			device.Driver = arena.Allocate<RamDriveDriver>(device);
+			device.Driver = KeAlloc<RamDriveDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
 		else if (device.Hid == "{F912AD6D-2B17-48EA-BD65-F927A61C7684}")
 		{
-			device.Driver = arena.Allocate<HyperVKeyboardDriver>(device);
+			device.Driver = KeAlloc<HyperVKeyboardDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
 		else if (device.Hid == "{CFA8B69E-5B4A-4CC0-B98B-8BA1A1F3F95A}")
 		{
-			device.Driver = arena.Allocate<HyperVMouseDriver>(device);
+			device.Driver = KeAlloc<HyperVMouseDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
 		else if (device.Hid == "{F8615163-DF3E-46C5-913F-F2D2F965ED0E}")
 		{
-			device.Driver = arena.Allocate<HyperVNic>(device);
+			device.Driver = KeAlloc<HyperVNic>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
 
 		//If driver was attached, attempt to initialize/enumerate
 		if (device.Driver)
 		{
-			if (device.Driver->Initialize(arena) != Result::Failed)
+			if (device.Driver->Initialize() != Result::Failed)
 			{
-				const Result enumResult = device.Driver->Enumerate(arena);
+				const Result enumResult = device.Driver->Enumerate();
 				if (enumResult == Result::Failed)
 				{
 					Printf("Driver failed to enumerate: %d\n", (uint32_t)enumResult);

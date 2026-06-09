@@ -53,7 +53,7 @@ extern "C"
 	void CDebugPrintf(const bool enabled, const char* format, ...);
 	void Bugcheck(const char* file, const char* line, const char* format, ...);
 	HModule LoadLibrary(char* lpLibFileName);
-	uint32_t GetErrno();
+	uint32_t* GetErrno();
 	
 	//0x100: System
 	milli_t GetTickCount();

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core_crt/stdint.h"
-#include "core_crt/string.h"
+#include <cstdint>
+#include <cstring>
 #include "Assert.h"
 
 //Buffer of fixed length that is read only

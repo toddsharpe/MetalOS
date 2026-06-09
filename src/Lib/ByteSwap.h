@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_crt/stdint.h"
+#include <cstdint>
 #include "x64/intrin.h"
 
 template <typename T>

@@ -2,6 +2,7 @@
 #include "uACPI/uacpi.h"
 #include "uACPI/event.h"
 #include "uACPI/status.h"
+#include "kernel/Api.h"
 #include "Assert.h"
 #include "errno.h"
 
@@ -74,21 +75,16 @@ uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rsdp_address)
 	*out_rsdp_address = (uintptr_t)GetAcpiTable();
 	return uacpi_status::UACPI_STATUS_OK;
 }
+
+//Use the kernel's permanent physical map of all RAM
 void *uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len)
 {
-	// Handle unaligned addresses
-	const size_t pageOffset = addr & PageMask;
-	const size_t pageCount = DivRoundUp(pageOffset + len, PageSize);
-
-	const uintptr_t physicalBase = addr & ~PageMask;
-	const void* virtualAddress = MapPages(physicalBase, pageCount, MapType::Acpi);
-	return MakePointer<void*>(virtualAddress, pageOffset);
+	return reinterpret_cast<void*>(KernelPhysicalStart + addr);
 }
 
 void uacpi_kernel_unmap(void *addr, uacpi_size len)
 {
-	UNUSED(addr);
-	UNUSED(len);
+	//No-op: addresses come from the permanent physical map
 }
 
 void uacpi_kernel_log(uacpi_log_level, const uacpi_char* c_str)
@@ -191,12 +187,12 @@ uacpi_status uacpi_kernel_io_write32(uacpi_handle, uacpi_size offset, uacpi_u32 
 
 void *uacpi_kernel_alloc(uacpi_size size)
 {
-	return KeHeapAlloc(size, HeapAllocType::Acpi);
+	return KeAlloc(size, AllocType::Acpi);
 }
 
 void uacpi_kernel_free(void *mem)
 {
-	KeHeapFree(mem, HeapAllocType::Acpi);
+	KeFree(mem, AllocType::Acpi);
 }
 
 uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
@@ -216,22 +212,22 @@ void uacpi_kernel_sleep(uacpi_u64 msec)
 
 uacpi_handle uacpi_kernel_create_mutex(void)
 {
-	return KeHeapAlloc(sizeof(mutex_t), HeapAllocType::Acpi);
+	return KeAlloc(sizeof(mutex_t), AllocType::Acpi);
 }
 
 void uacpi_kernel_free_mutex(uacpi_handle ptr)
 {
-	KeHeapFree(ptr, HeapAllocType::Acpi);
+	KeFree(ptr, AllocType::Acpi);
 }
 
 uacpi_handle uacpi_kernel_create_event(void)
 {
-	return KeHeapAlloc(sizeof(event_t), HeapAllocType::Acpi);
+	return KeAlloc(sizeof(event_t), AllocType::Acpi);
 }
 
 void uacpi_kernel_free_event(uacpi_handle ptr)
 {
-	KeHeapFree(ptr, HeapAllocType::Acpi);
+	KeFree(ptr, AllocType::Acpi);
 }
 
 static int id = 1;
@@ -280,12 +276,12 @@ uacpi_status uacpi_kernel_uninstall_interrupt_handler(uacpi_interrupt_handler, u
 
 uacpi_handle uacpi_kernel_create_spinlock(void)
 {
-	return KeHeapAlloc(sizeof(spinlock_t), HeapAllocType::Acpi);
+	return KeAlloc(sizeof(spinlock_t), AllocType::Acpi);
 }
 
 void uacpi_kernel_free_spinlock(uacpi_handle ptr)
 {
-	KeHeapFree(ptr, HeapAllocType::Acpi);
+	KeFree(ptr, AllocType::Acpi);
 }
 
 uacpi_cpu_flags uacpi_kernel_lock_spinlock(uacpi_handle)

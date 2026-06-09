@@ -19,7 +19,7 @@ namespace HyperV::Interrupts
 			HV_INTERRUPT_PAGE_REGISTER reg;
 			reg.AsUint64 = __readmsr(static_cast<uint32_t>(MSR::SIEFP));
 			reg.Enable = true;
-			reg.BaseAddress = (address >> PageShift);
+			reg.BaseAddress = (address >> Arch::PageShift);
 			__writemsr(static_cast<uint32_t>(MSR::SIEFP), reg.AsUint64);
 		}
 		{
@@ -28,7 +28,7 @@ namespace HyperV::Interrupts
 			HV_INTERRUPT_PAGE_REGISTER reg;
 			reg.AsUint64 = __readmsr(static_cast<uint32_t>(MSR::SIMP));
 			reg.Enable = true;
-			reg.BaseAddress = (address >> PageShift);
+			reg.BaseAddress = (address >> Arch::PageShift);
 
 			__writemsr(static_cast<uint32_t>(MSR::SIMP), reg.AsUint64);
 		}

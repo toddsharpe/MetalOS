@@ -17,7 +17,7 @@ HyperVMouseDriver::HyperVMouseDriver(KDevice& device) :
 
 }
 
-Result HyperVMouseDriver::Initialize(Arena& arena)
+Result HyperVMouseDriver::Initialize()
 {
 	Printf("HyperVMouseDriver::Initialize\n");
 	m_device.Class = KDeviceClass::Mouse;
@@ -59,7 +59,7 @@ Result HyperVMouseDriver::Initialize(Arena& arena)
 	return Result::Success;
 }
 
-Result HyperVMouseDriver::Enumerate(Arena& arena)
+Result HyperVMouseDriver::Enumerate()
 {
 	return Result::NotImplemented;
 }

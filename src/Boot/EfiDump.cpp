@@ -194,42 +194,8 @@ namespace EfiDump
 		return Status;
 	}
 
-	EFI_STATUS DumpMemoryMap(const EFI_MEMORY_MAP& map)
-	{
-		const CHAR16 mem_types[16][27] = {
-		  L"EfiReservedMemoryType     ",
-		  L"EfiLoaderCode             ",
-		  L"EfiLoaderData             ",
-		  L"EfiBootServicesCode       ",
-		  L"EfiBootServicesData       ",
-		  L"EfiRuntimeServicesCode    ",
-		  L"EfiRuntimeServicesData    ",
-		  L"EfiConventionalMemory     ",
-		  L"EfiUnusableMemory         ",
-		  L"EfiACPIReclaimMemory      ",
-		  L"EfiACPIMemoryNVS          ",
-		  L"EfiMemoryMappedIO         ",
-		  L"EfiMemoryMappedIOPortSpace",
-		  L"EfiPalCode                ",
-		  L"EfiPersistentMemory       ",
-		  L"EfiMaxMemoryType          "
-		};
-
-		UartPrintf(L"MapSize: 0x%016X, Size: 0x%x, DescSize: 0x%x\n", map.Table, map.Size, map.DescriptorSize);
-
-		for (EFI_MEMORY_DESCRIPTOR* current = map.Table; current < NextMemoryDescriptor(map.Table, map.Size); current = NextMemoryDescriptor(current, map.DescriptorSize))
-		{
-			const bool runtime = (current->Attribute & EFI_MEMORY_RUNTIME) != 0;
-			UartPrintf(L"P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, mem_types[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
-		}
-
-		return EFI_SUCCESS;
-	}
-
 	EFI_STATUS PrintDirectory(EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir)
 	{
-		EFI_STATUS status;
-
 		const size_t MAX_FILE_INFO_SIZE = 1024;
 		uint8_t buffer[MAX_FILE_INFO_SIZE] = { };
 		EFI_FILE_INFO* fileInfo = (EFI_FILE_INFO*)buffer;
@@ -237,7 +203,7 @@ namespace EfiDump
 		while (true)
 		{
 			UINTN size = MAX_FILE_INFO_SIZE;
-			ReturnIfNotSuccess(status = dir->Read(dir, &size, buffer));
+			ReturnIfNotSuccess(dir->Read(dir, &size, buffer));
 			if (size == 0)
 				break; //No more directories
 
@@ -263,6 +229,6 @@ namespace EfiDump
 				UartPrintf(L"File: %s\n", fileInfo->FileName);
 		}
 
-		return status;
+		return EFI_SUCCESS;
 	}
 }

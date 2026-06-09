@@ -5,7 +5,6 @@
 uint32_t KThread::LastId = 0;
 
 KThread::KThread(const KThreadStart start, void* const arg, const CString& name) :
-	Link(),
 
 	ContextPtr(&m_context),
 	UserThread(),
@@ -32,7 +31,7 @@ KThread::KThread(const KThreadStart start, void* const arg, const CString& name)
 
 void KThread::Init(void* const entry)
 {
-	m_stack = KeVirtualAlloc(nullptr, KThread::StackSize);
+	m_stack = KeVirtualAlloc(KThread::StackSize);
 	m_stackPointer = MakePointer<void*>(m_stack, KThread::StackSize - ArchStackReserve());
 
 	Printf("KThread::InitContext Id %d Start: 0x%016x, End: 0x%016x\n", Id, m_stack, m_stackPointer);

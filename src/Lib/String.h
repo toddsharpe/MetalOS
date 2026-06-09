@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core_crt/stdint.h"
-#include "core_crt/ctype.h"
+#include <cstdint>
+#include <cctype>
 #include "Lib/Buffer.h"
 
 int constexpr length(const char* str)
@@ -44,6 +44,11 @@ struct CString
 	bool operator==(const CString& rhs) const
 	{
 		return this->Length == rhs.Length && memcmp(this->m_data, rhs.m_data, this->Length) == 0;
+	}
+
+	explicit operator bool() const
+	{
+		return Length != 0;
 	}
 
 	const char *begin() const
@@ -225,6 +230,18 @@ public:
 		*end() = '\0';
 	}
 
+	void Clear()
+	{
+		m_count = 0;
+		*end() = '\0';
+	}
+
+	void Set(const CString& str)
+	{
+		Clear();
+		Append(str);
+	}
+
 	void Append(const CString& str)
 	{
 		AssertOp(m_count + str.Length, <, Capacity - 1);
@@ -234,15 +251,6 @@ public:
 
 		//Null terminate
 		*end() = '\0';
-	}
-
-	//TODO(tsharpe): Why cant this be an assignment operator?
-	void Set(const CString& str)
-	{
-		//Clear
-		m_count = 0;
-
-		Append(str);
 	}
 
 	void AppendClip(const char* const c_str, const size_t maxLength = 0)
@@ -307,6 +315,8 @@ public:
 		memcpy(m_storage, other.c_str(), other.Length);
 		m_count = other.Length;
 	}
+
+	static constexpr size_t Size = N;
 
 private:
 	char m_storage[N];

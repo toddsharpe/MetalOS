@@ -18,7 +18,7 @@ public:
 
 	void AddModule(const KModule& library);
 
-	void DebuggerEvent(InterruptVector vector, InterruptFrame& frame);
+	void DebuggerEvent(Arch::InterruptVector vector, Arch::InterruptFrame& frame);
 	void KdpDprintf(const char* format, ...);
 	void KdpDprintf(const char* format, va_list args);
 	bool Enabled();
@@ -27,9 +27,9 @@ private:
 	static uint32_t ThreadLoop(void* arg);
 	uint32_t ThreadLoop();
 
-	void ConvertToContext(InterruptFrame* frame, PCONTEXT context);
+	void ConvertToContext(Arch::InterruptFrame* frame, PCONTEXT context);
 
-	StaticArena<PageSize> m_arena;
+	StaticArena<Arch::PageSize> m_arena;
 
 	LIST_ENTRY PsLoadedModuleList;
 };

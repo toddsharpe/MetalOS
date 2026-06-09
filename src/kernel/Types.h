@@ -2,6 +2,7 @@
 
 #include "Lib/System.h"
 #include "Lib/List.h"
+#include "Lib/String.h"
 #include "Assert.h"
 
 typedef uint32_t (*KThreadStart)(void* const arg);
@@ -42,8 +43,7 @@ struct KFile
 
 struct KModule
 {
-	ListEntry Link;
-	String Name;
+	StaticString<64> Name;
 	void* ImageBase;
 };
 

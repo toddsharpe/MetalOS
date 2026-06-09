@@ -1,6 +1,6 @@
 del "..\build\*.obj"
 
-set CompileIncludes=-I.\ -I.\..\external -I.\User
+set CompileIncludes=-I.\ -I.\..\external -I.\User -I.\std
 
 set CompileFlags=/std:c++20 /GS- /Gy /Gw /GR- /Z7 %CompileIncludes% /X
 set LinkFlags=/OPT:REF /NODEFAULTLIB

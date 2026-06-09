@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core_crt/stdint.h"
-#include "core_crt/string.h"
+#include <cstdint>
+#include <cstring>
 
 //Linear map, not an actual HashMap
 template <typename TKey, typename TValue, size_t N>

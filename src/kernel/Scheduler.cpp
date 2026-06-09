@@ -30,16 +30,16 @@ Scheduler::Scheduler(const ReadTsc readTsc) :
 	m_cpu(),
 	m_readTsc(readTsc),
 	m_threadIndex(),
-	m_threads(),
-	m_threadPool()
+	m_threads()
 {
 
 }
 
-void Scheduler::Initialize()
+void Scheduler::Initialize(KProcess& proc)
 {
 	//Make boot thread
-	KThread* boot = m_threadPool.Allocate(nullptr, nullptr, "Boot");
+	KThread* boot = KeAlloc<KThread>(AllocType::Kernel, nullptr, nullptr, "Boot");
+	boot->Process = &proc;
 	m_threads.Add(boot);
 	boot->m_state = KThreadState::Running;
 
@@ -48,21 +48,12 @@ void Scheduler::Initialize()
 	m_cpu.Thread = boot;
 }
 
-KThread* Scheduler::CreateReady(const KThreadStart start, void* const arg, const CString& name)
+void Scheduler::MakeReady(KThread& thread)
 {
-	//Construct
-	KThread* thread = m_threadPool.Allocate(start, arg, name);
-	thread->Init(&KThreadInit);
-
-	//Sanity check this thread isn't already in the ready queue
 	for (size_t i = 0; i < m_threads.Count(); i++)
-	{
-		KThread* current = m_threads[i];
-		AssertNotEqual(current->Id, thread->Id);
-	}
+		AssertNotEqual(m_threads[i]->Id, thread.Id);
 
-	m_threads.Add(thread);
-	return thread;
+	m_threads.Add(&thread);
 }
 
 void Scheduler::Schedule()
@@ -95,7 +86,7 @@ void Scheduler::Schedule()
 			case KThreadState::SignalWait:
 			{
 				Assert(thread->m_signal);
-				KSignalObject* signal = thread->m_signal;
+				KSignal* signal = thread->m_signal;
 
 				if (thread->m_timeout <= tsc)
 				{
@@ -150,13 +141,14 @@ void Scheduler::Schedule()
 		if (ArchSaveContext(current->ContextPtr) == 0)
 		{
 			//Switch cr3 if changing processes
-			if (next.UserThread != nullptr)
-				ArchSetPagingRoot(next.UserThread->Process.Tables.GetRoot());
+			Assert(next.Process);
+			ArchSetPagingRoot(next.Process->Tables.Root);
 
 			//Set current thread
 			m_cpu.Thread = &next;
 
 			//Set interrupt stack
+			//This is needed since syscall and interrupt paths have different stack lengths
 			ArchSetInterruptStack((void*)next.m_stackPointer);
 
 			//Load new context
@@ -176,7 +168,7 @@ void Scheduler::Schedule()
 		if (thread->m_state == KThreadState::Terminated)
 		{
 			m_threads.RemoveAt(idx);
-			m_threadPool.Deallocate(thread);
+			KeFree(thread, AllocType::Kernel);
 		}
 		else
 		{
@@ -208,7 +200,7 @@ void Scheduler::Sleep(nano_t value)
 	this->Schedule();
 }
 
-KWaitResult Scheduler::ObjectWait(KSignalObject& object, const milli_t timeout)
+KWaitResult Scheduler::ObjectWait(KSignal& object, const milli_t timeout)
 {
 	KThread& current = GetCurrentThread();
 	AssertEqual(current.m_state, KThreadState::Running);

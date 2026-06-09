@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core_crt/stdint.h"
-#include "core_crt/string.h"
+#include <cstdint>
+#include <cstring>
 
 //https://www.snellman.net/blog/archive/2016-12-13-ring-buffers/
 template<size_t N>

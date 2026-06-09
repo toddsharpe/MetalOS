@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_crt/stdint.h"
+#include <cstdint>
 #include "Assert.h"
 
 // Implementation of Windows double-linked lists (see list.h)
@@ -211,91 +211,3 @@ inline T* ListGet(const ListHead& head, const size_t index)
 
 	return nullptr;
 }
-
-template <typename T>
-struct ListHead2
-{
-	template <typename TContext>
-	using CAction = void(*)(const T&, TContext&);
-
-	template <typename TContext>
-	using Pred = bool(*)(const T&, TContext&);
-	
-	ListHead Head;
-
-	void Initialize()
-	{
-		ListInitializeHead(Head);
-	}
-
-	size_t Count() const
-	{
-		return Head.Count;
-	}
-
-	template <typename TContext>
-	void ForEach(const CAction<TContext> action, TContext ctx) const
-	{
-		if (Count() == 0)
-			return;
-
-		for (ListEntry* link = Head.Link.Flink; link != &Head.Link; link = link->Flink)
-		{
-			T* item = LIST_CONTAINING_RECORD(link, T, Link);
-			action(*item, ctx);
-		}
-	}
-
-	template <typename TContext>
-	void ForEachReverse(const CAction<TContext> action, TContext ctx) const
-	{
-		if (Count() == 0)
-			return;
-
-		for (ListEntry* link = Head.Link.Blink; link != &Head.Link; link = link->Blink)
-		{
-			T* item = LIST_CONTAINING_RECORD(link, T, Link);
-			action(*item, ctx);
-		}
-	}
-
-	template <typename TContext>
-	T* First(const Pred<TContext> pred, TContext ctx) const
-	{
-		if (!Head.Count)
-			return nullptr;
-	
-		for (ListEntry* link = Head.Link.Flink; link != &Head.Link; link = link->Flink)
-		{
-			T* item = LIST_CONTAINING_RECORD(link, T, Link);
-			if (pred(*item, ctx))
-				return item;
-		}
-		return nullptr;
-	}
-
-	void InsertHead(T& item)
-	{
-		ListInsertHead(Head, item.Link);
-	}
-
-	void InsertTail(T& item)
-	{
-		ListInsertTail(Head, item.Link);
-	}
-
-	void Remove(T& item)
-	{
-		ListRemoveEntry(Head, item.Link);
-	}
-
-	void Display() const
-	{
-		Printf("Count: %d\n", Count());
-		for (ListEntry* link = Head.Link.Flink; link != &Head.Link; link = link->Flink)
-		{
-			T* item = LIST_CONTAINING_RECORD(link, T, Link);
-			Printf("Item: 0x%016x\n", item);
-		}
-	}
-};

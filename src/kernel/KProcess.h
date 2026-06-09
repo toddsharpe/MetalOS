@@ -3,9 +3,70 @@
 #include "Arch.h"
 #include "Lib/String.h"
 #include "Lib/Arena.h"
+#include "Lib/LinkedList.h"
 #include "x64/PageTables.h"
 #include "kernel/Types.h"
+#include "kernel/AddressSpace.h"
 #include "MetalOS.Space.h"
+
+//Manages resources associated with a process
+//-Virtual allocations
+//-Modules
+
+class KModuleList : public LinkedList<KModule*>
+{
+public:
+	constexpr KModuleList() :
+		LinkedList<KModule*>()
+	{
+
+	}
+
+	const KModule* AddModule(const CString& name, void* image)
+	{
+		KModule* created = KeAlloc<KModule>(AllocType::User, name, image);
+		Assert(this->Add(created));
+		return created;
+	}
+
+	const KModule* GetModule(const CString& name) const
+	{
+		for (const KModule* module : *this)
+		{
+			if (module->Name == name)
+				return module;
+		}
+
+		return nullptr;
+	}
+
+	//NOTE: needs modules to be addressable at time of call
+	const KModule* GetModule(const uintptr_t address) const
+	{
+		for (const KModule* module : *this)
+		{
+			const uintptr_t imageBase = (uintptr_t)module->ImageBase;
+			const size_t imageSize = WinPE::GetSizeOfImage(module->ImageBase);
+			const bool contains = ((address >= imageBase) && (address < imageBase + imageSize));
+
+			if (contains)
+				return module;
+		}
+
+		return nullptr;
+	}
+
+	void Display() const
+	{
+		Printf("  Modules:\n");
+		for (const KModule* module : *this)
+		{
+			Printf("    0x%016X: %s\n", module->ImageBase, module->Name.c_str());
+		}
+	}
+
+private:
+};
 
 enum class KProcessType
 {
@@ -13,53 +74,58 @@ enum class KProcessType
 	User
 };
 
-//Manages resources associated with a process
-//-Virtual allocations
-//-Modules
+constexpr uintptr_t get_start(const KProcessType type)
+{
+	if (type == KProcessType::Kernel)
+		return KernelStart;
+	else
+		return UserStart;
+}
 
-class KProcess
+constexpr uintptr_t get_end(const KProcessType type)
+{
+	if (type == KProcessType::Kernel)
+		return KernelEnd;
+	else
+		return UserEnd;
+}
+
+struct KProcess
 {
 public:
-	constexpr KProcess(const KProcessType type);
+	constexpr KProcess(const KProcessType type) :
+		Modules(),
+		//Kernel dynamic allocations start at KernelAllocStart so the watermark never
+		//collides with the fixed low-memory regions (KernelBase, KdCom, KernelPdb, KernelHeap).
+		Space(get_start(type), get_end(type), type == KProcessType::Kernel ? (KernelAllocStart - KernelStart) : AllocationGranularity),
+		Tables(),
+		IsGlobal(type == KProcessType::Kernel),
+		Debug(),
+		Arena()
+	{
+	}
 
-	void Initialize();
+	void Display() const 
+	{
+		Printf("KProcess: %d\n", IsGlobal);
+		Modules.Display();
+		Space.Display();
+	}
 
-	KModule* AddModule(const CString& name, void* image);
-	KModule* GetModule(const CString& name) const;
-	KModule* GetModule(const uintptr_t address) const;
+	//Modules 
+	KModuleList Modules;
 
-	bool IsValidPointer(const void* const address);
-	bool Reserve(const uintptr_t address, const size_t count);
-	uintptr_t Reserve(const size_t count);
+	//Address Space
+	AddressSpace Space;
 
-	void Display() const;
+	//Page Tables
+	KernelPageTables Tables;
 
 	bool IsGlobal;
 	bool Debug;
 
+	StaticArena<Arch::PageSize * 2> Arena;
+
 private:
 	static constexpr uint64_t AllocationGranularity = 0x1'0000; //64K
-	static constexpr uintptr_t UserAllocStart = UserStart + AllocationGranularity;
-	static constexpr uintptr_t KernelAllocStart = 0xFFFF'8000'2000'0000;
-
-	struct Reservation
-	{
-		ListEntry Link;
-		uintptr_t Address;
-		size_t PageCount;
-	};
-
-	bool IsFree(const uintptr_t address, const size_t count) const;
-
-	//Modules 
-	ListHead m_modules;
-
-	//Address Space
-	uintptr_t m_start;
-	uintptr_t m_end;
-	uintptr_t m_watermark;
-	ListHead m_reservations;
-
-protected:
-	StaticArena<PageSize * 2> m_arena;
 };

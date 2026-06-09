@@ -1,87 +1,104 @@
 #pragma once
 
 #include "kernel/AddressSpace.h"
-#include "kernel/Api.h"
-
-AddressSpace::AddressSpace(const uintptr_t start, const uintptr_t end, const bool isGlobal) :
-	Start(start),
-	End(end),
-	IsGlobal(isGlobal),
-	Debug(),
-	m_watermark(),
-	m_reservations()
-{
-
-}
-
-void AddressSpace::Initialize()
-{
-	ListInitializeHead(m_reservations);
-}
 
 bool AddressSpace::IsValidPointer(const void* const address)
 {
-	const uintptr_t page = (uintptr_t)address & ~PageMask;
+	const uintptr_t page = (uintptr_t)address & ~Arch::PageMask;
+	if (page < Start || page >= End)
+		return false;
 	return !IsFree(page, 1);
 }
 
-bool AddressSpace::Reserve(Arena& arena, uintptr_t& address, const size_t count)
+uintptr_t AddressSpace::Reserve(const size_t count)
 {
-	Assert(count != 0);
+	Assert(count);
+	CPrintf(Debug, "Reserve: Any in [0x%016x, 0x%016x] Size: 0x%x\n", Start, End, count);
+	CPrintf(Debug, "  Watermark: 0x%016x Gran: 0x%016x\n", m_watermark, AllocationGranularity);
+
+	//Find first free
+	const size_t bytes = (count << Arch::PageShift);
+	uintptr_t test = m_watermark;
+	const uintptr_t stop = End - bytes;
+	while (test <= stop && !IsFree(test, count))
+	{
+		test += AllocationGranularity;
+	}
+
+	//None found
+	if (test == stop)
+		return 0;
+
+	//Claim address
+	m_watermark = test;
+	const uintptr_t address = m_watermark;
+	m_reservations.Add(Reservation{address, count});
+
+	//Increment watermark
+	m_watermark += ByteAlign(bytes, AllocationGranularity);
+	CPrintf(Debug, "  NewWatermark: 0x%016x\n", m_watermark);
+	CPrintf(Debug, "  Received: 0x%016x Count:0x%x\n", address, count);
+
+	return address;
+}
+
+bool AddressSpace::Reserve(const uintptr_t address, const size_t count)
+{
 	CPrintf(Debug, "Reserve: 0x%016x in [0x%016x, 0x%016x] Size: 0x%x\n", address, Start, End, count);
+	Assert(count != 0);
 
-	if (address != 0)
-	{
-		//If address is specified, don't round
-		if (!IsFree(address, count))
-			return false;
-	}
-	else
-	{
-		CPrintf(Debug, "  Watermark: 0x%016x Gran: 0x%016x\n", m_watermark, AllocationGranularity);
+	//Check requested address
+	if (!IsFree(address, count))
+		return false;
 
-		while (!IsFree(m_watermark, count))
-		{
-			AssertOp(m_watermark, <, End);
-			m_watermark += AllocationGranularity;
-		}
-		
-		address = m_watermark;
-		m_watermark += ByteAlign((count << PageShift), AllocationGranularity);;
-		CPrintf(Debug, "  NewWatermark: 0x%016x\n", m_watermark);
-	}
-
-	Reservation* res = arena.Allocate<Reservation>();
-	Assert(res);
-	res->Address = address;
-	res->PageCount = count;
-	ListInsertTail(m_reservations, res->Link);
+	//Claim
+	m_reservations.Add(Reservation{address, count});
 
 	CPrintf(Debug, "  Received: 0x%016x Count:0x%x\n", address, count);
 
 	return true;
 }
 
+size_t AddressSpace::GetCount(const uintptr_t address) const
+{
+	for (size_t i = 0; i < m_reservations.Count(); i++)
+	{
+		if (m_reservations[i].Address == address)
+			return m_reservations[i].PageCount;
+	}
+	return 0;
+}
+
+bool AddressSpace::Free(const uintptr_t address, const size_t count)
+{
+	CPrintf(Debug, "Free: 0x%016x Count: 0x%x\n", address, count);
+
+	for (size_t i = 0; i < m_reservations.Count(); i++)
+	{
+		if (m_reservations[i].Address == address)
+		{
+			Assert(m_reservations[i].PageCount == count);
+			return m_reservations.RemoveAt(i);
+		}
+	}
+
+	return false;
+}
+
 void AddressSpace::Display() const
 {
-	if (IsGlobal)
-		Printf("KAddressSpace\n");
-	else
-		Printf("UAddressSpace\n");
-
-	Printf("  Reservations: %d\n", m_reservations.Count);
-	ListForEach<Reservation>(m_reservations, [](const ListEntry& entry, const Reservation& item)
+	Printf("  Reservations: %d\n", m_reservations.Count());
+	for (const Reservation& item : m_reservations)
 	{
-		const uintptr_t high = item.Address + (item.PageCount << PageShift);
+		const uintptr_t high = item.Address + (item.PageCount << Arch::PageShift);
 		Printf("    [0x%016X-0x%016X] (Count: 0x%x)\n", item.Address, high, item.PageCount);
-	});
+	}
 }
 
 bool AddressSpace::IsFree(const uintptr_t address, const size_t count) const
 {
-	Assert((address & PageMask) == 0);
+	Assert((address & Arch::PageMask) == 0);
 
-	//Check if address is inside out address space
 	if ((address < Start) || (address >= End))
 		return false;
 
@@ -91,34 +108,24 @@ bool AddressSpace::IsFree(const uintptr_t address, const size_t count) const
 		uintptr_t High;
 	};
 
-	Lookup lookup = {};
-	lookup.Low = address;
-	lookup.High = address + (count << PageShift);
+	const Lookup lookup = { address, address + (count << Arch::PageShift) };
 
-	const bool found = ListAny<Reservation, Lookup>(m_reservations, [](const ListEntry&, const Reservation& res, Lookup& lookup)
-	{
-		const uintptr_t end = res.Address + (res.PageCount << PageShift);
-
-		//Check start address
-		if ((lookup.Low >= res.Address) && (lookup.Low < end))
-			return true;
-
-		//Check ending address
-		if ((lookup.High >= res.Address) && (lookup.High < end))
-			return true;
-
+	if (lookup.High > End)
 		return false;
-	}, lookup);
 
-	return !found;
-}
+	for (const Reservation& res : m_reservations)
+	{
+		const uintptr_t end = res.Address + (res.PageCount << Arch::PageShift);
 
-KAddressSpace::KAddressSpace() : AddressSpace(KernelStart, KernelEnd, true)
-{
+		if ((lookup.Low >= res.Address) && (lookup.Low < end))
+			return false;
 
-}
+		if ((lookup.High > res.Address) && (lookup.High <= end))
+			return false;
 
-UAddressSpace::UAddressSpace() : AddressSpace(UserStart, UserEnd, false)
-{
+		if ((res.Address >= lookup.Low) && (res.Address < lookup.High))
+			return false;
+	}
 
+	return true;
 }

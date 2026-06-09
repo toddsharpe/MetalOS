@@ -1,6 +1,5 @@
 #pragma once
 
-#include "kernel/Objects/KSignalObject.h"
 #include "kernel/KProcess.h"
 #include "Lib/Arena.h"
 #include "user/MetalOS.Types.h"
@@ -20,7 +19,7 @@ enum class UProcessState
 class KThread;
 class Scheduler;
 class UThread;
-class UProcess : public KProcess, public KSignalObject
+class UProcess : public KProcess
 {
 	friend Scheduler;
 
@@ -36,16 +35,11 @@ public:
 	UThread* CreateThread(KThread& backing, const size_t stackSize, const UThreadStart userStart = nullptr, void* const arg = nullptr);
 	UObject* CreateObject(const UObjectType type);
 	UObject* CreateObject(const UObjectType type, const handle_t handle);
-	UObject* CreateEvent(const bool manual, const bool initial);
-	UObject* CreatePipe(KPipe& pipe, const KPipeOp op);
-	UObject* CreatePipe(KPipe& pipe, const KPipeOp op, const handle_t handle);
 	UObject* GetObject();
 	UObject* GetObject(const handle_t handle);
 	bool CloseObject(const handle_t handle);
 
-	KModule* AddModule(const CString& name, void* image);
-
-	virtual bool IsSignalled() const;
+	const KModule* AddModule(const CString& name, void* image);
 
 	void Display() const;
 
@@ -56,25 +50,24 @@ public:
 	void* InitThread;
 	bool IsConsole;
 
-	PageTables Tables;
+	//PageTables Tables;
 
 	 //TODO(tsharpe): Shouldnt be a static string, just string
 	StaticString<32> Name;
 
+	LinkedList<UObject*> Objects;
+
 private:
 	static uint32_t LastId;
 
-	static constexpr size_t KernelReserve = PageSize * 4;
-	static constexpr size_t UThreadStackSize = (PageSize << 4); //64K
+	static constexpr size_t KernelReserve = Arch::PageSize * 4;
+	static constexpr size_t UThreadStackSize = (Arch::PageSize << 4); //64K
 
 	//UThreads
 	ListHead m_threads;
 
 	//Scheduler
 	UProcessState m_state;
-
-	//UObjects
-	ListHead m_objects;
 
 	//Userspace process storage (PEB/TEB)
 	ProcessEnvironmentBlock* m_peb;

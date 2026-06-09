@@ -4,7 +4,7 @@
 
 // Hypervisor Top Level Functional Specification v6.0b.pdf
 
-#define HYPERV_PAGE_ALIGN __declspec(align(PageSize))
+#define HYPERV_PAGE_ALIGN __declspec(align(Arch::PageSize))
 #pragma pack(push,8)
 namespace HyperV
 {
@@ -196,13 +196,13 @@ namespace HyperV
 		HV_MESSAGE_HEADER Header;
 		uint64_t Payload[HV_MESSAGE_MAX_PAYLOAD_QWORD_COUNT];
 	};
-	static_assert((sizeof(HV_MESSAGE)* HV_SYNIC_SINT_COUNT) == PageSize, "Bad sim page");
+	static_assert((sizeof(HV_MESSAGE)* HV_SYNIC_SINT_COUNT) == Arch::PageSize, "Bad sim page");
 
 	struct HV_SYNIC_EVENT_FLAGS
 	{
 		uint8_t Flags[HV_EVENT_FLAGS_BYTE_COUNT];
 	};
-	static_assert((sizeof(HV_SYNIC_EVENT_FLAGS)* HV_SYNIC_SINT_COUNT) == PageSize, "Bad event flags page");
+	static_assert((sizeof(HV_SYNIC_EVENT_FLAGS)* HV_SYNIC_SINT_COUNT) == Arch::PageSize, "Bad event flags page");
 
 	struct HV_SINT_REGISTER
 	{

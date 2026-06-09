@@ -17,7 +17,7 @@ public:
 
 	}
 
-	Result Initialize(Arena& arena) override
+	Result Initialize() override
 	{
 		uacpi_resources *res;
 		uacpi_status ret = uacpi_get_current_resources(m_device.AcpiNode, &res);
@@ -55,7 +55,7 @@ public:
 		return Result::Success;
 	}
 
-	Result Enumerate(Arena& arena) override
+	Result Enumerate() override
 	{
 		return Result::NotImplemented;
 	}

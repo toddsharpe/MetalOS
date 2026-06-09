@@ -18,8 +18,8 @@ public:
 
 	VmBusDriver(KDevice& device);
 
-	Result Initialize(Arena& arena) override;
-	Result Enumerate(Arena& arena) override;
+	Result Initialize() override;
+	Result Enumerate() override;
 
 	HyperV::HV_HYPERCALL_RESULT_VALUE PostMessage(const uint32_t size, const void* message, HyperV::VmBusResponse& response);
 	uint32_t BeginGpadl(const uint32_t size, void* message, HyperV::VmBusResponse& response, KEvent& event);
@@ -29,8 +29,8 @@ public:
 private:
 	static constexpr HyperV::HV_MESSAGE_TYPE VmbusMessageType = (HyperV::HV_MESSAGE_TYPE)1;
 
-	static HYPERV_PAGE_ALIGN volatile uint8_t MonitorPage1[PageSize];
-	static HYPERV_PAGE_ALIGN volatile uint8_t MonitorPage2[PageSize];
+	static HYPERV_PAGE_ALIGN volatile uint8_t MonitorPage1[Arch::PageSize];
+	static HYPERV_PAGE_ALIGN volatile uint8_t MonitorPage2[Arch::PageSize];
 
 	struct BusRequest
 	{
@@ -46,7 +46,6 @@ private:
 
 	void OnInterrupt();
 
-	Arena* m_arena;
 
 	KEvent m_connectEvent;
 	KThread* m_thread;

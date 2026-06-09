@@ -1,33 +1,39 @@
 #pragma once
 
-#include "kernel/Arch.h"
-#include "Lib/List.h"
-#include "Lib/Arena.h"
-#include "MetalOS.Space.h"
+#include "Lib/StaticVector.h"
+#include <cstdlib>
 
 class AddressSpace
 {
 public:
-	AddressSpace(const uintptr_t start, const uintptr_t end, const bool isGlobal);
+	constexpr AddressSpace(const uintptr_t start, const uintptr_t end, const uintptr_t offset = 0) :
+		Start(start),
+		End(end),
+		Debug(true),
+		m_watermark(start + offset),
+		m_reservations()
+	{
 
-	void Initialize();
+	}
 
 	bool IsValidPointer(const void* const address);
-	bool Reserve(Arena& arena, uintptr_t& address, const size_t count);
+	uintptr_t Reserve(const size_t count);
+	bool Reserve(const uintptr_t address, const size_t count);
+	bool Free(const uintptr_t address, const size_t count);
+	size_t GetCount(const uintptr_t address) const;
 
 	void Display() const;
 
 	const uintptr_t Start;
 	const uintptr_t End;
-	const bool IsGlobal;
 
 	bool Debug;
 
 private:
+	static constexpr uint64_t AllocationGranularity = 0x1'0000; //64K
 
 	struct Reservation
 	{
-		ListEntry Link;
 		uintptr_t Address;
 		size_t PageCount;
 	};
@@ -36,17 +42,6 @@ private:
 
 	//Reservations
 	uintptr_t m_watermark;
-	ListHead m_reservations;
-};
-
-class KAddressSpace : public AddressSpace
-{
-public:
-	KAddressSpace();
-};
-
-class UAddressSpace : public AddressSpace
-{
-public:
-	UAddressSpace();
+	//LinkedList<Reservation> m_reservations;
+	StaticVector<Reservation, 16> m_reservations;
 };

@@ -24,8 +24,8 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	if (buffer != nullptr)
 		Assert(buffer->Size <= MAX_USER_DEFINED_BYTES);
 
-	Assert((m_outbound.Size % PageSize) == 0);
-	Assert((m_inbound.Size % PageSize) == 0);
+	Assert((m_outbound.Size % Arch::PageSize) == 0);
+	Assert((m_inbound.Size % Arch::PageSize) == 0);
 
 	//Get reference to vmbus
 	KDevice* bus = KeGetDevice("\\_SB_.VMOD.VMBS");
@@ -33,8 +33,8 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	VmBusDriver* const vmbus = static_cast<VmBusDriver*>(bus->Driver);
 	
 	//Number of pages
-	const size_t sendCount = SizeToPages(m_outbound.Size);
-	const size_t receiveCount = SizeToPages(m_inbound.Size);
+	const size_t sendCount = Arch::SizeToPages(m_outbound.Size);
+	const size_t receiveCount = Arch::SizeToPages(m_inbound.Size);
 	const size_t pageCount = sendCount + receiveCount;
 
 	//Get physical contiguous region
@@ -61,9 +61,9 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	msg->rangecount = 1;
 	msg->range_buflen = bodySize;
 	msg->range[0].byte_offset = 0;
-	msg->range[0].byte_count = (uint32_t)(pageCount << PageShift);
+	msg->range[0].byte_count = (uint32_t)(pageCount << Arch::PageShift);
 	for (size_t i = 0; i < pageCount; i++)
-		msg->range[0].pfn_array[i] = (address >> PageShift) + i;
+		msg->range[0].pfn_array[i] = (address >> Arch::PageShift) + i;
 
 	msg->header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_HEADER;
 	msg->child_relid = m_channel->child_relid;

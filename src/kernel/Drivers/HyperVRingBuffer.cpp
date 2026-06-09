@@ -3,7 +3,7 @@
 
 HyperVRingBuffer::HyperVRingBuffer(const uint32_t size, HyperVChannel& channel) :
 	Size(size),
-	DataSize(size - PageSize),
+	DataSize(size - Arch::PageSize),
 	m_channel(channel),
 	m_header(),
 	m_iterator()
@@ -14,7 +14,7 @@ HyperVRingBuffer::HyperVRingBuffer(const uint32_t size, HyperVChannel& channel) 
 void HyperVRingBuffer::Initialize(const paddr_t address)
 {
 	//Number of pages
-	const size_t count = SizeToPages(Size);
+	const size_t count = Arch::SizeToPages(Size);
 
 	//TODO(tsharpe): Temp arena/growing vector
 	StaticVector<paddr_t, 32> addresses;
@@ -23,15 +23,15 @@ void HyperVRingBuffer::Initialize(const paddr_t address)
 	//Push physical addresses twice (for wraparound)
 	for (size_t i = 0; i < count - 1; i++)
 	{
-		addresses.Add(address + ((i + 1) << PageShift));
+		addresses.Add(address + ((i + 1) << Arch::PageShift));
 	}
 	for (size_t i = 0; i < count - 1; i++)
 	{
-		addresses.Add(address + ((i + 1) << PageShift));
+		addresses.Add(address + ((i + 1) << Arch::PageShift));
 	}
 	Assert(addresses.Count() == 2 * count - 1);
 
-	void* const base = KeVirtualMap(addresses.begin(), addresses.Count());
+	void* const base = KeVirtualMap(addresses.begin(), addresses.Count() << Arch::PageShift);
 	memset(base, 0, Size);
 
 	m_header = (volatile hv_ring_buffer * )base;

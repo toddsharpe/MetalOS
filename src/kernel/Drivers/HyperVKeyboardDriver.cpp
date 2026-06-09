@@ -43,7 +43,7 @@ HyperVKeyboardDriver::HyperVKeyboardDriver(KDevice& device) :
 
 }
 
-Result HyperVKeyboardDriver::Initialize(Arena& arena)
+Result HyperVKeyboardDriver::Initialize()
 {
 	Printf("HyperVKeyboardDriver::Initialize\n");
 	m_device.Class = KDeviceClass::Keyboard;
@@ -67,7 +67,7 @@ Result HyperVKeyboardDriver::Initialize(Arena& arena)
 	return Result::Success;
 }
 
-Result HyperVKeyboardDriver::Enumerate(Arena& arena)
+Result HyperVKeyboardDriver::Enumerate()
 {
 	return Result::NotImplemented;
 }

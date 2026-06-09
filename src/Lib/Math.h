@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_crt/stdint.h"
+#include <cstdint>
 
 constexpr size_t DivRoundUp(const size_t x, const size_t y)
 {

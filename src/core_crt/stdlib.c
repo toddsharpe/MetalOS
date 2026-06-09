@@ -1,6 +1,6 @@
 #include "core_crt/stdlib.h"
 #include "core_crt/wchar.h"
-#include "core_crt/string.h"
+#include <cstring>
 
 // https://wiki.osdev.org/Random_Number_Generator
 static unsigned long int next = 1;

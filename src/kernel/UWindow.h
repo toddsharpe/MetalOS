@@ -9,7 +9,6 @@ class UWindow
 {
 public:
 	UWindow(UThread& thread) :
-		Link(),
 		Thread(thread),
 		Frame(),
 		Point()
@@ -21,8 +20,6 @@ public:
 	{
 		return { Point.X, Point.Y, Frame.Width, Frame.Height };
 	}
-
-	ListEntry Link;
 
 	UThread& Thread;
 	Graphics::FrameBuffer Frame;

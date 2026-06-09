@@ -13,7 +13,7 @@ public:
 
 	}
 
-	virtual void Display() const override
+	void Display() const
 	{
 		UObject::Display();
 		Printf("  USemaphore\n");

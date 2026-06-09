@@ -78,7 +78,7 @@ private:
 		*/
 		uint8_t buffer[0];
 	};
-	static_assert(sizeof(hv_ring_buffer) == PageSize, "Invalid hv_ring_buffer");
+	static_assert(sizeof(hv_ring_buffer) == Arch::PageSize, "Invalid hv_ring_buffer");
 
 	//Total size
 	

@@ -66,11 +66,10 @@ namespace Net
 		uint32_t rx_broadcast;
 	};
 	
-	struct NetDriver;
 	struct NetIf
 	{
-		NetIf(NetDriver& _driver, const l2_t _l2)
-			: driver(_driver)
+		NetIf(NetDriverOps ops, const l2_t _l2)
+			: ops(ops)
 			, l2(_l2)
 			, ipv4()
 			, ethernet()
@@ -80,12 +79,12 @@ namespace Net
 
 		void Init()
 		{
-			ethernet.addr = driver.GetMac();
+			ethernet.addr = ops.mac;
 		}
 
 		void PreDispatch()
 		{
-			driver.Receive(*this);
+			ops.receive(ops.ctx, *this);
 		}
 
 		void PostDispatch()
@@ -94,7 +93,7 @@ namespace Net
 				Net::Ethernet::TxFlush(*this);
 		}
 
-		NetDriver& driver;
+		NetDriverOps ops;
 		const l2_t l2;
 
 		ipv4_data_t ipv4;

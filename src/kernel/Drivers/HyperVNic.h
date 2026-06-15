@@ -259,7 +259,7 @@ struct rndis_packet
 
 } // namespace
 
-class HyperVNic : public Driver, public Net::NetDriver
+class HyperVNic : public Driver
 {
 public:
 	HyperVNic(KDevice& device);
@@ -267,16 +267,24 @@ public:
 	Result Initialize(Arena& arena) override;
 	Result Enumerate(Arena& arena) override;
 
-	// NetDriver interface
-	void Receive(Net::NetIf& net_if) override;
-	bool Send(Net::NetIf& net_if, Net::Packet& packet) override;
-	const Net::eth_mac_t& GetMac() const override;
-	bool IsLinkUp() const override;
-
 	static void Callback(void* context) { ((HyperVNic*)context)->OnCallback(); }
+
+	static bool Send_(void* ctx, Net::NetIf& net_if, Net::Packet& packet)
+	{
+		return static_cast<HyperVNic*>(ctx)->SendFrame(packet.buffer(), packet.length()) == Result::Success;
+	}
+	static void Receive_(void* ctx, Net::NetIf& net_if)
+	{
+		static_cast<HyperVNic*>(ctx)->Receive(net_if);
+	}
+	static bool IsLinkUp_(void* ctx)
+	{
+		return static_cast<HyperVNic*>(ctx)->m_recvBuf != nullptr;
+	}
 
 private:
 	void OnCallback();
+	void Receive(Net::NetIf& net_if);
 	Result SendFrame(const void* data, size_t length);
 	void SendNvsp(const nvsp_message& msg, bool requestCompletion = false);
 	void SendNvspCompletion(const nvsp_message& msg, uint64_t transId);

@@ -179,7 +179,8 @@ Result HyperVNic::Initialize(Arena& arena)
 			m_macAddress.bytes[3], m_macAddress.bytes[4], m_macAddress.bytes[5]);
 	}
 
-	m_netIf = arena.Allocate<Net::NetIf>(*this, Net::l2_t::Ethernet);
+	const Net::NetDriverOps ops = { this, m_macAddress, &HyperVNic::Send_, &HyperVNic::Receive_, &HyperVNic::IsLinkUp_ };
+	m_netIf = arena.Allocate<Net::NetIf>(ops, Net::l2_t::Ethernet);
 	m_netIf->Init();
 	Net::AddNetIf(*m_netIf);
 
@@ -202,20 +203,6 @@ void HyperVNic::Receive(Net::NetIf& net_if)
 	}
 }
 
-bool HyperVNic::Send(Net::NetIf& net_if, Net::Packet& packet)
-{
-	return SendFrame(packet.buffer(), packet.length()) == Result::Success;
-}
-
-const Net::eth_mac_t& HyperVNic::GetMac() const
-{
-	return m_macAddress;
-}
-
-bool HyperVNic::IsLinkUp() const
-{
-	return m_recvBuf != nullptr;
-}
 
 void HyperVNic::SendNvsp(const nvsp_message& msg, bool requestCompletion)
 {

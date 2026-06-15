@@ -105,7 +105,7 @@ namespace Net::Ethernet
 			ser.Write(hdr.src.bytes);
 			ser.Write(hdr.type);
 	
-			return net_if.driver.Send(net_if, packet);
+			return net_if.ops.send(net_if.ops.ctx, net_if, packet);
 		}
 	}
 

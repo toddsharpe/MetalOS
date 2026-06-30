@@ -69,3 +69,9 @@
 
 //Net
 #include "kernel/Net/NetIf.h"
+
+/*
+ * Kernel parameters.
+ */
+static constexpr size_t MaxUProcess = 32;
+static constexpr size_t TempArenaSize = Arch::PageSize << 10; //4MB Temp Arena

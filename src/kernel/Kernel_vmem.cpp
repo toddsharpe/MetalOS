@@ -6,12 +6,8 @@
 #include "MetalOS.Space.h"
 #include "Assert.h"
 
-//m_process is defined in Kernel.cpp's anonymous namespace; this extern must stay
-//anonymous (not in _VMEM) so it resolves to that same symbol.
-namespace
-{
-	extern KProcess m_process;
-}
+//Kernel globals (defined in Kernel.cpp).
+extern KProcess m_process;
 
 //Reserves space in a process, acquires physical pages, maps into its page tables
 namespace _VMEM

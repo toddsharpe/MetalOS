@@ -6,6 +6,11 @@
 #include "WinPE.h"
 #include "Assert.h"
 
+//Kernel globals (defined in Kernel.cpp).
+extern KProcess m_process;
+extern ObjectPool<UProcess, MaxUProcess> m_procArena;
+extern Scheduler m_scheduler;
+
 static constexpr CString RuntimeDLL = "mosrt.dll";
 
 const KModule* KeLoadLibrary(const CString& name)

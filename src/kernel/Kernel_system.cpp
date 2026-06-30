@@ -2,6 +2,11 @@
 #include "kernel/Arch.h"
 #include "kernel/KProcess.h"
 
+//Kernel globals (defined in Kernel.cpp).
+extern KProcess m_process;
+extern Scheduler m_scheduler;
+extern EFI_RUNTIME_SERVICES m_runtime;
+
 void KePauseSystem()
 {
 	ArchDisableInterrupts();

@@ -3,6 +3,11 @@
 #include "kernel/KProcess.h"
 #include "Assert.h"
 
+//Kernel globals (defined in Kernel.cpp).
+extern KProcess m_process;
+extern DirectUart m_uart;
+extern StaticArena<TempArenaSize> m_tempArena;
+
 void PrintStack(const Arch::Context* context, const KProcess& process)
 {
 	//Convert to unwind context

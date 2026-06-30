@@ -5,6 +5,10 @@
 #include "kernel/UProcess.h"
 #include "Assert.h"
 
+//Kernel globals (defined in Kernel.cpp).
+extern KProcess m_process;
+extern Scheduler m_scheduler;
+
 KThread* KeCreateThread(const KThreadStart start, void* const arg, const CString& name)
 {
 	KThread* thread = KeAlloc<KThread>(AllocType::Kernel, start, arg, name);

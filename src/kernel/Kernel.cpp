@@ -67,11 +67,17 @@
 LoaderParams BootParams;
 
 /*
- * Kernel parameters.
+ * Kernel globals with external linkage. The subsystem files (Kernel_*.cpp) included
+ * below reference these through matching `extern` declarations.
  */
-static constexpr size_t MaxUProcess = 32;
-
 DeviceTree m_deviceTree;
+KERNEL_PAGE_ALIGN StaticArena<TempArenaSize> m_tempArena;
+ObjectPool<UProcess, MaxUProcess> m_procArena;
+EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);
+Graphics::FrameBuffer m_display((Graphics::Color*)KernelGraphicsDevice, BootParams.Display.VerticalResolution, BootParams.Display.HorizontalResolution);
+DirectUart m_uart(DirectUart::ComPort::Com1);
+Scheduler m_scheduler(&HyperV::Tsc::ReadTsc);
+KProcess m_process(KProcessType::Kernel);
 
 namespace
 {
@@ -82,29 +88,14 @@ namespace
 	uint32_t IdleThread(void* unused);
 
 	/*
-	 * Kernel Arenas.
+	 * Kernel loader data (internal to Kernel.cpp).
 	 */
-	static constexpr size_t TempArenaSize = Arch::PageSize << 10; //4MB Temp Arena
-	KERNEL_PAGE_ALIGN static StaticArena<TempArenaSize> m_tempArena;
-
-	ObjectPool<UProcess, MaxUProcess> m_procArena;
-
-	/*
-	* Kernel loader data.
-	*/
 	const LoaderParams& m_params(BootParams);
-	EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);
-	Graphics::FrameBuffer m_display((Graphics::Color*)KernelGraphicsDevice, BootParams.Display.VerticalResolution, BootParams.Display.HorizontalResolution);
 	ConfigTables m_configTables;
-	
-	//Basic output
-	DirectUart m_uart(DirectUart::ComPort::Com1);
 	LoadingScreen m_loadingScreen(m_display);
 
 	//System
 	InterruptTable<Arch::InterruptVector, Arch::IrqN> m_irqs;
-	Scheduler m_scheduler(&HyperV::Tsc::ReadTsc);
-	KProcess m_process(KProcessType::Kernel);
 	Debugger m_debugger;
 
 	void Initialize()
@@ -214,9 +205,9 @@ namespace
 	}
 }
 
-//API split out by subsystem. Included after the anonymous namespace so these can
-//reference the kernel globals (m_scheduler, m_process, m_procArena, m_deviceTree,
-//m_runtime, m_uart, m_tempArena).
+//API split out by subsystem. Included after the kernel globals are defined so that any
+//static objects in these files (e.g. _WM::m_backBuffer, built from m_display) initialize
+//after the globals they read. Each file declares what it uses via its own `extern`s.
 #include "kernel/Kernel_thread.cpp"
 #include "kernel/Kernel_file.cpp"
 #include "kernel/Kernel_process.cpp"

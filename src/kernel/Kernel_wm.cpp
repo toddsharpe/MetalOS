@@ -12,10 +12,12 @@
 
 using namespace Graphics;
 
+//Kernel globals (defined in Kernel.cpp).
+extern Graphics::FrameBuffer m_display;
+
 //Simple windowing system. The top window is the head of m_windows (tail is the
 //bottom of the z-order). Windows are heap allocated with KeAlloc. State and helpers
-//live in the _WM namespace; m_display is defined in Kernel.cpp and in scope because
-//this file is included after its namespace.
+//live in the _WM namespace.
 namespace _WM
 {
 	//Display/back buffer (m_backBuffer is sized from m_display at static init)

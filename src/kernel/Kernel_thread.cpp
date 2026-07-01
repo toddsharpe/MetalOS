@@ -9,9 +9,9 @@
 extern KProcess m_process;
 extern Scheduler m_scheduler;
 
-KThread* KeCreateThread(const KThreadStart start, void* const arg, const CString& name)
+KThread* KeCreateThread(const KThreadStart start, void* const arg, const char* const name)
 {
-	KThread* thread = KeAlloc<KThread>(AllocType::Kernel, start, arg, name);
+	KThread* thread = KeAlloc<KThread>(AllocType::Kernel, start, arg, CString(name));
 	thread->Init(&KThreadInit);
 	thread->Process = &m_process;
 

@@ -68,7 +68,8 @@ void Debugger::Initialize()
 
 void Debugger::AddModule(const KModule& library)
 {
-	LDR_DATA_TABLE_ENTRY* entry = m_arena.Allocate<LDR_DATA_TABLE_ENTRY>();
+	LDR_DATA_TABLE_ENTRY* entry = static_cast<LDR_DATA_TABLE_ENTRY*>(KeAlloc(sizeof(LDR_DATA_TABLE_ENTRY), AllocType::Kernel));
+	memset(entry, 0, sizeof(LDR_DATA_TABLE_ENTRY));
 
 	entry->DllBase = (void*)library.ImageBase;
 	entry->EntryPoint = (void*)((uintptr_t)library.ImageBase + WinPE::GetEntryPoint(library.ImageBase));
@@ -78,7 +79,7 @@ void Debugger::AddModule(const KModule& library)
 	//Allocate name unicode strings
 	size_t length = library.Name.Count();
 	size_t wideLength = (length + 1) * 2;
-	wchar_t* s = (wchar_t*)m_arena.Allocate(sizeof(wchar_t) * wideLength);
+	wchar_t* s = (wchar_t*)KeAlloc(sizeof(wchar_t) * wideLength, AllocType::Kernel);
 	mbstowcs(s, library.Name.c_str(), wideLength);
 	s[length] = '\0';
 

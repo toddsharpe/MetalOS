@@ -29,8 +29,6 @@ private:
 
 	void ConvertToContext(Arch::InterruptFrame* frame, PCONTEXT context);
 
-	StaticArena<Arch::PageSize> m_arena;
-
 	LIST_ENTRY PsLoadedModuleList;
 };
 

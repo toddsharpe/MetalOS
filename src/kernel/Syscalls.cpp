@@ -10,6 +10,8 @@
 #include "kernel/Objects/KPipe.h"
 #include "kernel/Objects/UPipe.h"
 #include "kernel/UWindow.h"
+#include "kernel/Net/KSocket.h"
+#include "Lib/ByteSwap.h"
 #include "Assert.h"
 
 //TODO(tsharpe): Syscalls should be going through Kernel Api, but theres no kernel internal use for windows?
@@ -52,6 +54,9 @@ namespace
 
 //Syscalls that the kernel adds params
 SyscallResult DebugPrintStack(const uint64_t rip);
+
+//Packed form of SocketRecvFrom (the userland wrapper packs the >4 args, see Sockets.cpp)
+SyscallResult SocketRecvFromSys(HSocket sock, SocketRecvParams* params);
 
 uint64_t Dispatch(const Arch::SyscallFrame& frame)
 {
@@ -186,6 +191,40 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 		case Syscall::DebugPrintStack:
 			return (uint64_t)DebugPrintStack(frame.UserIP);
 
+		//0x800
+		case Syscall::SocketCreate:
+			return (uint64_t)SocketCreate((int)frame.Arg0, (int)frame.Arg1, (int)frame.Arg2);
+
+		case Syscall::SocketBind:
+			return (uint64_t)SocketBind((HSocket)frame.Arg0, (const sockaddr_in*)frame.Arg1);
+
+		case Syscall::SocketConnect:
+			return (uint64_t)SocketConnect((HSocket)frame.Arg0, (const sockaddr_in*)frame.Arg1);
+
+		case Syscall::SocketSendTo:
+			return (uint64_t)SocketSendTo((HSocket)frame.Arg0, (const void*)frame.Arg1, (size_t)frame.Arg2, (const sockaddr_in*)frame.Arg3);
+
+		case Syscall::SocketRecvFrom:
+			return (uint64_t)SocketRecvFromSys((HSocket)frame.Arg0, (SocketRecvParams*)frame.Arg1);
+
+		case Syscall::SocketSend:
+			return (uint64_t)SocketSend((HSocket)frame.Arg0, (const void*)frame.Arg1, (size_t)frame.Arg2);
+
+		case Syscall::SocketClose:
+			return (uint64_t)SocketClose((HSocket)frame.Arg0);
+
+		case Syscall::GetInterfaces:
+			return (uint64_t)GetInterfaces((InterfaceInfo*)frame.Arg0, (size_t)frame.Arg1, (size_t*)frame.Arg2);
+
+		case Syscall::GetInterfaceIp:
+			return (uint64_t)GetInterfaceIp((uint32_t)frame.Arg0, (in_addr*)frame.Arg1, (in_addr*)frame.Arg2);
+
+		case Syscall::SetInterfaceIp:
+			return (uint64_t)SetInterfaceIp((uint32_t)frame.Arg0, (const in_addr*)frame.Arg1, (const in_addr*)frame.Arg2);
+
+		case Syscall::SetGateway:
+			return (uint64_t)SetGateway((uint32_t)frame.Arg0, (const in_addr*)frame.Arg1);
+
 		default:
 			//Syscall not found
 			Printf("Syscall not implemented: 0x%x\n", frame.SystemCall);
@@ -249,7 +288,7 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 	StaticString<128> copy = {};
 	copy.AppendClip(commandLine);
 
-	UProcess* created = KeCreateProcess(copy);
+	UProcess* created = KeCreateProcess(copy.c_str());
 	if (!created)
 		return SyscallResult::Failed;
 
@@ -840,7 +879,8 @@ SyscallResult CloseHandle(const Handle handle)
 		case UObjectType::Process:
 		case UObjectType::Thread:
 		case UObjectType::Debug:
-			//do nothing
+		case UObjectType::Socket:
+			//do nothing (Socket teardown happens in UProcess::CloseObject)
 			break;
 
 		default:
@@ -974,6 +1014,267 @@ SyscallResult DebugPrintStack(const uint64_t rip)
 	context.Rsp = (uintptr_t)thread.Stack;
 	context.Rbp = *(uintptr_t*)thread.Stack;
 	PrintStack(&context, thread.Process);
-	
+
+	return SyscallResult::Success;
+}
+
+/*
+* 0x800: Network. sockaddr_in is network byte order; the stack uses host order, so
+* convert at this boundary (ByteSwap on little-endian == hton/ntoh).
+*/
+namespace
+{
+	bool ToEndpoint(const sockaddr_in& sa, Net::endpoint_t& out)
+	{
+		if (sa.sin_family != AF_INET)
+			return false;
+		out.addr.addr = ByteSwap<uint32_t>(sa.sin_addr.s_addr);
+		out.port = ByteSwap<uint16_t>(sa.sin_port);
+		return true;
+	}
+
+	void FromEndpoint(const Net::endpoint_t& ep, sockaddr_in& sa)
+	{
+		sa.sin_family = AF_INET;
+		sa.sin_port = ByteSwap<uint16_t>(ep.port);
+		sa.sin_addr.s_addr = ByteSwap<uint32_t>(ep.addr.addr);
+		for (size_t i = 0; i < sizeof(sa.sin_zero); i++)
+			sa.sin_zero[i] = 0;
+	}
+
+	KSocket* GetSocket(UProcess& proc, const HSocket sock)
+	{
+		UObject* obj = proc.GetObject((handle_t)sock);
+		if (!obj || obj->Type != UObjectType::Socket)
+			return nullptr;
+		return obj->Socket;
+	}
+
+	Net::ipv4_addr_t ToIpv4(const in_addr& a)
+	{
+		Net::ipv4_addr_t out;
+		out.addr = ByteSwap<uint32_t>(a.s_addr);
+		return out;
+	}
+
+	in_addr FromIpv4(const Net::ipv4_addr_t& a)
+	{
+		in_addr out;
+		out.s_addr = ByteSwap<uint32_t>(a.addr);
+		return out;
+	}
+}
+
+HSocket SocketCreate(int af, int type, int protocol)
+{
+	if (af != AF_INET)
+		return INVALID_SOCKET;
+
+	UProcess& proc = Scheduler::GetUProcess();
+
+	KSocket* socket = KeSocketCreate(type, protocol);
+	if (!socket)
+		return INVALID_SOCKET;
+
+	UObject* obj = proc.CreateObject(UObjectType::Socket);
+	if (!obj)
+	{
+		KeSocketClose(*socket);
+		KeFree(socket, AllocType::Kernel);
+		return INVALID_SOCKET;
+	}
+
+	obj->Socket = socket;
+	return (HSocket)obj->Handle;
+}
+
+SyscallResult SocketBind(HSocket sock, const sockaddr_in* addr)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(addr))
+		return SyscallResult::InvalidPointer;
+
+	KSocket* socket = GetSocket(proc, sock);
+	if (!socket)
+		return SyscallResult::InvalidHandle;
+
+	Net::endpoint_t local;
+	if (!ToEndpoint(*addr, local))
+		return SyscallResult::InvalidArg;
+
+	return KeSocketBind(*socket, local) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
+SyscallResult SocketConnect(HSocket sock, const sockaddr_in* peer)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(peer))
+		return SyscallResult::InvalidPointer;
+
+	KSocket* socket = GetSocket(proc, sock);
+	if (!socket)
+		return SyscallResult::InvalidHandle;
+
+	Net::endpoint_t endpoint;
+	if (!ToEndpoint(*peer, endpoint))
+		return SyscallResult::InvalidArg;
+
+	return KeSocketConnect(*socket, endpoint) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
+SyscallResult SocketSendTo(HSocket sock, const void* buf, size_t len, const sockaddr_in* to)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(buf) || !proc.Space.IsValidPointer(to))
+		return SyscallResult::InvalidPointer;
+	if (!len)
+		return SyscallResult::InvalidArg;
+
+	KSocket* socket = GetSocket(proc, sock);
+	if (!socket)
+		return SyscallResult::InvalidHandle;
+
+	Net::endpoint_t dst;
+	if (!ToEndpoint(*to, dst))
+		return SyscallResult::InvalidArg;
+
+	return KeSocketSend(*socket, dst, buf, len) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
+SyscallResult SocketSend(HSocket sock, const void* buf, size_t len)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(buf))
+		return SyscallResult::InvalidPointer;
+	if (!len)
+		return SyscallResult::InvalidArg;
+
+	KSocket* socket = GetSocket(proc, sock);
+	if (!socket)
+		return SyscallResult::InvalidHandle;
+	if (!socket->Connected)
+		return SyscallResult::InvalidArg;
+
+	return KeSocketSend(*socket, socket->Peer, buf, len) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
+SyscallResult SocketRecvFromSys(HSocket sock, SocketRecvParams* params)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(params))
+		return SyscallResult::InvalidPointer;
+	if (!proc.Space.IsValidPointer(params->buf))
+		return SyscallResult::InvalidPointer;
+	if (params->bytesRecv && !proc.Space.IsValidPointer(params->bytesRecv))
+		return SyscallResult::InvalidPointer;
+	if (params->from && !proc.Space.IsValidPointer(params->from))
+		return SyscallResult::InvalidPointer;
+	if (!params->maxLen)
+		return SyscallResult::InvalidArg;
+
+	KSocket* socket = GetSocket(proc, sock);
+	if (!socket)
+		return SyscallResult::InvalidHandle;
+
+	Net::endpoint_t src = {};
+	size_t bytes = 0;
+	const Net::Socket::read_t result = KeSocketRecv(*socket, src, params->buf, params->maxLen, bytes, params->timeoutMs);
+
+	if (params->bytesRecv)
+		*params->bytesRecv = bytes;
+
+	switch (result)
+	{
+		case Net::Socket::read_t::Success:
+			if (params->from)
+				FromEndpoint(src, *params->from);
+			return SyscallResult::Success;
+
+		case Net::Socket::read_t::Failure:
+			return SyscallResult::BrokenPipe;
+
+		default:
+			//Empty / timeout: no datagram available
+			return SyscallResult::Failed;
+	}
+}
+
+SyscallResult SocketClose(HSocket sock)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!GetSocket(proc, sock))
+		return SyscallResult::InvalidHandle;
+
+	return proc.CloseObject((handle_t)sock) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
+SyscallResult GetInterfaces(InterfaceInfo* buffer, size_t maxCount, size_t* count)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(buffer) || !proc.Space.IsValidPointer(count))
+		return SyscallResult::InvalidPointer;
+
+	const size_t total = KeNetInterfaceCount();
+	size_t n = 0;
+	for (size_t i = 0; i < total && n < maxCount; i++)
+	{
+		Net::ipv4_addr_t addr, subnet, gateway;
+		Net::eth_mac_t mac;
+		if (!KeNetGetInterface(i, addr, subnet, gateway, mac))
+			continue;
+
+		InterfaceInfo& info = buffer[n];
+		info.index = (uint32_t)i;
+		//MACs are stored little-endian internally; expose canonical (wire) order.
+		for (size_t b = 0; b < sizeof(info.mac); b++)
+			info.mac[b] = mac.bytes[sizeof(mac.bytes) - 1 - b];
+		info.reserved = 0;
+		info.addr = FromIpv4(addr);
+		info.subnet = FromIpv4(subnet);
+		info.gateway = FromIpv4(gateway);
+		n++;
+	}
+
+	*count = n;
+	return SyscallResult::Success;
+}
+
+SyscallResult GetInterfaceIp(uint32_t index, in_addr* addr, in_addr* subnet)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(addr) || !proc.Space.IsValidPointer(subnet))
+		return SyscallResult::InvalidPointer;
+
+	Net::ipv4_addr_t a, s, g;
+	Net::eth_mac_t mac;
+	if (!KeNetGetInterface(index, a, s, g, mac))
+		return SyscallResult::InvalidArg;
+
+	*addr = FromIpv4(a);
+	*subnet = FromIpv4(s);
+	return SyscallResult::Success;
+}
+
+SyscallResult SetInterfaceIp(uint32_t index, const in_addr* addr, const in_addr* subnet)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(addr) || !proc.Space.IsValidPointer(subnet))
+		return SyscallResult::InvalidPointer;
+
+	if (!KeNetSetInterface(index, ToIpv4(*addr), ToIpv4(*subnet)))
+		return SyscallResult::InvalidArg;
+
+	return SyscallResult::Success;
+}
+
+SyscallResult SetGateway(uint32_t index, const in_addr* gateway)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(gateway))
+		return SyscallResult::InvalidPointer;
+
+	if (!KeNetSetGateway(index, ToIpv4(*gateway)))
+		return SyscallResult::InvalidArg;
+
 	return SyscallResult::Success;
 }

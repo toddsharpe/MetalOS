@@ -7,12 +7,6 @@ namespace Net::IPv4
 {
 	static void Forward(const Packet& packet, NetIf& dst_if)
 	{
-#if 0
-		printf("Fwd %d.%d.%d.%d -> %p\n",
-			packet.dst.addr.bytes[3], packet.dst.addr.bytes[2], packet.dst.addr.bytes[1], packet.dst.addr.bytes[0],
-			&dst_if
-		);
-#endif
 		//Get buffer
 		const NetLayer& l2 = get_l2(dst_if.l2);
 		StaticBuffer<Net::buffer_size> buffer;
@@ -104,19 +98,15 @@ namespace Net::IPv4
 		packet.dst = { ip_hdr.dst, 0 };
 		packet.proto = proto_t::Ipv4;
 
-#if 1
-		printf("IPv4: %d.%d.%d.%d -> %d.%d.%d.%d\n",
-			packet.src.addr.bytes[3], packet.src.addr.bytes[2], packet.src.addr.bytes[1], packet.src.addr.bytes[0],
-			packet.dst.addr.bytes[3], packet.dst.addr.bytes[2], packet.dst.addr.bytes[1], packet.dst.addr.bytes[0]
-		);
-#endif
-
 		//Forward packet if needed
 		const bool is_broadcast = packet.dst.addr == Net::broadcast;
 		const bool is_match = net_if.ipv4.addr == packet.dst.addr;
 		const bool is_joined = net_if.ipv4.is_joined(packet.dst.addr);
 		const bool is_multicast = Net::is_multicast(packet.dst.addr);
-		const bool accept = is_multicast ? is_joined : (is_match || is_broadcast);
+		//Before the interface has an address (e.g. awaiting DHCP), a server may unicast the
+		//reply to the offered IP; the NIC already filtered by MAC, so accept it at L2.
+		const bool is_unconfigured = net_if.ipv4.addr == Net::empty;
+		const bool accept = is_multicast ? is_joined : (is_match || is_broadcast || is_unconfigured);
 
 		//Update stats
 		if (is_broadcast)
@@ -161,7 +151,6 @@ namespace Net::IPv4
 					break;
 
 				default:
-					printf("Unsupported IPv4 proto: %d\n", ip_hdr.proto);
 					return false;
 			}
 		}

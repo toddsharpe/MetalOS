@@ -65,3 +65,17 @@ EXPORTS
 	DebugPrint
 	DebugPrintBytes
 	DebugPrintStack
+
+	; 0x800: Network
+	SocketCreate
+	SocketBind
+	SocketConnect
+	SocketSendTo
+	SocketSend
+	SocketRecvFrom
+	SocketRecv
+	SocketClose
+	GetInterfaces
+	GetInterfaceIp
+	SetInterfaceIp
+	SetGateway

@@ -70,4 +70,18 @@ x64Syscall <DebugPrint>, 700h
 x64Syscall <DebugPrintBytes>, 701h
 x64Syscall <DebugPrintStack>, 702h
 
+; 0x800: Network
+; SocketRecvFrom is exposed via a C wrapper (SocketRecvFromSys) because it has >4 args.
+x64Syscall <SocketCreate>, 800h
+x64Syscall <SocketBind>, 801h
+x64Syscall <SocketConnect>, 802h
+x64Syscall <SocketSendTo>, 803h
+x64Syscall <SocketRecvFromSys>, 804h
+x64Syscall <SocketSend>, 805h
+x64Syscall <SocketClose>, 806h
+x64Syscall <GetInterfaces>, 807h
+x64Syscall <GetInterfaceIp>, 808h
+x64Syscall <SetInterfaceIp>, 809h
+x64Syscall <SetGateway>, 80Ah
+
 end

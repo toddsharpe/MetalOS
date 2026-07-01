@@ -173,9 +173,10 @@ Result HyperVNic::Initialize()
 		SendRndisPacket(NVSP_CHANNEL_TYPE_CONTROL, rndis, rndisLen, false);
 		KeWait(m_event);
 
+		//Stored little-endian; print in canonical (wire) order.
 		Printf("HyperVNic: MAC=%02x:%02x:%02x:%02x:%02x:%02x\n",
-			m_macAddress.bytes[0], m_macAddress.bytes[1], m_macAddress.bytes[2],
-			m_macAddress.bytes[3], m_macAddress.bytes[4], m_macAddress.bytes[5]);
+			m_macAddress.bytes[5], m_macAddress.bytes[4], m_macAddress.bytes[3],
+			m_macAddress.bytes[2], m_macAddress.bytes[1], m_macAddress.bytes[0]);
 	}
 
 	m_netIf = KeAlloc<Net::NetIf>(AllocType::Kernel, *this, Net::l2_t::Ethernet);
@@ -362,7 +363,10 @@ void HyperVNic::OnCallback()
 						rndis_query_complete* qc = (rndis_query_complete*)(hdr + 1);
 						const uint8_t* info = (const uint8_t*)qc + qc->info_buf_offset;
 						const uint32_t copyLen = qc->info_buflen < sizeof(m_macAddress) ? qc->info_buflen : sizeof(m_macAddress);
-						memcpy(m_macAddress.bytes, info, copyLen);
+						//RNDIS returns the MAC in canonical (wire) order; store it little-endian
+						//to match the kernel convention (the serializer swaps back to wire order).
+						for (uint32_t i = 0; i < copyLen; i++)
+							m_macAddress.bytes[copyLen - 1 - i] = info[i];
 						m_event.Set();
 					}
 				}
@@ -406,22 +410,14 @@ void HyperVNic::OnCallback()
 
 Result HyperVNic::SendFrame(const void* data, size_t length)
 {
-	// Build inline send: [nvsp_rndis_prefix][rndis_message_header][rndis_packet][Ethernet frame]
-	// send_buf_section_index=0xFFFFFFFF tells the host to read data inline from the ring buffer.
+	// Build the RNDIS_PACKET message: [rndis_message_header][rndis_packet][Ethernet frame].
 	const uint32_t rndisLen = (uint32_t)(sizeof(rndis_message_header) + sizeof(rndis_packet) + length);
-	const uint32_t totalLen = (uint32_t)(sizeof(nvsp_rndis_prefix) + rndisLen);
 
-	StaticBuffer<2048> txArena;
-	uint8_t* buf = txArena.Data;
-	memset(buf, 0, totalLen);
+	StaticBuffer<2048> rndisArena;
+	uint8_t* buf = rndisArena.Data;
+	memset(buf, 0, rndisLen);
 
-	nvsp_rndis_prefix* prefix = (nvsp_rndis_prefix*)buf;
-	prefix->msg_type = NvspMessageType::SendRndisPacket;
-	prefix->channel_type = NVSP_CHANNEL_TYPE_DATA;
-	prefix->send_buf_section_index = NVSP_INVALID_SECTION_INDEX;
-	prefix->send_buf_section_size = 0;
-
-	rndis_message_header* rndisHdr = (rndis_message_header*)(prefix + 1);
+	rndis_message_header* rndisHdr = (rndis_message_header*)buf;
 	rndisHdr->ndis_msg_type = RNDIS_MSG_PACKET;
 	rndisHdr->msg_len = rndisLen;
 
@@ -431,7 +427,9 @@ Result HyperVNic::SendFrame(const void* data, size_t length)
 
 	memcpy((uint8_t*)(pkt + 1), data, length);
 
-	m_channel.SendPacket(buf, totalLen, 0,
-		HyperV::VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
+	// Transmit over the data channel using the send-buffer section mechanism — the same
+	// path that works for control RNDIS messages. (The prior inline scheme, with a 16-byte
+	// NVSP prefix and section_index=INVALID, never actually put frames on the wire.)
+	SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, buf, rndisLen, true);
 	return Result::Success;
 }

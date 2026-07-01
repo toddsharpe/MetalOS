@@ -65,6 +65,10 @@ namespace Net::Arp
 			return;
 
 		Assert(ArpCache::Update(reply.sender_proto, reply.sender_hw));
+
+		//Resolution done; allow future ARP requests. (pending_tx is not re-sent: its
+		//buffer belonged to the caller's stack. Senders retry once the cache is warm.)
+		net_if.ethernet.arp_pending = false;
 	}
 	
 	bool Receive(NetIf& net_if, Packet& packet)

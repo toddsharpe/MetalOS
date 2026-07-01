@@ -410,9 +410,7 @@ namespace Net
 		bool Receive(NetIf& net_if, Packet& packet);
 
 		bool SendUdp(const endpoint_t dst, const uint16_t src_port, const void* const buffer, const size_t length);
-		bool SendUdpIf(NetIf& net_if, const endpoint_t dst, const uint16_t src_port, const void* const buffer, const size_t length);
-		read_t ReadUdp(const uint16_t dst_port, endpoint_t& src, void* const buffer, const size_t length, size_t& bytes_read);
-		read_t ReadUdp(const endpoint_t dst, endpoint_t& src, void* const buffer, const size_t length, size_t& bytes_read);
+		bool SendIcmpRaw(const endpoint_t dst, const void* const buffer, const size_t length);
 	}
 
 	bool AddNetIf(NetIf& net_if);

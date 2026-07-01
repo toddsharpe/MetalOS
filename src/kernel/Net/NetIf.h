@@ -33,7 +33,7 @@ namespace Net
 	
 	struct ipv4_data_t
 	{
-		constexpr ipv4_data_t() : mc_groups(), mc_routes(), addr(), subnet_mask(Net::subnet_32), ip_forwarding(true), rx_dropped(), rx_accepted(), rx_unicast(), rx_multicast(), rx_broadcast()
+		constexpr ipv4_data_t() : mc_groups(), mc_routes(), addr(), subnet_mask(Net::subnet_32), gateway(), ip_forwarding(true), rx_dropped(), rx_accepted(), rx_unicast(), rx_multicast(), rx_broadcast()
 		{
 		}
 
@@ -54,6 +54,7 @@ namespace Net
 		StaticArray<ipv4_mc_route_t, 4> mc_routes;
 		ipv4_addr_t addr;
 		ipv4_addr_t subnet_mask;
+		ipv4_addr_t gateway;
 		bool ip_forwarding;
 
 		/*

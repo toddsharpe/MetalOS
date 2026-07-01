@@ -14,6 +14,14 @@ class KProcess;
 class UThread;
 class UWindow;
 class Message;
+class KSocket;
+namespace Net
+{
+	struct endpoint_t;
+	struct ipv4_addr_t;
+	struct eth_mac_t;
+	namespace Socket { enum class read_t; }
+}
 
 /*
  * Kernel API types.
@@ -118,12 +126,12 @@ T* KeAlloc(AllocType type, Args&&... args)
 /*
  * Modules.
  */
-const KModule* KeLoadLibrary(const CString& name);
+const KModule* KeLoadLibrary(const char* const name);
 
 /*
  * KThreads.
  */
-KThread* KeCreateThread(const KThreadStart start, void* const arg, const CString& name);
+KThread* KeCreateThread(const KThreadStart start, void* const arg, const char* const name);
 void KeExitThread();
 void KeExitThread(KThread& thread);
 void KThreadInit();
@@ -136,7 +144,7 @@ void KeYield();
  */
 UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThreadStart entry = nullptr, void* const arg = nullptr);
 uint32_t UThreadInit(void* const arg);
-UProcess* KeCreateProcess(const CString& commandLine);
+UProcess* KeCreateProcess(const char* const commandLine);
 void KeTerminateProcess(UProcess& process, const uint32_t exitCode);
 
 /*
@@ -161,7 +169,23 @@ void PrintBytes(const void* data, const size_t length);
 /*
  * Devices.
  */
-KDevice* KeGetDevice(const CString& path);
+KDevice* KeGetDevice(const char* const path);
+
+/*
+ * Networking. 'type'/'proto' are the userland SOCK_/IPPROTO_ values.
+ */
+KSocket* KeSocketCreate(const int type, const int proto);
+bool KeSocketBind(KSocket& socket, const Net::endpoint_t& local);
+bool KeSocketConnect(KSocket& socket, const Net::endpoint_t& peer);
+bool KeSocketSend(KSocket& socket, const Net::endpoint_t& dst, const void* const buffer, const size_t length);
+Net::Socket::read_t KeSocketRecv(KSocket& socket, Net::endpoint_t& src, void* const buffer, const size_t maxLength, size_t& bytesRead, const milli_t timeoutMs);
+void KeSocketClose(KSocket& socket);
+
+//Interfaces are indexed by position in the registry.
+size_t KeNetInterfaceCount();
+bool KeNetGetInterface(const size_t index, Net::ipv4_addr_t& addr, Net::ipv4_addr_t& subnet, Net::ipv4_addr_t& gateway, Net::eth_mac_t& mac);
+bool KeNetSetInterface(const size_t index, const Net::ipv4_addr_t& addr, const Net::ipv4_addr_t& subnet);
+bool KeNetSetGateway(const size_t index, const Net::ipv4_addr_t& gateway);
 
 /*
 * Windows.

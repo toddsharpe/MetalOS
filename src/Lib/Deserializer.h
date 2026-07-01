@@ -2,6 +2,7 @@
 
 #include "Assert.h"
 #include "Lib/ByteSwap.h"
+#include "Lib/String.h"
 
 #include <cstdint>
 #include <cstddef>

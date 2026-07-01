@@ -32,6 +32,15 @@ cl user/Hello/Main.cpp /Fo"..\build\hello" %CompileFlags% /link %LinkFlags% /SUB
 :: Build Time.exe
 cl user/Time/Main.cpp /Fo"..\build\time" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\time.exe" /DEBUG /PDB:"..\build\time.pdb" || exit /b 1
 
+:: Build NetTest.exe
+cl user/NetTest/Main.cpp /Fo"..\build\nettest" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\nettest.exe" /DEBUG /PDB:"..\build\nettest.pdb" || exit /b 1
+
+:: Build dhcp.exe
+cl user/dhcp/Main.cpp /Fo"..\build\dhcp" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\dhcp.exe" /DEBUG /PDB:"..\build\dhcp.pdb" || exit /b 1
+
+:: Build ping.exe
+cl user/ping/Main.cpp /Fo"..\build\ping" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\ping.exe" /DEBUG /PDB:"..\build\ping.pdb" || exit /b 1
+
 ::
 :: GUI apps
 ::

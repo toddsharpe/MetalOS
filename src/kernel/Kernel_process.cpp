@@ -13,36 +13,38 @@ extern Scheduler m_scheduler;
 
 static constexpr CString RuntimeDLL = "mosrt.dll";
 
-const KModule* KeLoadLibrary(const CString& name)
+const KModule* KeLoadLibrary(const char* const name)
 {
+	const CString moduleName(name);
+
 	//Check if module exists in process
-	const KModule* search = m_process.Modules.GetModule(name);
+	const KModule* search = m_process.Modules.GetModule(moduleName);
 	if (search != nullptr)
 		return search;
 
 	//If it doesnt exists attempt to load it
-	void* address = Loader::Load(m_process, name);
+	void* address = Loader::Load(m_process, moduleName);
 	if (!address)
 		return nullptr;
 
-	const KModule* created = m_process.Modules.AddModule(name, address);
+	const KModule* created = m_process.Modules.AddModule(moduleName, address);
 	return created;
 }
 
 //Since this method changes page tables, make sure every return restores original
-UProcess* KeCreateProcess(const CString& cmd)
+UProcess* KeCreateProcess(const char* const cmd)
 {
 	//TODO(tsharpe): Make this not necessary
 	KernelPageTables current = KernelPageTables::Current();
 
-	//Get path
+	//Get path (up to the first space or end of string)
 	size_t i = 0;
-	while (i < cmd.Length && cmd[i] != '\0' && cmd[i] !=' ')
+	while (cmd[i] != '\0' && cmd[i] != ' ')
 		i++;
 	Assert(i > 0);
 
 	StaticString<64> path;
-	path.Append(CString(cmd.c_str(), i));
+	path.Append(CString(cmd, i));
 
 	//Create UProcess
 	UProcess* created = m_procArena.Allocate(path);
@@ -87,7 +89,7 @@ UProcess* KeCreateProcess(const CString& cmd)
 	Assert(created->InitThread);
 
 	//Update process structures
-	created->InContextInit(address, cmd);
+	created->InContextInit(address, CString(cmd));
 
 	Assert(created->AddModule(path, address));
 	Assert(created->AddModule(RuntimeDLL, runtime));

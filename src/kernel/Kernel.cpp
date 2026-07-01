@@ -214,6 +214,8 @@ namespace
 #include "kernel/Kernel_system.cpp"
 #include "kernel/Kernel_diag.cpp"
 #include "kernel/Kernel_wm.cpp"
+#include "kernel/Kernel_sockets.cpp"
+#include "kernel/Kernel_net.cpp"
 
 void KeRegisterInterrupt(const Arch::InterruptVector interrupt, const ActionContext& context)
 {
@@ -234,9 +236,9 @@ paddr_t ResolveImageVA(void* const address)
 	return m_params.KernelAddress + rva;
 }
 
-KDevice* KeGetDevice(const CString& path)
+KDevice* KeGetDevice(const char* const path)
 {
-	return m_deviceTree.GetDevice(path);
+	return m_deviceTree.GetDevice(CString(path));
 }
 
 //TODO(tsharpe): Should efi display be in the device tree?

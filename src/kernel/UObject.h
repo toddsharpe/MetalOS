@@ -15,7 +15,9 @@ enum class UObjectType
 	Debug,
 
 	Semaphore,
-	Event
+	Event,
+
+	Socket
 };
 
 typedef uintptr_t handle_t;
@@ -31,6 +33,7 @@ class UThread;
 class UProcess;
 class UWindow;
 class UPipe;
+class KSocket;
 class UObject
 {
 public:
@@ -54,6 +57,8 @@ public:
 	UPipe* Pipe;
 
 	KEvent* Event;
+
+	KSocket* Socket;
 
 private:
 	static constexpr handle_t StartingHandle = 0x10;

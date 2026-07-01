@@ -59,4 +59,17 @@ enum class Syscall : uint64_t
 	DebugPrint = 0x700,
 	DebugPrintBytes,
 	DebugPrintStack,
+
+	//0x800: Network
+	SocketCreate = 0x800,
+	SocketBind,
+	SocketConnect,
+	SocketSendTo,
+	SocketRecvFrom,
+	SocketSend,
+	SocketClose,
+	GetInterfaces,
+	GetInterfaceIp,
+	SetInterfaceIp,
+	SetGateway,
 };

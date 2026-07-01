@@ -19,8 +19,7 @@ namespace Net::Icmp
 		packet.mask(echo_hdr_size);
 		packet.proto = proto_t::EchoReply;
 
-		//TODO: reply
-		Assert(false);
+		//The full ICMP message was already delivered to raw sockets in Receive().
 	}
 
 	static void ReceiveEchoRequest(NetIf& net_if, Packet& packet)
@@ -90,7 +89,7 @@ namespace Net::Icmp
 	{
 		if (packet.length() < icmp_hdr_size)
 			return false;
-		
+
 		Deserializer deser(packet.buffer(), packet.length());
 		const icmp_hdr_t hdr =
 		{
@@ -98,6 +97,12 @@ namespace Net::Icmp
 			.code = deser.ReadU8(),
 			.checksum = deser.ReadU16(),
 		};
+
+		//Deliver the complete ICMP message (header + payload) to any raw ICMP socket
+		//(e.g. ping) before the kernel strips headers for its own handling.
+		packet.proto = proto_t::Icmp;
+		Socket::Receive(net_if, packet);
+
 		packet.mask(icmp_hdr_size);
 		packet.proto = proto_t::Icmp;
 

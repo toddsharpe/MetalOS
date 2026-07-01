@@ -18,57 +18,20 @@ namespace
 
 namespace Net::Socket
 {
-	bool Receive(NetIf& net_if, Packet& packet)
-	{
-		return true;
-	}
+	//Receive() is implemented in Kernel_sockets.cpp, where the bound-socket registry
+	//lives; it demuxes inbound packets into per-KSocket queues.
 
-	read_t ReadUdp(const uint16_t dst_port, endpoint_t& src, void* const buffer, const size_t length, size_t& bytes_read)
-	{
-		return read_t::Empty;
-	}
-
-	read_t ReadUdp(const endpoint_t dst, endpoint_t& src, void* const buffer, const size_t length, size_t& bytes_read)
-	{
-		return read_t::Empty;
-	}
-	
 	//Note(tsharpe): Ideally this method would copy user data to one buffer and pass down multiple stacks if needed.
 	//However, without scatter/gather for headers (which will be interface dependent), copying is necessary
 	bool SendUdp(const endpoint_t dst, const uint16_t src_port, const void* const buffer, const size_t length)
 	{
 		NetIf& net_if = Router::Resolve(dst);
 
-		//Wait for valid ip address on this interface to send udp
-		if (net_if.ipv4.addr == Net::empty)
+		//Require a configured source address, except for broadcast (e.g. DHCP DISCOVER
+		//is sent from 0.0.0.0 before the interface has an address).
+		if (net_if.ipv4.addr == Net::empty && dst.addr != Net::broadcast)
 			return false;
 
-		//Get packet from driver
-		StaticBuffer<Net::buffer_size> allocated;
-		if (length > allocated.Capacity)
-			return false;
-
-		const NetLayer& l2 = get_l2(net_if.l2);
-
-		Packet packet(allocated);
-		packet.mask(l2.HeaderSize);
-		packet.mask(ipv4_hdr_size);
-		packet.mask(udp_hdr_size);
-
-		//Write data to packet
-		memcpy(packet.buffer(), buffer, length);
-		packet.trim(length);
-
-		//Populate packet fields
-		const uint16_t use_port = src_port != 0 ? src_port : rand_port();
-		packet.dst = dst;
-		packet.src = { net_if.ipv4.addr, use_port };
-
-		return Udp::Send(net_if, packet);
-	}
-
-	bool SendUdpIf(NetIf& net_if, const endpoint_t dst, const uint16_t src_port, const void* const buffer, const size_t length)
-	{
 		//Get packet from driver
 		StaticBuffer<Net::buffer_size> allocated;
 		if (length > allocated.Capacity)
@@ -153,5 +116,32 @@ namespace Net::Socket
 				Assert(false);
 				return false;
 		}
+	}
+
+	//Sends a caller-supplied, fully-formed ICMP message (raw socket): only L2/IPv4 headers
+	//are added. The ICMP header + checksum are the caller's responsibility.
+	bool SendIcmpRaw(const endpoint_t dst, const void* const buffer, const size_t length)
+	{
+		NetIf& net_if = Router::Resolve(dst);
+		if (net_if.ipv4.addr == Net::empty && dst.addr != Net::broadcast)
+			return false;
+
+		StaticBuffer<Net::buffer_size> allocated;
+		if (length > allocated.Capacity)
+			return false;
+
+		const NetLayer& l2 = get_l2(net_if.l2);
+		Packet packet(allocated);
+		packet.mask(l2.HeaderSize);
+		packet.mask(ipv4_hdr_size);
+
+		memcpy(packet.buffer(), buffer, length);
+		packet.trim(length);
+
+		packet.dst = { dst.addr, 0 };
+		packet.src = { net_if.ipv4.addr, 0 };
+		packet.proto = proto_t::Icmp;
+
+		return IPv4::Send(net_if, packet);
 	}
 }

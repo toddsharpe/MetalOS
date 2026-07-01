@@ -83,14 +83,6 @@ namespace Net::Udp
 		packet.src.port = udp_hdr.src_port;
 		packet.proto = proto_t::Udp;
 
-#if 1
-		printf("UDP: %d.%d.%d.%d::%d -> %d.%d.%d.%d::%d\n",
-			packet.src.addr.bytes[3], packet.src.addr.bytes[2], packet.src.addr.bytes[1], packet.src.addr.bytes[0],
-			packet.src.port,
-			packet.dst.addr.bytes[3], packet.dst.addr.bytes[2], packet.dst.addr.bytes[1], packet.dst.addr.bytes[0],
-			packet.dst.port
-		);
-#endif
 		return Socket::Receive(net_if, packet);
 	}
 

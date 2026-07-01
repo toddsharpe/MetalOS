@@ -17,7 +17,7 @@ namespace Loader
 	static void* Load(KProcess& process, const CString& path)
 	{
 		Printf("kernel load: %s\n", path.c_str());
-		
+
 		KFile file = {};
 		if (!KeCreateFile(file, path.c_str(), KFileAccess::Read))
 			return nullptr;

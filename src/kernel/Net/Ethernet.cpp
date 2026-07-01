@@ -64,24 +64,33 @@ namespace Net::Ethernet
 		if (packet.headroom() < eth_hdr_size)
 			return false;
 
+		//Broadcast IP maps directly to the broadcast MAC (no ARP, e.g. DHCP DISCOVER).
+		const bool is_broadcast = packet.dst.addr == Net::broadcast;
+
+		//L2 next hop: on-subnet destinations are reached directly; anything else goes via
+		//the default gateway (which must itself be on-subnet).
+		ipv4_addr_t nexthop = packet.dst.addr;
+		if (!is_broadcast && !Net::is_network(packet.dst.addr, net_if.ipv4.addr, net_if.ipv4.subnet_mask))
+			nexthop = net_if.ipv4.gateway;
+
 		//If arp isnt resolved, enqueue
-		const bool resolved = ArpCache::Contains(packet.dst.addr);
+		const bool resolved = is_broadcast || ArpCache::Contains(nexthop);
 		if (!resolved)
 		{
 			//One arp supported at a time
 			if (net_if.ethernet.arp_pending)
 				return false;
-	
+
 			//Save off tx packet
 			net_if.ethernet.arp_pending = true;
 			net_if.ethernet.pending_tx = packet;
 
-			//Build arp
+			//Build arp (reserve room for the ethernet + ARP headers)
 			StaticBuffer<Net::buffer_size> buffer;
 			Packet arp(buffer);
 			arp.mask(eth_hdr_size);
-			arp.mask(udp_hdr_size);
-			arp.dst.addr = packet.dst.addr;
+			arp.mask(arp_hdr_size);
+			arp.dst.addr = nexthop;
 
 			//Issue arp
 			return Arp::Send(net_if, arp);
@@ -90,7 +99,10 @@ namespace Net::Ethernet
 		{
 			//Send packet
 			eth_mac_t dst_mac = {};
-			Assert(ArpCache::Lookup(packet.dst.addr, dst_mac));
+			if (is_broadcast)
+				dst_mac = Net::eth_broadcast;
+			else
+				Assert(ArpCache::Lookup(nexthop, dst_mac));
 	
 			const eth_hdr_t hdr =
 			{

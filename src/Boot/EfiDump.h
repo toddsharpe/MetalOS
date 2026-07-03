@@ -1,7 +1,6 @@
 #pragma once
 
-#include <efi.h>
-#include <efilib.h>
+#include <Efi.h>
 #include "MetalOS.Loader.h"
 
 namespace EfiDump

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <efi.h>
+#include <Efi.h>
 #include "boot/EfiPrint.h"
 
 extern EFI_BOOT_SERVICES* BS;

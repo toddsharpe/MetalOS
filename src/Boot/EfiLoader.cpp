@@ -2,6 +2,7 @@
 
 #include "Boot/EfiLoader.h"
 #include "Lib/String.h"
+#include "Assert.h"
 #include "WinPE.h"
 
 namespace EfiLoader
@@ -37,7 +38,7 @@ namespace EfiLoader
 		UINTN size = sizeof(IMAGE_DOS_HEADER);
 		IMAGE_DOS_HEADER dosHeader;
 		ReturnIfNotSuccess(pFile->Read(pFile, &size, &dosHeader));
-		ASSERT(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
+		Assert(dosHeader.e_magic == IMAGE_DOS_SIGNATURE);
 
 		//NT Header
 		size = sizeof(IMAGE_NT_HEADERS64);

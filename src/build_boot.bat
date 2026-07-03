@@ -1,6 +1,6 @@
 del "..\build\*.obj"
 
-set CompileIncludes=-I..\external\gnu-efi -I..\external\gnu-efi\x86_64 -I.\ -I..\external -I.\std
+set CompileIncludes=-I.\ -I..\external -I.\std
 
 set CompileFlags=/Zc:wchar_t- /std:c++20 /GS- /Gy /Gw /Z7 %CompileIncludes% /X
 set LinkFlags=/OPT:REF /NODEFAULTLIB

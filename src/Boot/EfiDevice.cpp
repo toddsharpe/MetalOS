@@ -1,5 +1,9 @@
 #include "Boot/EfiDevice.h"
 
+extern EFI_SYSTEM_TABLE         *ST;
+extern EFI_BOOT_SERVICES        *BS;
+extern EFI_RUNTIME_SERVICES     *RT;
+
 namespace EfiDevice
 {
 	// On Hyper-V, console/locate directly returns 1 GOP, whereas locating by handle returns 2. They all look the same

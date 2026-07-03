@@ -5,6 +5,10 @@
 #define File L"dump.txt"
 #define MaxFilePath 64
 
+extern EFI_SYSTEM_TABLE         *ST;
+extern EFI_BOOT_SERVICES        *BS;
+extern EFI_RUNTIME_SERVICES     *RT;
+
 namespace EfiDump
 {
 	EFI_STATUS DumpGop(EFI_GRAPHICS_OUTPUT_PROTOCOL* gop)
@@ -163,7 +167,7 @@ namespace EfiDump
 			UartPrintf(L"No GOP handle found via HandleProtocol\r\n");
 
 		//Locate directly
-		Status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID**)&Gop);
+		Status = BS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID**)&Gop);
 		if (!EFI_ERROR(Status) && Gop != NULL)
 		{
 			UartPrintf(L"Found GOP handle via LocateProtocol\r\n");
@@ -173,19 +177,19 @@ namespace EfiDump
 			UartPrintf(L"No GOP handle found via LocateProtocol\r\n");
 
 		//Locate through handle
-		Status = gBS->LocateHandleBuffer(ByProtocol, &gEfiGraphicsOutputProtocolGuid, NULL, &HandleCount, &HandleBuffer);
+		Status = BS->LocateHandleBuffer(ByProtocol, &gEfiGraphicsOutputProtocolGuid, NULL, &HandleCount, &HandleBuffer);
 		if (!EFI_ERROR(Status))
 		{
 			UartPrintf(L"Found %d GOP handles via LocateHandleBuffer\r\n", HandleCount);
 			for (int i = 0; i < HandleCount; i++)
 			{
-				Status = gBS->HandleProtocol(HandleBuffer[i], &gEfiGraphicsOutputProtocolGuid, (VOID**)&Gop);
+				Status = BS->HandleProtocol(HandleBuffer[i], &gEfiGraphicsOutputProtocolGuid, (VOID**)&Gop);
 				if (!EFI_ERROR(Status))
 					DumpGop(Gop);
 				else
 					UartPrintf(L"ERROR: Bad response from HandleProtocol: %d\r\n", Status);
 			}
-			gBS->FreePool(HandleBuffer);
+			BS->FreePool(HandleBuffer);
 		}
 		else
 			UartPrintf(L"No GOP handles found via LocateHandleBuffer\r\n");

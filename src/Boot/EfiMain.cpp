@@ -23,11 +23,11 @@ EFI_SYSTEM_TABLE* ST;
 EFI_RUNTIME_SERVICES* RT;
 EFI_BOOT_SERVICES* BS;
 
-//EFI protocols
-static EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
-static EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
-static EFI_GUID gEfiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
-static EFI_GUID gEfiFileInfoGuid = EFI_FILE_INFO_ID;
+//EFI protocol GUIDs (declared extern in Efi.h)
+EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
+EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
+EFI_GUID gEfiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
+EFI_GUID gEfiFileInfoGuid = EFI_FILE_INFO_ID;
 
 static_assert(x64::PageShift == EFI_PAGE_SHIFT, "PageShift mismatch");
 static_assert(x64::PageSize == EFI_PAGE_SIZE, "PageSize mismatch");

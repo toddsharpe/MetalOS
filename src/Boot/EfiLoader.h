@@ -1,6 +1,6 @@
 #pragma once
 
-#include <efi.h>
+#include <Efi.h>
 
 namespace EfiLoader
 {

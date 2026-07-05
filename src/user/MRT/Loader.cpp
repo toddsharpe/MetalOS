@@ -7,6 +7,8 @@
 #include "user/MetalOS.h"
 #include "WinPE.h"
 
+#define RetNullIfNot(x) if (!(x)) return nullptr;
+#define RetNullIfFailed(x) if ((x) != SyscallResult::Success) return nullptr;
 
 namespace Loader
 {

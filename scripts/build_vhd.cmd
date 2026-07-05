@@ -33,8 +33,12 @@ xcopy %BUILD_OUT%\mosrt.dll X:\EFI\BOOT\
 xcopy %BUILD_OUT%\mosrt.pdb X:\EFI\BOOT\
 xcopy %BUILD_OUT%\crt.dll X:\EFI\BOOT\
 xcopy %BUILD_OUT%\crt.pdb X:\EFI\BOOT\
+xcopy %BUILD_OUT%\User.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\User.pdb X:\EFI\BOOT\
 
 @rem Copy apps
+xcopy %BUILD_OUT%\wm.exe X:\EFI\BOOT\
+xcopy %BUILD_OUT%\wm.pdb X:\EFI\BOOT\
 xcopy %BUILD_OUT%\calc.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\fire.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\hello.exe X:\EFI\BOOT\

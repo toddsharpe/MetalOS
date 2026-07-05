@@ -176,8 +176,9 @@ namespace
 		m_debugger.Initialize();
 		m_debugger.AddModule(*m_process.Modules.GetModule("moskrnl.exe"));
 
-		//Initialize windowing system
-		KeWindowingInitialize();
+		//Initialize the kernel->WM input ring. Compositing lives in the usermode
+		//WM process (wm.exe), which maps the framebuffer and drains this ring.
+		KeInputInitialize();
 
 		//System displays
 		m_process.Display();
@@ -186,9 +187,6 @@ namespace
 
 		Printf("MetalOS Initialized!\n");
 		PrintStack();
-
-		//Start
-		KeWindowingEnable();
 	}
 
 	void OnTimer0(void* arg)
@@ -213,7 +211,10 @@ namespace
 #include "kernel/Kernel_process.cpp"
 #include "kernel/Kernel_system.cpp"
 #include "kernel/Kernel_diag.cpp"
-#include "kernel/Kernel_wm.cpp"
+#include "kernel/Kernel_shm.cpp"
+#include "kernel/Kernel_grant.cpp"
+#include "kernel/Kernel_endpoint.cpp"
+#include "kernel/Kernel_input.cpp"
 #include "kernel/Kernel_sockets.cpp"
 #include "kernel/Kernel_net.cpp"
 
@@ -241,10 +242,16 @@ KDevice* KeGetDevice(const char* const path)
 	return m_deviceTree.GetDevice(CString(path));
 }
 
-//TODO(tsharpe): Should efi display be in the device tree?
-Graphics::Rectangle GetScreen()
+//Physical framebuffer descriptor from the loader, for mapping into a process.
+KFramebufferInfo KeGetFramebuffer()
 {
-	return {0, 0, m_display.Width, m_display.Height};
+	return {
+		BootParams.Display.FrameBufferBase,
+		BootParams.Display.FrameBufferSize,
+		BootParams.Display.HorizontalResolution,
+		BootParams.Display.VerticalResolution,
+		BootParams.Display.PixelsPerScanLine,
+	};
 }
 
 /*

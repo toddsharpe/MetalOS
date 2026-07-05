@@ -20,8 +20,7 @@ bool UICallback(GUI& window, Message& message)
 		screen->Update();
 		screen->Draw(frame);
 
-		CBuffer buff((uint8_t*)frame.Buffer, frame.Size());
-		AssertSuccess(PaintWindow(window.GetHandle(), &buff));
+		//Draw straight into the WM-provided shared surface; the WM composites it.
 		return true;
 	}
 	break;

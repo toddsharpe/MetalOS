@@ -20,15 +20,10 @@ enum class Syscall : uint64_t
 	ExitProcess,
 	TerminateThread,
 	ExitThread,
+	IsProcessAlive,
 
-	//0x300: Windowing
-	AllocWindow = 0x300,
-	PaintWindow,
-	MoveWindow,
-	GetWindowRect,
-	GetMessage,
-	PeekMessage,
-	GetScreenRect,
+	//0x300: Devices
+	MapFramebuffer = 0x300,
 
 	//0x400: Files/pipes
 	CreateFile = 0x400,
@@ -50,10 +45,8 @@ enum class Syscall : uint64_t
 
 	//0x600: Memory
 	VirtualAlloc = 0x600,
-	//CreateRingBuffer,
-	//CreateSharedMemory,
-	//MapObject,
-	//MapSharedObject,
+	CreateSharedMemory,
+	MapSharedMemory,
 
 	//0x700: Debug
 	DebugPrint = 0x700,
@@ -72,4 +65,14 @@ enum class Syscall : uint64_t
 	GetInterfaceIp,
 	SetInterfaceIp,
 	SetGateway,
+
+	//0x900: IPC endpoints (name -> capability-token rendezvous)
+	RegisterEndpoint = 0x900,
+	LookupEndpoint,
+	PostEndpoint,   //0x902
+	PollEndpoint,   //0x903
+
+	//0xA00: Handle capabilities (pass a handle to another process)
+	ShareHandle = 0xA00,
+	ClaimHandle,
 };

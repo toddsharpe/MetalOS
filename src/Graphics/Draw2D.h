@@ -21,7 +21,7 @@ namespace Graphics
 			}
 		}
 
-		void DrawRectangle(Graphics::FrameBuffer &frame, const Color color, const Rectangle &region)
+		void DrawRectangle(const Graphics::FrameBuffer &frame, const Color color, const Rectangle &region)
 		{
 			const int32_t x0 = Max<int32_t>(0, region.X);
 			const int32_t x1 = Min<int32_t>(static_cast<int32_t>(frame.Width),  region.X + static_cast<int32_t>(region.Width));
@@ -40,7 +40,7 @@ namespace Graphics
 			}
 		}
 
-		void FillScreen(Graphics::FrameBuffer &frame, const Color color)
+		void FillScreen(const Graphics::FrameBuffer &frame, const Color color)
 		{
 			DrawRectangle(frame, color, {0, 0, frame.Width, frame.Height});
 		}

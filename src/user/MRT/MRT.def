@@ -30,15 +30,9 @@ EXPORTS
 	ExitProcess
 	TerminateThread
 	ExitThread
+	IsProcessAlive
 
-	; 0x300
-	AllocWindow
-	PaintWindow
-	MoveWindow
-	GetWindowRect
-	GetMessage
-	PeekMessage
-	GetScreenRect
+	; 0x300 windowing moved to User.dll (IPC to the WM process)
 
 	; 0x400
 	CreateFile
@@ -60,6 +54,9 @@ EXPORTS
 
 	; 0x600
 	VirtualAlloc
+	CreateSharedMemory
+	MapSharedMemory
+	MapFramebuffer
 
 	; 0x700
 	DebugPrint
@@ -79,3 +76,13 @@ EXPORTS
 	GetInterfaceIp
 	SetInterfaceIp
 	SetGateway
+
+	; 0x900: IPC endpoints
+	RegisterEndpoint
+	LookupEndpoint
+	PostEndpoint
+	PollEndpoint
+
+	; 0xA00: Handle capabilities
+	ShareHandle
+	ClaimHandle

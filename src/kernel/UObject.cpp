@@ -16,11 +16,12 @@ constexpr UObject::UObject(const UObjectType type, const handle_t handle) :
 	Type(type),
 	Thread(),
 	Process(),
-	Window(),
 	File(),
 	Pipe(),
 	Event(),
-	Socket()
+	Socket(),
+	Shm(),
+	ShmAddress()
 {
 
 }
@@ -108,15 +109,6 @@ void UObject::Display() const
 			Printf("    Name: %s\n", Process->Name.c_str());
 			break;
 
-		case UObjectType::Window:
-			Printf("  UWindow\n");
-			Printf("    Thread.Name: %s\n", Window->Thread.Name.c_str());
-			Printf("    Frame\n");
-			Printf("    - Buffer: 0x%016x\n", Window->Frame.Buffer);
-			Printf("    - Height,Width: %d,%d\n", Window->Frame.Height, Window->Frame.Width);
-			Printf("    Point: (%d,%d)\n", Window->Point.X, Window->Point.Y);
-			break;
-
 		case UObjectType::File:
 			Printf("  UFile\n");
 			Printf("    Position: %d\n", File.Position);
@@ -140,6 +132,11 @@ void UObject::Display() const
 
 		case UObjectType::Socket:
 			Printf("  USocket\n");
+			break;
+
+		case UObjectType::SharedMemory:
+			Printf("  USharedMemory\n");
+			Printf("    Address: 0x%016x\n", ShmAddress);
 			break;
 
 		default:

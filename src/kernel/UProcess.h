@@ -5,6 +5,7 @@
 #include "user/MetalOS.Types.h"
 #include "kernel/UObject.h"
 #include "Lib/List.h"
+#include "Lib/LinkedList.h"
 #include "kernel/Types.h"
 #include "kernel/Objects/KPipe.h"
 
@@ -15,6 +16,7 @@ enum class UProcessState
 	Terminated,
 	Last
 };
+
 
 class KThread;
 class Scheduler;
@@ -42,6 +44,11 @@ public:
 	const KModule* AddModule(const CString& name, void* image);
 
 	void Display() const;
+
+	//Lifecycle: set on teardown so consumers (e.g. the WM liveness check) can tell
+	//a process is gone even though its UProcess slot may still be allocated.
+	void MarkTerminated() { m_state = UProcessState::Terminated; }
+	bool IsAlive() const { return m_state != UProcessState::Terminated; }
 
 	const uint32_t Id;
 

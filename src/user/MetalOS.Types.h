@@ -16,6 +16,7 @@ DECLARE_HANDLE(HWindow);
 DECLARE_HANDLE(HProcess);
 DECLARE_HANDLE(HEvent);
 DECLARE_HANDLE(HModule);
+DECLARE_HANDLE(HSharedMem);
 
 struct ProcessInfo
 {
@@ -91,6 +92,16 @@ struct CreateProcessArgs
 struct CreateProcessResult
 {
 	HProcess Process;
+};
+
+//Framebuffer descriptor returned by MapFramebuffer. FrameBase is mapped into the
+//caller's address space; PixelsPerScanLine is the row stride in pixels (>= Width).
+struct GraphicsDevice
+{
+	void*    FrameBase;
+	uint32_t Width;
+	uint32_t Height;
+	uint32_t PixelsPerScanLine;
 };
 
 enum class FileAccess

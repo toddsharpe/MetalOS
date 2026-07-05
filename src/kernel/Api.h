@@ -12,9 +12,10 @@ class KDevice;
 class UProcess;
 class KProcess;
 class UThread;
-class UWindow;
 class Message;
 class KSocket;
+class KSharedMemory;
+enum class UObjectType;
 namespace Net
 {
 	struct endpoint_t;
@@ -100,6 +101,45 @@ void* KeVirtualMap(const paddr_t address, const size_t size);
 void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size);
 
 /*
+ * Framebuffer. The loader hands the kernel a linear framebuffer; KeGetFramebuffer
+ * exposes its physical descriptor so a process (the usermode WM) can map it.
+ */
+struct KFramebufferInfo
+{
+	paddr_t Base;
+	size_t Size;
+	uint32_t Width;
+	uint32_t Height;
+	uint32_t Pitch; //pixels per scan line (>= Width)
+};
+KFramebufferInfo KeGetFramebuffer();
+
+/*
+ * Shared memory. Regions are reached only through the handles/grants that reference
+ * them (see ShareHandle/ClaimHandle); there is no global id lookup.
+ */
+KSharedMemory* KeShmCreate(const size_t size);
+void* KeShmMap(KProcess& process, KSharedMemory& shm);
+void KeShmUnref(KSharedMemory& shm);
+
+/*
+ * Handle grants (capability passing). Generic over handle types; the grant carries the
+ * object's type + kernel pointer. Mint a single-use token, redeem it with KeGrantClaim.
+ */
+uint64_t KeGrantShare(const UObjectType type, void* const object);
+bool KeGrantClaim(const uint64_t token, UObjectType& type, void*& object);
+
+/*
+ * IPC endpoint registry: a name -> shared-memory-id rendezvous so unrelated
+ * processes can find a server's well-known shared region.
+ */
+bool KeEndpointRegister(const char* const name, const uint64_t id);
+bool KeEndpointLookup(const char* const name, uint64_t& id);
+//Connection handoff: a client posts an id, the server polls to accept it.
+bool KeEndpointPost(const char* const name, const uint64_t value);
+bool KeEndpointPoll(const char* const name, uint64_t& value);
+
+/*
  * Kernel heap.
  */
 void* KeAlloc(size_t size, AllocType type);
@@ -146,6 +186,8 @@ UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThrea
 uint32_t UThreadInit(void* const arg);
 UProcess* KeCreateProcess(const char* const commandLine);
 void KeTerminateProcess(UProcess& process, const uint32_t exitCode);
+//Whether a user process with the given id exists and has not terminated.
+bool KeIsProcessAlive(const uint32_t id);
 
 /*
  * Files.
@@ -188,14 +230,12 @@ bool KeNetSetInterface(const size_t index, const Net::ipv4_addr_t& addr, const N
 bool KeNetSetGateway(const size_t index, const Net::ipv4_addr_t& gateway);
 
 /*
-* Windows.
-*/
-void KeWindowingInitialize();
-void KeWindowingEnable();
-UWindow* CreateWindow(UThread& owner);
-void Delete(UWindow& window);
-Graphics::Rectangle GetScreen();
-void KePostMessage(Message& msg);
+ * Input. Drivers post Message records into a kernel->WM shared ring (published
+ * under the "input" endpoint) that the usermode WM (wm.exe) drains and routes.
+ * Compositing and window management live entirely in the usermode WM process.
+ */
+void KeInputInitialize();
+void KeInputPost(const Message& message);
 
 /*
  * Interrupts.

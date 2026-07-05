@@ -9,7 +9,7 @@
 #include "kernel/Objects/KPredicate.h"
 #include "kernel/Objects/KPipe.h"
 #include "kernel/Objects/UPipe.h"
-#include "kernel/UWindow.h"
+#include "kernel/Objects/KSharedMemory.h"
 #include "kernel/Net/KSocket.h"
 #include "Lib/ByteSwap.h"
 #include "Assert.h"
@@ -111,27 +111,10 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 			ExitThread((uint32_t)frame.Arg0);
 			return 0;
 
-		//0x300
-		case Syscall::AllocWindow:
-			return (uint64_t)AllocWindow((HWindow*)frame.Arg0, (Graphics::Rectangle*)frame.Arg1);
+		case Syscall::IsProcessAlive:
+			return (uint64_t)IsProcessAlive((uint32_t)frame.Arg0);
 
-		case Syscall::PaintWindow:
-			return (uint64_t)PaintWindow((HWindow)frame.Arg0, (CBuffer*)frame.Arg1);
-
-		case Syscall::MoveWindow:
-			return (uint64_t)MoveWindow((HWindow)frame.Arg0, (Graphics::Rectangle*)frame.Arg1);
-
-		case Syscall::GetWindowRect:
-			return (uint64_t)GetWindowRect((HWindow)frame.Arg0, (Graphics::Rectangle*)frame.Arg1);
-
-		case Syscall::GetMessage:
-			return (uint64_t)GetMessage((Message*)frame.Arg0);
-
-		case Syscall::PeekMessage:
-			return (uint64_t)PeekMessage((Message*)frame.Arg0);
-
-		case Syscall::GetScreenRect:
-			return (uint64_t)GetScreenRect((Graphics::Rectangle*)frame.Arg0);
+		//0x300 windowing moved to the usermode WM (User.dll <-> wm.exe)
 
 		//0x400
 		case Syscall::CreateFile:
@@ -181,6 +164,15 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 		case Syscall::VirtualAlloc:
 			return (uintptr_t)VirtualAlloc((void*)frame.Arg0, (size_t)frame.Arg1);
 
+		case Syscall::CreateSharedMemory:
+			return (uint64_t)CreateSharedMemory((size_t)frame.Arg0, (HSharedMem*)frame.Arg1, (void**)frame.Arg2);
+
+		case Syscall::MapSharedMemory:
+			return (uint64_t)MapSharedMemory((HSharedMem)frame.Arg0, (void**)frame.Arg1);
+
+		case Syscall::MapFramebuffer:
+			return (uint64_t)MapFramebuffer((GraphicsDevice*)frame.Arg0);
+
 		//0x700
 		case Syscall::DebugPrint:
 			return (uint64_t)DebugPrint((char*)frame.Arg0);
@@ -224,6 +216,26 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 
 		case Syscall::SetGateway:
 			return (uint64_t)SetGateway((uint32_t)frame.Arg0, (const in_addr*)frame.Arg1);
+
+		//0x900
+		case Syscall::RegisterEndpoint:
+			return (uint64_t)RegisterEndpoint((const char*)frame.Arg0, (uint64_t)frame.Arg1);
+
+		case Syscall::LookupEndpoint:
+			return (uint64_t)LookupEndpoint((const char*)frame.Arg0, (uint64_t*)frame.Arg1);
+
+		case Syscall::PostEndpoint:
+			return (uint64_t)PostEndpoint((const char*)frame.Arg0, (uint64_t)frame.Arg1);
+
+		case Syscall::PollEndpoint:
+			return (uint64_t)PollEndpoint((const char*)frame.Arg0, (uint64_t*)frame.Arg1);
+
+		//0xA00
+		case Syscall::ShareHandle:
+			return (uint64_t)ShareHandle((Handle)frame.Arg0, (uint64_t*)frame.Arg1);
+
+		case Syscall::ClaimHandle:
+			return (uint64_t)ClaimHandle((uint64_t)frame.Arg0, (Handle*)frame.Arg1);
 
 		default:
 			//Syscall not found
@@ -382,6 +394,11 @@ HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg)
 	return (HThread)obj->Handle;
 }
 
+bool IsProcessAlive(uint32_t id)
+{
+	return KeIsProcessAlive(id);
+}
+
 uint32_t GetThreadId(HThread thread)
 {
 	UProcess& proc = Scheduler::GetUProcess();
@@ -464,143 +481,6 @@ void ExitThread(const uint32_t exitCode)
 	UNUSED(exitCode);
 	
 	KeExitThread();
-}
-
-/*
- * 0x300/
- */
-SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame)
-{
-	UThread& thread = Scheduler::GetUThread();
-	UProcess& proc = thread.Process;
-	if (!handle || !frame)
-		return SyscallResult::InvalidArg;
-	if (!proc.Space.IsValidPointer(handle) || !proc.Space.IsValidPointer(frame))
-		return SyscallResult::InvalidPointer;
-
-	UWindow* window = CreateWindow(thread);
-	window->Frame = {nullptr, frame->Height, frame->Width};
-	window->Frame.Buffer = (Graphics::Color*)KeVirtualAlloc(window->Frame.Size());
-	window->Point = { frame->X, frame->Y };
-
-	UObject* obj = proc.CreateObject(UObjectType::Window);
-	obj->Window = window;
-	obj->Display();
-
-	*handle = (HWindow)obj->Handle;
-	return SyscallResult::Success;
-}
-
-SyscallResult PaintWindow(HWindow handle, const CBuffer* buffer)
-{
-	UProcess& proc = Scheduler::GetUProcess();
-	if (!buffer)
-		return SyscallResult::InvalidArg;
-	if (!proc.Space.IsValidPointer(buffer))
-		return SyscallResult::InvalidPointer;
-	
-	UObject* obj = proc.GetObject((handle_t)handle);
-	if (!obj)
-		return SyscallResult::InvalidHandle;
-	if (obj->Type != UObjectType::Window)
-		return SyscallResult::InvalidObject;
-
-	UWindow* window = obj->Window;
-	Assert(window->Frame.Buffer);
-
-	memcpy(window->Frame.Buffer, buffer->Data, buffer->Size);
-	return SyscallResult::Success;
-}
-
-SyscallResult MoveWindow(HWindow handle, const Graphics::Rectangle* frame)
-{
-	UProcess& proc = Scheduler::GetUProcess();
-	if (!frame)
-		return SyscallResult::InvalidArg;
-	if (!proc.Space.IsValidPointer(frame))
-		return SyscallResult::InvalidPointer;
-	
-	UObject* obj = proc.GetObject((handle_t)handle);
-	if (!obj)
-		return SyscallResult::InvalidHandle;
-	if (obj->Type != UObjectType::Window)
-		return SyscallResult::InvalidObject;
-
-	UWindow* window = obj->Window;
-
-	//TODO(tsharpe): Dealloc. For now enforce bounds are the same
-	if ((window->Frame.Height != frame->Height) || (window->Frame.Width != frame->Width))
-		return SyscallResult::Failed;
-	
-	window->Point = { frame->X, frame->Y };
-	return SyscallResult::Success;
-}
-
-SyscallResult GetWindowRect(HWindow handle, Graphics::Rectangle* frame)
-{
-	UProcess& proc = Scheduler::GetUProcess();
-	if (!frame)
-		return SyscallResult::InvalidArg;
-	if (!proc.Space.IsValidPointer(frame))
-		return SyscallResult::InvalidPointer;
-	
-	UObject* obj = proc.GetObject((handle_t)handle);
-	if (!obj)
-		return SyscallResult::InvalidHandle;
-	if (obj->Type != UObjectType::Window)
-		return SyscallResult::InvalidObject;
-
-	UWindow* window = obj->Window;
-	*frame = { window->Point.X, window->Point.Y, window->Frame.Width, window->Frame.Height };
-	return SyscallResult::Success;
-}
-
-SyscallResult GetMessage(Message* message)
-{
-	UThread& thread = Scheduler::GetUThread();
-	UProcess& proc = thread.Process;
-	if (!message)
-		return SyscallResult::InvalidArg;
-	if (!proc.Space.IsValidPointer(message))
-		return SyscallResult::InvalidPointer;
-
-	//Wait for message
-	KPredicate signal(&UThread::HasMessage, &thread);
-	KeWait(signal);
-
-	Assert(thread.HasMessage());
-	thread.Dequeue(*message);
-
-	return SyscallResult::Success;
-}
-
-SyscallResult PeekMessage(Message* message)
-{
-	UThread& thread = Scheduler::GetUThread();
-	UProcess& proc = thread.Process;
-	if (!message)
-		return SyscallResult::InvalidArg;
-	if (!proc.Space.IsValidPointer(message))
-		return SyscallResult::InvalidPointer;
-
-	if (!thread.HasMessage())
-		return SyscallResult::Failed;
-
-	Assert(thread.Dequeue(*message));
-	return SyscallResult::Success;
-}
-
-SyscallResult GetScreenRect(Graphics::Rectangle* rect)
-{
-	UProcess& proc = Scheduler::GetUProcess();
-	if (!rect)
-		return SyscallResult::InvalidArg;
-	if (!proc.Space.IsValidPointer(rect))
-		return SyscallResult::InvalidPointer;
-	
-	*rect = GetScreen();
-	Printf("X: %d, Y: %d\n", rect->X, rect->Y);
-	return SyscallResult::Success;
 }
 
 /*
@@ -852,10 +732,6 @@ SyscallResult CloseHandle(const Handle handle)
 
 	switch (obj->Type)
 	{
-		case UObjectType::Window:
-			Delete(*obj->Window);
-			break;
-
 		case UObjectType::Pipe:
 		{
 			switch (obj->Pipe->Op)
@@ -880,7 +756,8 @@ SyscallResult CloseHandle(const Handle handle)
 		case UObjectType::Thread:
 		case UObjectType::Debug:
 		case UObjectType::Socket:
-			//do nothing (Socket teardown happens in UProcess::CloseObject)
+		case UObjectType::SharedMemory:
+			//do nothing here; type-specific teardown happens in UProcess::CloseObject
 			break;
 
 		default:
@@ -975,6 +852,183 @@ void* VirtualAlloc(const void* address, const size_t size)
 		return KeVirtualAlloc(proc, size);
 
 	return KeVirtualAlloc(proc, address, size);
+}
+
+SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** address)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!handle || !proc.Space.IsValidPointer(handle))
+		return SyscallResult::InvalidPointer;
+	if (!address || !proc.Space.IsValidPointer(address))
+		return SyscallResult::InvalidPointer;
+	if (!size)
+		return SyscallResult::InvalidArg;
+
+	KSharedMemory* const shm = KeShmCreate(size);
+	if (!shm)
+		return SyscallResult::Failed;
+	shm->Refs.Increment(); //this handle's reference
+
+	void* const va = KeShmMap(proc, *shm);
+	if (!va)
+	{
+		KeShmUnref(*shm);
+		return SyscallResult::Failed;
+	}
+
+	//Wrap the mapping in a handle; closing it (or process exit) releases the region.
+	UObject* const obj = proc.CreateObject(UObjectType::SharedMemory);
+	obj->Shm = shm;
+	obj->ShmAddress = va;
+
+	*handle = (HSharedMem)obj->Handle;
+	*address = va;
+	return SyscallResult::Success;
+}
+
+//Map a shared-memory handle the caller owns (created or claimed) into its address
+//space. Idempotent: returns the existing mapping if already mapped.
+SyscallResult MapSharedMemory(const HSharedMem handle, void** address)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!address || !proc.Space.IsValidPointer(address))
+		return SyscallResult::InvalidPointer;
+
+	UObject* const obj = proc.GetObject((handle_t)handle);
+	if (!obj || obj->Type != UObjectType::SharedMemory)
+		return SyscallResult::InvalidHandle;
+
+	if (!obj->Shm)
+		return SyscallResult::InvalidObject;
+
+	if (!obj->ShmAddress)
+	{
+		void* const va = KeShmMap(proc, *obj->Shm);
+		if (!va)
+			return SyscallResult::Failed;
+		obj->ShmAddress = va;
+	}
+
+	*address = obj->ShmAddress;
+	return SyscallResult::Success;
+}
+
+//Mint a single-use capability token for a handle the caller owns, so it can be
+//handed to another process (over the endpoint registry / an IPC ring). Generic
+//over handle types; only shared memory is grantable today.
+SyscallResult ShareHandle(const Handle handle, uint64_t* token)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!token || !proc.Space.IsValidPointer(token))
+		return SyscallResult::InvalidPointer;
+
+	UObject* const obj = proc.GetObject((handle_t)handle);
+	if (!obj)
+		return SyscallResult::InvalidHandle;
+
+	switch (obj->Type)
+	{
+		case UObjectType::SharedMemory:
+			if (!obj->Shm)
+				return SyscallResult::InvalidObject;
+			*token = KeGrantShare(UObjectType::SharedMemory, obj->Shm);
+			return SyscallResult::Success;
+
+		default:
+			return SyscallResult::InvalidObject; //not shareable yet
+	}
+}
+
+//Redeem a grant token: install a fresh handle to the same object in the caller.
+//The handle is not mapped/opened here; use the type's own call (e.g. MapSharedMemory).
+SyscallResult ClaimHandle(const uint64_t token, Handle* handle)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!handle || !proc.Space.IsValidPointer(handle))
+		return SyscallResult::InvalidPointer;
+
+	UObjectType type;
+	void* object = nullptr;
+	if (!KeGrantClaim(token, type, object))
+		return SyscallResult::InvalidHandle;
+
+	switch (type)
+	{
+		case UObjectType::SharedMemory:
+		{
+			//Adopt the grant's reference; this handle owns it until closed.
+			UObject* const obj = proc.CreateObject(UObjectType::SharedMemory);
+			obj->Shm = static_cast<KSharedMemory*>(object);
+			obj->ShmAddress = nullptr;
+			*handle = (Handle)obj->Handle;
+			return SyscallResult::Success;
+		}
+
+		default:
+			return SyscallResult::NotImplemented;
+	}
+}
+
+//Map the linear framebuffer into the calling process (used by the usermode WM).
+SyscallResult MapFramebuffer(GraphicsDevice* device)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!device || !proc.Space.IsValidPointer(device))
+		return SyscallResult::InvalidPointer;
+
+	const KFramebufferInfo fb = KeGetFramebuffer();
+	void* const va = KeVirtualMap(proc, fb.Base, fb.Size);
+	if (!va)
+		return SyscallResult::Failed;
+
+	device->FrameBase = va;
+	device->Width = fb.Width;
+	device->Height = fb.Height;
+	device->PixelsPerScanLine = fb.Pitch;
+	return SyscallResult::Success;
+}
+
+/*
+ * 0x900. IPC endpoint registry (declared alongside 0x600 for locality).
+ */
+SyscallResult RegisterEndpoint(const char* name, const uint64_t id)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!name || !proc.Space.IsValidPointer(name))
+		return SyscallResult::InvalidPointer;
+
+	return KeEndpointRegister(name, id) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
+SyscallResult LookupEndpoint(const char* name, uint64_t* id)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!name || !proc.Space.IsValidPointer(name))
+		return SyscallResult::InvalidPointer;
+	if (!id || !proc.Space.IsValidPointer(id))
+		return SyscallResult::InvalidPointer;
+
+	return KeEndpointLookup(name, *id) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
+SyscallResult PostEndpoint(const char* name, const uint64_t value)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!name || !proc.Space.IsValidPointer(name))
+		return SyscallResult::InvalidPointer;
+
+	return KeEndpointPost(name, value) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
+SyscallResult PollEndpoint(const char* name, uint64_t* value)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!name || !proc.Space.IsValidPointer(name))
+		return SyscallResult::InvalidPointer;
+	if (!value || !proc.Space.IsValidPointer(value))
+		return SyscallResult::InvalidPointer;
+
+	return KeEndpointPoll(name, *value) ? SyscallResult::Success : SyscallResult::Failed;
 }
 
 /*

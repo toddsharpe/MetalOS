@@ -1,0 +1,11 @@
+EXPORTS
+	DllMain
+
+	; Windowing (the user32 analog): IPC client to the WM process
+	AllocWindow
+	MoveWindow
+	GetWindowRect
+	GetMessage
+	PeekMessage
+	GetScreenRect
+	GetWindowSurface

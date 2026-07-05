@@ -45,7 +45,6 @@ HyperVKeyboardDriver::HyperVKeyboardDriver(KDevice& device) :
 
 Result HyperVKeyboardDriver::Initialize()
 {
-	Printf("HyperVKeyboardDriver::Initialize\n");
 	m_device.Class = KDeviceClass::Keyboard;
 
 	uint32_t childRelid = m_device.child_relid;
@@ -115,7 +114,6 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 		{
 			Assert(size >= sizeof(synth_kbd_protocol_response));
 			memcpy(&m_response, header, sizeof(synth_kbd_protocol_response));
-			Printf("Keyboard Connected: %d\n", m_response.proto_status);
 			m_event.Set();
 		}
 		break;
@@ -132,7 +130,7 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 			message.Header.MessageType = MessageType::KeyEvent;
 			message.KeyEvent.Key = keyCode;
 			message.KeyEvent.Flags.Pressed = (key.info & IS_BREAK) == 0;
-			KePostMessage(message);
+			KeInputPost(message); //feed the kernel->WM input ring
 			break;
 		}
 		break;

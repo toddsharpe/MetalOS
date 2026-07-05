@@ -30,15 +30,10 @@ x64Syscall <TerminateProcess>, 208h
 x64Syscall <ExitProcess>, 209h
 x64Syscall <TerminateThread>, 20Ah
 x64Syscall <ExitThread>, 20Bh
+x64Syscall <IsProcessAlive>, 20Ch
 
-; 0x300: Windowing
-x64Syscall <AllocWindow>, 300h
-x64Syscall <PaintWindow>, 301h
-x64Syscall <MoveWindow>, 302h
-x64Syscall <GetWindowRect>, 303h
-x64Syscall <GetMessage>, 304h
-x64Syscall <PeekMessage>, 305h
-x64Syscall <GetScreenRect>, 306h
+; 0x300: Devices
+x64Syscall <MapFramebuffer>, 300h
 
 ; 0x400: Files/pipes
 x64Syscall <CreateFile>, 400h
@@ -60,10 +55,8 @@ x64Syscall <ResetEvent>, 503h
 
 ; 0x600: Memory
 x64Syscall <VirtualAlloc>, 600h
-;x64Syscall <CreateRingBuffer>, 601h
-;x64Syscall <CreateSharedMemory>, 602h
-;x64Syscall <MapObject>, 603h
-;x64Syscall <MapSharedObject>, 604h
+x64Syscall <CreateSharedMemory>, 601h
+x64Syscall <MapSharedMemory>, 602h
 
 ; 0x700: Debug
 x64Syscall <DebugPrint>, 700h
@@ -83,5 +76,15 @@ x64Syscall <GetInterfaces>, 807h
 x64Syscall <GetInterfaceIp>, 808h
 x64Syscall <SetInterfaceIp>, 809h
 x64Syscall <SetGateway>, 80Ah
+
+; 0x900: IPC endpoints
+x64Syscall <RegisterEndpoint>, 900h
+x64Syscall <LookupEndpoint>, 901h
+x64Syscall <PostEndpoint>, 902h
+x64Syscall <PollEndpoint>, 903h
+
+; 0xA00: Handle capabilities
+x64Syscall <ShareHandle>, 0A00h
+x64Syscall <ClaimHandle>, 0A01h
 
 end

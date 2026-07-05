@@ -19,7 +19,6 @@ HyperVMouseDriver::HyperVMouseDriver(KDevice& device) :
 
 Result HyperVMouseDriver::Initialize()
 {
-	Printf("HyperVMouseDriver::Initialize\n");
 	m_device.Class = KDeviceClass::Mouse;
 
 	uint32_t childRelid = m_device.child_relid;
@@ -112,8 +111,7 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 	case SYNTH_HID_PROTOCOL_RESPONSE:
 	{
 		const uint32_t innerSize = msg->size + sizeof(struct pipe_prt_msg) - sizeof(unsigned char);
-		Printf("innerSize %d struct %d\n", innerSize, sizeof(mousevsc_prt_msg));
-		Assert(innerSize == sizeof(mousevsc_prt_msg));
+		AssertEqual(innerSize, sizeof(mousevsc_prt_msg));
 		memcpy(&m_response, msg, innerSize);
 		Assert(m_response.response.approved);
 	}
@@ -123,30 +121,14 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 	case SYNTH_HID_INITIAL_DEVICE_INFO:
 	{
 		Assert(msg->size >= sizeof(struct hv_input_dev_info));
-		Printf("SYNTH_HID_INITIAL_DEVICE_INFO\n");
 
 		synthhid_device_info* info = (synthhid_device_info*)msg->data;
-		Printf("Vendor 0x%x Product: 0x%x Version 0x%x\n", info->hid_dev_info.vendor, info->hid_dev_info.product, info->hid_dev_info.version);
 
 		//HID 1.1 E.8 HID Descriptor (Mouse)
 		Assert(info->hid_descriptor.bLength == 0x9);
 		Assert(info->hid_descriptor.bDescriptorType == HID_DT_HID);
 		Assert(info->hid_descriptor.bcdHID == 0x101);
 		Assert(info->hid_descriptor.bNumDescriptors == 1); //Report descriptor
-
-		const uint32_t innerSize = msg->size + sizeof(struct pipe_prt_msg) - sizeof(unsigned char);
-		Printf("MsgSize 0x%x, Inner? 0x%x\n", msg->size, innerSize);
-		
-		//msg->size = sizeof(synthhid_device_info) + wDescriptorLength
-
-		Printf("Info 0x%x\n", sizeof(synthhid_device_info));
-
-		Printf("T: 0x%x, L: 0x%x\n", info->hid_descriptor.desc[0].bDescriptorType, info->hid_descriptor.desc[0].wDescriptorLength);
-
-		//TODO: actually parse the report
-		//char* start = (char*)&info->hid_descriptor + info->hid_descriptor.bLength;
-		//info->hid_descriptor.desc[0].wDescriptorLength
-		//kernel.PrintBytes(start, info->hid_descriptor.desc[0].wDescriptorLength);
 
 		//Ack device info
 		m_event.Set();
@@ -179,7 +161,7 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 		message.MouseEvent.Buttons.RightPressed = rightClick;
 		message.MouseEvent.XPosition = x;
 		message.MouseEvent.YPosition = y;
-		KePostMessage(message);
+		KeInputPost(message); //feed the kernel->WM input ring
 		break;
 	}
 	break;

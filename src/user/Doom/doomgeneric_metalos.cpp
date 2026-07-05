@@ -74,25 +74,11 @@ static void ProcessMessage(const struct Message &message)
 {
 	switch (message.Header.MessageType)
 	{
-		// case WM_CLOSE:
-		//	DestroyWindow(hwnd);
-		//	break;
-		// case WM_DESTROY:
-		//	PostQuitMessage(0);
-		//	ExitProcess(0);
-		//	break;
-	case MessageType::PaintEvent:
-	{
-		CBuffer buffer((uint8_t*)DG_ScreenBuffer, DG_BufferSize);
-		PaintWindow(window, &buffer);
-	}
-	break;
-
+		//PaintEvent needs no handling: Doom renders straight into DG_ScreenBuffer,
+		//which points at the window's shared surface, and the WM composites it.
 	case MessageType::KeyEvent:
 		addKeyToQueue(message.KeyEvent.Flags.Pressed, (unsigned char)message.KeyEvent.Key);
 		break;
-		// default:
-		// return DefWindowProcA(hwnd, msg, wParam, lParam);
 	}
 }
 
@@ -102,11 +88,25 @@ extern "C"
 	{
 		printf("DG_Init\n");
 
-		Rectangle bounds;
-		GetScreenRect(&bounds);
+		//Create a window at Doom's fixed internal resolution so its shared surface is
+		//exactly DG_BufferSize, then render zero-copy directly into that surface.
+		Rectangle screen = {};
+		GetScreenRect(&screen);
 
-		AllocWindow(&window, &bounds);
-		DebugPrintf("Bounds: (0x%x,0x%x) to (0x%x,0x%x)\n", bounds.X, bounds.Y, bounds.Width, bounds.Height);
+		Rectangle frame = {};
+		frame.Width = DOOMGENERIC_RESX;
+		frame.Height = DOOMGENERIC_RESY;
+		frame.X = screen.Width > frame.Width ? (screen.Width - frame.Width) / 2 : 0;
+		frame.Y = screen.Height > frame.Height ? (screen.Height - frame.Height) / 2 : 0;
+
+		AllocWindow(&window, &frame);
+		DebugPrintf("Doom window: (0x%x,0x%x) 0x%x x 0x%x\n", frame.X, frame.Y, frame.Width, frame.Height);
+
+		//Point Doom's screen buffer at the window surface (replaces the malloc done in
+		//doomgeneric_Create); the WM composites it on its next pass.
+		free(DG_ScreenBuffer);
+		DG_ScreenBuffer = (pixel_t*)GetWindowSurface(window);
+		Assert(DG_ScreenBuffer);
 
 		memset(s_KeyQueue, 0, KEYQUEUE_SIZE * sizeof(unsigned short));
 	}

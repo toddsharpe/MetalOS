@@ -112,7 +112,14 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 {
 	Printf("Process: %s exited with code 0x%x\n", process.Name.c_str(), exitCode);
 
-	//Close all objects
+	//Mark dead first: KillProcess() does not return when a process terminates
+	//itself (ExitProcess), so anything after it would be skipped. This also lets
+	//liveness queries (KeIsProcessAlive) report the process as gone.
+	process.MarkTerminated();
+
+	//Close all objects. This also releases the process's shared-memory mappings
+	//(CloseObject unmaps each SharedMemory handle), freeing regions whose last
+	//holder is now gone.
 	UObject* top = process.GetObject();
 	while (top != nullptr)
 	{
@@ -123,6 +130,17 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 		top = process.GetObject();
 	}
 
-	//Kill all KThreads in process
+	//Kill all KThreads in process (does not return for a self-terminating process)
 	m_scheduler.KillProcess(process);
+}
+
+bool KeIsProcessAlive(const uint32_t id)
+{
+	bool alive = false;
+	m_procArena.ForEach([&](UProcess* const process)
+	{
+		if (process->Id == id && process->IsAlive())
+			alive = true;
+	});
+	return alive;
 }

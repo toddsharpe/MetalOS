@@ -8,7 +8,6 @@ enum class UObjectType
 {
 	Thread,
 	Process,
-	Window,
 
 	File,
 	Pipe,
@@ -17,7 +16,9 @@ enum class UObjectType
 	Semaphore,
 	Event,
 
-	Socket
+	Socket,
+
+	SharedMemory
 };
 
 typedef uintptr_t handle_t;
@@ -34,6 +35,7 @@ class UProcess;
 class UWindow;
 class UPipe;
 class KSocket;
+class KSharedMemory;
 class UObject
 {
 public:
@@ -51,7 +53,6 @@ public:
 	//Depending on the type
 	UThread* Thread;
 	UProcess* Process;
-	UWindow* Window;
 
 	KFile File;
 	UPipe* Pipe;
@@ -59,6 +60,10 @@ public:
 	KEvent* Event;
 
 	KSocket* Socket;
+
+	//SharedMemory: the region plus this process's mapping of it (or null if unmapped).
+	KSharedMemory* Shm;
+	void* ShmAddress;
 
 private:
 	static constexpr handle_t StartingHandle = 0x10;

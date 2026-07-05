@@ -37,6 +37,15 @@ public:
 		m_used.Clear(index);
 	}
 
+	//Invoke func for each live (allocated) object.
+	template <typename Func>
+	void ForEach(Func func)
+	{
+		for (size_t i = 0; i < N; i++)
+			if (m_used.Get(i))
+				func(reinterpret_cast<T*>(&m_storage[i * sizeof(T)]));
+	}
+
 	void Display() const
 	{
 		Printf("ObjectPool: ");

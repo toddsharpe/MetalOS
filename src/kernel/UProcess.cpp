@@ -147,6 +147,16 @@ bool UProcess::CloseObject(const handle_t handle)
 			}
 			break;
 
+		case UObjectType::SharedMemory:
+			if (object->Shm)
+			{
+				//Unmap our view (if we mapped it), then drop this handle's reference.
+				if (object->ShmAddress)
+					KeVirtualFree(*this, object->ShmAddress);
+				KeShmUnref(*object->Shm);
+			}
+			break;
+
 		default:
 			break;
 	}

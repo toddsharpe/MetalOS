@@ -14,9 +14,6 @@
 //System Call interface is kept as C-compatible despite this header not being C-friendly
 //This is to allow potential C# interop to be clean
 
-#define RetNullIfNot(x) if (!(x)) return nullptr;
-#define RetNullIfFailed(x) if ((x) != SyscallResult::Success) return nullptr;
-
 #define AssertSuccess(EXP) \
 	{ \
 		const SyscallResult r = (EXP); \
@@ -42,7 +39,9 @@ enum class SyscallResult
 //TODO(tsharpe): Convert pointers to references where able
 extern "C"
 {
-	//Provided by runtime
+	/*
+	 * MetalOS Runtime.
+	 */
 	uintptr_t GetProcAddress(HModule hModule, const char* lpProcName);
 	SyscallResult GetProcessInfo(ProcessInfo* info);
 	uint32_t GetCurrentThreadId();
@@ -55,6 +54,17 @@ extern "C"
 	HModule LoadLibrary(char* lpLibFileName);
 	uint32_t* GetErrno();
 	
+	/*
+	 * MetalOS Window Manager.
+	 */
+	SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame);
+	SyscallResult MoveWindow(HWindow handle, const Graphics::Rectangle* frame);
+	SyscallResult GetWindowRect(HWindow handle, Graphics::Rectangle* frame);
+	SyscallResult GetMessage(Message* message);
+	SyscallResult PeekMessage(Message* message);
+	SyscallResult GetScreenRect(Graphics::Rectangle* rect);
+	void* GetWindowSurface(HWindow handle);
+
 	//0x100: System
 	milli_t GetTickCount();
 	SyscallResult GetSystemTime(SystemTime* time);
@@ -72,15 +82,10 @@ extern "C"
 	void ExitProcess(const uint32_t exitCode);
 	SyscallResult TerminateThread(const HThread thread, const uint32_t exitCode);
 	void ExitThread(const uint32_t exitCode);
+	bool IsProcessAlive(const uint32_t processId);
 
-	//0x300: Windowing
-	SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame);
-	SyscallResult PaintWindow(HWindow handle, const CBuffer* buffer);
-	SyscallResult MoveWindow(HWindow handle, const Graphics::Rectangle* frame);
-	SyscallResult GetWindowRect(HWindow handle, Graphics::Rectangle* frame);
-	SyscallResult GetMessage(Message* message);
-	SyscallResult PeekMessage(Message* message);
-	SyscallResult GetScreenRect(Graphics::Rectangle* rect);
+	//0x300: Devices
+	SyscallResult MapFramebuffer(GraphicsDevice* device);
 
 	//0x400: Files/pipes
 	HFile CreateFile(const char* path, const FileAccess access);
@@ -102,10 +107,8 @@ extern "C"
 
 	//0x600: Memory
 	void* VirtualAlloc(const void* address, const size_t size);
-	//HRingBuffer CreateRingBuffer(const char* name, const size_t indexSize, const size_t ringSize);
-	//HSharedMemory CreateSharedMemory(const char* name, const size_t size);
-	//void* MapObject(const void* address, Handle handle);
-	//void* MapSharedObject(const void* address, const char* name);
+	SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** address);
+	SyscallResult MapSharedMemory(const HSharedMem handle, void** address);
 	
 	//0x700: Debug
 	SyscallResult DebugPrint(const char* s);
@@ -121,10 +124,22 @@ extern "C"
 	SyscallResult SocketRecvFrom(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs);
 	SyscallResult SocketRecv(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, milli_t timeoutMs);
 	SyscallResult SocketClose(HSocket sock);
-
-	//Interface configuration. in_addr fields are network byte order.
 	SyscallResult GetInterfaces(InterfaceInfo* buffer, size_t maxCount, size_t* count);
 	SyscallResult GetInterfaceIp(uint32_t index, in_addr* addr, in_addr* subnet);
 	SyscallResult SetInterfaceIp(uint32_t index, const in_addr* addr, const in_addr* subnet);
 	SyscallResult SetGateway(uint32_t index, const in_addr* gateway);
+
+	//0x900: IPC endpoints (name -> capability-token rendezvous)
+	SyscallResult RegisterEndpoint(const char* name, uint64_t id);
+	SyscallResult LookupEndpoint(const char* name, uint64_t* id);
+	SyscallResult PostEndpoint(const char* name, uint64_t value);
+	SyscallResult PollEndpoint(const char* name, uint64_t* value);
+
+	//0xA00: Handle capabilities. ShareHandle mints a single-use token for a handle
+	//you own (currently shared memory); another process redeems it with ClaimHandle
+	//to get its own handle to the same object. The token travels over the endpoint/
+	//ring. ClaimHandle only installs the handle; open/map it with the type's own call
+	//(e.g. MapSharedMemory for shared memory).
+	SyscallResult ShareHandle(Handle handle, uint64_t* token);
+	SyscallResult ClaimHandle(uint64_t token, Handle* handle);
 }

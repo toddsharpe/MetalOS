@@ -27,7 +27,8 @@ public:
 		Graphics::Rectangle rect = {m_point.X, m_point.Y, Frame.Width, Frame.Height};
 		AssertSuccess(AllocWindow(&m_handle, &rect));
 
-		Frame.Buffer = (Graphics::Color *)VirtualAlloc(nullptr, Frame.Size());
+		// Draw directly into the WM-provided shared surface (zero-copy)
+		Frame.Buffer = (Graphics::Color *)GetWindowSurface(m_handle);
 		Assert(Frame.Buffer);
 	}
 
@@ -46,12 +47,9 @@ public:
 		switch (message.Header.MessageType)
 		{
 		case MessageType::PaintEvent:
-		{
+			//Draw straight into the WM-provided shared surface; the WM composites it.
 			Draw(Frame);
-			CBuffer buff((uint8_t *)Frame.Buffer, Frame.Size());
-			AssertSuccess(PaintWindow(m_handle, &buff));
-		}
-		break;
+			break;
 
 		case MessageType::MouseEvent:
 			m_prevMouseButtons = message.MouseEvent.Buttons;

@@ -32,7 +32,8 @@ EXPORTS
 	ExitThread
 	IsProcessAlive
 
-	; 0x300 windowing moved to User.dll (IPC to the WM process)
+	; 0x300: Devices (framebuffer export lives near memory; network interface enumeration)
+	GetInterfaces
 
 	; 0x400
 	CreateFile
@@ -63,19 +64,8 @@ EXPORTS
 	DebugPrintBytes
 	DebugPrintStack
 
-	; 0x800: Network
-	SocketCreate
-	SocketBind
-	SocketConnect
-	SocketSendTo
-	SocketSend
-	SocketRecvFrom
-	SocketRecv
-	SocketClose
-	GetInterfaces
-	GetInterfaceIp
-	SetInterfaceIp
-	SetGateway
+	; 0x800: Network device (raw ethernet frame TX; the TCP/IP stack is in usermode netstack)
+	NetSend
 
 	; 0x900: IPC endpoints
 	RegisterEndpoint

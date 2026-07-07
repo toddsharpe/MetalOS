@@ -1,5 +1,5 @@
 #include "user/MetalOS.h"
-#include "user/WmProtocol.h"
+#include "user/Protocol_wm.h"
 #include "Graphics/Types.h"
 #include "Graphics/Draw2D.h"
 #include "Lib/LinkedList.h"
@@ -11,7 +11,7 @@
 //the logic that used to live in the kernel's Kernel_wm.cpp. The kernel keeps
 //only the privileged pieces: it maps the linear framebuffer into this process
 //(MapFramebuffer) and feeds raw input events into a shared ring published under
-//the "input" endpoint. Apps connect over the "wm" endpoint (see WmProtocol.h);
+//the "input" endpoint. Apps connect over the "wm" endpoint (see Protocol_wm.h);
 //each window is backed by a shared surface the app draws into directly.
 
 using namespace Graphics;

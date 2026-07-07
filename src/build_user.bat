@@ -17,8 +17,14 @@ cl user/crt/DllMain.cpp /Fo"..\build\crt" %CompileFlags% /link %LinkFlags% /SUBS
 :: Build User.dll (windowing client -> IPC to the WM process; the "user32" analog)
 cl user/User/DllMain.cpp /Fo"..\build\user" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE /DLL %UserLibs% /DYNAMICBASE:NO /BASE:"0x0000000200000000" /DEF:"user/User/User.def" /OUT:"..\build\User.dll" /DEBUG /PDB:"..\build\User.pdb" || exit /b 1
 
+:: Build NetClient.dll (socket API -> IPC to the netstack process; the "winsock" analog)
+cl user/NetClient/DllMain.cpp /Fo"..\build\netclient" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE /DLL %UserLibs% /DYNAMICBASE:NO /BASE:"0x0000000240000000" /DEF:"user/NetClient/NetClient.def" /OUT:"..\build\NetClient.dll" /DEBUG /PDB:"..\build\NetClient.pdb" || exit /b 1
+
 :: GUI apps additionally link the windowing client
 set GuiLibs=%UserLibs% ..\build\User.lib
+
+:: Net apps additionally link the socket client
+set NetLibs=%UserLibs% ..\build\NetClient.lib
 
 ::
 :: Init process
@@ -38,19 +44,23 @@ cl user/Hello/Main.cpp /Fo"..\build\hello" %CompileFlags% /link %LinkFlags% /SUB
 :: Build Time.exe
 cl user/Time/Main.cpp /Fo"..\build\time" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\time.exe" /DEBUG /PDB:"..\build\time.pdb" || exit /b 1
 
-:: Build NetTest.exe
-cl user/NetTest/Main.cpp /Fo"..\build\nettest" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\nettest.exe" /DEBUG /PDB:"..\build\nettest.pdb" || exit /b 1
+:: Build NetTest.exe (links the socket client)
+cl user/NetTest/Main.cpp /Fo"..\build\nettest" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %NetLibs% /ENTRY:"main" /OUT:"..\build\nettest.exe" /DEBUG /PDB:"..\build\nettest.pdb" || exit /b 1
 
-:: Build dhcp.exe
-cl user/dhcp/Main.cpp /Fo"..\build\dhcp" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\dhcp.exe" /DEBUG /PDB:"..\build\dhcp.pdb" || exit /b 1
+:: Build dhcp.exe (links the socket client)
+cl user/dhcp/Main.cpp /Fo"..\build\dhcp" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %NetLibs% /ENTRY:"main" /OUT:"..\build\dhcp.exe" /DEBUG /PDB:"..\build\dhcp.pdb" || exit /b 1
 
-:: Build ping.exe
-cl user/ping/Main.cpp /Fo"..\build\ping" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\ping.exe" /DEBUG /PDB:"..\build\ping.pdb" || exit /b 1
+:: Build ping.exe (links the socket client)
+cl user/ping/Main.cpp /Fo"..\build\ping" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %NetLibs% /ENTRY:"main" /OUT:"..\build\ping.exe" /DEBUG /PDB:"..\build\ping.pdb" || exit /b 1
 
 ::
-:: Window manager (usermode compositor)
+:: Usermode system services (compositor + network stack)
 ::
 cl user/WM/Main.cpp /Fo"..\build\wm" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE %UserLibs% /ENTRY:"main" /OUT:"..\build\wm.exe" /DEBUG /PDB:"..\build\wm.pdb" || exit /b 1
+
+:: Build netstack.exe (usermode TCP/IP stack; claims the kernel RX ring + NIC MAC).
+:: /Zc:threadSafeInit- drops the _Init_thread_* CRT deps (netstack is single-threaded).
+cl user/NetStack/Main.cpp /Fo"..\build\netstack" %CompileFlags% /Zc:threadSafeInit- /link %LinkFlags% /SUBSYSTEM:NATIVE %UserLibs% /ENTRY:"main" /OUT:"..\build\netstack.exe" /DEBUG /PDB:"..\build\netstack.pdb" || exit /b 1
 
 ::
 :: GUI apps (link the windowing client, User.lib)

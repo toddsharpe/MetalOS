@@ -13,37 +13,12 @@ class UProcess;
 class KProcess;
 class UThread;
 class Message;
-class KSocket;
 class KSharedMemory;
 enum class UObjectType;
-namespace Net
-{
-	struct endpoint_t;
-	struct ipv4_addr_t;
-	struct eth_mac_t;
-	namespace Socket { enum class read_t; }
-}
 
 /*
- * Kernel API types.
+ * System.
  */
-enum class VirtualAllocType
-{
-	KStack,
-};
-
-enum class AllocType
-{
-	Boot,
-	Kernel,
-	Acpi,
-	Temp,
-	Shared,
-	Malloc,
-	WM,
-	User
-};
-
 struct KSystemTime
 {
 	uint16_t Year;
@@ -58,11 +33,6 @@ struct KSystemTime
 	uint32_t Nanoseconds;
 };
 
-struct KThread;
-
-/*
- * System.
- */
 void KePauseSystem();
 void KeResumeSystem();
 milli_t KeGetTicks();
@@ -82,6 +52,7 @@ void KePhysicalFree(const paddr_t address, const size_t count);
  * Virtual memory. All sizes are in bytes; each routine has an m_process form
  * and a form taking an explicit KProcess.
  */
+
 //Allocate backed by fresh physical pages
 void* KeVirtualAlloc(const size_t size);
 void* KeVirtualAlloc(KProcess& process, const size_t size);
@@ -99,6 +70,24 @@ void* KeVirtualMap(const paddr_t* addresses, const size_t size);
 void* KeVirtualMap(KProcess& process, const paddr_t* addresses, const size_t size);
 void* KeVirtualMap(const paddr_t address, const size_t size);
 void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size);
+
+//Validity check on an address.
+bool KeIsValid(const void* address);
+
+//Kernel page tables.
+static constexpr PageTablesOps PtOps =
+{
+	.Resolve = [](const paddr_t address) -> void*
+	{
+		return reinterpret_cast<void*>(KernelPhysicalStart + address);
+	},
+	.PhyAlloc = [](paddr_t &address) -> bool
+	{
+		address = KePhysicalAlloc();
+		return true;
+	}
+};
+using KernelPageTables = PageTabes<PtOps>;
 
 /*
  * Framebuffer. The loader hands the kernel a linear framebuffer; KeGetFramebuffer
@@ -142,6 +131,18 @@ bool KeEndpointPoll(const char* const name, uint64_t& value);
 /*
  * Kernel heap.
  */
+enum class AllocType
+{
+	Boot,
+	Kernel,
+	Acpi,
+	Temp,
+	Shared,
+	Malloc,
+	WM,
+	User
+};
+
 void* KeAlloc(size_t size, AllocType type);
 void KeFree(void* ptr, AllocType type);
 
@@ -167,10 +168,14 @@ T* KeAlloc(AllocType type, Args&&... args)
  * Modules.
  */
 const KModule* KeLoadLibrary(const char* const name);
+//Resolve a virtual address back to its loaded image (used by stack traces).
+paddr_t ResolveImageVA(void* const address);
 
 /*
  * KThreads.
  */
+struct KThread;
+
 KThread* KeCreateThread(const KThreadStart start, void* const arg, const char* const name);
 void KeExitThread();
 void KeExitThread(KThread& thread);
@@ -186,7 +191,6 @@ UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThrea
 uint32_t UThreadInit(void* const arg);
 UProcess* KeCreateProcess(const char* const commandLine);
 void KeTerminateProcess(UProcess& process, const uint32_t exitCode);
-//Whether a user process with the given id exists and has not terminated.
 bool KeIsProcessAlive(const uint32_t id);
 
 /*
@@ -214,20 +218,21 @@ void PrintBytes(const void* data, const size_t length);
 KDevice* KeGetDevice(const char* const path);
 
 /*
- * Networking. 'type'/'proto' are the userland SOCK_/IPPROTO_ values.
+ * Network device. The kernel owns hardware interface enumeration (the NICs in the
+ * device tree) and raw ethernet frame I/O; the TCP/IP stack (ARP/IPv4/ICMP/UDP/routing/
+ * sockets) and the IPv4 config live in the usermode netstack process. NIC drivers live in
+ * the device tree (KDeviceClass::Nic, NicDriver); received frames are handed to
+ * KeNetRxFrame from interrupt context. KeInitNetDevice stands up the kernel->netstack RX
+ * ring and publishes it for netstack.
  */
-KSocket* KeSocketCreate(const int type, const int proto);
-bool KeSocketBind(KSocket& socket, const Net::endpoint_t& local);
-bool KeSocketConnect(KSocket& socket, const Net::endpoint_t& peer);
-bool KeSocketSend(KSocket& socket, const Net::endpoint_t& dst, const void* const buffer, const size_t length);
-Net::Socket::read_t KeSocketRecv(KSocket& socket, Net::endpoint_t& src, void* const buffer, const size_t maxLength, size_t& bytesRead, const milli_t timeoutMs);
-void KeSocketClose(KSocket& socket);
+struct KMacAddress { uint8_t bytes[6]; };
+class NicDriver;
 
-//Interfaces are indexed by position in the registry.
+void KeInitNetDevice();
+void KeNetRxFrame(NicDriver* const nic, const void* const frame, const size_t length);
+bool KeNetSend(const uint32_t ifIdx, const void* const frame, const size_t length);
 size_t KeNetInterfaceCount();
-bool KeNetGetInterface(const size_t index, Net::ipv4_addr_t& addr, Net::ipv4_addr_t& subnet, Net::ipv4_addr_t& gateway, Net::eth_mac_t& mac);
-bool KeNetSetInterface(const size_t index, const Net::ipv4_addr_t& addr, const Net::ipv4_addr_t& subnet);
-bool KeNetSetGateway(const size_t index, const Net::ipv4_addr_t& gateway);
+NicDriver* KeNetGetInterface(const size_t index);
 
 /*
  * Input. Drivers post Message records into a kernel->WM shared ring (published
@@ -242,22 +247,7 @@ void KeInputPost(const Message& message);
  */
 void KeRegisterInterrupt(const Arch::InterruptVector interrupt, const ActionContext& context);
 
+/*
+ * ACPI.
+ */
 void* GetAcpiTable();
-paddr_t ResolveImageVA(void* const address);
-
-
-bool KeIsValid(const void* address);
-
-static constexpr PageTablesOps PtOps =
-{
-	.Resolve = [](const paddr_t address) -> void*
-	{
-		return reinterpret_cast<void*>(KernelPhysicalStart + address);
-	},
-	.PhyAlloc = [](paddr_t &address) -> bool
-	{
-		address = KePhysicalAlloc();
-		return true;
-	}
-};
-using KernelPageTables = PageTabes<PtOps>;

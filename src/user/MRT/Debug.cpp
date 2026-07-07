@@ -54,5 +54,5 @@ void Bugcheck(const char* file, const char* line, const char* format, ...)
 
 	DebugPrintStack();
 
-	ExitProcess(-1);
+	ExitProcess(-2);
 }

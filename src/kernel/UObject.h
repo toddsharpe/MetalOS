@@ -16,8 +16,6 @@ enum class UObjectType
 	Semaphore,
 	Event,
 
-	Socket,
-
 	SharedMemory
 };
 
@@ -34,7 +32,6 @@ class UThread;
 class UProcess;
 class UWindow;
 class UPipe;
-class KSocket;
 class KSharedMemory;
 class UObject
 {
@@ -58,8 +55,6 @@ public:
 	UPipe* Pipe;
 
 	KEvent* Event;
-
-	KSocket* Socket;
 
 	//SharedMemory: the region plus this process's mapping of it (or null if unmapped).
 	KSharedMemory* Shm;

@@ -18,23 +18,29 @@ int main(int argc, char** argv)
 		return 1;
 	}
 	const InterfaceInfo& nic = ifaces[0];
-	const uint8_t* a = (const uint8_t*)&nic.addr.s_addr;
-	const uint8_t* s = (const uint8_t*)&nic.subnet.s_addr;
+
+	//The IPv4 config is owned by netstack (GetInterfaceIp/GetGateway), not the kernel enumeration.
+	in_addr addr = {}, subnet = {}, gateway = {};
+	GetInterfaceIp(nic.index, &addr, &subnet);
+	GetGateway(nic.index, &gateway);
+	const uint8_t* a = (const uint8_t*)&addr.s_addr;
+	const uint8_t* s = (const uint8_t*)&subnet.s_addr;
 	printf("  if%u %02x:%02x:%02x:%02x:%02x:%02x  ip %u.%u.%u.%u / %u.%u.%u.%u\n",
 		nic.index, nic.mac[0], nic.mac[1], nic.mac[2], nic.mac[3], nic.mac[4], nic.mac[5],
 		a[0], a[1], a[2], a[3], s[0], s[1], s[2], s[3]);
 
-	if (nic.addr.s_addr == 0)
+	if (addr.s_addr == 0)
 	{
 		printf("  interface has no IP - run dhcp.exe first\n");
 		return 1;
 	}
 
-	//gateway = (ip & subnet) | .1  (last octet is the high byte of the network-order s_addr)
-	in_addr gw = {};
-	gw.s_addr = (nic.addr.s_addr & nic.subnet.s_addr) | (1u << 24);
+	//Prefer the DHCP-provided gateway; fall back to (ip & subnet) | .1.
+	in_addr gw = gateway;
+	if (gw.s_addr == 0)
+		gw.s_addr = (addr.s_addr & subnet.s_addr) | (1u << 24);
 	const uint8_t* g = (const uint8_t*)&gw.s_addr;
-	printf("  gateway (guess) %u.%u.%u.%u\n", g[0], g[1], g[2], g[3]);
+	printf("  gateway %u.%u.%u.%u\n", g[0], g[1], g[2], g[3]);
 
 	HSocket sock = SocketCreate(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock == INVALID_SOCKET)

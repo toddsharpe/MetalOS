@@ -34,6 +34,7 @@ const KModule* KeLoadLibrary(const char* const name)
 //Since this method changes page tables, make sure every return restores original
 UProcess* KeCreateProcess(const char* const cmd)
 {
+	Printf("Creating process: %s\n", cmd);
 	//TODO(tsharpe): Make this not necessary
 	KernelPageTables current = KernelPageTables::Current();
 

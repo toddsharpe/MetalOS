@@ -1,0 +1,18 @@
+EXPORTS
+	DllMain
+
+	; Socket API (IPC to the usermode netstack process)
+	SocketCreate
+	SocketBind
+	SocketConnect
+	SocketSendTo
+	SocketSend
+	SocketRecvFrom
+	SocketRecv
+	SocketClose
+
+	; Interface IPv4 config (IPC to netstack; enumeration is the GetInterfaces syscall)
+	GetInterfaceIp
+	SetInterfaceIp
+	GetGateway
+	SetGateway

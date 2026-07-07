@@ -5,7 +5,6 @@
 #include "kernel/UThread.h"
 #include "kernel/KThread.h"
 #include "kernel/Api.h"
-#include "kernel/Net/KSocket.h"
 #include "new.h"
 
 uint32_t UProcess::LastId = 0;
@@ -137,14 +136,6 @@ bool UProcess::CloseObject(const handle_t handle)
 
 		case UObjectType::Pipe:
 			//TODO(tsharpe): Free
-			break;
-
-		case UObjectType::Socket:
-			if (object->Socket)
-			{
-				KeSocketClose(*object->Socket);
-				KeFree(object->Socket, AllocType::Kernel);
-			}
 			break;
 
 		case UObjectType::SharedMemory:

@@ -32,8 +32,10 @@ x64Syscall <TerminateThread>, 20Ah
 x64Syscall <ExitThread>, 20Bh
 x64Syscall <IsProcessAlive>, 20Ch
 
-; 0x300: Devices
+; 0x300: Devices (framebuffer + network interface enumeration)
 x64Syscall <MapFramebuffer>, 300h
+x64Syscall <GetInterfaces>, 301h
+x64Syscall <NetSend>, 302h
 
 ; 0x400: Files/pipes
 x64Syscall <CreateFile>, 400h
@@ -62,20 +64,6 @@ x64Syscall <MapSharedMemory>, 602h
 x64Syscall <DebugPrint>, 700h
 x64Syscall <DebugPrintBytes>, 701h
 x64Syscall <DebugPrintStack>, 702h
-
-; 0x800: Network
-; SocketRecvFrom is exposed via a C wrapper (SocketRecvFromSys) because it has >4 args.
-x64Syscall <SocketCreate>, 800h
-x64Syscall <SocketBind>, 801h
-x64Syscall <SocketConnect>, 802h
-x64Syscall <SocketSendTo>, 803h
-x64Syscall <SocketRecvFromSys>, 804h
-x64Syscall <SocketSend>, 805h
-x64Syscall <SocketClose>, 806h
-x64Syscall <GetInterfaces>, 807h
-x64Syscall <GetInterfaceIp>, 808h
-x64Syscall <SetInterfaceIp>, 809h
-x64Syscall <SetGateway>, 80Ah
 
 ; 0x900: IPC endpoints
 x64Syscall <RegisterEndpoint>, 900h

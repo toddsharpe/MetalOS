@@ -48,18 +48,22 @@ int main(int argc, char** argv)
 	in_addr target = {};
 	if (!(argc > 1 && ParseIp(argv[1], &target)))
 	{
+		//Enumeration is a kernel syscall; the IPv4 config is owned by netstack (GetInterfaceIp).
 		InterfaceInfo ifaces[4] = {};
 		size_t ifcount = 0;
-		if (GetInterfaces(ifaces, 4, &ifcount) != SyscallResult::Success || ifcount == 0 || ifaces[0].addr.s_addr == 0)
+		in_addr addr = {}, subnet = {}, gateway = {};
+		if (GetInterfaces(ifaces, 4, &ifcount) != SyscallResult::Success || ifcount == 0 ||
+			GetInterfaceIp(ifaces[0].index, &addr, &subnet) != SyscallResult::Success || addr.s_addr == 0)
 		{
 			printf("ping: no configured interface (run dhcp.exe first)\n");
 			return 1;
 		}
 		//Prefer the DHCP-provided gateway; fall back to a network|.1 guess.
-		if (ifaces[0].gateway.s_addr != 0)
-			target = ifaces[0].gateway;
+		GetGateway(ifaces[0].index, &gateway);
+		if (gateway.s_addr != 0)
+			target = gateway;
 		else
-			target.s_addr = (ifaces[0].addr.s_addr & ifaces[0].subnet.s_addr) | (1u << 24);
+			target.s_addr = (addr.s_addr & subnet.s_addr) | (1u << 24);
 	}
 
 	const uint8_t* t = (const uint8_t*)&target.s_addr;

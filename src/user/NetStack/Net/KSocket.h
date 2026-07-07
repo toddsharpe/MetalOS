@@ -2,14 +2,13 @@
 
 #include "Net/Net.h"
 #include "Net/PacketBuffer.h"
-#include "kernel/Objects/KSpinLock.h"
 #include "Lib/Buffer.h"
 #include "Assert.h"
 
-//Kernel datagram socket. Sends reuse the existing Net::Socket send path; receives are
-//demultiplexed by Net::Socket::Receive into a per-socket queue. A blocked reader waits
-//on a KPredicate over RecvReady (the KPipe pattern). The queue is filled from the NIC
-//receive path (possibly interrupt context), so it is guarded by a KSpinLock.
+//Datagram socket. Sends reuse the Net::Socket send path; receives are demultiplexed by
+//Net::Socket::Receive into a per-socket queue that the netstack IPC layer drains to
+//service app RecvFrom requests. netstack is single-threaded (one RX/IPC loop), so no
+//lock is needed around the queue.
 class KSocket
 {
 public:
@@ -24,19 +23,17 @@ public:
 		Connected(false),
 		Closed(false),
 		Registered(false),
-		m_lock(),
 		m_queue(),
 		m_scratch()
 	{
 	}
 
-	//Push a received datagram (driver/interrupt context). Drops if oversized or full.
+	//Push a received datagram. Drops if oversized or full.
 	bool Enqueue(const Net::endpoint_t& src, const void* const data, const size_t length)
 	{
 		if (length > MaxDatagram)
 			return false;
 
-		KSpinLockGuard guard(m_lock);
 		memcpy(m_scratch, &src, sizeof(Net::endpoint_t));
 		memcpy(m_scratch + sizeof(Net::endpoint_t), data, length);
 		return m_queue.Push(m_scratch, sizeof(Net::endpoint_t) + length);
@@ -45,7 +42,6 @@ public:
 	//Pop one datagram into the caller buffer (thread context). Returns false if empty.
 	bool Dequeue(Net::endpoint_t& src, void* const buffer, const size_t maxLength, size_t& bytesRead)
 	{
-		KSpinLockGuard guard(m_lock);
 		if (m_queue.IsEmpty())
 			return false;
 
@@ -84,7 +80,6 @@ public:
 	bool Registered;        //present in the demux registry
 
 private:
-	KSpinLock m_lock;
 	Net::PacketBuffer<QueueBytes> m_queue;
 	uint8_t m_scratch[sizeof(Net::endpoint_t) + MaxDatagram];
 };

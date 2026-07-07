@@ -48,18 +48,8 @@
 #include "kernel/Kd64/mmdbg.cpp"
 #include "kernel/MetalOSkd.cpp"
 
-//Net
-#include "kernel/Net/Arp.cpp"
-#include "kernel/Net/ArpCache.cpp"
-#include "kernel/Net/Checksum.cpp"
-#include "kernel/Net/Ethernet.cpp"
-#include "kernel/Net/Icmp.cpp"
-#include "kernel/Net/IPv4.cpp"
-#include "kernel/Net/Net.cpp"
-#include "kernel/Net/Router.cpp"
-#include "kernel/Net/Socket.cpp"
-#include "kernel/Net/Udp.cpp"
-#include "kernel/Net/Util.cpp"
+//Networking: the TCP/IP stack lives in the usermode netstack process. The kernel keeps
+//only the NIC driver (HyperVNic) and a raw ethernet frame device (Kernel_net.cpp).
 
 /*
  * Bootloader parameters.
@@ -180,6 +170,10 @@ namespace
 		//WM process (wm.exe), which maps the framebuffer and drains this ring.
 		KeInputInitialize();
 
+		//Initialize the kernel net device (RX ring + NIC MAC published for netstack).
+		//The TCP/IP stack lives in the usermode netstack process.
+		KeInitNetDevice();
+
 		//System displays
 		m_process.Display();
 		m_scheduler.Display();
@@ -215,7 +209,6 @@ namespace
 #include "kernel/Kernel_grant.cpp"
 #include "kernel/Kernel_endpoint.cpp"
 #include "kernel/Kernel_input.cpp"
-#include "kernel/Kernel_sockets.cpp"
 #include "kernel/Kernel_net.cpp"
 
 void KeRegisterInterrupt(const Arch::InterruptVector interrupt, const ActionContext& context)

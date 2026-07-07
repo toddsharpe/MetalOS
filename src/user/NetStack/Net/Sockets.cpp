@@ -1,25 +1,24 @@
-#include "kernel/Api.h"
-#include "kernel/Net/KSocket.h"
-#include "kernel/Net/NetIf.h"
-#include "kernel/Net/Packet.h"
-#include "kernel/Objects/KPredicate.h"
-#include "kernel/Objects/KSpinLock.h"
+#include "Net/Net.h"
+#include "Net/KSocket.h"
+#include "Net/NetIf.h"
+#include "Net/Packet.h"
 #include "Lib/LinkedList.h"
+#include "Lib/Time.h"
 #include "Assert.h"
 
 using namespace Net;
 
 //Userland SOCK_*/IPPROTO_* values (kept in sync with src/User/MetalOS.Types.h).
-static constexpr int kSockDgram   = 2;
-static constexpr int kSockRaw     = 3;
-static constexpr int kProtoIcmp   = 1;
-static constexpr int kProtoUdp    = 17;
+static constexpr int kSockDgram = 2;
+static constexpr int kSockRaw   = 3;
+static constexpr int kProtoIcmp = 1;
+static constexpr int kProtoUdp  = 17;
 
-//Bound-socket registry. Inbound demux (FindBound) runs in NIC/interrupt context, so the
-//list is guarded by a KSpinLock (which disables interrupts while held).
+//Bound-socket registry + inbound demux. netstack is single-threaded (one RX/IPC loop),
+//so no lock is needed. Sockets are owned by the IPC layer (one per app socket handle);
+//the registry demuxes received datagrams into the matching socket's queue.
 namespace
 {
-	KSpinLock g_lock;
 	LinkedList<KSocket*> g_sockets;
 
 	bool ProtoMatches(const proto_t bound, const proto_t incoming)
@@ -41,7 +40,6 @@ namespace
 
 	KSocket* FindBound(const proto_t proto, const uint16_t port)
 	{
-		KSpinLockGuard guard(g_lock);
 		for (KSocket* socket : g_sockets)
 		{
 			if (!ProtoMatches(socket->Proto, proto))
@@ -57,7 +55,6 @@ namespace
 	{
 		if (socket.Registered)
 			return;
-		KSpinLockGuard guard(g_lock);
 		Assert(g_sockets.Add(&socket));
 		socket.Registered = true;
 	}
@@ -66,16 +63,15 @@ namespace
 	{
 		if (!socket.Registered)
 			return;
-		KSpinLockGuard guard(g_lock);
 		g_sockets.Remove(&socket);
 		socket.Registered = false;
 	}
 }
 
 /*
- * Kernel socket API.
+ * Socket API (called by the netstack IPC layer that services app requests).
  */
-KSocket* KeSocketCreate(const int type, const int proto)
+KSocket* SocketCreate(const int type, const int proto)
 {
 	proto_t p;
 	if (proto == kProtoUdp || (proto == 0 && type == kSockDgram))
@@ -85,7 +81,7 @@ KSocket* KeSocketCreate(const int type, const int proto)
 	else
 		return nullptr;
 
-	KSocket* socket = KeAlloc<KSocket>(AllocType::Kernel, p);
+	KSocket* socket = new KSocket(p);
 	if (!socket)
 		return nullptr;
 
@@ -96,7 +92,7 @@ KSocket* KeSocketCreate(const int type, const int proto)
 	return socket;
 }
 
-bool KeSocketBind(KSocket& socket, const endpoint_t& local)
+bool SocketBind(KSocket& socket, const endpoint_t& local)
 {
 	socket.Local = local;
 	if (socket.Local.port == 0)
@@ -105,14 +101,14 @@ bool KeSocketBind(KSocket& socket, const endpoint_t& local)
 	return true;
 }
 
-bool KeSocketConnect(KSocket& socket, const endpoint_t& peer)
+bool SocketConnect(KSocket& socket, const endpoint_t& peer)
 {
 	socket.Peer = peer;
 	socket.Connected = true;
 	return true;
 }
 
-bool KeSocketSend(KSocket& socket, const endpoint_t& dst, const void* const buffer, const size_t length)
+bool SocketSend(KSocket& socket, const endpoint_t& dst, const void* const buffer, const size_t length)
 {
 	if (socket.Proto == proto_t::Udp)
 	{
@@ -132,18 +128,11 @@ bool KeSocketSend(KSocket& socket, const endpoint_t& dst, const void* const buff
 	return false;
 }
 
-Net::Socket::read_t KeSocketRecv(KSocket& socket, endpoint_t& src, void* const buffer, const size_t maxLength, size_t& bytesRead, const milli_t timeoutMs)
+//Non-blocking receive: returns one queued datagram or Empty. Apps block by polling
+//their reply ring, so netstack never blocks its single loop here.
+Net::Socket::read_t SocketRecv(KSocket& socket, endpoint_t& src, void* const buffer, const size_t maxLength, size_t& bytesRead)
 {
 	bytesRead = 0;
-
-	//Block until a datagram arrives (or the socket closes), unless polling (timeout 0).
-	if (timeoutMs != 0 && !KSocket::RecvReady(&socket))
-	{
-		KPredicate wait(&KSocket::RecvReady, &socket);
-		if (KeWait(wait, timeoutMs) == KWaitResult::Timeout)
-			return Net::Socket::read_t::Empty;
-	}
-
 	if (socket.Closed)
 		return Net::Socket::read_t::Failure;
 
@@ -152,14 +141,15 @@ Net::Socket::read_t KeSocketRecv(KSocket& socket, endpoint_t& src, void* const b
 		: Net::Socket::read_t::Empty;
 }
 
-void KeSocketClose(KSocket& socket)
+void SocketClose(KSocket& socket)
 {
 	socket.MarkClosed();
 	Unregister(socket);
+	delete &socket;
 }
 
 /*
- * Inbound demux (definition declared in Net.h; the stub was removed from Socket.cpp).
+ * Inbound demux (declared in Net.h). Called from Udp::Receive / Icmp::Receive.
  */
 namespace Net::Socket
 {

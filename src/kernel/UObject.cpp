@@ -19,7 +19,6 @@ constexpr UObject::UObject(const UObjectType type, const handle_t handle) :
 	File(),
 	Pipe(),
 	Event(),
-	Socket(),
 	Shm(),
 	ShmAddress()
 {
@@ -39,9 +38,6 @@ bool UObject::CanRead() const
 		case UObjectType::Debug:
 			return false;
 
-		case UObjectType::Socket:
-			return true;
-
 		default:
 			return false;
 	}
@@ -58,9 +54,6 @@ bool UObject::CanWrite() const
 			return Pipe->Op == KPipeOp::Write;
 
 		case UObjectType::Debug:
-			return true;
-
-		case UObjectType::Socket:
 			return true;
 
 		default:
@@ -128,10 +121,6 @@ void UObject::Display() const
 		case UObjectType::Event:
 			Printf("  UEvent\n");
 			Printf("    Signalled: %d\n", Event->IsSignalled());
-			break;
-
-		case UObjectType::Socket:
-			Printf("  USocket\n");
 			break;
 
 		case UObjectType::SharedMemory:

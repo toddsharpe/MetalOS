@@ -3,9 +3,7 @@
 #include "kernel/Drivers/Driver.h"
 #include "kernel/Drivers/HyperVChannel.h"
 #include "kernel/Objects/KEvent.h"
-#include "Net/NetDriver.h"
-#include "Net/NetIf.h"
-#include "Net/PacketBuffer.h"
+#include "kernel/Api.h"
 
 namespace
 {
@@ -259,7 +257,7 @@ struct rndis_packet
 
 } // namespace
 
-class HyperVNic : public Driver, public Net::NetDriver
+class HyperVNic : public NicDriver
 {
 public:
 	HyperVNic(KDevice& device);
@@ -267,17 +265,16 @@ public:
 	Result Initialize() override;
 	Result Enumerate() override;
 
-	// NetDriver interface
-	void Receive(Net::NetIf& net_if) override;
-	bool Send(Net::NetIf& net_if, Net::Packet& packet) override;
-	const Net::eth_mac_t& GetMac() const override;
-	bool IsLinkUp() const override;
+	bool IsLinkUp() const;
 
 	static void Callback(void* context) { ((HyperVNic*)context)->OnCallback(); }
 
+	// NicDriver interface
+	Result SendFrame(const void* const frame, const size_t length) override;
+	void GetMac(uint8_t out[6]) const override;
+
 private:
 	void OnCallback();
-	Result SendFrame(const void* data, size_t length);
 	void SendNvsp(const nvsp_message& msg, bool requestCompletion = false);
 	void SendNvspCompletion(const nvsp_message& msg, uint64_t transId);
 	void SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion = false);
@@ -286,9 +283,7 @@ private:
 	HyperVChannel m_channel;
 	KEvent m_event;
 
-	Net::eth_mac_t m_macAddress;
-	Net::NetIf* m_netIf;
-	Net::PacketBuffer<8192> m_rxQueue;
+	KMacAddress m_macAddress;
 
 	uint8_t* m_sendBuf;
 	uint32_t m_sendSectionSize;

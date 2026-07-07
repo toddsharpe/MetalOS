@@ -8,12 +8,10 @@
 #include "kernel/Api.h"
 
 HyperVNic::HyperVNic(KDevice& device) :
-	Driver(device),
+	NicDriver(device),
 	m_channel(NIC_SEND_RING_BUFFER_SIZE, NIC_RECV_RING_BUFFER_SIZE, { &HyperVNic::Callback, this }),
 	m_event(false, false),
 	m_macAddress{},
-	m_netIf(nullptr),
-	m_rxQueue(),
 	m_sendBuf(nullptr),
 	m_sendSectionSize(0),
 	m_recvBuf(nullptr),
@@ -179,9 +177,9 @@ Result HyperVNic::Initialize()
 			m_macAddress.bytes[2], m_macAddress.bytes[1], m_macAddress.bytes[0]);
 	}
 
-	m_netIf = KeAlloc<Net::NetIf>(AllocType::Kernel, *this, Net::l2_t::Ethernet);
-	m_netIf->Init();
-	Net::AddNetIf(*m_netIf);
+	//The NIC is now discoverable via the device tree (KDeviceClass::Nic). The kernel
+	//net device (Kernel_net.cpp) finds it there to transmit; received frames go up
+	//via KeNetRxFrame (called from OnCallback) to the netstack RX ring.
 
 	return Result::Success;
 }
@@ -189,27 +187,6 @@ Result HyperVNic::Initialize()
 Result HyperVNic::Enumerate()
 {
 	return Result::Success;
-}
-
-void HyperVNic::Receive(Net::NetIf& net_if)
-{
-	StaticBuffer<Net::buffer_size> buf;
-	size_t bytes_read;
-	while (m_rxQueue.Pop(buf, bytes_read))
-	{
-		Net::Packet packet(Buffer(buf.Data, bytes_read), bytes_read);
-		Net::get_l2(net_if.l2).Receive(net_if, packet);
-	}
-}
-
-bool HyperVNic::Send(Net::NetIf& net_if, Net::Packet& packet)
-{
-	return SendFrame(packet.buffer(), packet.length()) == Result::Success;
-}
-
-const Net::eth_mac_t& HyperVNic::GetMac() const
-{
-	return m_macAddress;
 }
 
 bool HyperVNic::IsLinkUp() const
@@ -383,11 +360,9 @@ void HyperVNic::OnCallback()
 						uint8_t* const frame = (uint8_t*)pkt + pkt->data_offset;
 						const uint32_t frameLen = pkt->data_length;
 
-						//Send up net stack
-						Buffer backing(frame, frameLen);
-						Net::Packet packet({ frame, frameLen }, frameLen);
-						Net::Ethernet::Receive(*m_netIf, packet);
-						//m_rxQueue.Push(frame, frameLen);
+						//Hand the raw ethernet frame to the kernel net device (interrupt
+						//context); the usermode netstack drains it from the RX ring.
+						KeNetRxFrame(this, frame, frameLen);
 					}
 				}
 
@@ -432,4 +407,9 @@ Result HyperVNic::SendFrame(const void* data, size_t length)
 	// NVSP prefix and section_index=INVALID, never actually put frames on the wire.)
 	SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, buf, rndisLen, true);
 	return Result::Success;
+}
+
+void HyperVNic::GetMac(uint8_t out[6]) const
+{
+	memcpy(out, m_macAddress.bytes, sizeof(m_macAddress.bytes));
 }

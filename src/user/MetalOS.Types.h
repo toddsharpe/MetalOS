@@ -144,24 +144,11 @@ struct sockaddr_in
 	uint8_t  sin_zero[8];
 };
 
-//Trailing args for SocketRecvFrom, packed by the userland wrapper because the
-//syscall ABI only carries 4 register args (see SocketRecvFromSys).
-struct SocketRecvParams
-{
-	void*        buf;
-	size_t       maxLen;
-	size_t*      bytesRecv;
-	sockaddr_in* from;
-	milli_t      timeoutMs;
-};
+
 
 //Network interface descriptor (addr/subnet are network byte order).
 struct InterfaceInfo
 {
 	uint32_t index;
 	uint8_t  mac[6];
-	uint16_t reserved;
-	in_addr  addr;
-	in_addr  subnet;
-	in_addr  gateway;
 };

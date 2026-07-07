@@ -22,8 +22,11 @@ enum class Syscall : uint64_t
 	ExitThread,
 	IsProcessAlive,
 
-	//0x300: Devices
+	//0x300: Devices (framebuffer + network interface enumeration).
+	//IPv4 config (Get/SetInterfaceIp, SetGateway) is netstack IPC, not syscalls.
 	MapFramebuffer = 0x300,
+	GetInterfaces,
+	NetSend,
 
 	//0x400: Files/pipes
 	CreateFile = 0x400,
@@ -52,19 +55,6 @@ enum class Syscall : uint64_t
 	DebugPrint = 0x700,
 	DebugPrintBytes,
 	DebugPrintStack,
-
-	//0x800: Network
-	SocketCreate = 0x800,
-	SocketBind,
-	SocketConnect,
-	SocketSendTo,
-	SocketRecvFrom,
-	SocketSend,
-	SocketClose,
-	GetInterfaces,
-	GetInterfaceIp,
-	SetInterfaceIp,
-	SetGateway,
 
 	//0x900: IPC endpoints (name -> capability-token rendezvous)
 	RegisterEndpoint = 0x900,

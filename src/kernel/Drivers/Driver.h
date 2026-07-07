@@ -49,3 +49,15 @@ public:
 	virtual Result OpenFile(KFile& file, const char* const path, const KFileAccess access) const = 0;
 	virtual size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const = 0;
 };
+
+class NicDriver : public Driver
+{
+public:
+	NicDriver(KDevice& device) : Driver(device)
+	{
+
+	}
+
+	virtual Result SendFrame(const void* const frame, const size_t length) = 0;
+	virtual void GetMac(uint8_t out[6]) const = 0;
+};

@@ -1,5 +1,4 @@
 #include "user/MetalOS.h"
-#include "NetDevice.h"
 #include "Lib/SharedRing.h"
 #include "Lib/Buffer.h"
 #include "Assert.h"
@@ -15,14 +14,11 @@ int __cdecl _purecall(void) { Assert(false); return 0; }
 #include "Net/KSocket.h"
 #include "Net/HostDriver.h"
 #include "user/Protocol_net.h"
+#include "user/Ipc.h"
 #include "Lib/ByteSwap.h"
 
-//MetalOS-NetSvr.exe -- the MetalOS usermode TCP/IP stack.
-//
-//The kernel owns only the NIC + raw frame I/O (Kernel_net.cpp). This process claims
-//the kernel->netstack RX ring and the NIC MAC (published in the endpoint registry),
-//runs ARP/IPv4/ICMP/UDP/routing over the frames, and transmits via the NetSend syscall
-//(HostDriver). Apps reach it over IPC (Protocol_net.h) -- serviced in the main loop.
+//MetalOS-NetSvr.exe -- usermode TCP/IP stack. Claims the kernel RX ring + NIC MAC, runs
+//ARP/IPv4/ICMP/UDP/routing, transmits via NetSend; apps reach it over IPC (Protocol_net.h).
 
 //The TCP/IP stack, compiled here as a unity build (the sources #include each other as
 //"Net/X.h", which resolves relative to this file).
@@ -41,29 +37,8 @@ int __cdecl _purecall(void) { Assert(false); return 0; }
 
 namespace
 {
-	//Claim a kernel-published shared region by endpoint name (grant token -> handle -> map).
-	void* ClaimRegion(const char* const endpoint)
-	{
-		uint64_t token = 0;
-		if (LookupEndpoint(endpoint, &token) != SyscallResult::Success)
-			return nullptr;
-
-		Handle handle = nullptr;
-		if (ClaimHandle(token, &handle) != SyscallResult::Success)
-			return nullptr;
-
-		void* region = nullptr;
-		if (MapSharedMemory((HSharedMem)handle, &region) != SyscallResult::Success)
-			return nullptr;
-
-		return region;
-	}
-
-	/*
-	 * App IPC. Each connected app has a duplex channel (Protocol_net.h); we assign it
-	 * per-connection socket ids backed by netstack KSockets. sockaddr_in is network
-	 * order, the stack is host order, so convert at this boundary (ByteSwap == hton/ntoh).
-	 */
+	//App IPC: each app's duplex channel gets per-connection socket ids backed by KSockets.
+	//sockaddr_in is network order, the stack host order, so convert here (ByteSwap == hton/ntoh).
 	using read_t = Net::Socket::read_t;
 
 	Net::endpoint_t ToEndpoint(const sockaddr_in& sa)
@@ -82,9 +57,8 @@ namespace
 		memset(sa.sin_zero, 0, sizeof(sa.sin_zero));
 	}
 
-	//The stack's single interface. Set up in main() and owned by the netstack; the IPv4
-	//config (addr/subnet/gateway) is set/read via the interface-config IPC ops below.
-	//in_addr is network order; the stack's ipv4_addr_t is host order (ByteSwap converts).
+	//The stack's single interface, owned by the netstack; its IPv4 config is set/read via the
+	//interface-config IPC ops below. in_addr is network order, ipv4_addr_t host (ByteSwap).
 	Net::NetIf* g_netif = nullptr;
 
 	Net::ipv4_addr_t ToIpv4(const in_addr& addr) { return { ByteSwap<uint32_t>(addr.s_addr) }; }
@@ -110,15 +84,11 @@ namespace
 			if (g_connCount >= MaxConns)
 				break;
 
-			Handle h = nullptr;
-			if (ClaimHandle(token, &h) != SyscallResult::Success)
-				continue;
+			HSharedMem handle = nullptr;
 			void* region = nullptr;
-			if (MapSharedMemory((HSharedMem)h, &region) != SyscallResult::Success)
-			{
-				CloseHandle(h);
+			if (!IpcClaim(token, handle, region))
 				continue;
-			}
+
 			g_conns[g_connCount].Region = region;
 			g_connCount++;
 		}
@@ -268,13 +238,13 @@ namespace
 			if (!g_conns[i].Region)
 				continue;
 
-			SharedRing<NetIpc::Request> reqRing = NetIpc::RequestRing(g_conns[i].Region);
+			SharedRing<NetIpc::Request> reqRing = NetIpc::Channel::Requests(g_conns[i].Region);
 			NetIpc::Request req;
 			while (reqRing.Dequeue(req))
 			{
 				NetIpc::Reply reply = {};
 				HandleRequest(g_conns[i], req, reply);
-				NetIpc::ReplyRing(g_conns[i].Region).Enqueue(reply);
+				NetIpc::Channel::Replies(g_conns[i].Region).Enqueue(reply);
 			}
 		}
 	}
@@ -288,7 +258,7 @@ int main(int argc, char** argv)
 	Assert(ifaceCount == 1);
 
 	//Claim the kernel->netstack RX ring of raw ethernet frames.
-	void* const rxRegion = ClaimRegion(NetDevice::RxEndpoint);
+	void* const rxRegion = IpcLookupRegion(NetDevice::RxEndpoint);
 	Assert(rxRegion);
 
 	//Build the single interface over the host NIC and register it for routing.

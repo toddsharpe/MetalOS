@@ -1,14 +1,32 @@
 #pragma once
 
 #include <cstdint>
-#include "user/MetalOS.Types.h"
-#include "Lib/SharedRing.h"
+#include "user/MetalOS.h"
+#include "user/Protocol_channel.h"
 
-//Shared app<->netstack IPC protocol. Included by both MetalOS-NetSvr.exe (server) and the
-//MetalOS-NET lib (the socket API). Each app opens one duplex channel (request ring
-//app->netstack, reply ring netstack->app) in shared memory and posts its channel grant
-//token to the "net" control endpoint. Calls are synchronous: the client enqueues one
-//Request and polls the reply ring for the matching Reply.
+//MetalOS networking shared ABIs: NetDevice (kernel<->netstack raw-frame device) and NetIpc
+//(app<->netstack socket IPC), both below.
+
+//Kernel<->netstack raw-frame device ABI: raw ethernet frames come up over the RX ring
+//(published as a grant under RxEndpoint); transmit is the KeNetSend syscall.
+namespace NetDevice
+{
+	static constexpr uint32_t Mtu = 1514;       //max ethernet frame (incl. header, excl. FCS)
+	static constexpr uint32_t RxCapacity = 256; //kernel->netstack RX ring depth
+
+	//A raw ethernet frame carried over the RX ring (fixed-size record).
+	struct Frame
+	{
+		uint32_t IfIdx;
+		uint16_t Length;
+		uint8_t Data[Mtu];
+	};
+
+	static constexpr const char* RxEndpoint = "net.rx"; //grant token for the RX ring shm
+}
+
+//Shared app<->netstack socket IPC (server MetalOS-NetSvr.exe, client MetalOS-NET.dll). Each
+//app opens a duplex channel and posts its grant to "net"; calls are synchronous req/reply.
 namespace NetIpc
 {
 	static constexpr const char* ControlEndpoint = "net"; //apps Post their channel grant here
@@ -17,9 +35,8 @@ namespace NetIpc
 	static constexpr uint32_t ReplyCapacity   = 8;
 	static constexpr size_t   MaxPayload      = 1500; //max UDP/ICMP datagram carried inline
 
-	//Socket ops plus IPv4 interface config. Hardware enumeration (GetInterfaces) stays a
-	//kernel syscall; the netstack owns the interface's IPv4 config, so Get/SetInterfaceIp
-	//and SetGateway are IPC ops here.
+	//Socket ops plus IPv4 interface config (netstack owns the config; enumeration stays a
+	//kernel syscall).
 	enum class Op : uint32_t
 	{
 		Create, Bind, Connect, SendTo, Send, RecvFrom, Recv, Close,
@@ -55,42 +72,7 @@ namespace NetIpc
 		uint8_t  Data[MaxPayload]; //RecvFrom payload
 	};
 
-	//A duplex channel is one shared region: [ChannelHeader][request ring][reply ring].
-	struct ChannelHeader
-	{
-		uint32_t ProcessId;
-		uint32_t Reserved;
-	};
-
-	static constexpr size_t RequestRingOffset = sizeof(ChannelHeader);
-
-	static constexpr size_t ReplyRingOffset()
-	{
-		return RequestRingOffset + SharedRing<Request>::RegionSize(RequestCapacity);
-	}
-
-	static constexpr size_t ChannelSize()
-	{
-		return ReplyRingOffset() + SharedRing<Reply>::RegionSize(ReplyCapacity);
-	}
-
-	static inline SharedRing<Request> RequestRing(void* const region)
-	{
-		return SharedRing<Request>(reinterpret_cast<uint8_t*>(region) + RequestRingOffset);
-	}
-
-	static inline SharedRing<Reply> ReplyRing(void* const region)
-	{
-		return SharedRing<Reply>(reinterpret_cast<uint8_t*>(region) + ReplyRingOffset());
-	}
-
-	//Called once by the creator (the app) after mapping the region.
-	static inline void InitChannel(void* const region, const uint32_t processId)
-	{
-		ChannelHeader* const header = reinterpret_cast<ChannelHeader*>(region);
-		header->ProcessId = processId;
-		header->Reserved = 0;
-		SharedRing<Request>::Init(reinterpret_cast<uint8_t*>(region) + RequestRingOffset, RequestCapacity);
-		SharedRing<Reply>::Init(reinterpret_cast<uint8_t*>(region) + ReplyRingOffset(), ReplyCapacity);
-	}
+	//Duplex channel: request ring (app->netstack) + reply ring (netstack->app), one matching
+	//Reply per Request. Channel::Requests()/Replies()/Size()/Init()/Header, see Protocol_channel.h.
+	using Channel = DuplexChannel<Request, Reply, RequestCapacity, ReplyCapacity>;
 }

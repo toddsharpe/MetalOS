@@ -99,6 +99,11 @@ void ArchSetUserCpuContext(void* context)
 	_writegsbase_u64((uintptr_t)context);
 }
 
+void ArchSetUserGsBase(void* teb)
+{
+	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_KERNELGS_BASE), (uintptr_t)teb);
+}
+
 void ArchWait()
 {
 	__halt();

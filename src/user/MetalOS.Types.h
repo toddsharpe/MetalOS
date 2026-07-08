@@ -64,7 +64,15 @@ struct ThreadEnvironmentBlock
 	uint32_t Error;
 };
 
-typedef size_t (*DllMainCall)(HModule hinstDLL);
+enum class DllReason
+{
+	ProcessAttach,
+	ProcessDetach,
+	ThreadAttach,
+	ThreadDetach
+};
+
+typedef bool (*DllMainCall)(HModule hinstDLL, DllReason reason);
 
 enum class DayOfWeek
 {

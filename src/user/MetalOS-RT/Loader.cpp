@@ -6,6 +6,7 @@
 #include "user/MetalOS-RT/Runtime.h"
 #include "user/MetalOS.h"
 #include "WinPE.h"
+#include "Assert.h"
 
 #define RetNullIfNot(x) if (!(x)) return nullptr;
 #define RetNullIfFailed(x) if ((x) != SyscallResult::Success) return nullptr;
@@ -176,9 +177,29 @@ HModule LoadLibrary(char* lpLibFileName)
 	//Execute entry point
 	//TODO: thread
 	DllMainCall main = (DllMainCall)GetProcAddress((HModule)moduleBase, Loader::DllMainName);
-	main((HModule)moduleBase);
+	const bool result = main((HModule)moduleBase, DllReason::ProcessAttach);
+	if (!result)
+	{
+		FreeLibrary((HModule)moduleBase);
+		return nullptr;
+	}
 
 	return (HModule)moduleBase;
+}
+
+bool FreeLibrary(HModule hModule)
+{
+	CDebugPrintf(Runtime::IsDebug(), "FreeLibrary: 0x%016x\n", hModule);
+
+	//Execute entry point - do not check return value
+	DllMainCall main = (DllMainCall)GetProcAddress(hModule, Loader::DllMainName);
+	main(hModule, DllReason::ProcessDetach);
+
+	//Free region
+	const bool result = VirtualFree(hModule);
+	Assert(result);
+
+	return true;
 }
 
 uintptr_t GetProcAddress(HModule hModule, const char* lpProcName)

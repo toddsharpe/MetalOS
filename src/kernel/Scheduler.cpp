@@ -147,6 +147,11 @@ void Scheduler::Schedule()
 			//Set current thread
 			m_cpu.Thread = &next;
 
+			//Point the user GS base at the incoming thread's TEB; otherwise 'next' resumes
+			//with the outgoing thread's TEB as GS and faults reading it in GetPEB.
+			if (next.UserThread)
+				ArchSetUserGsBase(next.UserThread->TebAddress());
+
 			//Set interrupt stack
 			//This is needed since syscall and interrupt paths have different stack lengths
 			ArchSetInterruptStack((void*)next.m_stackPointer);

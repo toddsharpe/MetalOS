@@ -1,18 +1,13 @@
 #include "user/MetalOS.h"
 #include "user/Protocol_wm.h"
+#include "user/Ipc.h"
 #include "Graphics/Types.h"
 #include "Graphics/Draw2D.h"
 #include "Lib/LinkedList.h"
 #include <cstring>
 
-//MetalOS usermode window manager.
-//
-//Owns compositing, window management, focus/drag/z-order and input routing --
-//the logic that used to live in the kernel's Kernel_wm.cpp. The kernel keeps
-//only the privileged pieces: it maps the linear framebuffer into this process
-//(MapFramebuffer) and feeds raw input events into a shared ring published under
-//the "input" endpoint. Apps connect over the "wm" endpoint (see Protocol_wm.h);
-//each window is backed by a shared surface the app draws into directly.
+//MetalOS usermode window manager: compositing, window/focus/drag/z-order, input routing. The
+//kernel only maps the framebuffer + feeds the input ring ("input"); apps connect over "wm".
 
 using namespace Graphics;
 
@@ -82,7 +77,7 @@ namespace
 	//Send a message to a connection's WM->app ring
 	void Post(Connection* const conn, const Message& message)
 	{
-		Wm::MessageRing(conn->Region).Enqueue(message);
+		Wm::Channel::Replies(conn->Region).Enqueue(message);
 	}
 
 	void AcceptConnections()
@@ -91,16 +86,10 @@ namespace
 		while (PollEndpoint(Wm::ControlEndpoint, &token) == SyscallResult::Success)
 		{
 			//Redeem the app's grant to get our own handle, then map the channel.
-			Handle h = nullptr;
-			if (ClaimHandle(token, &h) != SyscallResult::Success)
-				continue;
-			const HSharedMem hChannel = (HSharedMem)h;
+			HSharedMem hChannel = nullptr;
 			void* region = nullptr;
-			if (MapSharedMemory(hChannel, &region) != SyscallResult::Success)
-			{
-				CloseHandle(h);
+			if (!IpcClaim(token, hChannel, region))
 				continue;
-			}
 
 			//Reuse a freed connection slot if one exists, else grow.
 			size_t slot = g_connCount;
@@ -116,7 +105,7 @@ namespace
 			{
 				if (g_connCount >= MaxConns)
 				{
-					CloseHandle(h);
+					CloseHandle((Handle)hChannel);
 					break;
 				}
 				g_connCount++;
@@ -143,16 +132,10 @@ namespace
 		case Wm::Op::AllocWindow:
 		{
 			//Redeem the app's grant to get our own handle, then map the surface.
-			Handle h = nullptr;
-			if (ClaimHandle(request.SurfaceGrant, &h) != SyscallResult::Success)
-				return;
-			const HSharedMem hSurface = (HSharedMem)h;
+			HSharedMem hSurface = nullptr;
 			void* surface = nullptr;
-			if (MapSharedMemory(hSurface, &surface) != SyscallResult::Success)
-			{
-				CloseHandle(h);
+			if (!IpcClaim(request.SurfaceGrant, hSurface, surface))
 				return;
-			}
 
 			//Reuse a freed window slot if available, else grow.
 			size_t slot = g_windowCount;
@@ -168,7 +151,7 @@ namespace
 			{
 				if (g_windowCount >= MaxWindows)
 				{
-					CloseHandle(h);
+					CloseHandle((Handle)hSurface);
 					return;
 				}
 				g_windowCount++;
@@ -206,7 +189,7 @@ namespace
 		{
 			if (g_conns[i].Region == nullptr)
 				continue;
-			SharedRing<Wm::Request> ring = Wm::RequestRing(g_conns[i].Region);
+			SharedRing<Wm::Request> ring = Wm::Channel::Requests(g_conns[i].Region);
 			Wm::Request request;
 			while (ring.Dequeue(request))
 				HandleRequest(&g_conns[i], request);
@@ -287,7 +270,7 @@ namespace
 			if (conn->Region == nullptr)
 				continue;
 
-			const uint32_t pid = reinterpret_cast<Wm::ChannelHeader*>(conn->Region)->ProcessId;
+			const uint32_t pid = reinterpret_cast<Wm::Channel::Header*>(conn->Region)->ProcessId;
 			if (pid == 0 || IsProcessAlive(pid))
 				continue;
 
@@ -349,13 +332,7 @@ int main(int argc, char** argv)
 	RegisterEndpoint(Wm::ControlEndpoint, 0);
 
 	//Claim the kernel->WM input ring (published as a grant token under "input").
-	uint64_t inputToken = 0;
-	if (LookupEndpoint(Wm::InputEndpoint, &inputToken) == SyscallResult::Success)
-	{
-		Handle hInput = nullptr;
-		if (ClaimHandle(inputToken, &hInput) == SyscallResult::Success)
-			MapSharedMemory((HSharedMem)hInput, &g_inputRegion);
-	}
+	g_inputRegion = IpcLookupRegion(Wm::InputEndpoint);
 
 	const uint32_t targetFps = 30;
 	while (true)

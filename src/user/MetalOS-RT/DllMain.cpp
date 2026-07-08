@@ -9,7 +9,7 @@
 #include "user/MetalOS-RT/Runtime.cpp"
 #include "user/MetalOS-RT/Errno.cpp"
 
-size_t DllMain(HModule handle)
+bool DllMain(HModule handle, DllReason reason)
 {
 	//Do nothing
 	return true;

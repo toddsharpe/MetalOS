@@ -77,6 +77,9 @@ public:
 		Process.Display();
 	}
 
+	//Address of this thread's TEB (user VA); the scheduler loads it as the user GS base.
+	void* TebAddress() const { return &m_teb; }
+
 	ListEntry Link;
 
 	void* Stack; //Saved from asm on syscalls

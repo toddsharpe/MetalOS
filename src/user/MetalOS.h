@@ -52,6 +52,7 @@ extern "C"
 	void CDebugPrintf(const bool enabled, const char* format, ...);
 	void Bugcheck(const char* file, const char* line, const char* format, ...);
 	HModule LoadLibrary(char* lpLibFileName);
+	bool FreeLibrary(HModule hModule);
 	uint32_t* GetErrno();
 	
 	/*
@@ -126,6 +127,7 @@ extern "C"
 
 	//0x600: Memory
 	void* VirtualAlloc(const void* address, const size_t size);
+	bool VirtualFree(const void* address);
 	SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** address);
 	SyscallResult MapSharedMemory(const HSharedMem handle, void** address);
 	

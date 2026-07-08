@@ -3,11 +3,10 @@
 #include <cstdint>
 #include "Graphics/Types.h"
 #include "user/MetalOS.UI.h"
-#include "Lib/SharedRing.h"
+#include "user/Protocol_channel.h"
 
-//Shared app<->WM IPC protocol. Included by both the usermode WM (server) and the
-//MetalOS-WM.dll windowing client. Channels live entirely in shared memory; the kernel
-//only moves ids across via the endpoint registry (see MetalOS.Syscalls.h 0x900).
+//Shared app<->WM IPC protocol (server = usermode WM, client = MetalOS-WM.dll). Channels live
+//in shared memory; the kernel only moves ids via the endpoint registry.
 namespace Wm
 {
 	//Well-known endpoint names.
@@ -36,45 +35,7 @@ namespace Wm
 		uint32_t Height;
 	};
 
-	//A duplex channel is one shared region laid out as:
-	//   [ChannelHeader][ Request ring (app->WM) ][ Message ring (WM->app) ]
-	//The app creates and Init()s it, then Posts its id to ControlEndpoint.
-	struct ChannelHeader
-	{
-		uint32_t ProcessId;
-		uint32_t Reserved;
-	};
-
-	static constexpr size_t RequestRingOffset = sizeof(ChannelHeader);
-
-	static constexpr size_t MessageRingOffset()
-	{
-		return RequestRingOffset + SharedRing<Request>::RegionSize(RequestCapacity);
-	}
-
-	static constexpr size_t ChannelSize()
-	{
-		return MessageRingOffset() + SharedRing<Message>::RegionSize(MessageCapacity);
-	}
-
-	//Ring views over a mapped channel region
-	static inline SharedRing<Request> RequestRing(void* const region)
-	{
-		return SharedRing<Request>(reinterpret_cast<uint8_t*>(region) + RequestRingOffset);
-	}
-
-	static inline SharedRing<Message> MessageRing(void* const region)
-	{
-		return SharedRing<Message>(reinterpret_cast<uint8_t*>(region) + MessageRingOffset());
-	}
-
-	//Called once by the creator (the app) after mapping the region.
-	static inline void InitChannel(void* const region, const uint32_t processId)
-	{
-		ChannelHeader* const header = reinterpret_cast<ChannelHeader*>(region);
-		header->ProcessId = processId;
-		header->Reserved = 0;
-		SharedRing<Request>::Init(reinterpret_cast<uint8_t*>(region) + RequestRingOffset, RequestCapacity);
-		SharedRing<Message>::Init(reinterpret_cast<uint8_t*>(region) + MessageRingOffset(), MessageCapacity);
-	}
+	//Duplex channel: request ring (app->WM) + reply ring carrying the async input Message
+	//stream (WM->app). Channel::Requests()/Replies()/Size()/Init()/Header, see Protocol_channel.h.
+	using Channel = DuplexChannel<Request, Message, RequestCapacity, MessageCapacity>;
 }

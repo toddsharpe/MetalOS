@@ -6,7 +6,7 @@
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/Objects/KSpinLock.h"
 #include "Lib/SharedRing.h"
-#include "NetDevice.h"
+#include "user/Protocol_net.h"
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).

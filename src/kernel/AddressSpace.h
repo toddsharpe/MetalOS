@@ -21,6 +21,7 @@ public:
 	bool Reserve(const uintptr_t address, const size_t count);
 	bool Free(const uintptr_t address, const size_t count);
 	size_t GetCount(const uintptr_t address) const;
+	size_t ReservedBytes() const;
 
 	void Display() const;
 

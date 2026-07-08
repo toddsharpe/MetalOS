@@ -99,6 +99,7 @@ extern "C"
 	SyscallResult TerminateThread(const HThread thread, const uint32_t exitCode);
 	void ExitThread(const uint32_t exitCode);
 	bool IsProcessAlive(const uint32_t processId);
+	SyscallResult GetProcesses(ProcessListEntry* buffer, const size_t maxCount, size_t* count);
 
 	//0x300: Devices
 	SyscallResult MapFramebuffer(GraphicsDevice* device);

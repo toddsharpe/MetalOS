@@ -145,3 +145,23 @@ bool KeIsProcessAlive(const uint32_t id)
 	});
 	return alive;
 }
+
+size_t KeGetProcessList(ProcessListEntry* const buffer, const size_t maxCount)
+{
+	size_t n = 0;
+	m_procArena.ForEach([&](UProcess* const process)
+	{
+		if (n >= maxCount)
+			return;
+
+		ProcessListEntry& entry = buffer[n];
+		entry.Id = process->Id;
+		entry.VirtualSize = process->Space.ReservedBytes();
+
+		strncpy(entry.Name, process->Name.c_str(), MaxProcessName - 1);
+		entry.Name[MaxProcessName - 1] = '\0';
+
+		n++;
+	});
+	return n;
+}

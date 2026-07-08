@@ -8,7 +8,7 @@
 #include "user/crt/stdlib.cpp"
 #include "user/crt/string.cpp"
 
-const size_t heapSize = 0x2000000; //32MB
+const size_t heapSize = 0x400000; //4MB
 size_t DllMain(HModule handle)
 {
 	//Initialize heap

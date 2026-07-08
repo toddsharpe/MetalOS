@@ -21,6 +21,7 @@ enum class Syscall : uint64_t
 	TerminateThread,
 	ExitThread,
 	IsProcessAlive,
+	GetProcesses,
 
 	//0x300: Devices (framebuffer + network interface enumeration).
 	//IPv4 config (Get/SetInterfaceIp, SetGateway) is netstack IPC, not syscalls.

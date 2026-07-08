@@ -31,6 +31,7 @@ x64Syscall <ExitProcess>, 209h
 x64Syscall <TerminateThread>, 20Ah
 x64Syscall <ExitThread>, 20Bh
 x64Syscall <IsProcessAlive>, 20Ch
+x64Syscall <GetProcesses>, 20Dh
 
 ; 0x300: Devices (framebuffer + network interface enumeration)
 x64Syscall <MapFramebuffer>, 300h

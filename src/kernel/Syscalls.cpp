@@ -111,6 +111,9 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 		case Syscall::IsProcessAlive:
 			return (uint64_t)IsProcessAlive((uint32_t)frame.Arg0);
 
+		case Syscall::GetProcesses:
+			return (uint64_t)GetProcesses((ProcessListEntry*)frame.Arg0, (size_t)frame.Arg1, (size_t*)frame.Arg2);
+
 		//0x300 windowing moved to the usermode WM (User.dll <-> wm.exe)
 
 		//0x400
@@ -367,6 +370,16 @@ HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg)
 bool IsProcessAlive(uint32_t id)
 {
 	return KeIsProcessAlive(id);
+}
+
+SyscallResult GetProcesses(ProcessListEntry* buffer, const size_t maxCount, size_t* count)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!proc.Space.IsValidPointer(buffer) || !proc.Space.IsValidPointer(count))
+		return SyscallResult::InvalidPointer;
+
+	*count = KeGetProcessList(buffer, maxCount);
+	return SyscallResult::Success;
 }
 
 uint32_t GetThreadId(HThread thread)

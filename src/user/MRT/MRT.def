@@ -31,6 +31,7 @@ EXPORTS
 	TerminateThread
 	ExitThread
 	IsProcessAlive
+	GetProcesses
 
 	; 0x300: Devices (framebuffer export lives near memory; network interface enumeration)
 	GetInterfaces

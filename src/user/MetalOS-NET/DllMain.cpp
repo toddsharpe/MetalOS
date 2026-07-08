@@ -2,7 +2,7 @@
 #include "user/Protocol_net.h"
 #include <cstring>
 
-//NetClient.dll -- the socket API, backed by IPC to the usermode netstack process.
+//MetalOS-NET.dll -- the socket API, backed by IPC to the usermode netstack process.
 //Each process opens one duplex channel to netstack (Protocol_net.h) and posts its grant
 //to the "net" control endpoint. Calls are synchronous request/reply; RecvFrom polls.
 
@@ -200,7 +200,7 @@ extern "C" SyscallResult SocketClose(HSocket sock)
 	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
 }
 
-//Interface IPv4 config. Enumeration (GetInterfaces) is a kernel syscall (mosrt); the IPv4
+//Interface IPv4 config. Enumeration (GetInterfaces) is a kernel syscall (MetalOS-RT); the IPv4
 //config is owned by netstack, so these are IPC. Single NIC: index is passed through.
 extern "C" SyscallResult GetInterfaceIp(uint32_t index, in_addr* addr, in_addr* subnet)
 {

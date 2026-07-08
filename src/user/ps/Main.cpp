@@ -1,7 +1,6 @@
 #include "user/MetalOS.h"
 #include <stdio.h>
 
-//ps -- list running processes, one per line: name, id, virtual memory size.
 int main(int argc, char** argv)
 {
 	ProcessListEntry procs[64] = {};

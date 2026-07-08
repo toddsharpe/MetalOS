@@ -167,7 +167,7 @@ namespace
 		m_debugger.AddModule(*m_process.Modules.GetModule("moskrnl.exe"));
 
 		//Initialize the kernel->WM input ring. Compositing lives in the usermode
-		//WM process (wm.exe), which maps the framebuffer and drains this ring.
+		//WM process (MetalOS-WMSvr.exe), which maps the framebuffer and drains this ring.
 		KeInputInitialize();
 
 		//Initialize the kernel net device (RX ring + NIC MAC published for netstack).

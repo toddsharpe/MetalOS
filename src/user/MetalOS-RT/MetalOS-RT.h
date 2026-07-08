@@ -10,6 +10,6 @@
 #include "core_crt/ctype.h"
 
 #include "user/MetalOS.h"
-#include "user/MRT/Debug.h"
-#include "user/MRT/Runtime.h"
-#include "user/MRT/Loader.h"
+#include "user/MetalOS-RT/Debug.h"
+#include "user/MetalOS-RT/Runtime.h"
+#include "user/MetalOS-RT/Loader.h"

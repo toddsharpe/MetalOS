@@ -11,7 +11,7 @@ extern KProcess m_process;
 extern ObjectPool<UProcess, MaxUProcess> m_procArena;
 extern Scheduler m_scheduler;
 
-static constexpr CString RuntimeDLL = "mosrt.dll";
+static constexpr CString RuntimeDLL = "MetalOS-RT.dll";
 
 const KModule* KeLoadLibrary(const char* const name)
 {

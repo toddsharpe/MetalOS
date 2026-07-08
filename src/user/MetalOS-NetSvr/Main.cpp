@@ -17,7 +17,7 @@ int __cdecl _purecall(void) { Assert(false); return 0; }
 #include "user/Protocol_net.h"
 #include "Lib/ByteSwap.h"
 
-//netstack.exe -- the MetalOS usermode TCP/IP stack.
+//MetalOS-NetSvr.exe -- the MetalOS usermode TCP/IP stack.
 //
 //The kernel owns only the NIC + raw frame I/O (Kernel_net.cpp). This process claims
 //the kernel->netstack RX ring and the NIC MAC (published in the endpoint registry),

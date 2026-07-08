@@ -29,20 +29,22 @@ xcopy %BUILD_OUT%\kdcom.dll X:\EFI\BOOT\
 xcopy %BUILD_OUT%\kdcom.pdb X:\EFI\BOOT\
 
 @rem Copy runtime libraries
-xcopy %BUILD_OUT%\mosrt.dll X:\EFI\BOOT\
-xcopy %BUILD_OUT%\mosrt.pdb X:\EFI\BOOT\
-xcopy %BUILD_OUT%\crt.dll X:\EFI\BOOT\
-xcopy %BUILD_OUT%\crt.pdb X:\EFI\BOOT\
-xcopy %BUILD_OUT%\User.dll X:\EFI\BOOT\
-xcopy %BUILD_OUT%\User.pdb X:\EFI\BOOT\
-xcopy %BUILD_OUT%\NetClient.dll X:\EFI\BOOT\
-xcopy %BUILD_OUT%\NetClient.pdb X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-RT.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-RT.pdb X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-CRT.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-CRT.pdb X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-WM.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-WM.pdb X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-NET.dll X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-NET.pdb X:\EFI\BOOT\
+
+@rem Copy metalos system apps
+xcopy %BUILD_OUT%\MetalOS-WMSvr.exe X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-WMSvr.pdb X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-NetSvr.exe X:\EFI\BOOT\
+xcopy %BUILD_OUT%\MetalOS-NetSvr.pdb X:\EFI\BOOT\
 
 @rem Copy apps
-xcopy %BUILD_OUT%\wm.exe X:\EFI\BOOT\
-xcopy %BUILD_OUT%\wm.pdb X:\EFI\BOOT\
-xcopy %BUILD_OUT%\netstack.exe X:\EFI\BOOT\
-xcopy %BUILD_OUT%\netstack.pdb X:\EFI\BOOT\
 xcopy %BUILD_OUT%\calc.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\fire.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\hello.exe X:\EFI\BOOT\

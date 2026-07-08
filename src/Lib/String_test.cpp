@@ -3,7 +3,7 @@
 void String_test()
 {
 	//Construct from char array
-	static constexpr CString RuntimeDLL = "mosrt.dll";
+	static constexpr CString RuntimeDLL = "MetalOS-RT.dll";
 	
 	//Assign from char array
 	static constexpr char s[] = "abc";

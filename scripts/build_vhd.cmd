@@ -50,6 +50,7 @@ xcopy %BUILD_OUT%\init.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\init.pdb X:\EFI\BOOT\
 xcopy %BUILD_OUT%\term.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\time.exe X:\EFI\BOOT\
+xcopy %BUILD_OUT%\ps.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\nettest.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\dhcp.exe X:\EFI\BOOT\
 xcopy %BUILD_OUT%\ping.exe X:\EFI\BOOT\

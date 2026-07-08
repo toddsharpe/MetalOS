@@ -69,6 +69,14 @@ size_t AddressSpace::GetCount(const uintptr_t address) const
 	return 0;
 }
 
+size_t AddressSpace::ReservedBytes() const
+{
+	size_t bytes = 0;
+	for (const Reservation& res : m_reservations)
+		bytes += res.PageCount << Arch::PageShift;
+	return bytes;
+}
+
 bool AddressSpace::Free(const uintptr_t address, const size_t count)
 {
 	CPrintf(Debug, "Free: 0x%016x Count: 0x%x\n", address, count);

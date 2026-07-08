@@ -187,11 +187,14 @@ void KeYield();
 /*
  * User Threads/Process.
  */
+struct ProcessListEntry; //user/MetalOS.Types.h
+
 UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThreadStart entry = nullptr, void* const arg = nullptr);
 uint32_t UThreadInit(void* const arg);
 UProcess* KeCreateProcess(const char* const commandLine);
 void KeTerminateProcess(UProcess& process, const uint32_t exitCode);
 bool KeIsProcessAlive(const uint32_t id);
+size_t KeGetProcessList(ProcessListEntry* const buffer, const size_t maxCount);
 
 /*
  * Files.

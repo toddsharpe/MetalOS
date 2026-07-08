@@ -23,6 +23,15 @@ struct ProcessInfo
 	uint32_t Id;
 };
 
+constexpr size_t MaxProcessName = 32;
+
+struct ProcessListEntry
+{
+	uint32_t Id;
+	uint64_t VirtualSize;
+	char Name[MaxProcessName];
+};
+
 constexpr size_t MaxModuleName = 16;
 struct Module
 {

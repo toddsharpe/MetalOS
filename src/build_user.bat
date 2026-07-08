@@ -44,6 +44,9 @@ cl user/Hello/Main.cpp /Fo"..\build\hello" %CompileFlags% /link %LinkFlags% /SUB
 :: Build Time.exe
 cl user/Time/Main.cpp /Fo"..\build\time" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\time.exe" /DEBUG /PDB:"..\build\time.pdb" || exit /b 1
 
+:: Build ps.exe
+cl user/ps/Main.cpp /Fo"..\build\ps" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %UserLibs% /ENTRY:"main" /OUT:"..\build\ps.exe" /DEBUG /PDB:"..\build\ps.pdb" || exit /b 1
+
 :: Build NetTest.exe (links the socket client)
 cl user/NetTest/Main.cpp /Fo"..\build\nettest" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:CONSOLE %NetLibs% /ENTRY:"main" /OUT:"..\build\nettest.exe" /DEBUG /PDB:"..\build\nettest.pdb" || exit /b 1
 

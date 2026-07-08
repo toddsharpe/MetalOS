@@ -5,6 +5,7 @@
 #include "kernel/Objects/KSpinLock.h"
 #include "Lib/SharedRing.h"
 #include "user/MetalOS.UI.h"
+#include "user/Protocol_wm.h"
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
@@ -18,7 +19,6 @@ extern KProcess m_process;
 namespace _INPUT
 {
 	constexpr uint32_t Capacity = 128;
-	constexpr const char* EndpointName = "input";
 
 	KSpinLock m_lock;
 	void* m_region = nullptr;
@@ -38,7 +38,7 @@ void KeInputInitialize()
 	SharedRing<Message>::Init(_INPUT::m_region, _INPUT::Capacity);
 
 	//Publish a capability token for the WM to claim (KeGrantShare takes its own ref).
-	Assert(KeEndpointRegister(_INPUT::EndpointName, KeGrantShare(UObjectType::SharedMemory, shm)));
+	Assert(KeEndpointRegister(Wm::InputEndpoint, KeGrantShare(UObjectType::SharedMemory, shm)));
 }
 
 void KeInputPost(const Message& message)

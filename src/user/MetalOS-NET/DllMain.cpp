@@ -1,5 +1,6 @@
 #include "user/MetalOS.h"
 #include "user/Protocol_net.h"
+#include "user/Ipc.h"
 #include <cstring>
 
 //MetalOS-NET.dll -- the socket API, backed by IPC to the usermode netstack process.
@@ -16,23 +17,12 @@ namespace
 		if (g_connected)
 			return true;
 
-		HSharedMem handle = nullptr;
-		void* region = nullptr;
-		if (CreateSharedMemory(NetIpc::ChannelSize(), &handle, &region) != SyscallResult::Success)
+		//Open a channel to netstack (create + Init + grant over the "net" endpoint).
+		void* const region = IpcConnect<NetIpc::Channel>(NetIpc::ControlEndpoint);
+		if (!region)
 			return false;
 
-		ProcessInfo info = {};
-		GetProcessInfo(&info);
-		NetIpc::InitChannel(region, info.Id);
 		g_channel = region;
-
-		//Grant the channel to netstack and advertise it on the control endpoint.
-		uint64_t token = 0;
-		if (ShareHandle((Handle)handle, &token) != SyscallResult::Success)
-			return false;
-		if (PostEndpoint(NetIpc::ControlEndpoint, token) != SyscallResult::Success)
-			return false;
-
 		g_connected = true;
 		return true;
 	}
@@ -44,8 +34,8 @@ namespace
 		if (!EnsureConnected())
 			return false;
 
-		NetIpc::RequestRing(g_channel).Enqueue(req);
-		SharedRing<NetIpc::Reply> replies = NetIpc::ReplyRing(g_channel);
+		NetIpc::Channel::Requests(g_channel).Enqueue(req);
+		SharedRing<NetIpc::Reply> replies = NetIpc::Channel::Replies(g_channel);
 
 		//Bounded wait so a dead/stuck netstack fails the call instead of hanging forever.
 		const milli_t start = GetTickCount();
@@ -68,11 +58,13 @@ extern "C" HSocket SocketCreate(int af, int type, int protocol)
 	if (af != AF_INET)
 		return INVALID_SOCKET;
 
-	NetIpc::Request req = {};
-	req.Code = NetIpc::Op::Create;
-	req.Af = af;
-	req.Type = type;
-	req.Proto = protocol;
+	const NetIpc::Request req =
+	{
+		.Code = NetIpc::Op::Create,
+		.Af = af,
+		.Type = type,
+		.Proto = protocol,
+	};
 
 	NetIpc::Reply reply = {};
 	if (!Call(req, reply) || reply.Result != SyscallResult::Success)
@@ -85,10 +77,12 @@ extern "C" SyscallResult SocketBind(HSocket sock, const sockaddr_in* addr)
 	if (!addr)
 		return SyscallResult::InvalidPointer;
 
-	NetIpc::Request req = {};
-	req.Code = NetIpc::Op::Bind;
-	req.Socket = ToId(sock);
-	req.Addr = *addr;
+	const NetIpc::Request req =
+	{
+		.Code = NetIpc::Op::Bind,
+		.Socket = ToId(sock),
+		.Addr = *addr,
+	};
 
 	NetIpc::Reply reply = {};
 	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
@@ -99,10 +93,12 @@ extern "C" SyscallResult SocketConnect(HSocket sock, const sockaddr_in* peer)
 	if (!peer)
 		return SyscallResult::InvalidPointer;
 
-	NetIpc::Request req = {};
-	req.Code = NetIpc::Op::Connect;
-	req.Socket = ToId(sock);
-	req.Addr = *peer;
+	const NetIpc::Request req =
+	{
+		.Code = NetIpc::Op::Connect,
+		.Socket = ToId(sock),
+		.Addr = *peer,
+	};
 
 	NetIpc::Reply reply = {};
 	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
@@ -153,10 +149,12 @@ static SyscallResult RecvImpl(HSocket sock, void* buf, size_t maxLen, size_t* by
 	const milli_t start = GetTickCount();
 	for (;;)
 	{
-		NetIpc::Request req = {};
-		req.Code = wantFrom ? NetIpc::Op::RecvFrom : NetIpc::Op::Recv;
-		req.Socket = ToId(sock);
-		req.Timeout = timeoutMs;
+		const NetIpc::Request req =
+		{
+			.Code = wantFrom ? NetIpc::Op::RecvFrom : NetIpc::Op::Recv,
+			.Socket = ToId(sock),
+			.Timeout = timeoutMs,
+		};
 
 		NetIpc::Reply reply = {};
 		if (!Call(req, reply))
@@ -192,9 +190,11 @@ extern "C" SyscallResult SocketRecv(HSocket sock, void* buf, size_t maxLen, size
 
 extern "C" SyscallResult SocketClose(HSocket sock)
 {
-	NetIpc::Request req = {};
-	req.Code = NetIpc::Op::Close;
-	req.Socket = ToId(sock);
+	const NetIpc::Request req =
+	{
+		.Code = NetIpc::Op::Close,
+		.Socket = ToId(sock),
+	};
 
 	NetIpc::Reply reply = {};
 	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
@@ -207,9 +207,11 @@ extern "C" SyscallResult GetInterfaceIp(uint32_t index, in_addr* addr, in_addr* 
 	if (!addr || !subnet)
 		return SyscallResult::InvalidPointer;
 
-	NetIpc::Request req = {};
-	req.Code = NetIpc::Op::GetInterfaceIp;
-	req.Socket = index;
+	const NetIpc::Request req =
+	{
+		.Code = NetIpc::Op::GetInterfaceIp,
+		.Socket = index,
+	};
 
 	NetIpc::Reply reply = {};
 	if (!Call(req, reply) || reply.Result != SyscallResult::Success)
@@ -225,9 +227,11 @@ extern "C" SyscallResult GetGateway(uint32_t index, in_addr* gateway)
 	if (!gateway)
 		return SyscallResult::InvalidPointer;
 
-	NetIpc::Request req = {};
-	req.Code = NetIpc::Op::GetGateway;
-	req.Socket = index;
+	const NetIpc::Request req =
+	{
+		.Code = NetIpc::Op::GetGateway,
+		.Socket = index,
+	};
 
 	NetIpc::Reply reply = {};
 	if (!Call(req, reply) || reply.Result != SyscallResult::Success)
@@ -242,11 +246,13 @@ extern "C" SyscallResult SetInterfaceIp(uint32_t index, const in_addr* addr, con
 	if (!addr || !subnet)
 		return SyscallResult::InvalidPointer;
 
-	NetIpc::Request req = {};
-	req.Code = NetIpc::Op::SetInterfaceIp;
-	req.Socket = index;
-	req.Ip = *addr;
-	req.Subnet = *subnet;
+	const NetIpc::Request req =
+	{
+		.Code = NetIpc::Op::SetInterfaceIp,
+		.Socket = index,
+		.Ip = *addr,
+		.Subnet = *subnet,
+	};
 
 	NetIpc::Reply reply = {};
 	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
@@ -257,16 +263,19 @@ extern "C" SyscallResult SetGateway(uint32_t index, const in_addr* gateway)
 	if (!gateway)
 		return SyscallResult::InvalidPointer;
 
-	NetIpc::Request req = {};
-	req.Code = NetIpc::Op::SetGateway;
-	req.Socket = index;
-	req.Ip = *gateway;
+	const NetIpc::Request req =
+	{
+		.Code = NetIpc::Op::SetGateway,
+		.Socket = index,
+		.Ip = *gateway,
+	};
 
 	NetIpc::Reply reply = {};
 	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
 }
 
-size_t DllMain(HModule handle)
+bool DllMain(HModule handle, DllReason reason)
 {
+	//Do nothing
 	return true;
 }

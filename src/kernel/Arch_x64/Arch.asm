@@ -110,6 +110,10 @@ ArchUserThreadStart proc
 	; RFlags
 	mov r11, [rcx + CONTEXT._rflags]
 	mov rcx, [rcx + CONTEXT._rip]
+
+	; Keep interrupts off across swapgs..sysretq: here CS is kernel but GS is already user, so a
+	; timer would skip the entry swapgs and run with the wrong GS. sysretq restores user IF.
+	cli
 	swapgs
 	wrgsbase rdx
 	sysretq

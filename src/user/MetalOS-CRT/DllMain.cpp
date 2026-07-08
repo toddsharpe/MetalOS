@@ -9,7 +9,7 @@
 #include "user/MetalOS-CRT/string.cpp"
 
 const size_t heapSize = 0x1000000; //16MB
-size_t DllMain(HModule handle)
+bool DllMain(HModule handle, DllReason reason)
 {
 	//Initialize heap
 	CrtHeap.Initialize(heapSize);

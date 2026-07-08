@@ -220,14 +220,8 @@ void PrintBytes(const void* data, const size_t length);
  */
 KDevice* KeGetDevice(const char* const path);
 
-/*
- * Network device. The kernel owns hardware interface enumeration (the NICs in the
- * device tree) and raw ethernet frame I/O; the TCP/IP stack (ARP/IPv4/ICMP/UDP/routing/
- * sockets) and the IPv4 config live in the usermode netstack process. NIC drivers live in
- * the device tree (KDeviceClass::Nic, NicDriver); received frames are handed to
- * KeNetRxFrame from interrupt context. KeInitNetDevice stands up the kernel->netstack RX
- * ring and publishes it for netstack.
- */
+//Network device: the kernel owns NIC enumeration + raw ethernet frame I/O (RX via KeNetRxFrame
+//from IRQ, published by KeInitNetDevice); the TCP/IP stack lives in the usermode netstack.
 struct KMacAddress { uint8_t bytes[6]; };
 class NicDriver;
 

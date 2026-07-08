@@ -164,6 +164,9 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 		case Syscall::VirtualAlloc:
 			return (uintptr_t)VirtualAlloc((void*)frame.Arg0, (size_t)frame.Arg1);
 
+		case Syscall::VirtualFree:
+			return (uint64_t)VirtualFree((void*)frame.Arg0);
+
 		case Syscall::CreateSharedMemory:
 			return (uint64_t)CreateSharedMemory((size_t)frame.Arg0, (HSharedMem*)frame.Arg1, (void**)frame.Arg2);
 
@@ -836,6 +839,15 @@ void* VirtualAlloc(const void* address, const size_t size)
 	return KeVirtualAlloc(proc, address, size);
 }
 
+bool VirtualFree(const void* address)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (!address)
+		return false;
+
+	return KeVirtualFree(proc, address);
+}
+
 SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** address)
 {
 	UProcess& proc = Scheduler::GetUProcess();
@@ -1054,11 +1066,8 @@ SyscallResult DebugPrintStack(const uint64_t rip)
 	return SyscallResult::Success;
 }
 
-/*
- * 0x800: Network device. The TCP/IP stack lives in the usermode netstack process;
- * the only kernel network syscall transmits a raw ethernet frame through the NIC.
- * (netstack claims the RX ring + NIC MAC via the endpoint registry.)
- */
+//0x800: Network device. The TCP/IP stack is the usermode netstack; the only kernel network
+//syscall transmits a raw ethernet frame through the NIC (netstack claims the RX ring + MAC).
 SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length)
 {
 	UProcess& proc = Scheduler::GetUProcess();
@@ -1070,11 +1079,8 @@ SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length)
 	return KeNetSend(ifIdx, frame, length) ? SyscallResult::Success : SyscallResult::Failed;
 }
 
-/*
- * 0x300: Hardware interface enumeration. Interfaces are the NIC devices in the device tree;
- * the kernel reports only index + MAC. The IPv4 config (addr/subnet/gateway) is owned by the
- * usermode netstack and queried/set via MetalOS-NET IPC, not syscalls.
- */
+//0x300: Hardware interface enumeration -- NIC devices in the device tree, reported as index +
+//MAC only. The IPv4 config is owned by the usermode netstack (MetalOS-NET IPC), not syscalls.
 SyscallResult GetInterfaces(InterfaceInfo* buffer, const size_t maxCount, size_t* count)
 {
 	UProcess& proc = Scheduler::GetUProcess();

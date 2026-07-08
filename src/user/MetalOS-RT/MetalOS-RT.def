@@ -11,6 +11,8 @@ EXPORTS
 	DebugPrintf
 	CDebugPrintf
 	Bugcheck
+	LoadLibrary
+	FreeLibrary
 	GetErrno
 
 	; 0x100: System
@@ -56,6 +58,7 @@ EXPORTS
 
 	; 0x600
 	VirtualAlloc
+	VirtualFree
 	CreateSharedMemory
 	MapSharedMemory
 	MapFramebuffer

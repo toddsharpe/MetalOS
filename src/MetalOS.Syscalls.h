@@ -49,6 +49,7 @@ enum class Syscall : uint64_t
 
 	//0x600: Memory
 	VirtualAlloc = 0x600,
+	VirtualFree,
 	CreateSharedMemory,
 	MapSharedMemory,
 

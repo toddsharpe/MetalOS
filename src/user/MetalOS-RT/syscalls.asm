@@ -58,8 +58,9 @@ x64Syscall <ResetEvent>, 503h
 
 ; 0x600: Memory
 x64Syscall <VirtualAlloc>, 600h
-x64Syscall <CreateSharedMemory>, 601h
-x64Syscall <MapSharedMemory>, 602h
+x64Syscall <VirtualFree>, 601h
+x64Syscall <CreateSharedMemory>, 602h
+x64Syscall <MapSharedMemory>, 603h
 
 ; 0x700: Debug
 x64Syscall <DebugPrint>, 700h

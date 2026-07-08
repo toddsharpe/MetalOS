@@ -114,7 +114,7 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 		case Syscall::GetProcesses:
 			return (uint64_t)GetProcesses((ProcessListEntry*)frame.Arg0, (size_t)frame.Arg1, (size_t*)frame.Arg2);
 
-		//0x300 windowing moved to the usermode WM (User.dll <-> wm.exe)
+		//0x300 windowing moved to the usermode WM (MetalOS-WM.dll <-> MetalOS-WMSvr.exe)
 
 		//0x400
 		case Syscall::CreateFile:
@@ -1073,7 +1073,7 @@ SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length)
 /*
  * 0x300: Hardware interface enumeration. Interfaces are the NIC devices in the device tree;
  * the kernel reports only index + MAC. The IPv4 config (addr/subnet/gateway) is owned by the
- * usermode netstack and queried/set via NetClient IPC, not syscalls.
+ * usermode netstack and queried/set via MetalOS-NET IPC, not syscalls.
  */
 SyscallResult GetInterfaces(InterfaceInfo* buffer, const size_t maxCount, size_t* count)
 {

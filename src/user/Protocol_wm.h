@@ -6,7 +6,7 @@
 #include "Lib/SharedRing.h"
 
 //Shared app<->WM IPC protocol. Included by both the usermode WM (server) and the
-//User.dll windowing client. Channels live entirely in shared memory; the kernel
+//MetalOS-WM.dll windowing client. Channels live entirely in shared memory; the kernel
 //only moves ids across via the endpoint registry (see MetalOS.Syscalls.h 0x900).
 namespace Wm
 {

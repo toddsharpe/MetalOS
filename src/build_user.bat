@@ -4,27 +4,27 @@ set CompileIncludes=-I.\ -I.\..\external -I.\User -I.\std
 
 set CompileFlags=/std:c++20 /GS- /Gy /Gw /GR- /Z7 %CompileIncludes% /X
 set LinkFlags=/OPT:REF /NODEFAULTLIB
-set UserLibs=..\build\mosrt.lib ..\build\crt.lib
+set UserLibs=..\build\MetalOS-RT.lib ..\build\MetalOS-CRT.lib
 
-:: Build MRT.dll
-ml64 /c /Fo"..\build\mrt_x64" user\MRT\syscalls.asm || exit /b 1
-cl /c user/MRT/DllMain.cpp /Fo"..\build\mosrt" %CompileFlags% || exit /b 1
-link /DLL ..\build\mrt_x64.obj ..\build\mosrt.obj %LinkFlags% /SUBSYSTEM:NATIVE /DYNAMICBASE:NO /BASE:"0x0000000180000000" /DEF:"user/MRT/MRT.def" /OUT:"..\build\mosrt.dll" /DEBUG /PDB:"..\build\mosrt.pdb" || exit /b 1
+:: Build MetalOS-RT.dll
+ml64 /c /Fo"..\build\mrt_x64" user\MetalOS-RT\syscalls.asm || exit /b 1
+cl /c user/MetalOS-RT/DllMain.cpp /Fo"..\build\MetalOS-RT" %CompileFlags% || exit /b 1
+link /DLL ..\build\mrt_x64.obj ..\build\MetalOS-RT.obj %LinkFlags% /SUBSYSTEM:NATIVE /DYNAMICBASE:NO /BASE:"0x0000000180000000" /DEF:"user/MetalOS-RT/MetalOS-RT.def" /OUT:"..\build\MetalOS-RT.dll" /DEBUG /PDB:"..\build\MetalOS-RT.pdb" || exit /b 1
 
-:: Build CRT.dll (Linker warning LNK4210: .CRT section exists; there may be unhandled static initializers or terminators)
-cl user/crt/DllMain.cpp /Fo"..\build\crt" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE /DLL ..\build\mosrt.lib /DYNAMICBASE:NO /BASE:"0x00000001C0000000" /DEF:"user/crt/CRT.def" /OUT:"..\build\crt.dll" /DEBUG /PDB:"..\build\crt.pdb" /ignore:4210 || exit /b 1
+:: Build MetalOS-CRT.dll (Linker warning LNK4210: .CRT section exists; there may be unhandled static initializers or terminators)
+cl user/MetalOS-CRT/DllMain.cpp /Fo"..\build\MetalOS-CRT" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE /DLL ..\build\MetalOS-RT.lib /DYNAMICBASE:NO /BASE:"0x00000001C0000000" /DEF:"user/MetalOS-CRT/MetalOS-CRT.def" /OUT:"..\build\MetalOS-CRT.dll" /DEBUG /PDB:"..\build\MetalOS-CRT.pdb" /ignore:4210 || exit /b 1
 
-:: Build User.dll (windowing client -> IPC to the WM process; the "user32" analog)
-cl user/User/DllMain.cpp /Fo"..\build\user" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE /DLL %UserLibs% /DYNAMICBASE:NO /BASE:"0x0000000200000000" /DEF:"user/User/User.def" /OUT:"..\build\User.dll" /DEBUG /PDB:"..\build\User.pdb" || exit /b 1
+:: Build MetalOS-WM.dll (windowing client -> IPC to the WM process; the "user32" analog)
+cl user/MetalOS-WM/DllMain.cpp /Fo"..\build\MetalOS-WM" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE /DLL %UserLibs% /DYNAMICBASE:NO /BASE:"0x0000000200000000" /DEF:"user/MetalOS-WM/MetalOS-WM.def" /OUT:"..\build\MetalOS-WM.dll" /DEBUG /PDB:"..\build\MetalOS-WM.pdb" || exit /b 1
 
-:: Build NetClient.dll (socket API -> IPC to the netstack process; the "winsock" analog)
-cl user/NetClient/DllMain.cpp /Fo"..\build\netclient" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE /DLL %UserLibs% /DYNAMICBASE:NO /BASE:"0x0000000240000000" /DEF:"user/NetClient/NetClient.def" /OUT:"..\build\NetClient.dll" /DEBUG /PDB:"..\build\NetClient.pdb" || exit /b 1
+:: Build MetalOS-NET.dll (socket API -> IPC to the netstack process; the "winsock" analog)
+cl user/MetalOS-NET/DllMain.cpp /Fo"..\build\MetalOS-NET" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE /DLL %UserLibs% /DYNAMICBASE:NO /BASE:"0x0000000240000000" /DEF:"user/MetalOS-NET/MetalOS-NET.def" /OUT:"..\build\MetalOS-NET.dll" /DEBUG /PDB:"..\build\MetalOS-NET.pdb" || exit /b 1
 
 :: GUI apps additionally link the windowing client
-set GuiLibs=%UserLibs% ..\build\User.lib
+set GuiLibs=%UserLibs% ..\build\MetalOS-WM.lib
 
 :: Net apps additionally link the socket client
-set NetLibs=%UserLibs% ..\build\NetClient.lib
+set NetLibs=%UserLibs% ..\build\MetalOS-NET.lib
 
 ::
 :: Init process
@@ -59,14 +59,14 @@ cl user/ping/Main.cpp /Fo"..\build\ping" %CompileFlags% /link %LinkFlags% /SUBSY
 ::
 :: Usermode system services (compositor + network stack)
 ::
-cl user/WM/Main.cpp /Fo"..\build\wm" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE %UserLibs% /ENTRY:"main" /OUT:"..\build\wm.exe" /DEBUG /PDB:"..\build\wm.pdb" || exit /b 1
+cl user/MetalOS-WMSvr/Main.cpp /Fo"..\build\MetalOS-WMSvr" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE %UserLibs% /ENTRY:"main" /OUT:"..\build\MetalOS-WMSvr.exe" /DEBUG /PDB:"..\build\MetalOS-WMSvr.pdb" || exit /b 1
 
-:: Build netstack.exe (usermode TCP/IP stack; claims the kernel RX ring + NIC MAC).
+:: Build MetalOS-NetSvr.exe (usermode TCP/IP stack; claims the kernel RX ring + NIC MAC).
 :: /Zc:threadSafeInit- drops the _Init_thread_* CRT deps (netstack is single-threaded).
-cl user/NetStack/Main.cpp /Fo"..\build\netstack" %CompileFlags% /Zc:threadSafeInit- /link %LinkFlags% /SUBSYSTEM:NATIVE %UserLibs% /ENTRY:"main" /OUT:"..\build\netstack.exe" /DEBUG /PDB:"..\build\netstack.pdb" || exit /b 1
+cl user/MetalOS-NetSvr/Main.cpp /Fo"..\build\MetalOS-NetSvr" %CompileFlags% /Zc:threadSafeInit- /link %LinkFlags% /SUBSYSTEM:NATIVE %UserLibs% /ENTRY:"main" /OUT:"..\build\MetalOS-NetSvr.exe" /DEBUG /PDB:"..\build\MetalOS-NetSvr.pdb" || exit /b 1
 
 ::
-:: GUI apps (link the windowing client, User.lib)
+:: GUI apps (link the windowing client, MetalOS-WM.lib)
 ::
 
 :: Build Calc.exe

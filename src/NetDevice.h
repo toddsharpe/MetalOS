@@ -3,7 +3,7 @@
 #include <cstdint>
 
 //Shared ABI between the kernel net device (Kernel_net.cpp) and the usermode
-//network stack (netstack.exe). The kernel owns the NIC; it hands raw ethernet
+//network stack (MetalOS-NetSvr.exe). The kernel owns the NIC; it hands raw ethernet
 //frames up over the RX ring and accepts frames to transmit via the KeNetSend
 //syscall. The RX ring shm and the NIC MAC are published in the endpoint registry.
 namespace NetDevice

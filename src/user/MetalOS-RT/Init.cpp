@@ -2,8 +2,8 @@
 #include "windows/winnt.h"
 #include "user/MetalOS.h"
 #include "Lib/System.h"
-#include "user/MRT/Runtime.h"
-#include "user/MRT/Loader.h"
+#include "user/MetalOS-RT/Runtime.h"
+#include "user/MetalOS-RT/Loader.h"
 #include "Lib/StaticVector.h"
 #include "Lib/Arena.h"
 #include "Assert.h"
@@ -37,7 +37,7 @@ extern "C" __declspec(dllexport) void InitProcess() // Rename: init module?
 			Assert(hModule);
 
 			// Kernel does RT imports. Due to the PE unions, imports can't be done more than once.
-			if (_stricmp(module, "mosrt.dll") != 0)
+			if (_stricmp(module, "MetalOS-RT.dll") != 0)
 			{
 				PIMAGE_THUNK_DATA pThunkData = MakePointer<PIMAGE_THUNK_DATA>(peb->ImageBase, importDescriptor->FirstThunk);
 				while (pThunkData->u1.AddressOfData)

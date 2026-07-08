@@ -4,8 +4,8 @@
 #include "user/MetalOS.Types.h"
 #include "Lib/SharedRing.h"
 
-//Shared app<->netstack IPC protocol. Included by both netstack.exe (server) and the
-//NetClient lib (the socket API). Each app opens one duplex channel (request ring
+//Shared app<->netstack IPC protocol. Included by both MetalOS-NetSvr.exe (server) and the
+//MetalOS-NET lib (the socket API). Each app opens one duplex channel (request ring
 //app->netstack, reply ring netstack->app) in shared memory and posts its channel grant
 //token to the "net" control endpoint. Calls are synchronous: the client enqueues one
 //Request and polls the reply ring for the matching Reply.

@@ -6,11 +6,11 @@ int main(int argc, char** argv)
 
 	//Launch the usermode window manager first so it owns the framebuffer and
 	//serves the "wm" endpoint before any GUI app connects.
-	AssertSuccess(CreateProcess("wm.exe", nullptr, nullptr));
+	AssertSuccess(CreateProcess("MetalOS-WMSvr.exe", nullptr, nullptr));
 
 	//Launch the usermode network stack so it claims the kernel RX ring + NIC and
 	//serves the "net" endpoint before any networking app connects.
-	AssertSuccess(CreateProcess("netstack.exe", nullptr, nullptr));
+	AssertSuccess(CreateProcess("MetalOS-NetSvr.exe", nullptr, nullptr));
 
 	//Launch demo apps
 	//AssertSuccess(CreateProcess("calc.exe", nullptr, nullptr));

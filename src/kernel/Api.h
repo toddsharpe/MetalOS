@@ -239,7 +239,7 @@ NicDriver* KeNetGetInterface(const size_t index);
 
 /*
  * Input. Drivers post Message records into a kernel->WM shared ring (published
- * under the "input" endpoint) that the usermode WM (wm.exe) drains and routes.
+ * under the "input" endpoint) that the usermode WM (MetalOS-WMSvr.exe) drains and routes.
  * Compositing and window management live entirely in the usermode WM process.
  */
 void KeInputInitialize();

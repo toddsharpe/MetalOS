@@ -9,31 +9,12 @@
 
 namespace
 {
-	bool g_connected = false;
 	void* g_channel = nullptr;
-
-	bool EnsureConnected()
-	{
-		if (g_connected)
-			return true;
-
-		//Open a channel to netstack (create + Init + grant over the "net" endpoint).
-		void* const region = IpcConnect<NetIpc::Channel>(NetIpc::ControlEndpoint);
-		if (!region)
-			return false;
-
-		g_channel = region;
-		g_connected = true;
-		return true;
-	}
 
 	//Synchronous request/reply: enqueue one request, poll for its reply. Only one
 	//request is outstanding at a time, so replies map 1:1 to requests in order.
 	bool Call(const NetIpc::Request& req, NetIpc::Reply& reply)
 	{
-		if (!EnsureConnected())
-			return false;
-
 		NetIpc::Channel::Requests(g_channel).Enqueue(req);
 		SharedRing<NetIpc::Reply> replies = NetIpc::Channel::Replies(g_channel);
 
@@ -276,6 +257,19 @@ extern "C" SyscallResult SetGateway(uint32_t index, const in_addr* gateway)
 
 bool DllMain(HModule handle, DllReason reason)
 {
-	//Do nothing
+	switch (reason)
+	{
+		case DllReason::ProcessAttach:
+		{
+			//Open a channel to netstack (create + Init + grant over the "net" endpoint).
+			void* const region = IpcConnect<NetIpc::Channel>(NetIpc::ControlEndpoint);
+			if (!region)
+				return false;
+
+			g_channel = region;
+		}
+		break;
+	}
+
 	return true;
 }

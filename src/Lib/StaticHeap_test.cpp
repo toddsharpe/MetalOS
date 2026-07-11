@@ -133,4 +133,58 @@ void StaticHeap_test()
 		Assert(p != nullptr);
 		Assert(p->x == 3 && p->y == 7);
 	}
+
+	// Reallocate(nullptr, size) behaves like Allocate
+	{
+		StaticHeap<256> heap;
+		void *a = heap.Reallocate(nullptr, 64);
+		Assert(a != nullptr);
+		AssertEqual(heap.InUse(), (size_t)64);
+	}
+
+	// Reallocate(ptr, 0) frees and returns nullptr
+	{
+		StaticHeap<256> heap;
+		void *a = heap.Allocate(64);
+		Assert(a != nullptr);
+		void *b = heap.Reallocate(a, 0);
+		Assert(b == nullptr);
+		AssertEqual(heap.InUse(), (size_t)0);
+	}
+
+	// Grow preserves the original bytes
+	{
+		StaticHeap<512> heap;
+		uint8_t *a = static_cast<uint8_t *>(heap.Allocate(16));
+		for (uint8_t i = 0; i < 16; i++)
+			a[i] = i;
+
+		uint8_t *b = static_cast<uint8_t *>(heap.Reallocate(a, 64));
+		Assert(b != nullptr);
+		for (uint8_t i = 0; i < 16; i++)
+			AssertEqual(b[i], i);
+	}
+
+	// Shrink preserves the surviving prefix
+	{
+		StaticHeap<512> heap;
+		uint8_t *a = static_cast<uint8_t *>(heap.Allocate(64));
+		for (uint8_t i = 0; i < 64; i++)
+			a[i] = i;
+
+		uint8_t *b = static_cast<uint8_t *>(heap.Reallocate(a, 16));
+		Assert(b != nullptr);
+		for (uint8_t i = 0; i < 16; i++)
+			AssertEqual(b[i], i);
+	}
+
+	// Reallocate always moves (allocate-copy-free) and InUse tracks the new size
+	{
+		StaticHeap<256> heap;
+		void *a = heap.Allocate(32);
+		Assert(a != nullptr);
+		void *b = heap.Reallocate(a, 48); // new block taken before old is freed, so b != a
+		Assert(b != nullptr && b != a);
+		AssertEqual(heap.InUse(), (size_t)48);
+	}
 }

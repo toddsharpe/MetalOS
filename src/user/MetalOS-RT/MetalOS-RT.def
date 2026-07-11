@@ -61,6 +61,7 @@ EXPORTS
 	VirtualFree
 	CreateSharedMemory
 	MapSharedMemory
+	DeleteSharedMemory
 	MapFramebuffer
 
 	; 0x700

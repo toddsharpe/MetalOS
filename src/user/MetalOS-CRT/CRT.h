@@ -10,7 +10,7 @@
 #include "core_crt/ctype.h"
 
 //Include user CRT
-#include "user/MetalOS-CRT/Heap.h"
+#include "Lib/StaticHeap.h"
 #include "user/stdio.h"
 #include "user/stdlib.h"
 #include "user/string.h"

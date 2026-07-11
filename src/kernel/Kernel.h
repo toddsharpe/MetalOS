@@ -23,7 +23,6 @@
 #include "Lib/Buffer.h"
 #include "Lib/List.h"
 #include "Lib/Math.h"
-#include "Lib/ObjectPool.h"
 #include "Lib/Path.h"
 #include "Lib/Arena.h"
 #include "Lib/StaticHeap.h"
@@ -70,5 +69,4 @@
 /*
  * Kernel parameters.
  */
-static constexpr size_t MaxUProcess = 32;
 static constexpr size_t TempArenaSize = Arch::PageSize << 10; //4MB Temp Arena

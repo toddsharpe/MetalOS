@@ -9,7 +9,7 @@
 //Client: create a channel, stamp it with our pid, and grant it to the server over the control
 //endpoint. Returns the mapped region (kept for the channel's life) or nullptr on failure.
 template <typename Channel>
-inline void* IpcConnect(const char* const controlEndpoint)
+inline void* IpcConnect(const char* const controlEndpoint, HSharedMem* const outHandle = nullptr)
 {
 	HSharedMem handle = nullptr;
 	void* region = nullptr;
@@ -27,6 +27,9 @@ inline void* IpcConnect(const char* const controlEndpoint)
 	if (PostEndpoint(controlEndpoint, token) != SyscallResult::Success)
 		return nullptr;
 
+	//Return the handle so the caller can DeleteSharedMemory it on teardown.
+	if (outHandle)
+		*outHandle = handle;
 	return region;
 }
 

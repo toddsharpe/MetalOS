@@ -16,6 +16,7 @@ namespace
 	{
 		uint32_t Id;
 		void* Surface;
+		HSharedMem SurfaceHandle; //our handle to the surface shm; DeleteSharedMemory on teardown
 		size_t SurfaceSize;
 		Rectangle Rect;
 	};
@@ -61,6 +62,7 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 	{
 		.Id = id,
 		.Surface = surfaceAddr,
+		.SurfaceHandle = hSurface,
 		.SurfaceSize = surfaceSize,
 		.Rect = *frame,
 	};
@@ -160,12 +162,19 @@ extern "C" SyscallResult GetScreenRect(Graphics::Rectangle* rect)
 
 bool DllMain(HModule handle, DllReason reason)
 {
-	//Open a channel to the WM (create + Init + grant over the "wm" endpoint). The channel
-	//stamps our pid so the WM can detect when we exit and reclaim our windows.
-	void* const region = IpcConnect<Wm::Channel>(Wm::ControlEndpoint);
-	if (!region)
-		return false;
+	switch (reason)
+	{
+		case DllReason::ProcessAttach:
+		{
+			//Open a channel to the WM (create + Init + grant over "wm")
+			void* const region = IpcConnect<Wm::Channel>(Wm::ControlEndpoint);
+			if (!region)
+				return false;
 
-	g_channel = region;
+			g_channel = region;
+		}
+		break;
+	}
+
 	return true;
 }

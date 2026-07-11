@@ -9,9 +9,3 @@ namespace Loader
 	typedef void (*CrtInitializer)();
 	void CrtInit(const void* const imageBase);
 }
-
-extern "C"
-{
-	HModule LoadLibrary(char* lpLibFileName);
-	uintptr_t GetProcAddress(HModule hModule, const char* lpProcName);
-}

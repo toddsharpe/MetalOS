@@ -130,6 +130,7 @@ extern "C"
 	bool VirtualFree(const void* address);
 	SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** address);
 	SyscallResult MapSharedMemory(const HSharedMem handle, void** address);
+	SyscallResult DeleteSharedMemory(const HSharedMem handle);
 	
 	//0x700: Debug
 	SyscallResult DebugPrint(const char* s);

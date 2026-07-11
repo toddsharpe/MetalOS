@@ -62,7 +62,7 @@ LoaderParams BootParams;
  */
 DeviceTree m_deviceTree;
 KERNEL_PAGE_ALIGN StaticArena<TempArenaSize> m_tempArena;
-ObjectPool<UProcess, MaxUProcess> m_procArena;
+LinkedList<UProcess*> m_processes;
 EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);
 Graphics::FrameBuffer m_display((Graphics::Color*)KernelGraphicsDevice, BootParams.Display.VerticalResolution, BootParams.Display.HorizontalResolution);
 DirectUart m_uart(DirectUart::ComPort::Com1);

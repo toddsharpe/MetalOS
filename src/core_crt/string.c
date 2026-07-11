@@ -219,7 +219,8 @@ char* strncpy(char* _Destination, char const* _Source, size_t _Count)
 
 char* strcpy(char* _Destination, char const* _Source)
 {
-	return strncpy(_Destination, _Source, strlen(_Source));
+	//+1 to copy the terminating null; strncpy here is a raw memcpy that does not add it.
+	return strncpy(_Destination, _Source, strlen(_Source) + 1);
 }
 
 char const* strchr(const char* _String, const int _Ch)

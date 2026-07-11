@@ -2,7 +2,6 @@
 
 #include "Arch.h"
 #include "Lib/String.h"
-#include "Lib/Arena.h"
 #include "Lib/LinkedList.h"
 #include "x64/PageTables.h"
 #include "kernel/Types.h"
@@ -90,6 +89,16 @@ constexpr uintptr_t get_end(const KProcessType type)
 		return UserEnd;
 }
 
+constexpr uintptr_t get_offset(const KProcessType type)
+{
+	constexpr uint64_t AllocationGranularity = 0x1'0000; //64K
+
+	if (type == KProcessType::Kernel)
+		return KernelAllocStart - KernelStart;
+	else
+		return AllocationGranularity;
+}
+
 struct KProcess
 {
 public:
@@ -97,11 +106,10 @@ public:
 		Modules(),
 		//Kernel dynamic allocations start at KernelAllocStart so the watermark never
 		//collides with the fixed low-memory regions (KernelBase, KdCom, KernelPdb, KernelHeap).
-		Space(get_start(type), get_end(type), type == KProcessType::Kernel ? (KernelAllocStart - KernelStart) : AllocationGranularity),
+		Space(get_start(type), get_end(type), get_offset(type)),
 		Tables(),
 		IsGlobal(type == KProcessType::Kernel),
-		Debug(),
-		Arena()
+		Debug()
 	{
 	}
 
@@ -124,8 +132,5 @@ public:
 	bool IsGlobal;
 	bool Debug;
 
-	StaticArena<Arch::PageSize * 2> Arena;
-
 private:
-	static constexpr uint64_t AllocationGranularity = 0x1'0000; //64K
 };

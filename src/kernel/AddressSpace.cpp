@@ -4,10 +4,39 @@
 
 bool AddressSpace::IsValidPointer(const void* const address)
 {
-	const uintptr_t page = (uintptr_t)address & ~Arch::PageMask;
-	if (page < Start || page >= End)
+	return IsValidRange(address, 1);
+}
+
+bool AddressSpace::IsValidRange(const void* const address, const size_t length) const
+{
+	if (length == 0)
 		return false;
-	return !IsFree(page, 1);
+
+	//Page-align the span; reject wraparound and anything outside [Start, End).
+	const uintptr_t low = (uintptr_t)address & ~Arch::PageMask;
+	const uintptr_t last = (uintptr_t)address + (length - 1);
+	if (last < (uintptr_t)address)
+		return false;
+	const uintptr_t high = (last & ~Arch::PageMask) + Arch::PageSize;
+	if (low < Start || high > End)
+		return false;
+
+	//Greedily advance a cursor across contiguous reservation coverage; independent of length.
+	uintptr_t cursor = low;
+	while (cursor < high)
+	{
+		uintptr_t next = cursor;
+		for (const Reservation& res : m_reservations)
+		{
+			const uintptr_t resEnd = res.Address + (res.PageCount << Arch::PageShift);
+			if (cursor >= res.Address && cursor < resEnd && resEnd > next)
+				next = resEnd;
+		}
+		if (next == cursor)
+			return false;
+		cursor = next;
+	}
+	return true;
 }
 
 uintptr_t AddressSpace::Reserve(const size_t count)

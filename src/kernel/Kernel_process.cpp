@@ -8,7 +8,7 @@
 
 //Kernel globals (defined in Kernel.cpp).
 extern KProcess m_process;
-extern ObjectPool<UProcess, MaxUProcess> m_procArena;
+extern LinkedList<UProcess*> m_processes;
 extern Scheduler m_scheduler;
 
 static constexpr CString RuntimeDLL = "MetalOS-RT.dll";
@@ -47,9 +47,10 @@ UProcess* KeCreateProcess(const char* const cmd)
 	StaticString<64> path;
 	path.Append(CString(cmd, i));
 
-	//Create UProcess
-	UProcess* created = m_procArena.Allocate(path);
+	//Create UProcess on the kernel heap and track it in the process list.
+	UProcess* created = KeAlloc<UProcess>(AllocType::User, path);
 	Assert(created);
+	Assert(m_processes.Add(created));
 	created->Initialize();
 
 	//Initialize and switch to new page tables. Interrupts are disabled for the
@@ -137,22 +138,21 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 
 bool KeIsProcessAlive(const uint32_t id)
 {
-	bool alive = false;
-	m_procArena.ForEach([&](UProcess* const process)
+	for (UProcess* const process : m_processes)
 	{
 		if (process->Id == id && process->IsAlive())
-			alive = true;
-	});
-	return alive;
+			return true;
+	}
+	return false;
 }
 
 size_t KeGetProcessList(ProcessListEntry* const buffer, const size_t maxCount)
 {
 	size_t n = 0;
-	m_procArena.ForEach([&](UProcess* const process)
+	for (UProcess* const process : m_processes)
 	{
 		if (n >= maxCount)
-			return;
+			break;
 
 		ProcessListEntry& entry = buffer[n];
 		entry.Id = process->Id;
@@ -162,6 +162,6 @@ size_t KeGetProcessList(ProcessListEntry* const buffer, const size_t maxCount)
 		entry.Name[MaxProcessName - 1] = '\0';
 
 		n++;
-	});
+	}
 	return n;
 }

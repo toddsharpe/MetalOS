@@ -64,10 +64,9 @@ UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const 
 	teb->ThreadStart = userStart;
 	teb->Arg = arg;
 
-	//Allocate thread
-	void* const mem = Arena.Allocate(sizeof(UThread));
-	Assert(mem);
-	UThread* thread = new (mem) UThread(*this, backing, *teb);
+	//Allocate thread on the kernel heap
+	UThread* thread = KeAlloc<UThread>(AllocType::User, *this, backing, *teb);
+	Assert(thread);
 	ListInsertTail(m_threads, thread->Link);
 
 	//Allocate thread stack
@@ -84,7 +83,7 @@ UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const 
 	//Set name
 	char buffer[128] = {};
 	snprintf(buffer, sizeof(buffer), "%s[%d]", Name.c_str(), thread->Id);
-	thread->Name = Arena.Copy(buffer);
+	thread->Name = KeCopy(CString(buffer), AllocType::User);
 
 	return thread;
 }

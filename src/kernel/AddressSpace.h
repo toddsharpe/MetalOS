@@ -17,6 +17,15 @@ public:
 	}
 
 	bool IsValidPointer(const void* const address);
+
+	//Validate every page spanned by [address, address+length) is reserved in this space.
+	//Length-bounded so a user buffer near a mapping's end can't run into unmapped memory.
+	bool IsValidRange(const void* const address, const size_t length) const;
+
+	//Validate a typed object pointer over its full sizeof extent (not just its first page).
+	template <typename T>
+	bool IsValid(const T* const object) const { return IsValidRange(object, sizeof(T)); }
+
 	uintptr_t Reserve(const size_t count);
 	bool Reserve(const uintptr_t address, const size_t count);
 	bool Free(const uintptr_t address, const size_t count);

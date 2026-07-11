@@ -173,6 +173,9 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 		case Syscall::MapSharedMemory:
 			return (uint64_t)MapSharedMemory((HSharedMem)frame.Arg0, (void**)frame.Arg1);
 
+		case Syscall::DeleteSharedMemory:
+			return (uint64_t)DeleteSharedMemory((HSharedMem)frame.Arg0);
+
 		case Syscall::MapFramebuffer:
 			return (uint64_t)MapFramebuffer((GraphicsDevice*)frame.Arg0);
 
@@ -378,7 +381,7 @@ bool IsProcessAlive(uint32_t id)
 SyscallResult GetProcesses(ProcessListEntry* buffer, const size_t maxCount, size_t* count)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.Space.IsValidPointer(buffer) || !proc.Space.IsValidPointer(count))
+	if (!proc.Space.IsValidRange(buffer, maxCount * sizeof(ProcessListEntry)) || !proc.Space.IsValid(count))
 		return SyscallResult::InvalidPointer;
 
 	*count = KeGetProcessList(buffer, maxCount);
@@ -495,11 +498,11 @@ HFile CreateFile(const char* path, const FileAccess access)
 SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize, size_t* bytesRead)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.Space.IsValidPointer(buffer) || (bytesRead && !proc.Space.IsValidPointer(bytesRead)))
-		return SyscallResult::InvalidPointer;
-
 	if (!bufferSize)
 		return SyscallResult::InvalidArg;
+
+	if (!proc.Space.IsValidRange(buffer, bufferSize) || (bytesRead && !proc.Space.IsValid(bytesRead)))
+		return SyscallResult::InvalidPointer;
 
 	UObject* obj = proc.GetObject((handle_t)handle);
 	if (!obj)
@@ -549,11 +552,9 @@ SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize
 SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t bufferSize, size_t* bytesWritten)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.Space.IsValidPointer(buffer))
-		return SyscallResult::InvalidPointer;
 	if (!bufferSize)
 		return SyscallResult::InvalidArg;
-	if (bytesWritten && !proc.Space.IsValidPointer(bytesWritten))
+	if (!proc.Space.IsValidRange(buffer, bufferSize) || (bytesWritten && !proc.Space.IsValid(bytesWritten)))
 		return SyscallResult::InvalidPointer;
 
 	UObject* obj = proc.GetObject((handle_t)handle);
@@ -907,6 +908,19 @@ SyscallResult MapSharedMemory(const HSharedMem handle, void** address)
 	return SyscallResult::Success;
 }
 
+//Opposite of CreateSharedMemory: unmap our view and drop this handle's ref (the physical
+//pages are freed once the last ref across all processes goes). Handle is invalid after.
+SyscallResult DeleteSharedMemory(const HSharedMem handle)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+
+	UObject* const obj = proc.GetObject((handle_t)handle);
+	if (!obj || obj->Type != UObjectType::SharedMemory)
+		return SyscallResult::InvalidHandle;
+
+	return proc.CloseObject((handle_t)handle) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
 //Mint a single-use capability token for a handle the caller owns, so it can be
 //handed to another process (over the endpoint registry / an IPC ring). Generic
 //over handle types; only shared memory is grantable today.
@@ -1071,10 +1085,10 @@ SyscallResult DebugPrintStack(const uint64_t rip)
 SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.Space.IsValidPointer(frame))
-		return SyscallResult::InvalidPointer;
 	if (!length)
 		return SyscallResult::InvalidArg;
+	if (!proc.Space.IsValidRange(frame, length))
+		return SyscallResult::InvalidPointer;
 
 	return KeNetSend(ifIdx, frame, length) ? SyscallResult::Success : SyscallResult::Failed;
 }
@@ -1084,7 +1098,7 @@ SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length)
 SyscallResult GetInterfaces(InterfaceInfo* buffer, const size_t maxCount, size_t* count)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.Space.IsValidPointer(buffer) || !proc.Space.IsValidPointer(count))
+	if (!proc.Space.IsValidRange(buffer, maxCount * sizeof(InterfaceInfo)) || !proc.Space.IsValid(count))
 		return SyscallResult::InvalidPointer;
 
 	const size_t total = KeNetInterfaceCount();

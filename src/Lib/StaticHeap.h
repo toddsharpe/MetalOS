@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include "Assert.h"
 
 class Heap
 {
@@ -135,6 +136,34 @@ public:
 			if (block->Next)
 				block->Next->Prev = prev;
 		}
+	}
+
+	// Grow/shrink an allocation, preserving its contents (allocate-copy-free).
+	void *Reallocate(const void *const ptr, const size_t size)
+	{
+		if (!ptr)
+			return Allocate(size);
+		if (size == 0)
+		{
+			Deallocate(ptr);
+			return nullptr;
+		}
+
+		const Block *const block = reinterpret_cast<const Block *>(static_cast<const uint8_t *>(ptr) - sizeof(Block));
+		const size_t oldSize = block->Size;
+
+		void *const moved = Allocate(size);
+		if (!moved)
+			return nullptr;
+
+		const size_t copy = oldSize < size ? oldSize : size;
+		uint8_t *const dst = static_cast<uint8_t *>(moved);
+		const uint8_t *const src = static_cast<const uint8_t *>(ptr);
+		for (size_t i = 0; i < copy; i++)
+			dst[i] = src[i];
+
+		Deallocate(ptr);
+		return moved;
 	}
 
 	void Display() const

@@ -52,6 +52,7 @@ enum class Syscall : uint64_t
 	VirtualFree,
 	CreateSharedMemory,
 	MapSharedMemory,
+	DeleteSharedMemory,
 
 	//0x700: Debug
 	DebugPrint = 0x700,

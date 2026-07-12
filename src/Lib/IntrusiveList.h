@@ -2,14 +2,13 @@
 
 #include "Lib/List.h"
 
+//Intrusive doubly-linked list (elements embed a `ListEntry Link`). Holds only the structural
+//core: insert, remove, O(1) Count/IsEmpty. Range-for + ItemType make it Linq-compatible, so
+//queries (First/Any/ForEach/Count-by-predicate) come from Linq.h and work on every container.
 template <typename T>
 struct IntrusiveList
 {
-	template <typename TContext>
-	using CAction = void(*)(const T&, TContext&);
-
-	template <typename TContext>
-	using Pred = bool(*)(const T&, TContext&);
+	using ItemType = T;
 
 	constexpr IntrusiveList() :
 		Head()
@@ -30,47 +29,6 @@ struct IntrusiveList
 	bool IsEmpty() const
 	{
 		return Count() == 0;
-	}
-
-	template <typename TContext>
-	void ForEach(const CAction<TContext> action, TContext ctx) const
-	{
-		if (Count() == 0)
-			return;
-
-		for (ListEntry* link = Head.Link.Flink; link != &Head.Link; link = link->Flink)
-		{
-			T* item = LIST_CONTAINING_RECORD(link, T, Link);
-			action(*item, ctx);
-		}
-	}
-
-	template <typename TContext>
-	void ForEachReverse(const CAction<TContext> action, TContext ctx) const
-	{
-		if (Count() == 0)
-			return;
-
-		for (ListEntry* link = Head.Link.Blink; link != &Head.Link; link = link->Blink)
-		{
-			T* item = LIST_CONTAINING_RECORD(link, T, Link);
-			action(*item, ctx);
-		}
-	}
-
-	template <typename TContext>
-	T* First(const Pred<TContext> pred, TContext ctx) const
-	{
-		if (!Head.Count)
-			return nullptr;
-	
-		for (ListEntry* link = Head.Link.Flink; link != &Head.Link; link = link->Flink)
-		{
-			T* item = LIST_CONTAINING_RECORD(link, T, Link);
-			if (pred(*item, ctx))
-				return item;
-		}
-		return nullptr;
 	}
 
 	void InsertHead(T& item)
@@ -95,15 +53,27 @@ struct IntrusiveList
 		return LIST_CONTAINING_RECORD(popped, T, Link);
 	}
 
-	void Display() const
+	//Range-for support (yields T), so Linq algorithms operate on this list.
+	struct Iterator
 	{
-		Printf("Count: %d\n", Count());
-		for (ListEntry* link = Head.Link.Flink; link != &Head.Link; link = link->Flink)
-		{
-			T* item = LIST_CONTAINING_RECORD(link, T, Link);
-			Printf("Item: 0x%016x\n", item);
-		}
-	}
+		ListEntry* Node;
+		bool operator!=(const Iterator& other) const { return Node != other.Node; }
+		Iterator& operator++() { Node = Node->Flink; return *this; }
+		T& operator*() const { return *LIST_CONTAINING_RECORD(Node, T, Link); }
+	};
+
+	struct ConstIterator
+	{
+		const ListEntry* Node;
+		bool operator!=(const ConstIterator& other) const { return Node != other.Node; }
+		ConstIterator& operator++() { Node = Node->Flink; return *this; }
+		const T& operator*() const { return *LIST_CONTAINING_RECORD(Node, T, Link); }
+	};
+
+	Iterator begin() { return { Head.Link.Flink }; }
+	Iterator end() { return { &Head.Link }; }
+	ConstIterator begin() const { return { Head.Link.Flink }; }
+	ConstIterator end() const { return { &Head.Link }; }
 
 	ListHead Head;
 };

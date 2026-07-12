@@ -17,7 +17,7 @@ UProcess::UProcess(const CString& name) :
 	IsConsole(),
 	Name(name),
 	Objects(),
-	m_threads(),
+	Threads(),
 	m_state(),
 	m_peb(),
 	m_userArena()
@@ -27,8 +27,7 @@ UProcess::UProcess(const CString& name) :
 
 void UProcess::Initialize()
 {
-	//Initialize thread lists
-	ListInitializeHead(m_threads);
+	//Threads is a LinkedList; it self-initializes. Kept for the process init contract.
 }
 
 //This has to occur when this process is active (page tables are in use)
@@ -67,7 +66,7 @@ UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const 
 	//Allocate thread on the kernel heap
 	UThread* thread = KeAlloc<UThread>(AllocType::User, *this, backing, *teb);
 	Assert(thread);
-	ListInsertTail(m_threads, thread->Link);
+	Assert(Threads.Add(thread));
 
 	//Allocate thread stack
 	void* m_stack = KeVirtualAlloc(*this, UThreadStackSize);

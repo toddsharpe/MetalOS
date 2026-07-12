@@ -14,10 +14,9 @@ public:
 	static bool HasMessage(void* const arg) { return ((UThread*)arg)->HasMessage(); };
 
 	UThread(UProcess& process, KThread& thread, ThreadEnvironmentBlock& teb) :
-		Link(),
-		Stack(),
 		Process(process),
 		Thread(thread),
+		Stack(),
 		Name(),
 		Id(++LastUThreadId),
 		m_messages(),
@@ -80,11 +79,11 @@ public:
 	//Address of this thread's TEB (user VA); the scheduler loads it as the user GS base.
 	void* TebAddress() const { return &m_teb; }
 
-	ListEntry Link;
-
-	void* Stack; //Saved from asm on syscalls
+	//Process and Thread precede Stack so Stack stays at offset 16 for x64_SYSTEMCALL asm
+	//(guarded by the static_assert below); the UThread list is now a LinkedList in UProcess.
 	UProcess& Process;
 	KThread& Thread;
+	void* Stack; //Saved from asm on syscalls
 	CString Name;
 	const uint32_t Id;
 

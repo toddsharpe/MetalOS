@@ -19,12 +19,9 @@ enum class UProcessState
 
 
 class KThread;
-class Scheduler;
 class UThread;
 class UProcess : public KProcess
 {
-	friend Scheduler;
-
 public:
 	UProcess(const CString& name);
 
@@ -63,15 +60,13 @@ public:
 	StaticString<32> Name;
 
 	LinkedList<UObject*> Objects;
+	LinkedList<UThread*> Threads;
 
 private:
 	static uint32_t LastId;
 
 	static constexpr size_t KernelReserve = Arch::PageSize * 4;
 	static constexpr size_t UThreadStackSize = (Arch::PageSize << 4); //64K
-
-	//UThreads
-	ListHead m_threads;
 
 	//Scheduler
 	UProcessState m_state;

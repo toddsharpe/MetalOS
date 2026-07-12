@@ -9,7 +9,6 @@
 //Kernel globals (defined in Kernel.cpp).
 extern KProcess m_process;
 extern LinkedList<UProcess*> m_processes;
-extern Scheduler m_scheduler;
 
 static constexpr CString RuntimeDLL = "MetalOS-RT.dll";
 
@@ -133,7 +132,7 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 	}
 
 	//Kill all KThreads in process (does not return for a self-terminating process)
-	m_scheduler.KillProcess(process);
+	Scheduler::KillProcess(process);
 }
 
 bool KeIsProcessAlive(const uint32_t id)

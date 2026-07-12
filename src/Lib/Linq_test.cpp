@@ -11,6 +11,11 @@ static bool greater_than(const int& item, int threshold)
 	return item > threshold;
 }
 
+static void add_to_sum(const int& item, int* sum)
+{
+	*sum += item;
+}
+
 void Linq_test()
 {
 	// First — element exists
@@ -84,5 +89,39 @@ void Linq_test()
 
 		Assert(Linq::Any(list, equals_int, 42));
 		Assert(!Linq::Any(list, equals_int, 0));
+	}
+
+	// Count — total and empty
+	{
+		LinkedList<int> list;
+		list.Add(1);
+		list.Add(2);
+		list.Add(3);
+		AssertEqual(Linq::Count(list), (size_t)3);
+
+		LinkedList<int> empty;
+		AssertEqual(Linq::Count(empty), (size_t)0);
+	}
+
+	// Count — by predicate
+	{
+		LinkedList<int> list;
+		list.Add(10);
+		list.Add(20);
+		list.Add(30);
+		AssertEqual(Linq::Count(list, greater_than, 15), (size_t)2);
+	}
+
+	// ForEach — visits every item
+	{
+		LinkedList<int> list;
+		list.Add(1);
+		list.Add(2);
+		list.Add(3);
+		list.Add(4);
+
+		int sum = 0;
+		Linq::ForEach(list, add_to_sum, &sum);
+		AssertEqual(sum, 10);
 	}
 }

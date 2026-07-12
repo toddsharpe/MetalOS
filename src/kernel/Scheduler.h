@@ -2,23 +2,21 @@
 
 #include "new.h"
 #include "kernel/KThread.h"
-#include "Lib/StaticVector.h"
-#include "Lib/List.h"
 
 typedef nano100_t (*ReadTsc)();
 
-//TODO(tsharpe): Scheduler should be a namespace not a class!
 class KProcess;
-class Scheduler
+
+//Singleton kernel scheduler. A namespace, not a class: there is exactly one, and it needs no
+//friendship into KThread/UProcess (they expose the state it touches). All internal state lives
+//in Scheduler.cpp. Enabled gates preemption from the timer ISR.
+namespace Scheduler
 {
-public:
-	static KThread& GetThread();
-	static UThread& GetUThread();
-	static UProcess& GetUProcess();
+	KThread& GetThread();
+	UThread& GetUThread();
+	UProcess& GetUProcess();
 
-	Scheduler(const ReadTsc readTsc);
-
-	void Initialize(KProcess& proc);
+	void Initialize(KProcess& proc, const ReadTsc readTsc);
 	void MakeReady(KThread& thread);
 	void Schedule();
 
@@ -31,33 +29,8 @@ public:
 	void KillThread(KThread& thread);
 	void KillProcess(UProcess& process);
 
-	void Display() const;
+	void Display();
 
-	bool Enabled;
-
-private:
-	static constexpr size_t MaxKThreads = 32;
-
-	struct CpuContext
-	{
-		CpuContext() :
-			SelfPointer(*this),
-			Thread()
-		{}
-		
-		const CpuContext& SelfPointer;
-		KThread* Thread;
-	};
-	static_assert(offsetof(CpuContext, SelfPointer) == 0, "x64_SYSTEMCALL asm invalid");
-	static_assert(offsetof(CpuContext, Thread) == 8, "x64_SYSTEMCALL asm invalid");
-
-	//Cpu context
-	CpuContext m_cpu;
-
-	//Platform
-	ReadTsc m_readTsc;
-
-	//Threads and current thread
-	size_t m_threadIndex;
-	StaticVector<KThread*, MaxKThreads> m_threads;
-};
+	//Preemption gate; the timer ISR only reschedules when set. Defined in Scheduler.cpp.
+	extern bool Enabled;
+}

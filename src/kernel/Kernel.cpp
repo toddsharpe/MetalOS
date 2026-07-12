@@ -66,7 +66,6 @@ LinkedList<UProcess*> m_processes;
 EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);
 Graphics::FrameBuffer m_display((Graphics::Color*)KernelGraphicsDevice, BootParams.Display.VerticalResolution, BootParams.Display.HorizontalResolution);
 DirectUart m_uart(DirectUart::ComPort::Com1);
-Scheduler m_scheduler(&HyperV::Tsc::ReadTsc);
 KProcess m_process(KProcessType::Kernel);
 
 namespace
@@ -130,7 +129,7 @@ namespace
 
 		//Continue initializing system
 		m_irqs.Add(Arch::InterruptVector::Timer0, {&OnTimer0, nullptr});
-		m_scheduler.Initialize(m_process);
+		Scheduler::Initialize(m_process, &HyperV::Tsc::ReadTsc);
 		m_process.Modules.AddModule("moskrnl.exe", (void*)KernelBase);
 
 		//Initialize Platform (HyperV)
@@ -148,7 +147,7 @@ namespace
 
 		//Initialize scheduler and create idle thread. Allows device enumeration to block for interrupts if needed
 		KeCreateThread(&IdleThread, nullptr, "Idle");
-		m_scheduler.Enabled = true;
+		Scheduler::Enabled = true;
 
 		//Initialize ACPI/HW
 		InitializeAcpi();
@@ -176,7 +175,7 @@ namespace
 
 		//System displays
 		m_process.Display();
-		m_scheduler.Display();
+		Scheduler::Display();
 		m_deviceTree.Display();
 
 		Printf("MetalOS Initialized!\n");
@@ -186,8 +185,8 @@ namespace
 	void OnTimer0(void* arg)
 	{
 		HyperV::Interrupts::EOI();
-		if (m_scheduler.Enabled)
-			m_scheduler.Schedule();
+		if (Scheduler::Enabled)
+			Scheduler::Schedule();
 	}
 
 	uint32_t IdleThread(void* unused)
@@ -269,7 +268,7 @@ extern "C"
 		}
 
 		//Check if interrupt is in user code or kernel code
-		KThread& current = m_scheduler.GetCurrentThread();
+		KThread& current = Scheduler::GetCurrentThread();
 		if (current.UserThread && current.UserThread->Process.Space.IsValidPointer((void*)frame.RIP))
 		{
 			UProcess& proc = current.UserThread->Process;

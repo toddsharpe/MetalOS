@@ -15,12 +15,21 @@ enum class KThreadState
 };
 
 class KProcess;
-class Scheduler;
 class KThread
 {
-	friend class Scheduler;
-
 public:
+	//Scheduler-owned state. Public so the scheduler needs no friendship; the rest of KThread
+	//stays private. The scheduler is the only writer.
+	struct SchedState
+	{
+		KThreadState State = KThreadState::Ready;
+		KWaitResult WaitResult = KWaitResult::None;
+		nano100_t Timeout = 0;
+		KSignal* Signal = nullptr;
+		nano_t ScheduleTime = 0;
+		nano_t TotalCpuTime = 0;
+	};
+
 	KThread(const KThreadStart start, void* const arg, const CString& name);
 
 	void Init(void* const entry);
@@ -28,10 +37,14 @@ public:
 
 	void Display() const;
 
+	//Top of this thread's kernel stack, loaded as the interrupt stack on switch-in.
+	void* InterruptStack() const { return m_stackPointer; }
+
 	void* ContextPtr;
 	UThread* UserThread;
 	const uint32_t Id;
 	KProcess* Process;
+	SchedState Sched;
 
 private:
 	static uint32_t LastId;
@@ -41,14 +54,6 @@ private:
 	void* const m_arg;
 	void* m_stack;
 	void* m_stackPointer;
-
-	//Scheduler
-	KThreadState m_state;
-	KWaitResult m_waitResult;
-	nano100_t m_timeout;
-	KSignal* m_signal;
-	nano_t m_scheduleTime;
-	nano_t m_totalCpuTime;
 
 	//Storage
 	Arch::Context m_context;

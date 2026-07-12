@@ -7,7 +7,6 @@
 
 //Kernel globals (defined in Kernel.cpp).
 extern KProcess m_process;
-extern Scheduler m_scheduler;
 
 KThread* KeCreateThread(const KThreadStart start, void* const arg, const char* const name)
 {
@@ -15,35 +14,35 @@ KThread* KeCreateThread(const KThreadStart start, void* const arg, const char* c
 	thread->Init(&KThreadInit);
 	thread->Process = &m_process;
 
-	m_scheduler.MakeReady(*thread);
+	Scheduler::MakeReady(*thread);
 
 	return thread;
 }
 
 void KeExitThread()
 {
-	KThread& current = m_scheduler.GetThread();
+	KThread& current = Scheduler::GetThread();
 	KeExitThread(current);
 }
 
 void KeExitThread(KThread& thread)
 {
-	m_scheduler.KillThread(thread);
+	Scheduler::KillThread(thread);
 }
 
 void KeSleepThread(const nano_t time)
 {
-	m_scheduler.Sleep(time);
+	Scheduler::Sleep(time);
 }
 
 void KeYield()
 {
-	m_scheduler.Schedule();
+	Scheduler::Schedule();
 }
 
 void KThreadInit()
 {
-	KThread& current = m_scheduler.GetCurrentThread();
+	KThread& current = Scheduler::GetCurrentThread();
 
 	//Run thread
 	current.Start();
@@ -69,7 +68,7 @@ uint32_t UThreadInit(void* const arg)
 {
 	UNUSED(arg);
 
-	KThread& current = m_scheduler.GetCurrentThread();
+	KThread& current = Scheduler::GetCurrentThread();
 	Assert(current.UserThread);
 	UThread& user = *current.UserThread;
 	user.Start();
@@ -80,5 +79,5 @@ uint32_t UThreadInit(void* const arg)
 
 KWaitResult KeWait(KSignal& obj, const milli_t timeout)
 {
-	return m_scheduler.ObjectWait(obj, timeout);
+	return Scheduler::ObjectWait(obj, timeout);
 }

@@ -1,21 +1,21 @@
 #include "kernel/Api.h"
 #include "kernel/Arch.h"
 #include "kernel/KProcess.h"
+#include "kernel/Scheduler.h"
 
 //Kernel globals (defined in Kernel.cpp).
 extern KProcess m_process;
-extern Scheduler m_scheduler;
 extern EFI_RUNTIME_SERVICES m_runtime;
 
 void KePauseSystem()
 {
 	ArchDisableInterrupts();
-	m_scheduler.Enabled = false;
+	Scheduler::Enabled = false;
 }
 
 void KeResumeSystem()
 {
-	m_scheduler.Enabled = true;
+	Scheduler::Enabled = true;
 	ArchEnableInterrupts();
 }
 

@@ -199,3 +199,49 @@ void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size)
 
 	return (void*)reserved;
 }
+
+//Write memory into the address space of another process without switching CR3.
+void KeWriteProcessMemory(KProcess& process, void* const destVirtual, const void* const src, const size_t size)
+{
+	Assert(&process != &m_process);
+	
+	const uint8_t* source = static_cast<const uint8_t*>(src);
+	uintptr_t dest = reinterpret_cast<uintptr_t>(destVirtual);
+	size_t remaining = size;
+
+	while (remaining > 0)
+	{
+		const size_t pageOffset = dest & Arch::PageMask;
+		const size_t pageRemaining = Arch::PageSize - pageOffset;
+		const size_t chunk = remaining < pageRemaining ? remaining : pageRemaining;
+
+		const paddr_t phys = process.Tables.ResolvePhysical(reinterpret_cast<void*>(dest));
+		Assert(phys);
+
+		memcpy(reinterpret_cast<void*>(KernelPhysicalStart + phys), source, chunk);
+
+		dest += chunk;
+		source += chunk;
+		remaining -= chunk;
+	}
+}
+
+//Alias a kernel-resident region [source, source+size) into `process` at the fixed address `dest`
+void KeAliasInto(KProcess& process, const void* const source, const void* const dest, const size_t size)
+{
+	const size_t count = x64::SizeToPages(size);
+	const uintptr_t destVA = reinterpret_cast<uintptr_t>(dest);
+
+	//Reserve the destination range in the process (a fixed address = the image's ImageBase).
+	Assert(process.Space.Reserve(destVA, count));
+
+	//Map the source's (kernel-resident) physical frames into the process, no new physical.
+	const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
+	for (size_t i = 0; i < count; i++)
+	{
+		const uintptr_t srcPage = reinterpret_cast<uintptr_t>(source) + (i << Arch::PageShift);
+		const paddr_t phys = m_process.Tables.ResolvePhysical(reinterpret_cast<void*>(srcPage));
+		Assert(phys);
+		Assert(process.Tables.MapPages(destVA + (i << Arch::PageShift), phys & ~0xFFFull, 1, attributes));
+	}
+}

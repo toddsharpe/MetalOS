@@ -61,7 +61,7 @@ uintptr_t AddressSpace::Reserve(const size_t count)
 	//Claim address
 	m_watermark = test;
 	const uintptr_t address = m_watermark;
-	m_reservations.Add(Reservation{address, count});
+	Assert(m_reservations.Add(Reservation{address, count}));
 
 	//Increment watermark
 	m_watermark += ByteAlign(bytes, AllocationGranularity);
@@ -81,7 +81,7 @@ bool AddressSpace::Reserve(const uintptr_t address, const size_t count)
 		return false;
 
 	//Claim
-	m_reservations.Add(Reservation{address, count});
+	Assert(m_reservations.Add(Reservation{address, count}));
 
 	CPrintf(Debug, "  Received: 0x%016x Count:0x%x\n", address, count);
 
@@ -90,10 +90,10 @@ bool AddressSpace::Reserve(const uintptr_t address, const size_t count)
 
 size_t AddressSpace::GetCount(const uintptr_t address) const
 {
-	for (size_t i = 0; i < m_reservations.Count(); i++)
+	for (const Reservation& res : m_reservations)
 	{
-		if (m_reservations[i].Address == address)
-			return m_reservations[i].PageCount;
+		if (res.Address == address)
+			return res.PageCount;
 	}
 	return 0;
 }
@@ -110,16 +110,8 @@ bool AddressSpace::Free(const uintptr_t address, const size_t count)
 {
 	CPrintf(Debug, "Free: 0x%016x Count: 0x%x\n", address, count);
 
-	for (size_t i = 0; i < m_reservations.Count(); i++)
-	{
-		if (m_reservations[i].Address == address)
-		{
-			Assert(m_reservations[i].PageCount == count);
-			return m_reservations.RemoveAt(i);
-		}
-	}
-
-	return false;
+	//operator== keys on Address; removes the matching reservation (count is validated by callers).
+	return m_reservations.Remove(Reservation{ address, count });
 }
 
 void AddressSpace::Display() const

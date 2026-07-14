@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Lib/StaticVector.h"
+#include "Lib/LinkedList.h"
 #include <cstdlib>
 
 class AddressSpace
@@ -46,12 +46,15 @@ private:
 	{
 		uintptr_t Address;
 		size_t PageCount;
+
+		//Reservations are keyed by their (unique) address, so equality compares Address only.
+		bool operator==(const Reservation& other) const { return Address == other.Address; }
 	};
 
 	bool IsFree(const uintptr_t address, const size_t count) const;
 
-	//Reservations
+	//Reservations. Unbounded: the kernel address space in particular accumulates more than a
+	//small fixed cap (fixed maps, UEFI ranges, thread stacks, transient loader aliases).
 	uintptr_t m_watermark;
-	//LinkedList<Reservation> m_reservations;
-	StaticVector<Reservation, 16> m_reservations;
+	LinkedList<Reservation> m_reservations;
 };

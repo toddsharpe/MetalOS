@@ -33,6 +33,18 @@ public:
 		return address;
 	}
 
+	//Bump-allocate without writing (no memset). For memory the caller fills through some other
+	//path (e.g. a different address space), so the arena must not touch it here.
+	void* Reserve(const size_t size)
+	{
+		if (m_count + size > m_size)
+			return nullptr;
+
+		void* const address = (void*)&m_storage[m_count];
+		m_count += ByteAlign(size, Alignment);
+		return address;
+	}
+
 	template <typename T>
 	T* Allocate()
 	{

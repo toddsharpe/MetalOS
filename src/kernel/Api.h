@@ -71,6 +71,9 @@ void* KeVirtualMap(KProcess& process, const paddr_t* addresses, const size_t siz
 void* KeVirtualMap(const paddr_t address, const size_t size);
 void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size);
 
+void KeWriteProcessMemory(KProcess& process, void* const destVirtual, const void* const src, const size_t size);
+void KeAliasInto(KProcess& process, const void* const source, const void* const dest, const size_t size);
+
 //Validity check on an address.
 bool KeIsValid(const void* address);
 

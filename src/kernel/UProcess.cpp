@@ -18,35 +18,44 @@ UProcess::UProcess(const CString& name) :
 	Name(name),
 	Objects(),
 	Threads(),
-	m_state(),
+	State(),
 	m_peb(),
-	m_userArena()
+	m_userArena(),
+	m_moduleIndex()
 {
 
 }
 
-void UProcess::Initialize()
+/**
+ * Sets up the PEB in the process's user space.
+ */
+void UProcess::Initialize(void* const image, const CString& cmd)
 {
-	//Threads is a LinkedList; it self-initializes. Kept for the process init contract.
-}
-
-//This has to occur when this process is active (page tables are in use)
-//TODO(tsharpe): Remove this limitation (map into kernel also?)
-void UProcess::InContextInit(void* const image, const CString& cmd)
-{
-	//Allocate space in process for OS to manage
+	//Reserve OS-managed user space (PEB + command line); no writes to user memory here.
 	void* const storage = KeVirtualAlloc(*this, KernelReserve);
 	Assert(storage);
 	m_userArena = {reinterpret_cast<uint8_t*>(storage), KernelReserve};
 
-	//Allocate PEB
-	m_peb = m_userArena.Allocate<ProcessEnvironmentBlock>();
+	m_peb = reinterpret_cast<ProcessEnvironmentBlock*>(m_userArena.Reserve(sizeof(ProcessEnvironmentBlock)));
 	Assert(m_peb);
-	m_peb->ImageBase = image;
-	m_peb->CommandLine = m_userArena.Copy(cmd); //Copy string to user address space
-	m_peb->Handle = (HProcess)this;
-	m_peb->ProcessId = Id;
-	m_peb->Debug = false;
+	char* const cmdLine = reinterpret_cast<char*>(m_userArena.Reserve(cmd.Length + 1));
+	Assert(cmdLine);
+
+	//Command line bytes (+ null terminator) into the process.
+	KeWriteProcessMemory(*this, cmdLine, cmd.c_str(), cmd.Length);
+	const char nul = '\0';
+	KeWriteProcessMemory(*this, cmdLine + cmd.Length, &nul, 1);
+
+	//Build the PEB in kernel memory, then copy it into the process. CommandLine points at the
+	//user-space copy above.
+	ProcessEnvironmentBlock peb = {};
+	peb.ImageBase = image;
+	peb.CommandLine = CString(cmdLine, cmd.Length);
+	peb.Handle = (HProcess)this;
+	peb.ProcessId = Id;
+	peb.ModuleIndex = 0;
+	peb.Debug = false;
+	KeWriteProcessMemory(*this, m_peb, &peb, sizeof(peb));
 }
 
 UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const UThreadStart userStart, void* const arg)
@@ -55,13 +64,10 @@ UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const 
 	//Other user threads call init thread and then jump to this entry
 	void* threadStart = userStart == nullptr ? InitProcess : InitThread;
 	
-	//Allocate TEB for thread
-	ThreadEnvironmentBlock* teb = m_userArena.Allocate<ThreadEnvironmentBlock>();
+	//Reserve the TEB in user space (filled below). UThread keeps a reference to
+	//this user-space TEB address; it isn't dereferenced until the thread runs.
+	ThreadEnvironmentBlock* teb = reinterpret_cast<ThreadEnvironmentBlock*>(m_userArena.Reserve(sizeof(ThreadEnvironmentBlock)));
 	Assert(teb);
-	teb->SelfPointer = teb;
-	teb->PEB = m_peb;
-	teb->ThreadStart = userStart;
-	teb->Arg = arg;
 
 	//Allocate thread on the kernel heap
 	UThread* thread = KeAlloc<UThread>(AllocType::User, *this, backing, *teb);
@@ -76,8 +82,16 @@ UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const 
 
 	//Initialize
 	thread->Initialize(stackPointer, threadStart);
-	teb->Handle = (HThread)thread;
-	teb->ThreadId = thread->Id;
+
+	//Build the TEB in kernel memory and copy it into the process.
+	ThreadEnvironmentBlock tebData = {};
+	tebData.SelfPointer = teb;
+	tebData.PEB = m_peb;
+	tebData.ThreadStart = userStart;
+	tebData.Arg = arg;
+	tebData.Handle = (HThread)thread;
+	tebData.ThreadId = thread->Id;
+	KeWriteProcessMemory(*this, teb, &tebData, sizeof(tebData));
 
 	//Set name
 	char buffer[128] = {};
@@ -96,8 +110,6 @@ UObject* UProcess::CreateObject(const UObjectType type)
 
 UObject* UProcess::CreateObject(const UObjectType type, const handle_t handle)
 {
-	Assert((int)handle < (int)UProcessState::Last);
-
 	UObject* created = KeAlloc<UObject>(AllocType::User, type, handle);
 	Assert(Objects.Add(created));
 	return created;
@@ -156,10 +168,16 @@ bool UProcess::CloseObject(const handle_t handle)
 
 const KModule* UProcess::AddModule(const CString& name, void* image)
 {
-	//Assert(Tables.IsActive());
-	m_peb->LoadedModules[m_peb->ModuleIndex].ImageBase = image;
-	strcpy(m_peb->LoadedModules[m_peb->ModuleIndex].Name, name.c_str());
-	m_peb->ModuleIndex++;
+	//Write the module entry into the process's PEB via the physical window (no direct user access).
+	//m_moduleIndex is tracked kernel-side so we never read PEB->ModuleIndex from user space.
+	Assert(m_moduleIndex < MaxLoadedModules);
+	Module entry = {};
+	entry.ImageBase = image;
+	strcpy(entry.Name, name.c_str());
+	KeWriteProcessMemory(*this, &m_peb->LoadedModules[m_moduleIndex], &entry, sizeof(entry));
+
+	m_moduleIndex++;
+	KeWriteProcessMemory(*this, &m_peb->ModuleIndex, &m_moduleIndex, sizeof(m_peb->ModuleIndex));
 
 	KModule* created = KeAlloc<KModule>(AllocType::User, name, image);
 	Assert(this->Modules.Add(created));
@@ -173,7 +191,7 @@ void UProcess::Display() const
 	Printf("UProcess\n");
 	Printf("     Id: %x\n", Id);
 	Printf("   Name: %s\n", Name.c_str());
-	Printf("  State: %d\n", m_state);
+	Printf("  State: %d\n", State);
 
 	if (false /*Tables.IsActive()*/)
 	{

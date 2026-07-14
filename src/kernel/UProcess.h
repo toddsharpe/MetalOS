@@ -9,15 +9,6 @@
 #include "kernel/Types.h"
 #include "kernel/Objects/KPipe.h"
 
-enum class UProcessState
-{
-	Created,
-	Running,
-	Terminated,
-	Last
-};
-
-
 class KThread;
 class UThread;
 class UProcess : public KProcess
@@ -25,11 +16,7 @@ class UProcess : public KProcess
 public:
 	UProcess(const CString& name);
 
-	void Initialize();
-
-	//This has to occur when this process is active (page tables are in use)
-	//TODO(tsharpe): Remove this limitation (map into kernel also?)
-	void InContextInit(void* const image, const CString& cmd);
+	void Initialize(void* const image, const CString& cmd);
 
 	UThread* CreateThread(KThread& backing, const size_t stackSize, const UThreadStart userStart = nullptr, void* const arg = nullptr);
 	UObject* CreateObject(const UObjectType type);
@@ -42,11 +29,6 @@ public:
 
 	void Display() const;
 
-	//Lifecycle: set on teardown so consumers (e.g. the WM liveness check) can tell
-	//a process is gone even though its UProcess slot may still be allocated.
-	void MarkTerminated() { m_state = UProcessState::Terminated; }
-	bool IsAlive() const { return m_state != UProcessState::Terminated; }
-
 	const uint32_t Id;
 
 	//Runtime start addresses
@@ -54,13 +36,15 @@ public:
 	void* InitThread;
 	bool IsConsole;
 
-	//PageTables Tables;
-
-	 //TODO(tsharpe): Shouldnt be a static string, just string
+	//TODO(tsharpe): Shouldnt be a static string, just string
 	StaticString<32> Name;
 
 	LinkedList<UObject*> Objects;
 	LinkedList<UThread*> Threads;
+
+	//Lifecycle: Created at construction, Running once fully built and schedulable, Terminated on
+	//teardown (consumers like the WM liveness check read this directly).
+	ProcessState State;
 
 private:
 	static uint32_t LastId;
@@ -68,10 +52,8 @@ private:
 	static constexpr size_t KernelReserve = Arch::PageSize * 4;
 	static constexpr size_t UThreadStackSize = (Arch::PageSize << 4); //64K
 
-	//Scheduler
-	UProcessState m_state;
-
 	//Userspace process storage (PEB/TEB)
 	ProcessEnvironmentBlock* m_peb;
 	PreallocatedArena m_userArena;
+	size_t m_moduleIndex; //kernel-side PEB->LoadedModules count (avoids reading user memory)
 };

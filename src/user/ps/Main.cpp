@@ -11,11 +11,11 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	printf("%-20s %6s %10s\n", "NAME", "ID", "VIRT(KB)");
+	printf("%-20s %6s %10s %-10s\n", "NAME", "ID", "VIRT(KB)", "STATE");
 	for (size_t i = 0; i < count; i++)
 	{
 		const ProcessListEntry& p = procs[i];
-		printf("%-20s %6u %10u\n", p.Name, p.Id, (uint32_t)(p.VirtualSize / 1024));
+		printf("%-20s %6u %10u %-10s\n", p.Name, p.Id, (uint32_t)(p.VirtualSize / 1024), StateName(p.State));
 	}
 
 	return 0;

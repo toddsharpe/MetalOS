@@ -25,10 +25,30 @@ struct ProcessInfo
 
 constexpr size_t MaxProcessName = 32;
 
+//Process lifecycle state, shared with the kernel (UProcess stores this directly).
+enum class ProcessState : uint32_t
+{
+	Created,
+	Running,
+	Terminated,
+};
+
+constexpr const char* StateName(const ProcessState state)
+{
+	switch (state)
+	{
+		case ProcessState::Created: return "Created";
+		case ProcessState::Running: return "Running";
+		case ProcessState::Terminated: return "Terminated";
+		default: return "?";
+	}
+}
+
 struct ProcessListEntry
 {
 	uint32_t Id;
 	uint64_t VirtualSize;
+	ProcessState State;
 	char Name[MaxProcessName];
 };
 

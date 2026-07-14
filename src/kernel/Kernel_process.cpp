@@ -21,21 +21,21 @@ const KModule* KeLoadLibrary(const char* const name)
 	if (search != nullptr)
 		return search;
 
-	//If it doesnt exists attempt to load it
-	void* address = Loader::Load(m_process, moduleName);
-	if (!address)
+	//If it doesn't exist, load it in the kernel, install it at its ImageBase (a kernel VA for a
+	//kernel module), then drop the temporary load alias.
+	Loader::LoadedImage image = Loader::Load(moduleName);
+	if (!image.UserBase)
 		return nullptr;
+	KeAliasInto(m_process, image.Alias, image.UserBase, image.Size);
+	KeVirtualFree(m_process, image.Alias);
 
-	const KModule* created = m_process.Modules.AddModule(moduleName, address);
+	const KModule* created = m_process.Modules.AddModule(moduleName, image.UserBase);
 	return created;
 }
 
-//Since this method changes page tables, make sure every return restores original
 UProcess* KeCreateProcess(const char* const cmd)
 {
 	Printf("Creating process: %s\n", cmd);
-	//TODO(tsharpe): Make this not necessary
-	KernelPageTables current = KernelPageTables::Current();
 
 	//Get path (up to the first space or end of string)
 	size_t i = 0;
@@ -50,62 +50,61 @@ UProcess* KeCreateProcess(const char* const cmd)
 	UProcess* created = KeAlloc<UProcess>(AllocType::User, path);
 	Assert(created);
 	Assert(m_processes.Add(created));
-	created->Initialize();
 
-	//Initialize and switch to new page tables. Interrupts are disabled for the
-	//duration of the switch: the running thread belongs to the kernel process, so
-	//any reschedule would reload CR3 from it (Scheduler) and discard this override.
-	//Nothing in the load path blocks (RamDrive reads are a synchronous memcpy), so
-	//disabling interrupts cannot deadlock.
+	//Fresh page tables for the process, with the kernel mapped in. No CR3 switch and no
+	//interrupts-off window: the loader aliases each image into the kernel and patches it there,
+	//and process structures are written through the physical-memory window (KeWriteProcessMemory).
 	created->Tables = KernelPageTables::CreateNew();
 	Assert(created->Tables.IsValid());
 	created->Tables.LoadKernelMappings();
-	const cpu_flags_t flags = ArchDisableInterrupts();
-	ArchSetPagingRoot(created->Tables.Root);
 
-	//Load exe and runtime into process
-	void* address = Loader::Load(*created, path);
-	if (!address)
+	//Load exe and runtime into the kernel (each returns a temporary kernel alias for patching).
+	Loader::LoadedImage exe = Loader::Load(path);
+	if (!exe.UserBase)
+		return nullptr;
+
+	Loader::LoadedImage runtime = Loader::Load(RuntimeDLL);
+	if (!runtime.UserBase)
 	{
-		ArchSetPagingRoot(current.Root);
-		ArchRestoreFlags(flags);
+		KeVirtualFree(m_process, exe.Alias);
 		return nullptr;
 	}
 
-	void* runtime = Loader::Load(*created, RuntimeDLL);
-	if (!runtime)
-	{
-		ArchSetPagingRoot(current.Root);
-		ArchRestoreFlags(flags);
-		return nullptr;
-	}
+	//Resolve runtime imports (stamps the exe's IAT with the runtime's user addresses)
+	Loader::ResolveImports(exe, runtime, RuntimeDLL);
 
-	//Resolve runtime imports
-	Loader::ResolveImports(address, runtime, RuntimeDLL);
-
-	//Init pointers
-	created->InitProcess = WinPE::GetProcAddress(runtime, "InitProcess");
+	//Init pointers: resolve in the runtime alias, store the process (user) address
+	created->InitProcess = runtime.ToUser(WinPE::GetProcAddress(runtime.Alias, "InitProcess"));
 	Assert(created->InitProcess);
-	created->InitThread = WinPE::GetProcAddress(runtime, "InitThread");
+	created->InitThread = runtime.ToUser(WinPE::GetProcAddress(runtime.Alias, "InitThread"));
 	Assert(created->InitThread);
 
+	//Install the images into the process at their ImageBase (aliasing the kernel-loaded pages)
+	KeAliasInto(*created, exe.Alias, exe.UserBase, exe.Size);
+	KeAliasInto(*created, runtime.Alias, runtime.UserBase, runtime.Size);
+
 	//Update process structures
-	created->InContextInit(address, CString(cmd));
+	created->Initialize(exe.UserBase, CString(cmd));
 
-	Assert(created->AddModule(path, address));
-	Assert(created->AddModule(RuntimeDLL, runtime));
+	Assert(created->AddModule(path, exe.UserBase));
+	Assert(created->AddModule(RuntimeDLL, runtime.UserBase));
 
-	created->IsConsole = WinPE::IsConsole(address);
+	created->IsConsole = WinPE::IsConsole(exe.Alias);
 
 	//Create main process thread
-	const size_t stackSize = WinPE::GetStackSize(address);
+	const size_t stackSize = WinPE::GetStackSize(exe.Alias);
 	KeCreateUThread(*created, stackSize);
-	ArchSetPagingRoot(current.Root);
-	ArchRestoreFlags(flags);
+
+	//Done loading; release the temporary kernel aliases
+	KeVirtualFree(m_process, exe.Alias);
+	KeVirtualFree(m_process, runtime.Alias);
 
 	//Add debug output as stdout for now
 	Assert(created->CreateObject(UObjectType::Debug, Handles::StdOut));
 	Assert(created->CreateObject(UObjectType::Debug, Handles::StdErr));
+
+	//Fully built and schedulable now
+	created->State = ProcessState::Running;
 	return created;
 }
 
@@ -116,7 +115,7 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 	//Mark dead first: KillProcess() does not return when a process terminates
 	//itself (ExitProcess), so anything after it would be skipped. This also lets
 	//liveness queries (KeIsProcessAlive) report the process as gone.
-	process.MarkTerminated();
+	process.State = ProcessState::Terminated;
 
 	//Close all objects. This also releases the process's shared-memory mappings
 	//(CloseObject unmaps each SharedMemory handle), freeing regions whose last
@@ -139,7 +138,7 @@ bool KeIsProcessAlive(const uint32_t id)
 {
 	for (UProcess* const process : m_processes)
 	{
-		if (process->Id == id && process->IsAlive())
+		if (process->Id == id && process->State != ProcessState::Terminated)
 			return true;
 	}
 	return false;
@@ -156,6 +155,7 @@ size_t KeGetProcessList(ProcessListEntry* const buffer, const size_t maxCount)
 		ProcessListEntry& entry = buffer[n];
 		entry.Id = process->Id;
 		entry.VirtualSize = process->Space.ReservedBytes();
+		entry.State = process->State;
 
 		strncpy(entry.Name, process->Name.c_str(), MaxProcessName - 1);
 		entry.Name[MaxProcessName - 1] = '\0';

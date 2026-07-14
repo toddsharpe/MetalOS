@@ -301,5 +301,36 @@ public:
 		return Root != 0;
 	}
 
+	//Translate a virtual address to its physical address in these tables (0 if unmapped).
+	//Includes the in-page offset; handles 4KB/2MB/1GB leaf pages.
+	paddr_t ResolvePhysical(const void* const virtAddr) const
+	{
+		using namespace x64;
+
+		const uint64_t addr = reinterpret_cast<uint64_t>(virtAddr);
+		const VirtualAddress va = { .AsUint64 = addr };
+
+		PML4E* const pml4 = static_cast<PML4E*>(T_ops.Resolve(Root));
+		if (!pml4[va.index4].Present)
+			return 0;
+
+		PDPTE_DIR* const pdpt = static_cast<PDPTE_DIR*>(T_ops.Resolve(pml4[va.index4].Value & ~0xFFFull));
+		if (!pdpt[va.index3].Present)
+			return 0;
+		if (pdpt[va.index3].PageSize) // 1GB leaf
+			return (pdpt[va.index3].Value & 0x000FFFFFC0000000ull) | (addr & 0x3FFFFFFFull);
+
+		PDE_DIR* const pd = static_cast<PDE_DIR*>(T_ops.Resolve(pdpt[va.index3].Value & ~0xFFFull));
+		if (!pd[va.index2].Present)
+			return 0;
+		if (pd[va.index2].PageSize) // 2MB leaf
+			return (pd[va.index2].Value & 0x000FFFFFFFE00000ull) | (addr & 0x1FFFFFull);
+
+		PTE* const pt = static_cast<PTE*>(T_ops.Resolve(pd[va.index2].Value & ~0xFFFull));
+		if (!pt[va.index1].Present)
+			return 0;
+		return (pt[va.index1].Value & 0x000FFFFFFFFFF000ull) | (addr & 0xFFFull); // 4KB leaf
+	}
+
 	paddr_t Root;
 };

@@ -37,6 +37,7 @@ x64Syscall <GetProcesses>, 20Dh
 x64Syscall <MapFramebuffer>, 300h
 x64Syscall <GetInterfaces>, 301h
 x64Syscall <NetSend>, 302h
+x64Syscall <FlushFramebuffer>, 303h
 
 ; 0x400: Files/pipes
 x64Syscall <CreateFile>, 400h

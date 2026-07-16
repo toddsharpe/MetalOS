@@ -34,6 +34,7 @@
 #include "kernel/Drivers/HyperVKeyboardDriver.cpp"
 #include "kernel/Drivers/HyperVMouseDriver.cpp"
 #include "kernel/Drivers/HyperVNic.cpp"
+#include "kernel/Drivers/HyperVVideoDriver.cpp"
 
 //Kd64
 #include "kernel/Kd64/cpu.cpp"

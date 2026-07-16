@@ -304,6 +304,9 @@ namespace
 		for (uint32_t y = 0; y < g_gfx.Height; y++)
 			memcpy(fb + (size_t)y * g_gfx.PixelsPerScanLine, g_back.Buffer + (size_t)y * g_gfx.Width, (size_t)g_gfx.Width * sizeof(Color));
 
+		//Present: tell the display to re-read the framebuffer (synthvid needs a DIRT to refresh).
+		FlushFramebuffer();
+
 		//Request repaints
 		for (size_t i = 0; i < g_windowCount; i++)
 		{
@@ -322,6 +325,7 @@ int main(int argc, char** argv)
 	//Map the framebuffer into this process
 	if (MapFramebuffer(&g_gfx) != SyscallResult::Success)
 		return 1;
+	DebugPrintf("WM: framebuffer %dx%d, stride %d, base %p\n", g_gfx.Width, g_gfx.Height, g_gfx.PixelsPerScanLine, g_gfx.FrameBase);
 
 	//Backbuffer (packed Width*Height)
 	void* const back = VirtualAlloc(nullptr, (size_t)g_gfx.Width * g_gfx.Height * sizeof(Color));

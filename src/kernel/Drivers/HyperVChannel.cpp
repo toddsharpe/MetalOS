@@ -72,6 +72,11 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	HyperV::HV_HYPERCALL_RESULT_VALUE result = vmbus->PostMessage((uint32_t)msgsize, msg, response);
 	m_gpadlHandle = response.gpadl_created.gpadl;
 
+	//Register the channel callback BEFORE opening: the host can signal the channel the instant it
+	//is open, and if no handler is registered yet that notification is dropped (and the host may
+	//rescind the channel). The rings are already initialized above, so the callback is safe to run.
+	vmbus->SetCallback(m_channel->child_relid, m_callback);
+
 	//Open channel
 	HyperV::vmbus_channel_open_channel openChannel;
 	memset(&openChannel, 0, sizeof(HyperV::vmbus_channel_open_channel));
@@ -83,8 +88,6 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	if (buffer != nullptr)
 		memcpy(openChannel.userdata, buffer->Data, buffer->Size);
 	result = vmbus->PostMessage(sizeof(HyperV::vmbus_channel_open_channel), &openChannel, response);
-
-	vmbus->SetCallback(m_channel->child_relid, m_callback);
 }
 
 //Format is vmpacket_descriptor followed by buffer, alignment if needed, and then old indexes

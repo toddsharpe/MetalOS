@@ -61,3 +61,19 @@ public:
 	virtual Result SendFrame(const void* const frame, const size_t length) = 0;
 	virtual void GetMac(uint8_t out[6]) const = 0;
 };
+
+class DisplayDriver : public Driver
+{
+public:
+	DisplayDriver(KDevice& device) : Driver(device)
+	{
+
+	}
+
+	virtual Result SetMode(const uint32_t width, const uint32_t height, const uint32_t bpp) = 0;
+	virtual Result GetMode(uint32_t& width, uint32_t& height, uint32_t& bpp) const = 0;
+	virtual Result GetFrameBuffer(void*& outAddress, size_t& outSize) const = 0;
+
+	//Present: push the current framebuffer contents to the display (e.g. synthvid DIRT).
+	virtual void Flush() = 0;
+};

@@ -12,7 +12,8 @@ enum class KDeviceClass
 	Mouse,
 	Storage,
 	Serial,
-	Nic
+	Nic,
+	Display
 };
 
 enum class KDeviceType

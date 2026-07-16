@@ -14,6 +14,7 @@
 #include "kernel/Drivers/HyperVKeyboardDriver.h"
 #include "kernel/Drivers/HyperVMouseDriver.h"
 #include "kernel/Drivers/HyperVNic.h"
+#include "kernel/Drivers/HyperVVideoDriver.h"
 #include "Lib/StaticStack.h"
 
 class DeviceTree
@@ -230,6 +231,11 @@ private:
 		else if (device.Hid == "{F8615163-DF3E-46C5-913F-F2D2F965ED0E}")
 		{
 			device.Driver = KeAlloc<HyperVNic>(AllocType::Kernel, device);
+			Assert(device.Driver);
+		}
+		else if (device.Hid == "{DA0A7802-E377-4AAC-8E77-0558EB1073F8}")
+		{
+			device.Driver = KeAlloc<HyperVVideoDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
 

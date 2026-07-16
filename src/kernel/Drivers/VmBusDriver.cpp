@@ -268,6 +268,13 @@ void VmBusDriver::OnInterrupt()
 			}
 			break;
 
+			case HyperV::vmbus_channel_message_type::CHANNELMSG_RESCIND_CHANNELOFFER:
+			{
+				const uint32_t relid = *(uint32_t*)((uintptr_t)message.Payload + sizeof(HyperV::vmbus_channel_message_header));
+				Printf("VmBus: RESCIND child_relid=%u\n", relid);
+			}
+			break;
+
 			default:
 			{
 				Printf("HyperV::ThreadLoop - Type: %d Header: %d\n", message.Header.MessageType, header->msgtype);

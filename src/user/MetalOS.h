@@ -104,6 +104,7 @@ extern "C"
 
 	//0x300: Devices
 	SyscallResult MapFramebuffer(GraphicsDevice* device);
+	SyscallResult FlushFramebuffer(); //present: tell the display to re-read the framebuffer
 	SyscallResult GetInterfaces(InterfaceInfo* buffer, const size_t maxCount, size_t* count);
 	SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length);
 

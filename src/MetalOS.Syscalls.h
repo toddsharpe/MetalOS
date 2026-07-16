@@ -28,6 +28,7 @@ enum class Syscall : uint64_t
 	MapFramebuffer = 0x300,
 	GetInterfaces,
 	NetSend,
+	FlushFramebuffer,
 
 	//0x400: Files/pipes
 	CreateFile = 0x400,

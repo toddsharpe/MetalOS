@@ -178,6 +178,8 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 
 		case Syscall::MapFramebuffer:
 			return (uint64_t)MapFramebuffer((GraphicsDevice*)frame.Arg0);
+		case Syscall::FlushFramebuffer:
+			return (uint64_t)FlushFramebuffer();
 
 		case Syscall::GetInterfaces:
 			return (uint64_t)GetInterfaces((InterfaceInfo*)frame.Arg0, (size_t)frame.Arg1, (size_t*)frame.Arg2);
@@ -978,21 +980,61 @@ SyscallResult ClaimHandle(const uint64_t token, Handle* handle)
 }
 
 //Map the linear framebuffer into the calling process (used by the usermode WM).
+extern DeviceTree m_deviceTree;
+
 SyscallResult MapFramebuffer(GraphicsDevice* device)
 {
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!device || !proc.Space.IsValidPointer(device))
 		return SyscallResult::InvalidPointer;
 
-	const KFramebufferInfo fb = KeGetFramebuffer();
-	void* const va = KeVirtualMap(proc, fb.Base, fb.Size);
+	//Source the framebuffer from the display driver in the device tree (authoritative for the
+	//current, possibly host-negotiated, mode). Fall back to the boot GOP descriptor if there is no
+	//display driver (e.g. its init failed, or a platform without one).
+	paddr_t base;
+	size_t size;
+	uint32_t width, height, pitch;
+
+	KDevice* const display = m_deviceTree.GetDeviceByClass(KDeviceClass::Display);
+	DisplayDriver* const driver = display ? static_cast<DisplayDriver*>(display->Driver) : nullptr;
+	void* physBase = nullptr;
+	uint32_t bpp = 0;
+	if (driver &&
+		driver->GetFrameBuffer(physBase, size) == Result::Success &&
+		driver->GetMode(width, height, bpp) == Result::Success)
+	{
+		base = reinterpret_cast<paddr_t>(physBase);
+		pitch = width; //synthvid VRAM is packed (pitch == width)
+	}
+	else
+	{
+		const KFramebufferInfo fb = KeGetFramebuffer();
+		base = fb.Base;
+		size = fb.Size;
+		width = fb.Width;
+		height = fb.Height;
+		pitch = fb.Pitch;
+	}
+
+	void* const va = KeVirtualMap(proc, base, size);
 	if (!va)
 		return SyscallResult::Failed;
 
 	device->FrameBase = va;
-	device->Width = fb.Width;
-	device->Height = fb.Height;
-	device->PixelsPerScanLine = fb.Pitch;
+	device->Width = width;
+	device->Height = height;
+	device->PixelsPerScanLine = pitch;
+	return SyscallResult::Success;
+}
+
+//Present: ask the display driver to push the current framebuffer to the display (synthvid DIRT).
+SyscallResult FlushFramebuffer()
+{
+	KDevice* const display = m_deviceTree.GetDeviceByClass(KDeviceClass::Display);
+	if (!display || !display->Driver)
+		return SyscallResult::Success; //no display driver (boot GOP is scanned out directly)
+
+	static_cast<DisplayDriver*>(display->Driver)->Flush();
 	return SyscallResult::Success;
 }
 

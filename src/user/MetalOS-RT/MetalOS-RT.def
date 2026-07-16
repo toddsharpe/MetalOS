@@ -63,6 +63,7 @@ EXPORTS
 	MapSharedMemory
 	DeleteSharedMemory
 	MapFramebuffer
+	FlushFramebuffer
 
 	; 0x700
 	DebugPrint

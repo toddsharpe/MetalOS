@@ -12,6 +12,7 @@ enum class MessageType
 	KeyEvent,
 	MouseEvent,
 	PaintEvent,
+	CloseEvent, //WM asked the window to close; the app should exit
 };
 
 struct MessageHeader

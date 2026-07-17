@@ -16,6 +16,7 @@ namespace Wm
 
 	static constexpr uint32_t RequestCapacity = 64;
 	static constexpr uint32_t MessageCapacity = 64;
+	static constexpr uint32_t MaxTitle = 32; //window title length (for the taskbar)
 
 	//app -> WM request opcodes
 	enum class Op : uint32_t
@@ -33,6 +34,8 @@ namespace Wm
 		uint64_t SurfaceGrant;     //AllocWindow: capability token for the shared surface
 		uint32_t Width;            //AllocWindow: surface dimensions
 		uint32_t Height;
+		char     Title[MaxTitle];  //AllocWindow: window title (null-terminated), for the taskbar
+		bool     ShowTitle;        //AllocWindow: draw WM chrome (title/minimize/close); false = chromeless
 	};
 
 	//Duplex channel: request ring (app->WM) + reply ring carrying the async input Message

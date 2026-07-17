@@ -25,7 +25,7 @@ public:
 	{
 		// Allocate
 		Graphics::Rectangle rect = {m_point.X, m_point.Y, Frame.Width, Frame.Height};
-		AssertSuccess(AllocWindow(&m_handle, &rect));
+		AssertSuccess(AllocWindow(&m_handle, &rect, Title.c_str()));
 
 		// Draw directly into the WM-provided shared surface (zero-copy)
 		Frame.Buffer = (Graphics::Color *)GetWindowSurface(m_handle);
@@ -37,6 +37,8 @@ public:
 		Message message = {};
 		while (GetMessage(&message) == SyscallResult::Success)
 		{
+			if (message.Header.MessageType == MessageType::CloseEvent)
+				break; //WM asked us to close; exit the message loop so main() can return
 			if (!m_callback(*this, message))
 				DefaultCallback(message);
 		}

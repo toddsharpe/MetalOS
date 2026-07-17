@@ -24,80 +24,21 @@ Get-VMComPort -VMName MetalOS
   * High half used for Kernel mode
 * Ring 0 (Kernel) and Ring 3 (User)
 * Modern systemcall interface (syscall instruction)
+* Window Manager
+* Network stack
+* UEFI runtime services
 
 ### Non-Goals
 * 32-bit compatibility
 * Additional architectures
 * Support for bios
 
-## Project dependencies
-![Dependencies](docs/images/Dependencies.png)
-
-| Project | Type | File | Description |
-| - | - | - | - |
-| MetalOS.Kernel | Exe | moskrnl.exe | Monolithic kernel |
-| MetalOS.Boot | EFI App | BOOTX64.efi | EFI Bootloader |
-| MetalOS.Apps.Doom | Exe | doom.exe |  Doom ported for MetalOS |
-| MetalOS.OS.Fire | Exe | fire.exe | Doom fire implemented as standalone app |
-| MetalOS.OS.Runtime | DLL | mosrt.dll | MetalOS Runtime library |
-
 ## Architecture
-MetalOS is a monolithic kernel that uses a custom UEFI bootloader:  
-![Architecture](docs/images/Architecture.png)
+MetalOS is a hybrid kernel that uses a custom UEFI bootloader:
+* Kernel provides page tables, virtual memory, processes and threads
+* Usermode server for window manager and network stack.
 
 Note: All executable formats (``Kernel``, ``Doom``, ``Runtime``, and even ``Boot``) are Microsoft PE files. Boot contains a loader for the Kernel, the Kernel contains a loader for the usermode process (as well as the Runtime) and the Runtime contains a loader for subsequent DLLs the usermode process may desire.
-
-### Boot
-The main purpose of Boot is to load the ``Kernel``, however it must also:
-* Detect Graphics Device from UEFI (using Graphics Output Protocol)
-* Allocate Page Table Pool for Kernel
-* Allocate Page Frame Number Database for Kernel's PhysicalMemory
-* Allocate and load Kernel's PDB into physical memory (to allow for bugcheck stack walks)
-
-See also: [Loader Params](inc/LoaderParams.h)
-
-### Kernel
-Monolithic preemptive kernel. 
-
-Quick Notes:
-* UEFI Runtime is mapped into Kernel address space, allowing runtime services to be called
-* Each process has at least one thread
-* Each user thread also contains a kernel thread for when executing Kernel code (interrupt handler, systemcall)
-
-#### Usermode Interface
-Usermode interface is provided by MetalOS.h, a required Init static library, and a single runtime dll.  
-![DoomArchitecture](docs/images/DoomArchitecture.png)  
-This dll contains the MetalOS native interface as well as the expected CRT interfaces (stdio, stdlib, string, ctype).
-
-The init library provides two exports for use by the kernel:
-* InitProcess
-* InitThread
-
-These are the starting entry points for the first thread in a process and subsequent threads, respectively. ``InitProcess`` is responsible for finishing to load the process (and dependencies), executing main, and calling ``ExitProcess`` once main returns. ``InitThread`` retrieves its entry point and calls ``ExitThread`` on its return. ``Init`` depende on ``Runtime`` which means every process running has ``Runtime`` loaded as well.
-
-**Native Interface Subset:**
-| Type | Function |
-| - | - |
-| Environment | GetSystemInfo |
-| | GetProcessInfo |
-| Process/Thread | Sleep |
-| | ExitProcess  |
-| | ExitThread |
-| File/IO | CreateFile|
-| | ReadFile |
-| UI  | AllocWindow |
-| | PaintWindow |
-| | MoveWindow |
-| | GetWindowRect |
-| | GetMessage |
-| | PeekMessage |
-| | GetScreenRect |
-
-### Windowing System
-Windowing system is implemented in kernel mode, handles composing windows to frame buffer and handling input events.
-Currently supports
-* Tracking which window has focus
-* Click and drag moving of windows
 
 ### Features
 * Kernel Call Stack (virtual unwind + PDB support) for Assertions/Bugchecks
@@ -110,9 +51,10 @@ Currently supports
 * Kernel debugging using WinDbg
 
 ### 3rd Party code
-* ACPCIA
+* uACPI
 * Virtual Stack Unwinder from coreclr
 * kvprintf
+* kdcom - ReactOS
 
 ### Hyper-V Notes
 Gen2 Hyper-V was chosen early into development for its 64-bit UEFI environment (versus the real mode bios booting of Gen1). Gen1 VMs use emulated legacy hardware which allows it to run most operating systems without any modification. However, Gen2 VMs use all synthetic hardware, which requires using the VMBus for access, an entirely undocumented protocol (Guests are required to be aware of Hyper-Vs existence). Drivers used in MetalOS relied heavily on looking at linux driver source (drivers that were written by Microsoft).
@@ -120,9 +62,9 @@ Gen2 Hyper-V was chosen early into development for its 64-bit UEFI environment (
 - [x] VMBus
 - [x] Keyboard
 - [x] Mouse (Basics)
-- [ ] Video Adapter
+- [x] Video Adapter
 - [ ] SCSI
-- [ ] Network
+- [x] Network
 
 ## Screenshots
 
@@ -132,7 +74,7 @@ Gen2 Hyper-V was chosen early into development for its 64-bit UEFI environment (
 ![Doom](docs/screenshots/Doom3.png)
 
 ### Window System
-![Calc Windows](docs/screenshots/CalcWindows.png)
+![Windowss](docs/screenshots/Windows.png)
 
 ### WinDBG
 ![WinDBG](docs/screenshots/WinDbgFull.png)
@@ -144,20 +86,6 @@ May need to set sympath force kernel symbol:
 ```
 .reload /f /i moskrnl.exe=0xffff800001000000
 dx -r1 (*((moskrnl!Kernel *)0xffff8000011cf030))
-```
-
-Viewing kernel modules
-```
-dt moskrnl!KModule 0xffff800001db7258 -l Link.FLink
-```
-
-Viewing kernel threads
-```
-dt -r2 moskrnl!KThread 0xffff8000018b2160 -l Link.FLink
-```
-Viewing windows:
-```
-dt moskrnl!UWindow 0xffff8000014b05c0 -l Link.FLink
 ```
 
 Viewing stack trace:

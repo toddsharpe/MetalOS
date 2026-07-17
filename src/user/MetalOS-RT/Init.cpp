@@ -11,8 +11,6 @@
 typedef int (*ProcessEntry)(int argc, char **argv);
 extern "C" __declspec(dllexport) void InitProcess() // Rename: init module?
 {
-	DebugPrint("InitProcess\n");
-	
 	ProcessEnvironmentBlock *peb = Runtime::GetPEB();
 	DebugPrintf("PEB: ImageBase=0x%016x CommandLine=%s ProcessId=%d\n", (uintptr_t)peb->ImageBase, peb->CommandLine.c_str(), peb->ProcessId);
 

@@ -99,7 +99,7 @@ extern "C"
 		frame.X = screen.Width > frame.Width ? (screen.Width - frame.Width) / 2 : 0;
 		frame.Y = screen.Height > frame.Height ? (screen.Height - frame.Height) / 2 : 0;
 
-		AllocWindow(&window, &frame);
+		AllocWindow(&window, &frame, "Doom", false);
 		DebugPrintf("Doom window: (0x%x,0x%x) 0x%x x 0x%x\n", frame.X, frame.Y, frame.Width, frame.Height);
 
 		//Point Doom's screen buffer at the window surface (replaces the malloc done in

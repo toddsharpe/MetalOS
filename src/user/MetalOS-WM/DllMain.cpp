@@ -38,7 +38,7 @@ namespace
 	uint32_t ToId(const HWindow handle) { return (uint32_t)(uintptr_t)handle; }
 }
 
-extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame)
+extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame, const char* title, bool showTitle)
 {
 	if (!handle || !frame)
 		return SyscallResult::InvalidPointer;
@@ -68,7 +68,7 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 	};
 	g_windows.Add(window); //capacity checked above, so this succeeds
 
-	const Wm::Request request =
+	Wm::Request request =
 	{
 		.Code = Wm::Op::AllocWindow,
 		.WindowId = id,
@@ -77,6 +77,13 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 		.Width = frame->Width,
 		.Height = frame->Height,
 	};
+	//Copy the (bounded, null-terminated) title into the fixed request field.
+	size_t n = 0;
+	if (title)
+		for (; n < Wm::MaxTitle - 1 && title[n]; n++)
+			request.Title[n] = title[n];
+	request.Title[n] = '\0';
+	request.ShowTitle = showTitle;
 	Wm::Channel::Requests(g_channel).Enqueue(request);
 
 	*handle = (HWindow)(uintptr_t)id;

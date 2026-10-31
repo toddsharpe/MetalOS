@@ -41,7 +41,8 @@ UProcess* KeCreateProcess(const char* const cmd)
 	size_t i = 0;
 	while (cmd[i] != '\0' && cmd[i] != ' ')
 		i++;
-	Assert(i > 0);
+	if (i == 0)
+		return nullptr; //Empty command line (reachable from the CreateProcess syscall)
 
 	StaticString<64> path;
 	path.Append(CString(cmd, i));

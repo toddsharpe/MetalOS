@@ -70,6 +70,19 @@ namespace
 		}
 		return length;
 	}
+
+	//Resolve a child's standard handle: only the matching end of a pipe can be redirected
+	SyscallResult GetStdPipe(UProcess& proc, const HFile handle, const KPipeOp op, KPipe*& pipe)
+	{
+		UObject* const obj = proc.GetObject((handle_t)handle);
+		if (!obj)
+			return SyscallResult::InvalidHandle;
+		if (obj->Type != UObjectType::Pipe || obj->Pipe->Op != op)
+			return SyscallResult::InvalidObject;
+
+		pipe = &obj->Pipe->KPipe;
+		return SyscallResult::Success;
+	}
 }
 
 //Syscalls that the kernel adds params
@@ -297,6 +310,29 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 	if ((!proc.Space.IsValidPointer(commandLine)) || (args && !proc.Space.IsValidPointer(args)) || (result && !proc.Space.IsValidPointer(result)))
 		return SyscallResult::InvalidPointer;
 
+	//Resolve standard handles before creating the process, so a bad one can't leave a half-built child
+	KPipe* stdIn = nullptr;
+	KPipe* stdOut = nullptr;
+	KPipe* stdErr = nullptr;
+	if (args && args->StdInput)
+	{
+		const SyscallResult status = GetStdPipe(proc, args->StdInput, KPipeOp::Read, stdIn);
+		if (status != SyscallResult::Success)
+			return status;
+	}
+	if (args && args->StdOutput)
+	{
+		const SyscallResult status = GetStdPipe(proc, args->StdOutput, KPipeOp::Write, stdOut);
+		if (status != SyscallResult::Success)
+			return status;
+	}
+	if (args && args->StdError)
+	{
+		const SyscallResult status = GetStdPipe(proc, args->StdError, KPipeOp::Write, stdErr);
+		if (status != SyscallResult::Success)
+			return status;
+	}
+
 	//Copy string locally to automatically crop it at max bytes
 	StaticString<128> copy = {};
 	copy.AppendClip(commandLine);
@@ -314,65 +350,42 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 		result->Process = (HProcess)obj->Handle;
 	}
 
-	//If console application, set standard handles
+	//If console application, redirect standard handles (without args it keeps the debug output)
 	if (created->IsConsole)
 	{
-		Assert(args);
-
-		if (args->StdInput)
+		if (stdIn)
 		{
-			UObject* obj = proc.GetObject((handle_t)args->StdInput);
-			if (!obj)
-				return SyscallResult::InvalidHandle;
-			if (!obj->CanRead())
-				return SyscallResult::InvalidObject;
-
-			KPipe& backing = obj->Pipe->KPipe;
-			backing.Readers.Increment();
+			stdIn->Readers.Increment();
 
 			//Set stdin to new process
 			UObject* stdin = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe, Handles::StdIn);
-			stdin->Pipe = KeAlloc<UPipe>(AllocType::User, backing, KPipeOp::Read);
+			stdin->Pipe = KeAlloc<UPipe>(AllocType::User, *stdIn, KPipeOp::Read);
 			Assert(created->Objects.Add(stdin));
 		}
 
-		if (args->StdOutput)
+		if (stdOut)
 		{
-			UObject* obj = proc.GetObject((handle_t)args->StdOutput);
-			if (!obj)
-				return SyscallResult::InvalidHandle;
-			if (!obj->CanWrite())
-				return SyscallResult::InvalidObject;
-
 			//Delete existing stdout
 			created->CloseObject((handle_t)Handles::StdOut);
 
-			KPipe& backing = obj->Pipe->KPipe;
-			backing.Writers.Increment();
+			stdOut->Writers.Increment();
 
 			//Set stdout to new process
 			UObject* stdout = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe, Handles::StdOut);
-			stdout->Pipe = KeAlloc<UPipe>(AllocType::User, backing, KPipeOp::Write);
+			stdout->Pipe = KeAlloc<UPipe>(AllocType::User, *stdOut, KPipeOp::Write);
 			Assert(created->Objects.Add(stdout));
 		}
 
-		if (args->StdError)
+		if (stdErr)
 		{
-			UObject* obj = proc.GetObject((handle_t)args->StdError);
-			if (!obj)
-				return SyscallResult::InvalidHandle;
-			if (!obj->CanWrite())
-				return SyscallResult::InvalidObject;
-
-			//Delete existing stdout
+			//Delete existing stderr
 			created->CloseObject((handle_t)Handles::StdErr);
 
-			KPipe& backing = obj->Pipe->KPipe;
-			backing.Writers.Increment();
+			stdErr->Writers.Increment();
 
 			//Set stderr to new process
 			UObject* stderr = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe, Handles::StdErr);
-			stderr->Pipe = KeAlloc<UPipe>(AllocType::User, backing, KPipeOp::Write);
+			stderr->Pipe = KeAlloc<UPipe>(AllocType::User, *stdErr, KPipeOp::Write);
 			Assert(created->Objects.Add(stderr));
 		}
 	}

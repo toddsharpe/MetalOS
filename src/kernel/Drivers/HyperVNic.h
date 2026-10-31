@@ -277,8 +277,15 @@ private:
 	void OnCallback();
 	void SendNvsp(const nvsp_message& msg, bool requestCompletion = false);
 	void SendNvspCompletion(const nvsp_message& msg, uint64_t transId);
-	void SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion = false);
+	void SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion = false, uint32_t section = 0);
+	uint32_t AcquireSendSection();
+	void ReleaseSendSection(uint64_t transId);
 	uint32_t CreateGpadl(paddr_t address, size_t pageCount);
+
+	//Send-buffer sections: 0 is for init-time control messages; a data frame holds one until SendRndisPacketComplete
+	static constexpr uint32_t MaxSendSections = 64; //Width of m_sendSectionsInUse
+	static constexpr uint64_t SendSectionTag = 0x534E'4400'0000'0000; //trans_id = tag | section
+	static constexpr uint64_t SendSectionTagMask = 0xFFFF'FF00'0000'0000;
 
 	HyperVChannel m_channel;
 	KEvent m_event;
@@ -287,6 +294,8 @@ private:
 
 	uint8_t* m_sendBuf;
 	uint32_t m_sendSectionSize;
+	uint32_t m_sendSectionCount;
+	uint64_t m_sendSectionsInUse; //Bit per section; changed with interrupts off (completions run in the ISR)
 
 	uint8_t* m_recvBuf;
 	uint32_t m_recvBufGpadl;

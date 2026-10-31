@@ -32,15 +32,13 @@ int sprintf(char *const _Buffer, char const *const _Format, ...)
 	return (retval);
 }
 
-// TODO: BufferCount is not used
 int snprintf(char *const _Buffer, size_t const _BufferCount, char const *const _Format, ...)
 {
 	int retval;
 	va_list ap;
 
 	va_start(ap, _Format);
-	retval = kvprintf(_Format, NULL, (void *)_Buffer, 10, ap);
-	_Buffer[retval] = '\0';
+	retval = vsnprintf(_Buffer, _BufferCount, _Format, ap);
 	va_end(ap);
 	return (retval);
 }
@@ -54,10 +52,38 @@ int vsprintf(char *const _Buffer, char const *const _Format, va_list _ArgList)
 	return (retval);
 }
 
-// TODO: BufferCount is not used
+struct snprintf_arg
+{
+	char *str;
+	size_t remain;
+};
+
+static void snprintf_func(int ch, void *arg)
+{
+	struct snprintf_arg *const info = (struct snprintf_arg *)arg;
+
+	//Always leave room for the NUL
+	if (info->remain >= 2)
+	{
+		*info->str++ = (char)ch;
+		info->remain--;
+	}
+}
+
+// Stores at most _BufferCount - 1 characters plus the NUL. Returns the number of characters
+// stored (not the untruncated length), so callers indexing _Buffer[retval] stay in bounds.
 int vsnprintf(char *const _Buffer, size_t const _BufferCount, char const *const _Format, va_list _ArgList)
 {
-	return vsprintf(_Buffer, _Format, _ArgList);
+	struct snprintf_arg info;
+
+	if (_BufferCount == 0)
+		return 0;
+
+	info.str = _Buffer;
+	info.remain = _BufferCount;
+	kvprintf(_Format, snprintf_func, &info, 10, _ArgList);
+	*info.str = '\0';
+	return (int)(info.str - _Buffer);
 }
 
 /*

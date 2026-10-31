@@ -84,8 +84,7 @@ void PrintStack()
 void Printf(const char* format, va_list args)
 {
 	char buffer[1024];
-	int retval = vsprintf(buffer, format, args);
-	buffer[retval] = '\0';
+	vsnprintf(buffer, sizeof(buffer), format, args); //Truncates long output; always NUL-terminated
 	m_uart.Write(buffer);
 }
 

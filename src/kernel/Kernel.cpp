@@ -268,9 +268,10 @@ extern "C"
 			return;
 		}
 
-		//Check if interrupt is in user code or kernel code
+		//User or kernel fault by the interrupted CS's privilege level (not RIP: a user jump to null is a user fault)
 		KThread& current = Scheduler::GetCurrentThread();
-		if (current.UserThread && current.UserThread->Process.Space.IsValidPointer((void*)frame.RIP))
+		const bool fromUser = (frame.CS & 0x3) == 0x3;
+		if (fromUser && current.UserThread)
 		{
 			UProcess& proc = current.UserThread->Process;
 			UObject* obj = proc.GetObject((handle_t)Handles::StdOut);

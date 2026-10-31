@@ -96,6 +96,9 @@ ArchLoadContext endp
 
 ; void ArchUserThreadStart(void* context, void* teb);
 ArchUserThreadStart proc
+	; Interrupts off first: RSP becomes the user stack below while still in ring 0, and GS is user before sysretq
+	cli
+
 	; Load registers
 	mov r12, [rcx + CONTEXT._r12]
 	mov r13, [rcx + CONTEXT._r13]
@@ -111,9 +114,6 @@ ArchUserThreadStart proc
 	mov r11, [rcx + CONTEXT._rflags]
 	mov rcx, [rcx + CONTEXT._rip]
 
-	; Keep interrupts off across swapgs..sysretq: here CS is kernel but GS is already user, so a
-	; timer would skip the entry swapgs and run with the wrong GS. sysretq restores user IF.
-	cli
 	swapgs
 	wrgsbase rdx
 	sysretq

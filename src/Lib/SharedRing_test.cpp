@@ -152,4 +152,44 @@ void SharedRing_test()
 		Assert(out.A == in.A && out.B == in.B);
 		Assert(out.C[0] == 7 && out.C[1] == 8 && out.C[2] == 9);
 	}
+
+	// A peer rewriting the header can't push either side outside the region
+	{
+		constexpr uint32_t cap = 4;
+		constexpr size_t size = SharedRing<uint32_t>::RegionSize(cap);
+		constexpr uint8_t guard = 0xCC;
+		alignas(8) uint8_t region[size + 64];
+		memset(region, guard, sizeof(region));
+		SharedRing<uint32_t>::Init(region, cap);
+		SharedRingHeader* const header = reinterpret_cast<SharedRingHeader*>(region);
+
+		//Pinned capacity ignores a forged header capacity; out-of-range indices are rejected
+		SharedRing<uint32_t> pinned(region, cap);
+		header->Capacity = 0xFFFFFFFF;
+		header->Head = 0x7FFFFFFF;
+		Assert(!pinned.Enqueue(1));
+		header->Head = 0;
+		header->Tail = cap;
+		Assert(!pinned.Enqueue(1));
+		uint32_t value = 0;
+		Assert(!pinned.Dequeue(value));
+
+		//Zero capacity in the header rejects instead of dividing by zero
+		header->Head = 0;
+		header->Tail = 0;
+		header->Capacity = 0;
+		SharedRing<uint32_t> attached(region);
+		Assert(!attached.Enqueue(1));
+		Assert(!attached.Dequeue(value));
+
+		//Nothing past the region was touched
+		for (size_t i = size; i < sizeof(region); i++)
+			Assert(region[i] == guard);
+
+		//Still usable once the header is sane again
+		header->Capacity = cap;
+		Assert(pinned.Enqueue(42));
+		Assert(pinned.Dequeue(value));
+		Assert(value == 42);
+	}
 }

@@ -1,36 +1,46 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
+# Build on pull requests to master and on merges (pushes) to master
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: windows-2022
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
       with:
         submodules: true
 
-    # This action sets up cl.exe and MSVC paths automatically
+    # Puts cl.exe, link.exe and ml64.exe (x64) on the path
     - name: Set up MSVC
       uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Create output directory
-      run: mkdir build
+    - name: Build boot
+      shell: cmd
+      run: scripts\build_boot.bat
 
-    # Runs a set of commands using the runners shell
-    - name: Build
-      run: cd src; .\build.bat
+    - name: Build kernel
+      shell: cmd
+      run: scripts\build_kernel.bat
+
+    - name: Build user
+      shell: cmd
+      run: scripts\build_user.bat
+
+    # diskpart needs admin, which hosted runners have. DOOM.WAD/DEFAULT.CFG aren't
+    # available here, so the image has doom.exe but no game data.
+    - name: Build VHDX
+      shell: cmd
+      run: scripts\build_vhd.cmd
+
+    - name: Upload VHDX
+      uses: actions/upload-artifact@v7
+      with:
+        name: MetalOS-vhdx
+        path: build/MetalOS.vhdx
+        if-no-files-found: error

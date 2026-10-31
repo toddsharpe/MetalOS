@@ -50,6 +50,26 @@ namespace
 				return WaitStatus::None;
 		}
 	}
+
+	//Longer debug output is truncated by Printf's buffer anyway
+	constexpr size_t MaxDebugPrint = 1024;
+
+	//Length of a NUL-terminated user string, never reading past maxLength or the process's reservations
+	size_t UserStringLength(const UProcess& proc, const char* const s, const size_t maxLength)
+	{
+		size_t length = 0;
+		while (length < maxLength)
+		{
+			const char* const c = s + length;
+			const bool newPage = (length == 0) || (((uintptr_t)c & Arch::PageMask) == 0);
+			if (newPage && !proc.Space.IsValidRange(c, 1))
+				break;
+			if (*c == '\0')
+				break;
+			length++;
+		}
+		return length;
+	}
 }
 
 //Syscalls that the kernel adds params
@@ -590,8 +610,10 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 
 		case UObjectType::Debug:
 		{
+			//User text is data, never a format string. Buffer was validated for bufferSize bytes.
 			const char* const s = (char*)buffer;
-			Printf(s);
+			const size_t length = (bufferSize < MaxDebugPrint) ? bufferSize : MaxDebugPrint;
+			Printf("%.*s", (int)length, s);
 			return SyscallResult::Success;
 		}
 		break;
@@ -1090,7 +1112,8 @@ SyscallResult DebugPrint(const char* s)
 	if (!proc.Space.IsValidPointer(s))
 		return SyscallResult::InvalidPointer;
 
-	Printf(s);
+	//User text is data, never a format string
+	Printf("%.*s", (int)UserStringLength(proc, s, MaxDebugPrint), s);
 	return SyscallResult::Success;
 }
 

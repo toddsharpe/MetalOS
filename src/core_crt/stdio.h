@@ -9,12 +9,12 @@ extern "C"
 
 	int sprintf(char *const _Buffer, char const *const _Format, ...);
 
-	// TODO: BufferCount is not used
+	// Bounded: returns the number of characters stored (excluding the NUL)
 	int snprintf(char *const _Buffer, size_t const _BufferCount, char const *const _Format, ...);
 
 	int vsprintf(char *const _Buffer, char const *const _Format, va_list _ArgList);
 
-	// TODO: BufferCount is not used
+	// Bounded: returns the number of characters stored (excluding the NUL)
 	int vsnprintf(char *const _Buffer, size_t const _BufferCount, char const *const _Format, va_list _ArgList);
 
 	/*

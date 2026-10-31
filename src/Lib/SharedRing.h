@@ -26,10 +26,17 @@ template <typename T>
 class SharedRing
 {
 public:
-	//Attach to a region already initialized by Init()
+	//Attach to a region already initialized by Init(), taking the capacity from its header
 	explicit SharedRing(void* const region) :
+		SharedRing(region, reinterpret_cast<SharedRingHeader*>(region)->Capacity)
+	{
+	}
+
+	//Attach with a known capacity, ignoring the header's (which the peer can rewrite)
+	SharedRing(void* const region, const uint32_t capacity) :
 		m_header(reinterpret_cast<SharedRingHeader*>(region)),
-		m_records(reinterpret_cast<uint8_t*>(region) + sizeof(SharedRingHeader))
+		m_records(reinterpret_cast<uint8_t*>(region) + sizeof(SharedRingHeader)),
+		m_capacity(capacity)
 	{
 	}
 
@@ -52,8 +59,11 @@ public:
 	bool Enqueue(const T& value)
 	{
 		const uint32_t head = m_header->Head;
-		const uint32_t next = (head + 1) % m_header->Capacity;
-		if (next == m_header->Tail)
+		const uint32_t tail = m_header->Tail;
+		if (head >= m_capacity || tail >= m_capacity)
+			return false; //corrupt header (also covers a zero capacity)
+		const uint32_t next = (head + 1) % m_capacity;
+		if (next == tail)
 			return false; //full
 		memcpy(m_records + static_cast<size_t>(head) * sizeof(T), &value, sizeof(T));
 		m_header->Head = next;
@@ -63,10 +73,13 @@ public:
 	bool Dequeue(T& value)
 	{
 		const uint32_t tail = m_header->Tail;
-		if (tail == m_header->Head)
+		const uint32_t head = m_header->Head;
+		if (head >= m_capacity || tail >= m_capacity)
+			return false; //corrupt header (also covers a zero capacity)
+		if (tail == head)
 			return false; //empty
 		memcpy(&value, m_records + static_cast<size_t>(tail) * sizeof(T), sizeof(T));
-		m_header->Tail = (tail + 1) % m_header->Capacity;
+		m_header->Tail = (tail + 1) % m_capacity;
 		return true;
 	}
 
@@ -75,4 +88,5 @@ public:
 private:
 	SharedRingHeader* m_header;
 	uint8_t* m_records;
+	uint32_t m_capacity;
 };

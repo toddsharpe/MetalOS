@@ -47,6 +47,6 @@ void KeInputPost(const Message& message)
 		return;
 
 	KSpinLockGuard guard(_INPUT::m_lock);
-	SharedRing<Message> ring(_INPUT::m_region);
+	SharedRing<Message> ring(_INPUT::m_region, _INPUT::Capacity); //WM can rewrite the header; use our capacity
 	ring.Enqueue(message); //drops silently if the WM has fallen behind
 }

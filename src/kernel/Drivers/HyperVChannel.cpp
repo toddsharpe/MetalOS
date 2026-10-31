@@ -91,7 +91,7 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 }
 
 //Format is vmpacket_descriptor followed by buffer, alignment if needed, and then old indexes
-void HyperVChannel::SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint32_t flags)
+bool HyperVChannel::SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint32_t flags)
 {
 	uint32_t packetlen = sizeof(HyperV::vmpacket_descriptor) + (uint32_t)length;
 	const uint32_t packetlen_aligned = ByteAlign(packetlen, sizeof(uint64_t));
@@ -115,7 +115,7 @@ void HyperVChannel::SendPacket(const void* buffer, const size_t length, const ui
 	};
 	int writeCount = ((length != 0) ? fullSize : headerSize);
 
-	m_outbound.Write(buffers, writeCount);
+	return m_outbound.Write(buffers, writeCount);
 }
 
 void* HyperVChannel::ReadPacket(const uint32_t length)

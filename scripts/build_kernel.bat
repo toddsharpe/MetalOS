@@ -1,3 +1,8 @@
+:: Runs from src\ regardless of caller's directory (setlocal restores it on exit)
+setlocal
+cd /d "%~dp0..\src"
+
+if not exist "..\build" mkdir "..\build"
 del "..\build\kernel_acpi.obj"
 del "..\build\kernel_64.obj"
 del "..\build\moskrnl.obj"

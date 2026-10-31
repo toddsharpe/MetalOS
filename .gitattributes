@@ -3,6 +3,10 @@
 ###############################################################################
 * text=auto
 
+# cmd mis-parses labels/goto in LF-only batch files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

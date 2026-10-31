@@ -1,3 +1,8 @@
+:: Runs from src\ regardless of caller's directory (setlocal restores it on exit)
+setlocal
+cd /d "%~dp0..\src"
+
+if not exist "..\build" mkdir "..\build"
 del "..\build\*.obj"
 
 set CompileIncludes=-I.\ -I..\external -I.\std

@@ -90,10 +90,7 @@ UProcess* KeCreateProcess(const char* const cmd)
 	Assert(created->AddModule(RuntimeDLL, runtime.UserBase));
 
 	created->IsConsole = WinPE::IsConsole(exe.Alias);
-
-	//Create main process thread
 	const size_t stackSize = WinPE::GetStackSize(exe.Alias);
-	KeCreateUThread(*created, stackSize);
 
 	//Done loading; release the temporary kernel aliases
 	KeVirtualFree(m_process, exe.Alias);
@@ -103,8 +100,9 @@ UProcess* KeCreateProcess(const char* const cmd)
 	Assert(created->CreateObject(UObjectType::Debug, Handles::StdOut));
 	Assert(created->CreateObject(UObjectType::Debug, Handles::StdErr));
 
-	//Fully built and schedulable now
+	//Fully built; create the main thread last since it's schedulable as soon as it exists
 	created->State = ProcessState::Running;
+	KeCreateUThread(*created, stackSize);
 	return created;
 }
 

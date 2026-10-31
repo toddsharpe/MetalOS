@@ -65,7 +65,8 @@ extern "C" void ArchInitialize()
 	const x64::IA32_STAR_REG starReg = { {0, codeSelector.Value, userCodeSelector.Value } };
 	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_STAR), starReg.AsUint64);
 	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_LSTAR), (uintptr_t)&x64_SYSTEMCALL);
-	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_FMASK), 0x200 | 0x100); //Disable interrupts and traps
+	//Clear IF, TF, DF (kernel string ops assume it), NT (iretq faults with it set) and AC on syscall entry
+	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_FMASK), 0x200 | 0x100 | 0x400 | 0x4000 | 0x40000);
 
 	//Enable syscall
 	const size_t value = __readmsr(static_cast<uint32_t>(x64::MSR::IA32_EFER));

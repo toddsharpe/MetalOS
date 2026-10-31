@@ -123,20 +123,27 @@ ArchUserThreadStart endp
 ; Routines to save/load user/kernel stacks don't use the stack themselves by design
 x64_SYSTEMCALL PROC
 	swapgs ; Swap to KThread
+
+	; RSP is still the (untrusted) user stack: nothing may push/pop until the kernel stack is loaded.
+	; IF is clear here (IA32_FMASK), so RSP itself is used as scratch while loading it.
+	mov qword ptr gs:[16], rsp ; offsetof(CpuContext, UserStack)
+
+	; Load kernel stack
+	mov rsp, qword ptr gs:[0] ; Get CpuContext block (SelfPointer)
+	mov rsp, qword ptr [rsp+8] ; offsetof(CpuContext, Thread)
+	mov rsp, qword ptr [rsp] ; offsetof(KThread, ContextPtr)
+	mov rsp, qword ptr [rsp+64] ; Get Stack pointer (8th item)
+
+	; Save user stack and RBX on the kernel stack (two pushes keep KeSyscall's stack alignment)
+	push qword ptr gs:[16] ; offsetof(CpuContext, UserStack)
 	PUSH_NONVOLATILE
 
 	; Save user stack
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block (SelfPointer)
 	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
 	mov rbx, qword ptr [rbx+8] ; offsetof(KThread, UserThread)
-	mov qword ptr [rbx+16], rsp ; offsetof(UThread, Stack)
-
-	; Load kernel stack
-	mov rbx, qword ptr gs:[0] ; Get CpuContext block (SelfPointer)
-	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
-	mov rbx, qword ptr [rbx] ; offsetof(KThread, ContextPtr)
-	mov rbx, qword ptr [rbx+64] ; Get Stack pointer (8th item)
-	mov rsp, rbx ; Set stack
+	push qword ptr gs:[16] ; offsetof(CpuContext, UserStack)
+	pop qword ptr [rbx+16] ; offsetof(UThread, Stack)
 
 	; Create new frame
 	PROLOG
@@ -153,19 +160,19 @@ x64_SYSTEMCALL PROC
 	POP_SYSTEMCALL_FRAME
 	EPILOG
 
-	; Save kernel stack
+	; Interrupts stay off from here: RSP becomes the user stack while still in ring 0. sysretq restores user IF.
+	cli
+
+	; Save kernel stack (its top, above the saved RBX and user stack)
 	mov rbx, qword ptr gs:[0] ; Get CpuContext block (SelfPointer)
 	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
 	mov rbx, qword ptr [rbx] ; offsetof(KThread, ContextPtr)
 	mov qword ptr [rbx+64], rsp ; Set stack
+	add qword ptr [rbx+64], 16 ; Skip saved RBX and user stack
 
-	; Restore stack
-	mov rbx, qword ptr gs:[0] ; Get CpuContext block (SelfPointer)
-	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
-	mov rbx, qword ptr [rbx+8] ; offsetof(KThread, UserThread)
-	mov rsp, qword ptr [rbx+16] ; offsetof(UThread, Stack)
-
+	; Restore RBX, then the user stack
 	POP_NONVOLATILE
+	pop rsp ; Saved user stack
 	swapgs ; Swap back to User TEB
 	sysretq
 x64_SYSTEMCALL ENDP

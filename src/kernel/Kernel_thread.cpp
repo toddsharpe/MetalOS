@@ -8,12 +8,21 @@
 //Kernel globals (defined in Kernel.cpp).
 extern KProcess m_process;
 
+namespace
+{
+	//Allocate and initialize a kernel thread without making it schedulable yet
+	KThread* AllocKThread(const KThreadStart start, void* const arg, const char* const name)
+	{
+		KThread* thread = KeAlloc<KThread>(AllocType::Kernel, start, arg, CString(name));
+		thread->Init(&KThreadInit);
+		thread->Process = &m_process;
+		return thread;
+	}
+}
+
 KThread* KeCreateThread(const KThreadStart start, void* const arg, const char* const name)
 {
-	KThread* thread = KeAlloc<KThread>(AllocType::Kernel, start, arg, CString(name));
-	thread->Init(&KThreadInit);
-	thread->Process = &m_process;
-
+	KThread* thread = AllocKThread(start, arg, name);
 	Scheduler::MakeReady(*thread);
 
 	return thread;
@@ -57,10 +66,13 @@ void KThreadInit()
 //If entry is null, use InitProcess. Otherwise use InitThread with this as its arg
 UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThreadStart entry, void* const arg)
 {
-	KThread* kThread = KeCreateThread(&UThreadInit, nullptr, "");
+	//Build the thread fully before readying it: at boot a timer tick could otherwise run it before UserThread is set
+	KThread* kThread = AllocKThread(&UThreadInit, nullptr, "");
 	Assert(kThread);
 	kThread->Process = &process;
 	kThread->UserThread = process.CreateThread(*kThread, stackSize, entry, arg);
+
+	Scheduler::MakeReady(*kThread);
 	return kThread->UserThread;
 }
 

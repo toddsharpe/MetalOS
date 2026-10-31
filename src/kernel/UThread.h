@@ -15,7 +15,7 @@ public:
 
 	UThread(UProcess& process, KThread& thread, ThreadEnvironmentBlock& teb) :
 		Process(process),
-		Thread(thread),
+		Thread(&thread),
 		Stack(),
 		Name(),
 		Id(++LastUThreadId),
@@ -82,7 +82,7 @@ public:
 	//Process and Thread precede Stack so Stack stays at offset 16 for x64_SYSTEMCALL asm
 	//(guarded by the static_assert below); the UThread list is now a LinkedList in UProcess.
 	UProcess& Process;
-	KThread& Thread;
+	KThread* Thread; //Null once the thread has exited and the scheduler freed its KThread
 	void* Stack; //Saved from asm on syscalls
 	CString Name;
 	const uint32_t Id;

@@ -463,7 +463,11 @@ SyscallResult TerminateThread(const HThread thread, const uint32_t exitCode)
 	if (obj->Type != UObjectType::Thread)
 		return SyscallResult::InvalidObject;
 
-	KeExitThread(obj->Thread->Thread);
+	//Already exited
+	if (!obj->Thread->Thread)
+		return SyscallResult::Success;
+
+	KeExitThread(*obj->Thread->Thread);
 	return SyscallResult::Success;
 }
 

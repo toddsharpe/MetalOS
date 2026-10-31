@@ -23,10 +23,8 @@ Result HyperVMouseDriver::Initialize()
 
 	uint32_t childRelid = m_device.child_relid;
 	uint32_t connectionId = m_device.m_msg_conn_id;
-	HyperV::vmbus_channel_offer_channel offerChannel = (HyperV::vmbus_channel_offer_channel)m_device.m_channel;
-
-	//Initialize channel
-	m_channel.Initialize(&offerChannel);
+	//Initialize channel with the device's offer, not a stack copy: the channel keeps the pointer for SetEvent
+	m_channel.Initialize(&m_device.m_channel);
 
 	//Initialize keyboard
 	mousevsc_prt_msg request;

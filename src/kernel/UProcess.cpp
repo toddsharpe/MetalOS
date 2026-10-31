@@ -173,7 +173,8 @@ const KModule* UProcess::AddModule(const CString& name, void* image)
 	Assert(m_moduleIndex < MaxLoadedModules);
 	Module entry = {};
 	entry.ImageBase = image;
-	strcpy(entry.Name, name.c_str());
+	strncpy(entry.Name, name.c_str(), MaxModuleName - 1);
+	entry.Name[MaxModuleName - 1] = '\0';
 	KeWriteProcessMemory(*this, &m_peb->LoadedModules[m_moduleIndex], &entry, sizeof(entry));
 
 	m_moduleIndex++;

@@ -1113,6 +1113,10 @@ SyscallResult DebugPrintStack(const uint64_t rip)
 	UThread& thread = Scheduler::GetUThread();
 	thread.Process.Display();
 
+	//Stack is the raw user RSP from syscall entry
+	if (!thread.Process.Space.IsValidRange(thread.Stack, sizeof(uintptr_t)))
+		return SyscallResult::InvalidPointer;
+
 	Arch::Context context = {};
 	context.Rip = rip;
 	context.Rsp = (uintptr_t)thread.Stack;

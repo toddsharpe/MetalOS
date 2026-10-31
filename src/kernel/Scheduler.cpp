@@ -13,14 +13,17 @@ namespace
 	{
 		CpuContext() :
 			SelfPointer(*this),
-			Thread()
+			Thread(),
+			UserStack()
 		{}
 
 		const CpuContext& SelfPointer;
 		KThread* Thread;
+		uint64_t UserStack; //Scratch: user RSP stashed by x64_SYSTEMCALL before the kernel stack is loaded
 	};
 	static_assert(offsetof(CpuContext, SelfPointer) == 0, "x64_SYSTEMCALL asm invalid");
 	static_assert(offsetof(CpuContext, Thread) == 8, "x64_SYSTEMCALL asm invalid");
+	static_assert(offsetof(CpuContext, UserStack) == 16, "x64_SYSTEMCALL asm invalid");
 
 	//Per-CPU state. Single context today (uniprocessor); GetThread() already resolves the
 	//*current* CPU via GS, so SMP bring-up allocates one CpuContext per CPU (not ruled out here).

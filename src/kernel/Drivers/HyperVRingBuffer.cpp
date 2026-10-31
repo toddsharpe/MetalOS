@@ -38,12 +38,21 @@ void HyperVRingBuffer::Initialize(const paddr_t address)
 	m_header->feature_bits.value = 1;
 }
 
-void HyperVRingBuffer::Write(const CBuffer* buffers, const size_t count)
+bool HyperVRingBuffer::Write(const CBuffer* buffers, const size_t count)
 {
-	//TODO: buffer full etc
+	//Packet plus the trailing 8-byte previous-indices value
+	size_t total = sizeof(uint64_t);
+	for (size_t i = 0; i < count; i++)
+		total += buffers[i].Size;
+
+	//Refuse a packet that doesn't fit with a byte to spare: never overwrite unread data or make a full ring look empty
+	const uint32_t startIndex = m_header->write_index;
+	const uint32_t readIndex = m_header->read_index;
+	const uint32_t available = (startIndex >= readIndex) ? (DataSize - (startIndex - readIndex)) : (readIndex - startIndex);
+	if (available <= total)
+		return false;
 
 	//Copy into ring buffer
-	const uint32_t startIndex = m_header->write_index;
 	uint32_t index = startIndex;
 	for (size_t i = 0; i < count; i++)
 	{
@@ -62,7 +71,7 @@ void HyperVRingBuffer::Write(const CBuffer* buffers, const size_t count)
 
 	//Signal
 	if (m_header->interrupt_mask)
-		return;
+		return true;
 
 	__faststorefence();
 
@@ -71,6 +80,7 @@ void HyperVRingBuffer::Write(const CBuffer* buffers, const size_t count)
 	{
 		m_channel.SetEvent();
 	}
+	return true;
 }
 
 void HyperVRingBuffer::Increment(const uint32_t length)

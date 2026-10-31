@@ -8,7 +8,7 @@ public:
 
 	void Initialize(const paddr_t address);
 
-	void Write(const CBuffer* buffers, const size_t count);
+	bool Write(const CBuffer* buffers, const size_t count); //False if the host hasn't freed enough space
 	void Increment(const uint32_t length);
 	void* Read(const uint32_t length);
 	bool CommitRead();

@@ -245,7 +245,7 @@ milli_t GetTickCount()
 SyscallResult GetSystemTime(SystemTime* time)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.Space.IsValidPointer(time))
+	if (!proc.Space.IsValid(time))
 		return SyscallResult::InvalidPointer;
 
 	KSystemTime kTime = {};
@@ -274,7 +274,7 @@ HThread GetCurrentThread()
 SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* args, CreateProcessResult* result)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if ((!proc.Space.IsValidPointer(commandLine)) || (args && !proc.Space.IsValidPointer(args)) || (result && !proc.Space.IsValidPointer(result)))
+	if ((!proc.Space.IsValidPointer(commandLine)) || (args && !proc.Space.IsValid(args)) || (result && !proc.Space.IsValid(result)))
 		return SyscallResult::InvalidPointer;
 
 	//Copy string locally to automatically crop it at max bytes
@@ -285,7 +285,7 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 	if (!created)
 		return SyscallResult::Failed;
 
-	if (result && proc.Space.IsValidPointer(result))
+	if (result && proc.Space.IsValid(result))
 	{
 		//Add uobject to calling process
 		UObject* obj = proc.CreateObject(UObjectType::Process);
@@ -383,6 +383,8 @@ bool IsProcessAlive(uint32_t id)
 SyscallResult GetProcesses(ProcessListEntry* buffer, const size_t maxCount, size_t* count)
 {
 	UProcess& proc = Scheduler::GetUProcess();
+	if (maxCount > static_cast<size_t>(-1) / sizeof(ProcessListEntry))
+		return SyscallResult::InvalidArg; //Byte size would overflow
 	if (!proc.Space.IsValidRange(buffer, maxCount * sizeof(ProcessListEntry)) || !proc.Space.IsValid(count))
 		return SyscallResult::InvalidPointer;
 
@@ -605,7 +607,7 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const Seek seek, size_t* newPosition)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (newPosition && !proc.Space.IsValidPointer(newPosition))
+	if (newPosition && !proc.Space.IsValid(newPosition))
 		return SyscallResult::InvalidPointer;
 
 	UObject* uFile = proc.GetObject((handle_t)handle);
@@ -662,9 +664,9 @@ SyscallResult CreateDirectory(const char* path)
 SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!readHandle || !proc.Space.IsValidPointer(readHandle))
+	if (!readHandle || !proc.Space.IsValid(readHandle))
 		return SyscallResult::InvalidPointer;
-	if (!writeHandle || !proc.Space.IsValidPointer(writeHandle))
+	if (!writeHandle || !proc.Space.IsValid(writeHandle))
 		return SyscallResult::InvalidPointer;
 
 	const size_t pipeSize = Arch::PageSize;
@@ -697,7 +699,7 @@ SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle)
 SyscallResult PeekNamedPipe(const HFile file, size_t* bytesAvailable)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!bytesAvailable || !proc.Space.IsValidPointer(bytesAvailable))
+	if (!bytesAvailable || !proc.Space.IsValid(bytesAvailable))
 		return SyscallResult::InvalidPointer;
 
 	UObject* obj = proc.GetObject((handle_t)file);
@@ -764,7 +766,7 @@ SyscallResult CloseHandle(const Handle handle)
 SyscallResult WaitForSingleObject(const Handle handle, const milli_t time, WaitStatus* status)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!status || !proc.Space.IsValidPointer(status))
+	if (!status || !proc.Space.IsValid(status))
 		return SyscallResult::InvalidPointer;
 
 	UObject* obj = proc.GetObject((handle_t)handle);
@@ -787,7 +789,7 @@ SyscallResult WaitForSingleObject(const Handle handle, const milli_t time, WaitS
 SyscallResult CreateEvent(HEvent* event, const bool manual, const bool initial)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!event || !proc.Space.IsValidPointer(event))
+	if (!event || !proc.Space.IsValid(event))
 		return SyscallResult::InvalidPointer;
 
 	//Create Event
@@ -854,9 +856,9 @@ bool VirtualFree(const void* address)
 SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** address)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!handle || !proc.Space.IsValidPointer(handle))
+	if (!handle || !proc.Space.IsValid(handle))
 		return SyscallResult::InvalidPointer;
-	if (!address || !proc.Space.IsValidPointer(address))
+	if (!address || !proc.Space.IsValid(address))
 		return SyscallResult::InvalidPointer;
 	if (!size)
 		return SyscallResult::InvalidArg;
@@ -888,7 +890,7 @@ SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** a
 SyscallResult MapSharedMemory(const HSharedMem handle, void** address)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!address || !proc.Space.IsValidPointer(address))
+	if (!address || !proc.Space.IsValid(address))
 		return SyscallResult::InvalidPointer;
 
 	UObject* const obj = proc.GetObject((handle_t)handle);
@@ -929,7 +931,7 @@ SyscallResult DeleteSharedMemory(const HSharedMem handle)
 SyscallResult ShareHandle(const Handle handle, uint64_t* token)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!token || !proc.Space.IsValidPointer(token))
+	if (!token || !proc.Space.IsValid(token))
 		return SyscallResult::InvalidPointer;
 
 	UObject* const obj = proc.GetObject((handle_t)handle);
@@ -954,7 +956,7 @@ SyscallResult ShareHandle(const Handle handle, uint64_t* token)
 SyscallResult ClaimHandle(const uint64_t token, Handle* handle)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!handle || !proc.Space.IsValidPointer(handle))
+	if (!handle || !proc.Space.IsValid(handle))
 		return SyscallResult::InvalidPointer;
 
 	UObjectType type;
@@ -985,7 +987,7 @@ extern DeviceTree m_deviceTree;
 SyscallResult MapFramebuffer(GraphicsDevice* device)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!device || !proc.Space.IsValidPointer(device))
+	if (!device || !proc.Space.IsValid(device))
 		return SyscallResult::InvalidPointer;
 
 	//Source the framebuffer from the display driver in the device tree (authoritative for the
@@ -1055,7 +1057,7 @@ SyscallResult LookupEndpoint(const char* name, uint64_t* id)
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!name || !proc.Space.IsValidPointer(name))
 		return SyscallResult::InvalidPointer;
-	if (!id || !proc.Space.IsValidPointer(id))
+	if (!id || !proc.Space.IsValid(id))
 		return SyscallResult::InvalidPointer;
 
 	return KeEndpointLookup(name, *id) ? SyscallResult::Success : SyscallResult::Failed;
@@ -1075,7 +1077,7 @@ SyscallResult PollEndpoint(const char* name, uint64_t* value)
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!name || !proc.Space.IsValidPointer(name))
 		return SyscallResult::InvalidPointer;
-	if (!value || !proc.Space.IsValidPointer(value))
+	if (!value || !proc.Space.IsValid(value))
 		return SyscallResult::InvalidPointer;
 
 	return KeEndpointPoll(name, *value) ? SyscallResult::Success : SyscallResult::Failed;
@@ -1097,11 +1099,12 @@ SyscallResult DebugPrint(const char* s)
 SyscallResult DebugPrintBytes(const void* s, const size_t length)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.Space.IsValidPointer(s))
-		return SyscallResult::InvalidPointer;
-
 	if (!length)
 		return SyscallResult::InvalidArg;
+
+	//The whole range is read
+	if (!proc.Space.IsValidRange(s, length))
+		return SyscallResult::InvalidPointer;
 
 	PrintBytes(s, length);
 	return SyscallResult::Success;
@@ -1140,6 +1143,8 @@ SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length)
 SyscallResult GetInterfaces(InterfaceInfo* buffer, const size_t maxCount, size_t* count)
 {
 	UProcess& proc = Scheduler::GetUProcess();
+	if (maxCount > static_cast<size_t>(-1) / sizeof(InterfaceInfo))
+		return SyscallResult::InvalidArg; //Byte size would overflow
 	if (!proc.Space.IsValidRange(buffer, maxCount * sizeof(InterfaceInfo)) || !proc.Space.IsValid(count))
 		return SyscallResult::InvalidPointer;
 

@@ -14,6 +14,8 @@ HyperVNic::HyperVNic(KDevice& device) :
 	m_macAddress{},
 	m_sendBuf(nullptr),
 	m_sendSectionSize(0),
+	m_sendSectionCount(0),
+	m_sendSectionsInUse(0),
 	m_recvBuf(nullptr),
 	m_recvBufGpadl(0),
 	m_recvSectionCount(0),
@@ -87,6 +89,10 @@ Result HyperVNic::Initialize()
 
 		Assert(m_response.header.msg_type == NvspMessageType::SendSendBufferComplete);
 		m_sendSectionSize = m_response.msg.send_send_buf_complete.section_size;
+		Assert(m_sendSectionSize);
+
+		const size_t sections = (NIC_SEND_BUFFER_PAGES * Arch::PageSize) / m_sendSectionSize;
+		m_sendSectionCount = (sections < MaxSendSections) ? (uint32_t)sections : MaxSendSections;
 	}
 
 	// Step 4b: SendNdisConfig — required for NVSP V5+; not sent for V2
@@ -207,20 +213,53 @@ void HyperVNic::SendNvspCompletion(const nvsp_message& msg, uint64_t transId)
 		HyperV::VM_PKT_COMP, 0);
 }
 
-void HyperVNic::SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion)
+void HyperVNic::SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion, uint32_t section)
 {
 	Assert(rndisLen <= m_sendSectionSize);
-	memcpy(m_sendBuf, rndisData, rndisLen);
+	Assert(section < m_sendSectionCount);
+	memcpy(m_sendBuf + (size_t)section * m_sendSectionSize, rndisData, rndisLen);
 
 	// Full nvsp_message (28 bytes) required — host validates inline packet length and rejects truncated sends.
 	nvsp_message msg = {};
 	msg.header.msg_type = NvspMessageType::SendRndisPacket;
 	msg.msg.send_rndis_pkt.channel_type = channelType;
-	msg.msg.send_rndis_pkt.send_buf_section_index = 0;
+	msg.msg.send_rndis_pkt.send_buf_section_index = section;
 	msg.msg.send_rndis_pkt.send_buf_section_size = rndisLen;
 
+	//trans_id names the section so its SendRndisPacketComplete can release it (control messages use 0)
+	const uint64_t transId = (section == 0) ? 0 : (SendSectionTag | section);
 	const uint32_t flags = requestCompletion ? VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED : 0;
-	m_channel.SendPacket(&msg, sizeof(nvsp_message), 0, HyperV::VM_PKT_DATA_INBAND, flags);
+	m_channel.SendPacket(&msg, sizeof(nvsp_message), transId, HyperV::VM_PKT_DATA_INBAND, flags);
+}
+
+//Returns a free data section (never 0), or 0 if all are still owned by the host
+uint32_t HyperVNic::AcquireSendSection()
+{
+	const cpu_flags_t flags = ArchDisableInterrupts();
+	uint32_t section = 0;
+	for (uint32_t i = 1; i < m_sendSectionCount; i++)
+	{
+		const uint64_t bit = 1ULL << i;
+		if ((m_sendSectionsInUse & bit) == 0)
+		{
+			m_sendSectionsInUse |= bit;
+			section = i;
+			break;
+		}
+	}
+	ArchRestoreFlags(flags);
+	return section;
+}
+
+//Called from OnCallback (interrupts off) when the host completes a data frame
+void HyperVNic::ReleaseSendSection(const uint64_t transId)
+{
+	if ((transId & SendSectionTagMask) != SendSectionTag)
+		return;
+
+	const uint64_t section = transId & ~SendSectionTagMask;
+	if (section != 0 && section < m_sendSectionCount)
+		m_sendSectionsInUse &= ~(1ULL << section);
 }
 
 uint32_t HyperVNic::CreateGpadl(paddr_t address, size_t pageCount)
@@ -313,6 +352,10 @@ void HyperVNic::OnCallback()
 							m_recvSections[i] = ((nvsp_recv_buf_section*)complete->sections)[i];
 					}
 
+					//A data frame's send section belongs to the host until this completion
+					if (type == NvspMessageType::SendRndisPacketComplete)
+						ReleaseSendSection(packet->trans_id);
+
 					memcpy(&m_response, nvsp, sizeof(nvsp_message));
 					m_event.Set();
 				}
@@ -402,10 +445,15 @@ Result HyperVNic::SendFrame(const void* data, size_t length)
 
 	memcpy((uint8_t*)(pkt + 1), data, length);
 
+	//Own section per in-flight frame so back-to-back sends can't overwrite one the host hasn't read; drop if none free
+	const uint32_t section = AcquireSendSection();
+	if (section == 0)
+		return Result::Failed;
+
 	// Transmit over the data channel using the send-buffer section mechanism — the same
 	// path that works for control RNDIS messages. (The prior inline scheme, with a 16-byte
 	// NVSP prefix and section_index=INVALID, never actually put frames on the wire.)
-	SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, buf, rndisLen, true);
+	SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, buf, rndisLen, true, section);
 	return Result::Success;
 }
 

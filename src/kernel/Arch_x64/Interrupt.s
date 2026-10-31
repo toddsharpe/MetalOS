@@ -52,6 +52,9 @@ x64_interrupt_handler_&number& PROC
 	; Disable interrupts
 	cli
 
+	; Kernel code assumes DF is clear and the CPU doesn't clear it on interrupt (iretq restores it)
+	cld
+
 	; Push dummy error code if interrupt doesn't already
 	IF hasCode EQ 0
 	push 0

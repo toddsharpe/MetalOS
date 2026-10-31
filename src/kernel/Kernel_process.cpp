@@ -123,8 +123,7 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 	UObject* top = process.GetObject();
 	while (top != nullptr)
 	{
-		//TODO(tsharpe): Should this call internal method?
-		CloseHandle((Handle)top->Handle);
+		Assert(process.CloseObject(top->Handle)); //On the target, not the caller (TerminateProcess runs in the parent)
 
 		//Get next object
 		top = process.GetObject();

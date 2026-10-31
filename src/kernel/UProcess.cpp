@@ -5,6 +5,7 @@
 #include "kernel/UThread.h"
 #include "kernel/KThread.h"
 #include "kernel/Api.h"
+#include "kernel/Objects/UPipe.h"
 #include "new.h"
 
 uint32_t UProcess::LastId = 0;
@@ -145,6 +146,20 @@ bool UProcess::CloseObject(const handle_t handle)
 			break;
 
 		case UObjectType::Pipe:
+			//Drop this end's reference on the pipe
+			switch (object->Pipe->Op)
+			{
+				case KPipeOp::Read:
+					object->Pipe->KPipe.Readers.Decrement();
+					break;
+
+				case KPipeOp::Write:
+					object->Pipe->KPipe.Writers.Decrement();
+					break;
+
+				default:
+					Assert(false);
+			}
 			//TODO(tsharpe): Free
 			break;
 

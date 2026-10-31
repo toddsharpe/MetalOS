@@ -741,47 +741,8 @@ SyscallResult CloseHandle(const Handle handle)
 {
 	UProcess& proc = Scheduler::GetUProcess();
 
-	UObject* obj = proc.GetObject((handle_t)handle);
-	if (!obj)
-		return SyscallResult::InvalidHandle;
-
-	switch (obj->Type)
-	{
-		case UObjectType::Pipe:
-		{
-			switch (obj->Pipe->Op)
-			{
-				case KPipeOp::Read:
-					obj->Pipe->KPipe.Readers.Decrement();
-					break;
-
-				case KPipeOp::Write:
-					obj->Pipe->KPipe.Writers.Decrement();
-					break;
-
-				default:
-					Assert(false);
-			}
-		}
-		break;
-
-		case UObjectType::File:
-		case UObjectType::Event:
-		case UObjectType::Process:
-		case UObjectType::Thread:
-		case UObjectType::Debug:
-		case UObjectType::SharedMemory:
-			//do nothing here; type-specific teardown happens in UProcess::CloseObject
-			break;
-
-		default:
-			Printf("Closing: %d\n", obj->Type);
-			NotImplemented();
-			break;
-	}
-
-	const bool result = proc.CloseObject((handle_t)handle);
-	return result ? SyscallResult::Success : SyscallResult::Failed;
+	//Type-specific teardown happens in UProcess::CloseObject (shared with KeTerminateProcess)
+	return proc.CloseObject((handle_t)handle) ? SyscallResult::Success : SyscallResult::InvalidHandle;
 }
 
 /*

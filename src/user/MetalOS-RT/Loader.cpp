@@ -171,7 +171,8 @@ HModule LoadLibrary(char* lpLibFileName)
 
 	//Mark module as in the process
 	peb->LoadedModules[peb->ModuleIndex].ImageBase = moduleBase;
-	strcpy(peb->LoadedModules[peb->ModuleIndex].Name, lpLibFileName);
+	strncpy(peb->LoadedModules[peb->ModuleIndex].Name, lpLibFileName, MaxModuleName - 1);
+	peb->LoadedModules[peb->ModuleIndex].Name[MaxModuleName - 1] = '\0';
 	peb->ModuleIndex++;
 
 	//Execute entry point

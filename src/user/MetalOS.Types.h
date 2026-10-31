@@ -52,7 +52,7 @@ struct ProcessListEntry
 	char Name[MaxProcessName];
 };
 
-constexpr size_t MaxModuleName = 16;
+constexpr size_t MaxModuleName = 32; //Including NUL; longer names are truncated
 struct Module
 {
 	void* ImageBase;

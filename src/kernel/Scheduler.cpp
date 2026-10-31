@@ -197,6 +197,10 @@ void Scheduler::Schedule()
 		KThread* thread = m_threads[idx];
 		if (thread->Sched.State == KThreadState::Terminated)
 		{
+			//The UThread outlives its KThread (process thread list, thread handles)
+			if (thread->UserThread)
+				thread->UserThread->Thread = nullptr;
+
 			m_threads.RemoveAt(idx);
 			KeFree(thread, AllocType::Kernel);
 		}
@@ -281,7 +285,11 @@ void Scheduler::KillProcess(UProcess& process)
 	const bool isRunning = &process == &GetUProcess();
 
 	for (UThread* const thread : process.Threads)
-		thread->Thread.Sched.State = KThreadState::Terminated;
+	{
+		//Skip threads that already exited (their KThread is gone)
+		if (thread->Thread)
+			thread->Thread->Sched.State = KThreadState::Terminated;
+	}
 
 	if (!isRunning)
 		return;

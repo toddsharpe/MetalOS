@@ -160,4 +160,32 @@ void AddressSpace_test()
 
         Assert(!space.Free((uintptr_t)0x20000, 1));
     }
+
+    // Auto-allocation that doesn't fit after the watermark fails instead of claiming past End
+    {
+        AddressSpace space(TestStart, TestEnd, AllocationGranularity);
+
+        const size_t pages = (TestEnd - TestStart) >> Arch::PageShift; // whole range; watermark is past Start
+        AssertEqual(space.Reserve(pages), (uintptr_t)0);
+        AssertEqual(space.ReservedBytes(), (size_t)0);
+    }
+
+    // The last slot (ending exactly at End) is found
+    {
+        AddressSpace space(TestStart, TestEnd, AllocationGranularity);
+
+        const size_t pages = AllocationGranularity >> Arch::PageShift;
+        const uintptr_t last = TestEnd - AllocationGranularity;
+        Assert(space.Reserve((uintptr_t)0x20000, (last - 0x20000) >> Arch::PageShift)); // fill up to the last slot
+        AssertEqual(space.Reserve(pages), last);
+    }
+
+    // Counts whose byte size wraps are rejected rather than treated as tiny
+    {
+        AddressSpace space(TestStart, TestEnd, AllocationGranularity);
+
+        AssertEqual(space.Reserve((size_t)1 << 60), (uintptr_t)0);
+        Assert(!space.Reserve((uintptr_t)0x20000, (size_t)1 << 52)); // count << PageShift == 2^64
+        AssertEqual(space.ReservedBytes(), (size_t)0);
+    }
 }

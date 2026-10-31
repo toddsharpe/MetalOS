@@ -45,6 +45,10 @@ uintptr_t AddressSpace::Reserve(const size_t count)
 	CPrintf(Debug, "Reserve: Any in [0x%016x, 0x%016x] Size: 0x%x\n", Start, End, count);
 	CPrintf(Debug, "  Watermark: 0x%016x Gran: 0x%016x\n", m_watermark, AllocationGranularity);
 
+	//Reject sizes that can't fit at all (also keeps the shift and End - bytes below from wrapping)
+	if (count > ((End - Start) >> Arch::PageShift))
+		return 0;
+
 	//Find first free
 	const size_t bytes = (count << Arch::PageShift);
 	uintptr_t test = m_watermark;
@@ -54,8 +58,8 @@ uintptr_t AddressSpace::Reserve(const size_t count)
 		test += AllocationGranularity;
 	}
 
-	//None found
-	if (test == stop)
+	//None found (the loop exits past stop when nothing fits; stop itself is a valid slot)
+	if (test > stop)
 		return 0;
 
 	//Claim address
@@ -129,6 +133,10 @@ bool AddressSpace::IsFree(const uintptr_t address, const size_t count) const
 	Assert((address & Arch::PageMask) == 0);
 
 	if ((address < Start) || (address >= End))
+		return false;
+
+	//Must end by End (checked before the shift and add below can wrap)
+	if (count > ((End - address) >> Arch::PageShift))
 		return false;
 
 	struct Lookup

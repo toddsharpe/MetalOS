@@ -63,6 +63,7 @@ extern "C"
 	__int64 _InterlockedIncrement64(__int64 volatile * _Addend);
 	__int64 _InterlockedExchange64(__int64 volatile * _Target, __int64 _Value);
 	long _InterlockedIncrement(long volatile * _Addend);
+	unsigned char _interlockedbittestandreset(long volatile * _BitBase, long _BitPos);
 
 	void __faststorefence(void);
 

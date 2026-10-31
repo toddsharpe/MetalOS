@@ -58,23 +58,20 @@ namespace HyperV::Interrupts
 	{
 		cpu_flags_t flags = ArchDisableInterrupts();
 
-		//Scan event page
+		//Clear each set bit with an atomic test-and-reset: the host sets bits concurrently and a byte RMW could drop one
 		HV_SYNIC_EVENT_FLAGS* event = (HV_SYNIC_EVENT_FLAGS*)SynicEvents + sint;
-		for (uint32_t i = 0; i < HV_EVENT_FLAGS_COUNT; i++)
+		volatile long* const words = reinterpret_cast<volatile long*>(event->Flags);
+		for (uint32_t w = 0; w < HV_EVENT_FLAGS_COUNT / 32; w++)
 		{
-			const uint8_t index = i / 8;
-			const uint8_t flag = i % 8;
-
-			const uint8_t mask = (1 << flag);
-			if ((event->Flags[index] & mask) == 0)
+			const uint32_t pending = static_cast<uint32_t>(words[w]);
+			if (pending == 0)
 				continue;
 
-			const uint8_t cleared = event->Flags[index] & ~mask;
-
-			//Clear flag
-			_InterlockedCompareExchange((volatile long*)&event->Flags[index], cleared, event->Flags[index]);
-
-			channelIds.Add(i);
+			for (uint32_t bit = 0; bit < 32; bit++)
+			{
+				if (((pending >> bit) & 1) && _interlockedbittestandreset(&words[w], bit))
+					channelIds.Add(w * 32 + bit);
+			}
 		}
 
 		//Get corresponding message

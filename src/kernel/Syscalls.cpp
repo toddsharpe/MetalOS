@@ -493,7 +493,11 @@ HFile CreateFile(const char* path, const FileAccess access)
 
 	const bool result = KeCreateFile(uFile->File, copy.c_str(), ToAccess(access));
 	if (!result)
+	{
+		//Don't leave an unopened file object behind
+		proc.CloseObject(uFile->Handle);
 		return nullptr;
+	}
 	return (HFile)uFile->Handle;
 }
 
@@ -581,9 +585,14 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 			KWaitResult result = KeWait(wait);
 			Assert(result == KWaitResult::Signaled);
 
+			//The wait also ends when the reader is gone, with possibly no room to write
+			if (obj->Pipe->KPipe.IsBroken())
+				return SyscallResult::BrokenPipe;
+
 			//Write
 			size_t bytes = 0;
-			Assert(obj->Pipe->KPipe.Write(buffer, bufferSize, bytes));
+			if (!obj->Pipe->KPipe.Write(buffer, bufferSize, bytes))
+				return SyscallResult::Failed;
 			return SyscallResult::Success;
 		}
 		break;
@@ -839,6 +848,10 @@ void* VirtualAlloc(const void* address, const size_t size)
 	if (!address)
 		return KeVirtualAlloc(proc, size);
 
+	//Fixed addresses must be page aligned (the allocator asserts on it)
+	if (((uintptr_t)address & Arch::PageMask) != 0)
+		return nullptr;
+
 	return KeVirtualAlloc(proc, address, size);
 }
 
@@ -846,6 +859,10 @@ bool VirtualFree(const void* address)
 {
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!address)
+		return false;
+
+	//Must be the start of a reservation (the allocator asserts otherwise)
+	if (proc.Space.GetCount((uintptr_t)address) == 0)
 		return false;
 
 	return KeVirtualFree(proc, address);

@@ -76,7 +76,9 @@ size_t KeNetInterfaceCount()
 
 NicDriver* KeNetGetInterface(const size_t index)
 {
-	Assert(index == 0);
+	//Only one interface; index comes from usermode (NetSend)
+	if (index != 0)
+		return nullptr;
 
 	//Always returns the only interface
 	NicDriver* const nic = _NETDEV::Nic();

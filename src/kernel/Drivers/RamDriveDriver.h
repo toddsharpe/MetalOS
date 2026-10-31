@@ -44,7 +44,9 @@ public:
 
 	Result OpenFile(KFile& file, const char* const path, const KFileAccess access) const override
 	{
-		Assert(access == KFileAccess::Read);
+		//Read-only drive
+		if (access != KFileAccess::Read)
+			return Result::Failed;
 
 		void* address;
 		size_t length;
@@ -63,7 +65,9 @@ public:
 
 	size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const override
 	{
-		AssertOp(handle.Position, <, handle.Length);
+		//End of file (also covers empty files)
+		if (handle.Position >= handle.Length)
+			return 0;
 
 		const size_t read = Min(bytesToRead, handle.Length - handle.Position);
 		const void* source = MakePointer<void*>(handle.Context, handle.Position);

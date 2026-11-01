@@ -38,7 +38,7 @@ void KeInputInitialize()
 	SharedRing<Message>::Init(_INPUT::m_region, _INPUT::Capacity);
 
 	//Publish a capability token for the WM to claim (KeGrantShare takes its own ref).
-	Assert(KeEndpointRegister(Wm::InputEndpoint, KeGrantShare(UObjectType::SharedMemory, shm)));
+	Assert(KeEndpointRegister(Wm::InputEndpoint, KeGrantShare(UObjectType::SharedMemory, shm), KernelEndpointOwner));
 }
 
 void KeInputPost(const Message& message)

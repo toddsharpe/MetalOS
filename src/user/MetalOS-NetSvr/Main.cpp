@@ -291,6 +291,9 @@ int main(int argc, char** argv)
 
 	SharedRing<NetDevice::Frame> rx(rxRegion);
 
+	//Own the control endpoint; only its owner can poll it for connections
+	AssertSuccess(RegisterEndpoint(NetIpc::ControlEndpoint, 0));
+
 	while (true)
 	{
 		//Drain received frames up the stack.

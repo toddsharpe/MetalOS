@@ -35,6 +35,7 @@ namespace
 	//Threads and current thread. A single shared ready queue (needs a lock under SMP).
 	size_t m_threadIndex = 0;
 	StaticVector<KThread*, MaxKThreads> m_threads;
+	KThread* m_idleThread = nullptr;
 }
 
 //Preemption gate.
@@ -83,6 +84,11 @@ void Scheduler::MakeReady(KThread& thread)
 		AssertNotEqual(m_threads[i]->Id, thread.Id);
 
 	m_threads.Add(&thread);
+}
+
+void Scheduler::SetIdleThread(KThread& thread)
+{
+	m_idleThread = &thread;
 }
 
 void Scheduler::Schedule()
@@ -142,16 +148,22 @@ void Scheduler::Schedule()
 	if (current->Sched.State == KThreadState::Running)
 		current->Sched.State = KThreadState::Ready;
 
-	// Select new thread, round robin
+	// Select new thread, round robin, falling back to idle only when nothing else is ready
+	KThread* selected = m_idleThread;
 	for (size_t i = 0; i < m_threads.Count(); i++)
 	{
 		m_threadIndex = (m_threadIndex + 1) % m_threads.Count();
-		if (m_threads[m_threadIndex]->Sched.State == KThreadState::Ready)
+		KThread* const candidate = m_threads[m_threadIndex];
+		if (candidate != m_idleThread && candidate->Sched.State == KThreadState::Ready)
+		{
+			selected = candidate;
 			break;
+		}
 	}
 
 	//Mark next thread as running
-	KThread& next = *m_threads[m_threadIndex];
+	Assert(selected);
+	KThread& next = *selected;
 	next.Sched.ScheduleTime = tsc * 100;
 	Assert(next.Sched.State == KThreadState::Ready);
 	next.Sched.State = KThreadState::Running;

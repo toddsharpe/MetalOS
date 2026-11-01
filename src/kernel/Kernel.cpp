@@ -147,7 +147,7 @@ namespace
 		m_loadingScreen.Printf("  Date: %02d-%02d-%02d %02d:%02d:%02d\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
 		//Initialize scheduler and create idle thread. Allows device enumeration to block for interrupts if needed
-		KeCreateThread(&IdleThread, nullptr, "Idle");
+		Scheduler::SetIdleThread(*KeCreateThread(&IdleThread, nullptr, "Idle"));
 		Scheduler::Enabled = true;
 
 		//Initialize ACPI/HW

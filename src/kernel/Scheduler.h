@@ -18,6 +18,7 @@ namespace Scheduler
 
 	void Initialize(KProcess& proc, const ReadTsc readTsc);
 	void MakeReady(KThread& thread);
+	void SetIdleThread(KThread& thread); //Runs only when no other thread is ready
 	void Schedule();
 
 	//Currently running thread

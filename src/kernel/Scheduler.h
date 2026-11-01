@@ -17,6 +17,7 @@ namespace Scheduler
 	UProcess& GetUProcess();
 
 	void Initialize(KProcess& proc, const ReadTsc readTsc);
+	bool HasRoom(); //Check before building a thread; MakeReady asserts when the thread table is full
 	void MakeReady(KThread& thread);
 	void SetIdleThread(KThread& thread); //Runs only when no other thread is ready
 	void Schedule();

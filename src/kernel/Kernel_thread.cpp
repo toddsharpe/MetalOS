@@ -66,6 +66,10 @@ void KThreadInit()
 //If entry is null, use InitProcess. Otherwise use InitThread with this as its arg
 UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThreadStart entry, void* const arg)
 {
+	//Checked first: the TEB slot and stack taken below can't be given back
+	if (!Scheduler::HasRoom())
+		return nullptr;
+
 	//The user side can fail, so build it before the KThread, which would otherwise need unwinding
 	UThread* const user = process.CreateThread(stackSize, entry, arg);
 	if (!user)

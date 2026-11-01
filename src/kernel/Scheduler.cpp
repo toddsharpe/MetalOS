@@ -7,7 +7,7 @@
 
 namespace
 {
-	constexpr size_t MaxKThreads = 32;
+	constexpr size_t MaxKThreads = 128;
 
 	struct CpuContext
 	{
@@ -78,12 +78,17 @@ void Scheduler::Initialize(KProcess& proc, const ReadTsc readTsc)
 	m_cpu.Thread = boot;
 }
 
+bool Scheduler::HasRoom()
+{
+	return m_threads.Count() < MaxKThreads;
+}
+
 void Scheduler::MakeReady(KThread& thread)
 {
 	for (size_t i = 0; i < m_threads.Count(); i++)
 		AssertNotEqual(m_threads[i]->Id, thread.Id);
 
-	m_threads.Add(&thread);
+	Assert(m_threads.Add(&thread));
 }
 
 void Scheduler::SetIdleThread(KThread& thread)

@@ -119,8 +119,10 @@ void KeShmUnref(KSharedMemory& shm);
  * Handle grants (capability passing). Generic over handle types; the grant carries the
  * object's type + kernel pointer. Mint a single-use token, redeem it with KeGrantClaim.
  */
-uint64_t KeGrantShare(const UObjectType type, void* const object);
+static constexpr uint32_t KernelGrantOwner = 0; //Process ids start at 1
+uint64_t KeGrantShare(const UObjectType type, void* const object, const uint32_t granter);
 bool KeGrantClaim(const uint64_t token, UObjectType& type, void*& object);
+void KeGrantRevoke(const uint32_t granter);
 
 /*
  * IPC endpoint registry: a name -> shared-memory-id rendezvous so unrelated

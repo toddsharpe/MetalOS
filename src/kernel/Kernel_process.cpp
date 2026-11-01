@@ -178,6 +178,9 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 	//Free the names it served so a restarted server can register them
 	KeEndpointRelease(process.Id);
 
+	//Revoke grants nobody claimed, which would otherwise keep their objects alive forever
+	KeGrantRevoke(process.Id);
+
 	//Kill all KThreads in process (does not return for a self-terminating process)
 	Scheduler::KillProcess(process);
 }

@@ -400,6 +400,8 @@ HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg)
 		return nullptr;
 
 	UThread* created = KeCreateUThread(proc, stackSize, startAddress, arg);
+	if (!created)
+		return nullptr;
 
 	//Add uobject to calling process
 	UObject* obj = proc.CreateObject(UObjectType::Thread);

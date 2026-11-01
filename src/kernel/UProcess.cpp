@@ -59,25 +59,28 @@ void UProcess::Initialize(void* const image, const CString& cmd)
 	KeWriteProcessMemory(*this, m_peb, &peb, sizeof(peb));
 }
 
-UThread* UProcess::CreateThread(KThread& backing, const size_t stackSize, const UThreadStart userStart, void* const arg)
+UThread* UProcess::CreateThread(const size_t stackSize, const UThreadStart userStart, void* const arg)
 {
 	//Where user thread starts executing from. Main process thread calls inits process and executes main.
 	//Other user threads call init thread and then jump to this entry
 	void* threadStart = userStart == nullptr ? InitProcess : InitThread;
-	
+
 	//Reserve the TEB in user space (filled below). UThread keeps a reference to
 	//this user-space TEB address; it isn't dereferenced until the thread runs.
 	ThreadEnvironmentBlock* teb = reinterpret_cast<ThreadEnvironmentBlock*>(m_userArena.Reserve(sizeof(ThreadEnvironmentBlock)));
-	Assert(teb);
-
-	//Allocate thread on the kernel heap
-	UThread* thread = KeAlloc<UThread>(AllocType::User, *this, backing, *teb);
-	Assert(thread);
-	Assert(Threads.Add(thread));
+	if (!teb)
+		return nullptr; //TEB space is the per-process thread cap
 
 	//Allocate thread stack
 	void* m_stack = KeVirtualAlloc(*this, UThreadStackSize);
-	Assert(m_stack);
+	if (!m_stack)
+		return nullptr;
+
+	//Allocate thread on the kernel heap
+	UThread* thread = KeAlloc<UThread>(AllocType::User, *this, *teb);
+	Assert(thread);
+	Assert(Threads.Add(thread));
+
 	void* const stackPointer = MakePointer<void*>(m_stack, UThreadStackSize - ArchStackReserve());
 	Assert(stackPointer);
 

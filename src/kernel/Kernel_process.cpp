@@ -37,6 +37,10 @@ UProcess* KeCreateProcess(const char* const cmd)
 {
 	Printf("Creating process: %s\n", cmd);
 
+	//No room to schedule the main thread: fail before anything is built
+	if (!Scheduler::HasRoom())
+		return nullptr;
+
 	//Get path (up to the first space or end of string)
 	size_t i = 0;
 	while (cmd[i] != '\0' && cmd[i] != ' ')

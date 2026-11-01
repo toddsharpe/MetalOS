@@ -40,7 +40,7 @@ void KeInitNetDevice()
 	SharedRing<Frame>::Init(_NETDEV::m_rxRegion, RxCapacity);
 
 	//Publish the RX ring (as a capability grant) for netstack to claim.
-	Assert(KeEndpointRegister(RxEndpoint, KeGrantShare(UObjectType::SharedMemory, shm), KernelEndpointOwner));
+	Assert(KeEndpointRegister(RxEndpoint, KeGrantShare(UObjectType::SharedMemory, shm, KernelGrantOwner), KernelEndpointOwner));
 }
 
 void KeNetRxFrame(NicDriver* const nic, const void* const frame, const size_t length)

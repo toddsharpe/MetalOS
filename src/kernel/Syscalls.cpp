@@ -976,7 +976,7 @@ SyscallResult ShareHandle(const Handle handle, uint64_t* token)
 		case UObjectType::SharedMemory:
 			if (!obj->Shm)
 				return SyscallResult::InvalidObject;
-			*token = KeGrantShare(UObjectType::SharedMemory, obj->Shm);
+			*token = KeGrantShare(UObjectType::SharedMemory, obj->Shm, proc.Id);
 			return SyscallResult::Success;
 
 		default:

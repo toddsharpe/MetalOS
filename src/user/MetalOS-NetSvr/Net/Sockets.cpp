@@ -21,28 +21,12 @@ namespace
 {
 	LinkedList<KSocket*> g_sockets;
 
-	bool ProtoMatches(const proto_t bound, const proto_t incoming)
-	{
-		if (bound == proto_t::Udp)
-			return incoming == proto_t::Udp;
-
-		//Raw ICMP sockets accept every ICMP-family message.
-		if (bound == proto_t::Icmp)
-		{
-			return incoming == proto_t::Icmp
-				|| incoming == proto_t::EchoReply
-				|| incoming == proto_t::EchoRequest
-				|| incoming == proto_t::DestUnreachable;
-		}
-
-		return false;
-	}
-
+	//Udp::Receive delivers Udp and Icmp::Receive delivers whole ICMP messages (raw sockets) as Icmp
 	KSocket* FindBound(const proto_t proto, const uint16_t port)
 	{
 		for (KSocket* socket : g_sockets)
 		{
-			if (!ProtoMatches(socket->Proto, proto))
+			if (socket->Proto != proto)
 				continue;
 			if (socket->Proto == proto_t::Udp && socket->Local.port != port)
 				continue;

@@ -40,29 +40,6 @@ namespace Net::Udp
 	}
 	*/
 
-	bool Meta(Packet& packet)
-	{
-		if (packet.length() < udp_hdr_size)
-			return false;
-
-		Deserializer deser(packet.buffer(), packet.length());
-		const udp_hdr_t udp_hdr =
-		{
-			.src_port = deser.ReadU16(),
-			.dst_port = deser.ReadU16(),
-			.length = deser.ReadU16(),
-			.checksum = deser.ReadU16(),
-		};
-		packet.mask(udp_hdr_size);
-
-		//Update endpoints
-		packet.dst.port = udp_hdr.dst_port;
-		packet.src.port = udp_hdr.src_port;
-		packet.proto = proto_t::Udp;
-
-		return true;
-	}
-	
 	bool Receive(NetIf& net_if, Packet& packet)
 	{
 		if (packet.length() < udp_hdr_size)

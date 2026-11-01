@@ -25,8 +25,7 @@ namespace Net
 		Udp,
 		Icmp,
 		EchoReply,
-		EchoRequest,
-		DestUnreachable
+		EchoRequest
 	};
 
 	static constexpr char proto_None[] = "None";
@@ -262,7 +261,6 @@ namespace Net
 	 * ICMP.
 	 */
 	static constexpr uint8_t icmp_type_echo_reply = 0x00;
-	static constexpr uint8_t icmp_type_dest_unreachable = 0x03;
 	static constexpr uint8_t icmp_type_echo_request = 0x08;
 
 	struct icmp_hdr_t
@@ -273,12 +271,6 @@ namespace Net
 	};
 	static constexpr size_t icmp_hdr_checksum_offset = 2;
 	static constexpr size_t icmp_hdr_size = 4;
-
-	struct dest_unreachable_t
-	{
-		uint32_t unused;
-	};
-	static constexpr size_t dst_unreachable_size = 4;
 
 	struct echo_hdr_t
 	{
@@ -358,7 +350,6 @@ namespace Net
 
 	namespace IPv4
 	{
-		bool Meta(Packet &packet);
 		bool Receive(NetIf &net_if, Packet &packet);
 		bool Send(NetIf &net_if, Packet &packet);
 	}
@@ -380,7 +371,6 @@ namespace Net
 
 	namespace Udp
 	{
-		bool Meta(Packet& packet);
 		bool Receive(NetIf& net_if, Packet& packet);
 		bool Send(NetIf& net_if, Packet& packet);
 	}

@@ -18,7 +18,7 @@ public:
 
 	void Initialize(void* const image, const CString& cmd);
 
-	UThread* CreateThread(KThread& backing, const size_t stackSize, const UThreadStart userStart = nullptr, void* const arg = nullptr);
+	UThread* CreateThread(const size_t stackSize, const UThreadStart userStart = nullptr, void* const arg = nullptr); //Null when out of TEB space or stack memory
 	UObject* CreateObject(const UObjectType type);
 	UObject* CreateObject(const UObjectType type, const handle_t handle);
 	UObject* GetObject();

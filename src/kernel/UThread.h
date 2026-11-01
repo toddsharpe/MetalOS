@@ -13,9 +13,9 @@ class UThread
 public:
 	static bool HasMessage(void* const arg) { return ((UThread*)arg)->HasMessage(); };
 
-	UThread(UProcess& process, KThread& thread, ThreadEnvironmentBlock& teb) :
+	UThread(UProcess& process, ThreadEnvironmentBlock& teb) :
 		Process(process),
-		Thread(&thread),
+		Thread(),
 		Stack(),
 		Name(),
 		Id(++LastUThreadId),

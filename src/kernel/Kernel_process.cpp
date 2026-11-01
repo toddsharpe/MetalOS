@@ -111,7 +111,12 @@ UProcess* KeCreateProcess(const char* const cmd)
 
 	//Fully built; create the main thread last since it's schedulable as soon as it exists
 	created->State = ProcessState::Running;
-	KeCreateUThread(*created, stackSize);
+	if (!KeCreateUThread(*created, stackSize))
+	{
+		//No memory for the main thread's stack: tear down instead of leaving a running process with no threads
+		KeTerminateProcess(*created, 1);
+		return nullptr;
+	}
 	return created;
 }
 

@@ -66,14 +66,20 @@ void KThreadInit()
 //If entry is null, use InitProcess. Otherwise use InitThread with this as its arg
 UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThreadStart entry, void* const arg)
 {
+	//The user side can fail, so build it before the KThread, which would otherwise need unwinding
+	UThread* const user = process.CreateThread(stackSize, entry, arg);
+	if (!user)
+		return nullptr;
+
 	//Build the thread fully before readying it: at boot a timer tick could otherwise run it before UserThread is set
 	KThread* kThread = AllocKThread(&UThreadInit, nullptr, "");
 	Assert(kThread);
 	kThread->Process = &process;
-	kThread->UserThread = process.CreateThread(*kThread, stackSize, entry, arg);
+	kThread->UserThread = user;
+	user->Thread = kThread;
 
 	Scheduler::MakeReady(*kThread);
-	return kThread->UserThread;
+	return user;
 }
 
 uint32_t UThreadInit(void* const arg)

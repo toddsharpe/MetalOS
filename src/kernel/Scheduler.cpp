@@ -165,6 +165,12 @@ void Scheduler::Schedule()
 	{
 		if (ArchSaveContext(current->ContextPtr) == 0)
 		{
+			//Only user threads carry FPU/SSE state; nothing in the kernel touches it until next resumes
+			if (current->UserThread)
+				current->UserThread->SaveFpu();
+			if (next.UserThread)
+				next.UserThread->LoadFpu();
+
 			//Switch cr3 if changing processes
 			Assert(next.Process);
 			ArchSetPagingRoot(next.Process->Tables.Root);

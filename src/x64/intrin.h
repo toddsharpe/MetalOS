@@ -68,6 +68,9 @@ extern "C"
 	void __faststorefence(void);
 
 	void __invlpg(void *);
+
+	void _fxsave64(void *);
+	void _fxrstor64(void const *);
 }
 
 inline unsigned short _byteswap_ushort(unsigned short v)

@@ -4,6 +4,8 @@
 #include "user/MetalOS.h"
 #include "kernel/Objects/KSpinLock.h"
 #include "Lib/StaticQueue.h"
+#include "x64/intrin.h"
+#include <cstring>
 
 static uint32_t LastUThreadId = 0;
 
@@ -21,9 +23,14 @@ public:
 		Id(++LastUThreadId),
 		m_messages(),
 		m_context(),
+		m_fpu(),
 		m_teb(teb)
 	{
-
+		//Start from the power-on defaults: x87 control word and MXCSR with all exceptions masked
+		const uint16_t fcw = 0x037F;
+		const uint32_t mxcsr = 0x1F80;
+		memcpy(&m_fpu[0], &fcw, sizeof(fcw));
+		memcpy(&m_fpu[24], &mxcsr, sizeof(mxcsr));
 	}
 
 	//TODO(tsharpe): Find way to specify this arena in user process space
@@ -79,6 +86,10 @@ public:
 	//Address of this thread's TEB (user VA); the scheduler loads it as the user GS base.
 	void* TebAddress() const { return &m_teb; }
 
+	//The kernel never uses floating point, so FPU/SSE state is only user state, switched with the thread
+	void SaveFpu() { _fxsave64(m_fpu); }
+	void LoadFpu() const { _fxrstor64(m_fpu); }
+
 	//Process and Thread precede Stack so Stack stays at offset 16 for x64_SYSTEMCALL asm
 	//(guarded by the static_assert below); the UThread list is now a LinkedList in UProcess.
 	UProcess& Process;
@@ -96,6 +107,7 @@ private:
 
 	//Storage
 	Arch::Context m_context;
+	alignas(16) uint8_t m_fpu[512]; //FXSAVE image
 
 	//Pointers into process address space
 	ThreadEnvironmentBlock& m_teb;

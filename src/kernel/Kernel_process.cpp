@@ -2,6 +2,10 @@
 #include "kernel/Arch.h"
 #include "kernel/KProcess.h"
 #include "kernel/UProcess.h"
+#include "kernel/UThread.h"
+#include "kernel/KThread.h"
+#include "kernel/Scheduler.h"
+#include "kernel/Objects/KEvent.h"
 #include "kernel/Loader.h"
 #include "WinPE.h"
 #include "Assert.h"
@@ -156,6 +160,10 @@ UProcess* KeCreateProcess(const char* const cmd)
 
 void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 {
+	//Already torn down, e.g. TerminateProcess through a handle to a process that has exited
+	if (process.State == ProcessState::Terminated)
+		return;
+
 	Printf("Process: %s exited with code 0x%x\n", process.Name.c_str(), exitCode);
 
 	//Mark dead first: KillProcess() does not return when a process terminates
@@ -181,8 +189,132 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 	//Revoke grants nobody claimed, which would otherwise keep their objects alive forever
 	KeGrantRevoke(process.Id);
 
+	//The reaper frees the rest once its threads are off the CPU (a process with none is reapable now)
+	KeSignalReaper();
+
 	//Kill all KThreads in process (does not return for a self-terminating process)
 	Scheduler::KillProcess(process);
+}
+
+//Reclaims what exited threads and processes leave, from the reaper's own stack under the kernel's page tables
+namespace _REAP
+{
+	KEvent m_event(false, false);
+
+	//Nothing runs on an exited thread's user stack, so it goes now even if handles keep the record
+	void ReleaseUserStack(UThread& thread)
+	{
+		const uintptr_t stack = reinterpret_cast<uintptr_t>(thread.StackBase);
+		if (stack && thread.Process.Space.GetCount(stack))
+			Assert(KeVirtualFree(thread.Process, thread.StackBase));
+		thread.StackBase = nullptr;
+	}
+
+	//A terminated process is reapable once its last thread record is gone
+	UProcess* FindReapable()
+	{
+		for (UProcess* const process : m_processes)
+		{
+			if (process->State == ProcessState::Terminated && !process->Reaped && process->Threads.IsEmpty())
+				return process;
+		}
+		return nullptr;
+	}
+
+	//Frees a terminated process's memory, page tables and modules; the record lives on while handles to it remain
+	void ReapProcess(UProcess& process)
+	{
+		//One reservation at a time with interrupts off: the heap and page allocator have no locks
+		while (true)
+		{
+			const cpu_flags_t flags = ArchDisableInterrupts();
+			const uintptr_t reservation = process.Space.FirstReservation();
+			if (reservation)
+				Assert(KeVirtualFree(process, reinterpret_cast<void*>(reservation)));
+			ArchRestoreFlags(flags);
+
+			if (!reservation)
+				break;
+		}
+
+		const cpu_flags_t flags = ArchDisableInterrupts();
+		KeFreePageTables(process);
+		while (!process.Modules.IsEmpty())
+		{
+			KModule* const module = process.Modules.First();
+			process.Modules.Remove(module);
+			KeFree(module, AllocType::User);
+		}
+		process.Reaped = true;
+		KeReleaseUProcess(process);
+		ArchRestoreFlags(flags);
+	}
+}
+
+void KeSignalReaper()
+{
+	_REAP::m_event.Set();
+}
+
+uint32_t KeReaperThread(void* const arg)
+{
+	UNUSED(arg);
+
+	while (true)
+	{
+		KeWait(_REAP::m_event);
+
+		//Threads first: releasing a process's last thread record is what makes the process reapable
+		while (KThread* const thread = Scheduler::TakeDeadThread())
+		{
+			const cpu_flags_t flags = ArchDisableInterrupts();
+			thread->ReleaseStack();
+			if (thread->UserThread)
+			{
+				_REAP::ReleaseUserStack(*thread->UserThread);
+				KeReleaseUThread(*thread->UserThread);
+			}
+			KeFree(thread, AllocType::Kernel);
+			ArchRestoreFlags(flags);
+		}
+
+		while (true)
+		{
+			const cpu_flags_t flags = ArchDisableInterrupts();
+			UProcess* const process = _REAP::FindReapable();
+			ArchRestoreFlags(flags);
+
+			if (!process)
+				break;
+			_REAP::ReapProcess(*process);
+		}
+	}
+}
+
+void KeReleaseUThread(UThread& thread)
+{
+	Assert(thread.Refs);
+	if (--thread.Refs != 0)
+		return;
+
+	//Last reference: its KThread (and with it the user stack) is gone and no handle names it
+	UProcess& process = thread.Process;
+	Assert(process.Threads.Remove(&thread));
+	if (thread.Name.Length)
+		KeFree(const_cast<char*>(thread.Name.c_str()), AllocType::User);
+	KeFree(&thread, AllocType::User);
+}
+
+void KeReleaseUProcess(UProcess& process)
+{
+	Assert(process.Refs);
+	if (--process.Refs != 0)
+		return;
+
+	//Reaping drops the process's own reference, so at zero only the record is left
+	Assert(process.Reaped);
+	Assert(m_processes.Remove(&process));
+	KeFree(&process, AllocType::User);
 }
 
 bool KeIsProcessAlive(const uint32_t id)

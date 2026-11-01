@@ -20,6 +20,8 @@ UProcess::UProcess(const CString& name) :
 	Objects(),
 	Threads(),
 	State(),
+	Refs(1),
+	Reaped(),
 	m_peb(),
 	m_userArena(),
 	m_moduleIndex()
@@ -80,6 +82,7 @@ UThread* UProcess::CreateThread(const size_t stackSize, const UThreadStart userS
 	UThread* thread = KeAlloc<UThread>(AllocType::User, *this, *teb);
 	Assert(thread);
 	Assert(Threads.Add(thread));
+	thread->StackBase = m_stack;
 
 	void* const stackPointer = MakePointer<void*>(m_stack, UThreadStackSize - ArchStackReserve());
 	Assert(stackPointer);
@@ -176,11 +179,20 @@ bool UProcess::CloseObject(const handle_t handle)
 			}
 			break;
 
+		case UObjectType::Thread:
+			KeReleaseUThread(*object->Thread);
+			break;
+
+		case UObjectType::Process:
+			KeReleaseUProcess(*object->Process);
+			break;
+
 		default:
 			break;
 	}
 
 	Objects.Remove(object);
+	KeFree(object, AllocType::User);
 	return true;
 }
 

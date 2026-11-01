@@ -102,6 +102,11 @@ size_t AddressSpace::GetCount(const uintptr_t address) const
 	return 0;
 }
 
+uintptr_t AddressSpace::FirstReservation() const
+{
+	return m_reservations.IsEmpty() ? 0 : m_reservations.First().Address;
+}
+
 bool AddressSpace::OwnsPages(const uintptr_t address) const
 {
 	for (const Reservation& res : m_reservations)

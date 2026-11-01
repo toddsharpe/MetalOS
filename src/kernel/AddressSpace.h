@@ -38,6 +38,7 @@ public:
 	bool Free(const uintptr_t address, const size_t count);
 	size_t GetCount(const uintptr_t address) const;
 	bool OwnsPages(const uintptr_t address) const; //Whether freeing the reservation releases its physical pages
+	uintptr_t FirstReservation() const; //Any remaining reservation's address, or 0 once the space is empty
 	size_t ReservedBytes() const;
 
 	void Display() const;

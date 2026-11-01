@@ -34,6 +34,7 @@ public:
 
 	void Init(void* const entry);
 	void Start();
+	void ReleaseStack(); //Only once nothing can run on it (the reaper)
 
 	void Display() const;
 
@@ -45,6 +46,7 @@ public:
 	const uint32_t Id;
 	KProcess* Process;
 	SchedState Sched;
+	KThread* NextDead; //Link in the scheduler's queue of terminated threads awaiting the reaper
 
 private:
 	static uint32_t LastId;

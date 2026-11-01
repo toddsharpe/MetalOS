@@ -148,6 +148,7 @@ namespace
 
 		//Initialize scheduler and create idle thread. Allows device enumeration to block for interrupts if needed
 		Scheduler::SetIdleThread(*KeCreateThread(&IdleThread, nullptr, "Idle"));
+		KeCreateThread(&KeReaperThread, nullptr, "Reaper");
 		Scheduler::Enabled = true;
 
 		//Initialize ACPI/HW

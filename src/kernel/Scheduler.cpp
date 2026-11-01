@@ -36,6 +36,9 @@ namespace
 	size_t m_threadIndex = 0;
 	StaticVector<KThread*, MaxKThreads> m_threads;
 	KThread* m_idleThread = nullptr;
+
+	//Terminated threads, freed by the reaper once nothing can be running on their stacks
+	KThread* m_deadThreads = nullptr;
 }
 
 //Preemption gate.
@@ -224,8 +227,11 @@ void Scheduler::Schedule()
 			if (thread->UserThread)
 				thread->UserThread->Thread = nullptr;
 
+			//Freeing here would mean heap work in interrupt context, so the reaper does it
 			m_threads.RemoveAt(idx);
-			KeFree(thread, AllocType::Kernel);
+			thread->NextDead = m_deadThreads;
+			m_deadThreads = thread;
+			KeSignalReaper();
 		}
 		else
 		{
@@ -235,6 +241,16 @@ void Scheduler::Schedule()
 	m_threadIndex = Clamp(m_threadIndex, 0ULL, m_threads.Count() - 1);
 
 	ArchRestoreFlags(flags);
+}
+
+KThread* Scheduler::TakeDeadThread()
+{
+	const cpu_flags_t flags = ArchDisableInterrupts();
+	KThread* const thread = m_deadThreads;
+	if (thread)
+		m_deadThreads = thread->NextDead;
+	ArchRestoreFlags(flags);
+	return thread;
 }
 
 //Currently running thread

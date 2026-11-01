@@ -76,6 +76,7 @@ void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size);
 
 void KeWriteProcessMemory(KProcess& process, void* const destVirtual, const void* const src, const size_t size);
 void KeAliasInto(KProcess& process, const void* const source, const void* const dest, const size_t size);
+void KeFreePageTables(KProcess& process);
 
 //Validity check on an address.
 bool KeIsValid(const void* address);
@@ -203,6 +204,10 @@ UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThrea
 uint32_t UThreadInit(void* const arg);
 UProcess* KeCreateProcess(const char* const commandLine);
 void KeTerminateProcess(UProcess& process, const uint32_t exitCode);
+void KeReleaseUThread(UThread& thread);
+void KeReleaseUProcess(UProcess& process);
+void KeSignalReaper();
+uint32_t KeReaperThread(void* const arg);
 bool KeIsProcessAlive(const uint32_t id);
 size_t KeGetProcessList(ProcessListEntry* const buffer, const size_t maxCount);
 

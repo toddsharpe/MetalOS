@@ -231,6 +231,44 @@ void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size)
 	return (void*)reserved;
 }
 
+//Frees a process's user-half page tables and root; the kernel half is copied from the kernel's root and shared
+void KeFreePageTables(KProcess& process)
+{
+	using namespace x64;
+	static constexpr uint64_t AddressMask = 0x000F'FFFF'FFFF'F000;
+	static constexpr size_t UserEntries = 1 << 8;
+	static constexpr size_t Entries = 1 << 9;
+
+	PML4E* const pml4 = reinterpret_cast<PML4E*>(KernelPhysicalStart + process.Tables.Root);
+	for (size_t i4 = 0; i4 < UserEntries; i4++)
+	{
+		if (!pml4[i4].Present)
+			continue;
+
+		const paddr_t pdptAddr = pml4[i4].Value & AddressMask;
+		PDPTE_DIR* const pdpt = reinterpret_cast<PDPTE_DIR*>(KernelPhysicalStart + pdptAddr);
+		for (size_t i3 = 0; i3 < Entries; i3++)
+		{
+			if (!pdpt[i3].Present || pdpt[i3].PageSize)
+				continue;
+
+			const paddr_t pdAddr = pdpt[i3].Value & AddressMask;
+			PDE_DIR* const pd = reinterpret_cast<PDE_DIR*>(KernelPhysicalStart + pdAddr);
+			for (size_t i2 = 0; i2 < Entries; i2++)
+			{
+				if (pd[i2].Present && !pd[i2].PageSize)
+					KePhysicalFree(pd[i2].Value & AddressMask);
+			}
+			KePhysicalFree(pdAddr);
+		}
+		KePhysicalFree(pdptAddr);
+		pml4[i4].Value = 0;
+	}
+
+	KePhysicalFree(process.Tables.Root);
+	process.Tables.Root = 0;
+}
+
 //Write memory into the address space of another process without switching CR3.
 void KeWriteProcessMemory(KProcess& process, void* const destVirtual, const void* const src, const size_t size)
 {

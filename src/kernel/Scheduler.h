@@ -20,6 +20,7 @@ namespace Scheduler
 	bool HasRoom(); //Check before building a thread; MakeReady asserts when the thread table is full
 	void MakeReady(KThread& thread);
 	void SetIdleThread(KThread& thread); //Runs only when no other thread is ready
+	KThread* TakeDeadThread(); //Next terminated thread no longer scheduled, or null
 	void Schedule();
 
 	//Currently running thread

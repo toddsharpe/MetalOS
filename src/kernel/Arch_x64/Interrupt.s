@@ -74,9 +74,11 @@ noswap_start:
 	mov rcx, number
 	mov rdx, rsp
 
+	sub rsp, 8 ; The CPU 16-aligns before its frame, so frame + error code + 17 pushes leave RSP 8 short at the call
 	sub rsp, StackReserve; Reserve 32bytes for register parameter area
 	call KeInterrupt; Call OS handler
 	add rsp, StackReserve; Reclaim register parameter area
+	add rsp, 8 ; Drop the alignment pad
 
 	; Restore previous frame
 	POP_INTERRUPT_FRAME

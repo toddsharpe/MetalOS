@@ -74,8 +74,6 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 		.WindowId = id,
 		.Rect = *frame,
 		.SurfaceGrant = token,
-		.Width = frame->Width,
-		.Height = frame->Height,
 	};
 	//Copy the (bounded, null-terminated) title into the fixed request field.
 	size_t n = 0;

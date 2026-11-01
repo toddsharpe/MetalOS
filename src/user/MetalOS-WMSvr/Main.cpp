@@ -5,6 +5,7 @@
 #include "Graphics/Draw2D.h"
 #include "Lib/LinkedList.h"
 #include <cstring>
+#include <stdio.h>
 
 //MetalOS usermode window manager: compositing, window/focus/drag/z-order, input routing. The
 //kernel only maps the framebuffer + feeds the input ring ("input"); apps connect over "wm".
@@ -19,16 +20,15 @@ namespace
 
 	struct Connection
 	{
-		void* Region;              //mapped channel (request ring app->WM, message ring WM->app)
+		void* Region;              //mapped channel (request ring app->WM, message ring WM->app); null = free slot
 		HSharedMem ChannelHandle;  //our handle to the channel region; CloseHandle releases it
 	};
 
 	struct WmWindow
 	{
-		bool Used;                 //windows are freed in place (never moved) so z-order/Owner pointers stay valid
 		Connection* Owner;
 		uint32_t WindowId;         //unique within its connection
-		void* Surface;             //mapped shared surface (packed Width*Height pixels)
+		void* Surface;             //mapped shared surface (packed Width*Height pixels); null = free slot
 		HSharedMem SurfaceHandle;  //our handle to the surface; CloseHandle releases it
 		Rectangle Rect;            //position + size on screen
 		char Title[Wm::MaxTitle];  //window title (for the taskbar)
@@ -47,10 +47,7 @@ namespace
 
 	//Connections + windows
 	Connection g_conns[MaxConns];
-	size_t g_connCount = 0;
-
 	WmWindow g_windows[MaxWindows];
-	size_t g_windowCount = 0;
 
 	//Z-order: head is topmost. Holds pointers into g_windows (whose slots never move),
 	//so the list can be reordered and removed from freely.
@@ -59,16 +56,6 @@ namespace
 	WmWindow* g_focus = nullptr;
 	WmWindow* g_drag = nullptr;
 	bool g_startMenuOpen = false;
-
-	//Panel/taskbar/start-menu (defined below, used by ProcessInput).
-	int32_t PanelTop();
-	void HandlePanelClick(const Point2D& point);
-	bool InStartMenu(const Point2D& point);
-	void HandleStartMenuClick(const Point2D& point);
-	//Window controls (defined below, used by ProcessInput).
-	void CloseWindow(WmWindow* const window);
-	void Minimize(WmWindow* const window);
-	void RestoreAndFocus(WmWindow* const window);
 
 	//Title-bar control buttons, at the window's top-right (drawn by the WM over the window).
 	constexpr int32_t BtnSize = 16;
@@ -93,10 +80,29 @@ namespace
 		return nullptr;
 	}
 
+	//Topmost window that isn't minimized (null if none)
+	WmWindow* TopmostVisible()
+	{
+		for (WmWindow* const window : g_zorder)
+		{
+			if (!window->Minimized)
+				return window;
+		}
+		return nullptr;
+	}
+
 	//Send a message to a connection's WM->app ring
 	void Post(Connection* const conn, const Message& message)
 	{
 		Wm::Channel::Replies(conn->Region).Enqueue(message);
+	}
+
+	//Send a message that carries only its type (e.g. PaintEvent, CloseEvent)
+	void PostEvent(Connection* const conn, const MessageType type)
+	{
+		Message message = {};
+		message.Header.MessageType = type;
+		Post(conn, message);
 	}
 
 	void AcceptConnections()
@@ -110,36 +116,32 @@ namespace
 			if (!IpcClaim(token, hChannel, region))
 				continue;
 
-			//Reuse a freed connection slot if one exists, else grow.
-			size_t slot = g_connCount;
-			for (size_t i = 0; i < g_connCount; i++)
+			//Take the first free connection slot.
+			Connection* slot = nullptr;
+			for (Connection& conn : g_conns)
 			{
-				if (g_conns[i].Region == nullptr)
+				if (!conn.Region)
 				{
-					slot = i;
+					slot = &conn;
 					break;
 				}
 			}
-			if (slot == g_connCount)
+			if (!slot)
 			{
-				if (g_connCount >= MaxConns)
-				{
-					CloseHandle((Handle)hChannel);
-					break;
-				}
-				g_connCount++;
+				CloseHandle((Handle)hChannel);
+				break;
 			}
-			g_conns[slot].Region = region;
-			g_conns[slot].ChannelHandle = hChannel;
+			slot->Region = region;
+			slot->ChannelHandle = hChannel;
 		}
 	}
 
 	WmWindow* FindWindow(Connection* const conn, const uint32_t windowId)
 	{
-		for (size_t i = 0; i < g_windowCount; i++)
+		for (WmWindow& window : g_windows)
 		{
-			if (g_windows[i].Used && g_windows[i].Owner == conn && g_windows[i].WindowId == windowId)
-				return &g_windows[i];
+			if (window.Surface && window.Owner == conn && window.WindowId == windowId)
+				return &window;
 		}
 		return nullptr;
 	}
@@ -156,28 +158,22 @@ namespace
 			if (!IpcClaim(request.SurfaceGrant, hSurface, surface))
 				return;
 
-			//Reuse a freed window slot if available, else grow.
-			size_t slot = g_windowCount;
-			for (size_t i = 0; i < g_windowCount; i++)
+			//Take the first free window slot.
+			WmWindow* window = nullptr;
+			for (WmWindow& slot : g_windows)
 			{
-				if (!g_windows[i].Used)
+				if (!slot.Surface)
 				{
-					slot = i;
+					window = &slot;
 					break;
 				}
 			}
-			if (slot == g_windowCount)
+			if (!window)
 			{
-				if (g_windowCount >= MaxWindows)
-				{
-					CloseHandle((Handle)hSurface);
-					return;
-				}
-				g_windowCount++;
+				CloseHandle((Handle)hSurface);
+				return;
 			}
 
-			WmWindow* const window = &g_windows[slot];
-			window->Used = true;
 			window->Owner = conn;
 			window->WindowId = request.WindowId;
 			window->Surface = surface;
@@ -208,15 +204,223 @@ namespace
 
 	void ProcessRequests()
 	{
-		for (size_t i = 0; i < g_connCount; i++)
+		for (Connection& conn : g_conns)
 		{
-			if (g_conns[i].Region == nullptr)
+			if (conn.Region == nullptr)
 				continue;
-			SharedRing<Wm::Request> ring = Wm::Channel::Requests(g_conns[i].Region);
+			SharedRing<Wm::Request> ring = Wm::Channel::Requests(conn.Region);
 			Wm::Request request;
 			while (ring.Dequeue(request))
-				HandleRequest(&g_conns[i], request);
+				HandleRequest(&conn, request);
 		}
+	}
+
+	//Free a window in place (keeps other z-order/Owner pointers valid).
+	void DestroyWindow(WmWindow* const window)
+	{
+		//Drop it from the z-order.
+		g_zorder.Remove(window);
+
+		if (g_drag == window)
+			g_drag = nullptr;
+		if (g_focus == window)
+			g_focus = TopmostVisible();
+
+		//Release our surface handle (unmaps it), then free the slot.
+		CloseHandle((Handle)window->SurfaceHandle);
+		window->Surface = nullptr;
+		window->Owner = nullptr;
+	}
+
+	//Ask the owning app to close (it exits its message loop), then drop the window.
+	void CloseWindow(WmWindow* const window)
+	{
+		PostEvent(window->Owner, MessageType::CloseEvent);
+		DestroyWindow(window);
+	}
+
+	//Hide a window from compositing (still listed in the taskbar). Refocus the next visible window.
+	void Minimize(WmWindow* const window)
+	{
+		window->Minimized = true;
+		if (g_focus == window)
+			g_focus = TopmostVisible();
+	}
+
+	void RestoreAndFocus(WmWindow* const window)
+	{
+		window->Minimized = false;
+		g_focus = window;
+		Raise(window);
+	}
+
+	//Reclaim windows/connections whose owning process has exited (clean or crash).
+	void ReapDeadConnections()
+	{
+		for (Connection& conn : g_conns)
+		{
+			if (conn.Region == nullptr)
+				continue;
+
+			const uint32_t pid = reinterpret_cast<Wm::Channel::Header*>(conn.Region)->ProcessId;
+			if (pid == 0 || IsProcessAlive(pid))
+				continue;
+
+			for (WmWindow& window : g_windows)
+			{
+				if (window.Surface && window.Owner == &conn)
+					DestroyWindow(&window);
+			}
+			//Release our channel handle (unmaps it) and free the connection slot.
+			CloseHandle((Handle)conn.ChannelHandle);
+			conn.Region = nullptr;
+		}
+	}
+
+	//----- Panel / taskbar: Start launcher + running-window list + clock, always on top -----
+	constexpr int32_t PanelHeight = 28;
+	constexpr int32_t StartWidth  = 68;
+	constexpr int32_t TaskWidth   = 160;
+	constexpr int32_t TaskGap     = 4;
+	constexpr int32_t ClockWidth  = 92;
+
+	//Start menu
+	struct AppEntry { const char* Label; const char* Exe; };
+	constexpr AppEntry g_apps[] =
+	{
+		{ "Terminal",  "term.exe" },
+		{ "Doom",      "doom.exe" },
+		{ "Fire",      "fire.exe" },
+		{ "Calc",      "calc.exe" },
+		{ "Processes", "ps.exe"   },
+	};
+	constexpr size_t  g_appCount     = sizeof(g_apps) / sizeof(g_apps[0]);
+	constexpr int32_t MenuWidth      = 160;
+	constexpr int32_t MenuItemHeight = 24;
+
+	int32_t PanelTop() { return (int32_t)g_gfx.Height - PanelHeight; }
+
+	//Start menu sits directly above the panel, aligned with the Start button
+	Rectangle StartMenuRect()
+	{
+		const uint32_t h = (uint32_t)g_appCount * MenuItemHeight;
+		return { 4, PanelTop() - (int32_t)h, MenuWidth, h };
+	}
+
+	//Taskbar layout: one button per window in slot order until the clock; fn(window, x) returns true to stop
+	template <typename TFn>
+	void ForEachTaskButton(TFn&& fn)
+	{
+		int32_t x = StartWidth + TaskGap;
+		for (WmWindow& window : g_windows)
+		{
+			if (!window.Surface)
+				continue;
+			if (x + TaskWidth > (int32_t)g_gfx.Width - ClockWidth || fn(window, x))
+				return;
+			x += TaskWidth + TaskGap;
+		}
+	}
+
+	void DrawPanel()
+	{
+		const int32_t y0 = PanelTop();
+		const int32_t w = (int32_t)g_gfx.Width;
+		const Color panelBg = { 0x20, 0x20, 0x20 };
+		const Color taskBg  = { 0x50, 0x50, 0x50 };
+
+		//Background + blue top edge
+		Draw2D::DrawRectangle(g_back, panelBg, { 0, y0, (uint32_t)w, PanelHeight });
+		Draw2D::DrawRectangle(g_back, Colors::Blue, { 0, y0, (uint32_t)w, 2 });
+
+		//Start button
+		Draw2D::DrawRectangle(g_back, Colors::Blue, { 4, y0 + 4, StartWidth - 8, PanelHeight - 8 });
+		Draw2D::DrawText(g_back, { 12, y0 + 10 }, CString("Start"), Colors::White);
+
+		//Taskbar: one button per window (slot order); focused highlighted, hovered lit, ellipsized.
+		ForEachTaskButton([&](const WmWindow& window, const int32_t x)
+		{
+			const bool focused = (&window == g_focus);
+			const bool hover = g_mouse.X >= x && g_mouse.X < x + TaskWidth && g_mouse.Y >= y0;
+			const Color bg = focused ? Colors::Blue : (hover ? Color{ 0x68, 0x68, 0x68 } : taskBg);
+			Draw2D::DrawRectangle(g_back, bg, { x, y0 + 4, TaskWidth, PanelHeight - 8 });
+
+			//Title, ellipsized to ~14 chars so it fits the button.
+			const size_t len = strlen(window.Title);
+			const Point2D end = Draw2D::DrawText(g_back, { x + 6, y0 + 10 }, CString(window.Title, len <= 14 ? len : 11), Colors::White);
+			if (len > 14)
+				Draw2D::DrawText(g_back, end, CString("..."), Colors::White);
+			return false;
+		});
+
+		//Clock (HH:MM:SS) on the right
+		SystemTime t = {};
+		if (GetSystemTime(&t) == SyscallResult::Success)
+		{
+			char clock[9];
+			snprintf(clock, sizeof(clock), "%02d:%02d:%02d", t.Hour, t.Minute, t.Second);
+			Draw2D::DrawText(g_back, { w - ClockWidth + 10, y0 + 10 }, CString(clock), Colors::White);
+		}
+	}
+
+	void HandlePanelClick(const Point2D& point)
+	{
+		//Start button -> toggle the app menu
+		if (point.X >= 4 && point.X < StartWidth)
+		{
+			g_startMenuOpen = !g_startMenuOpen;
+			return;
+		}
+
+		//Any other panel click dismisses the menu.
+		g_startMenuOpen = false;
+
+		//Taskbar button -> minimize the focused window, otherwise restore/focus/raise it
+		ForEachTaskButton([&](WmWindow& window, const int32_t x)
+		{
+			if (point.X < x || point.X >= x + TaskWidth)
+				return false;
+
+			if (&window == g_focus && !window.Minimized)
+				Minimize(&window);
+			else
+				RestoreAndFocus(&window);
+			return true;
+		});
+	}
+
+	void DrawStartMenu()
+	{
+		if (!g_startMenuOpen)
+			return;
+
+		const Rectangle menu = StartMenuRect();
+		const Color menuBg = { 0x30, 0x30, 0x30 };
+
+		Draw2D::DrawRectangle(g_back, menuBg, menu);
+		Draw2D::DrawRectangle(g_back, Colors::Blue, { menu.X, menu.Y, menu.Width, 2 });
+
+		for (size_t i = 0; i < g_appCount; i++)
+		{
+			const Rectangle item = { menu.X, menu.Y + (int32_t)i * MenuItemHeight, menu.Width, MenuItemHeight };
+			//Highlight the item under the cursor.
+			if (item.Contains(g_mouse))
+				Draw2D::DrawRectangle(g_back, Colors::Blue, item);
+			Draw2D::DrawText(g_back, { item.X + 8, item.Y + 8 }, CString(g_apps[i].Label), Colors::White);
+		}
+	}
+
+	bool InStartMenu(const Point2D& point)
+	{
+		return g_startMenuOpen && StartMenuRect().Contains(point);
+	}
+
+	void HandleStartMenuClick(const Point2D& point)
+	{
+		const size_t idx = (size_t)((point.Y - StartMenuRect().Y) / MenuItemHeight);
+		if (idx < g_appCount)
+			CreateProcess(g_apps[idx].Exe, nullptr, nullptr);
+		g_startMenuOpen = false;
 	}
 
 	void ProcessInput()
@@ -241,13 +445,11 @@ namespace
 					{
 						//Launch the picked app and close the menu.
 						HandleStartMenuClick(mousePos);
-						g_drag = nullptr;
 					}
 					else if (mousePos.Y >= PanelTop())
 					{
 						//Clicks on the panel drive the launcher/taskbar, not window focus/drag.
 						HandlePanelClick(mousePos);
-						g_drag = nullptr;
 					}
 					else
 					{
@@ -294,255 +496,6 @@ namespace
 		}
 	}
 
-	//Free a window in place (keeps other z-order/Owner pointers valid).
-	void DestroyWindow(WmWindow* const window)
-	{
-		//Drop it from the z-order.
-		g_zorder.Remove(window);
-
-		if (g_drag == window)
-			g_drag = nullptr;
-		if (g_focus == window)
-			g_focus = g_zorder.First(); //new topmost (null if the list is now empty)
-
-		//Release our surface handle (unmaps it), then free the slot.
-		if (window->Surface)
-			CloseHandle((Handle)window->SurfaceHandle);
-		window->Surface = nullptr;
-		window->Used = false;
-		window->Owner = nullptr;
-	}
-
-	//Ask the owning app to close (it exits its message loop), then drop the window.
-	void CloseWindow(WmWindow* const window)
-	{
-		Message message = {};
-		message.Header.MessageType = MessageType::CloseEvent;
-		Post(window->Owner, message);
-		DestroyWindow(window);
-	}
-
-	//Hide a window from compositing (still listed in the taskbar). Refocus the next visible window.
-	void Minimize(WmWindow* const window)
-	{
-		window->Minimized = true;
-		if (g_drag == window)
-			g_drag = nullptr;
-		if (g_focus == window)
-		{
-			g_focus = nullptr;
-			for (WmWindow* const w : g_zorder)
-			{
-				if (!w->Minimized)
-				{
-					g_focus = w;
-					break;
-				}
-			}
-		}
-	}
-
-	void RestoreAndFocus(WmWindow* const window)
-	{
-		window->Minimized = false;
-		g_focus = window;
-		Raise(window);
-	}
-
-	//Reclaim windows/connections whose owning process has exited (clean or crash).
-	void ReapDeadConnections()
-	{
-		for (size_t i = 0; i < g_connCount; i++)
-		{
-			Connection* const conn = &g_conns[i];
-			if (conn->Region == nullptr)
-				continue;
-
-			const uint32_t pid = reinterpret_cast<Wm::Channel::Header*>(conn->Region)->ProcessId;
-			if (pid == 0 || IsProcessAlive(pid))
-				continue;
-
-			for (size_t w = 0; w < g_windowCount; w++)
-			{
-				if (g_windows[w].Used && g_windows[w].Owner == conn)
-					DestroyWindow(&g_windows[w]);
-			}
-			//Release our channel handle (unmaps it) and free the connection slot.
-			CloseHandle((Handle)conn->ChannelHandle);
-			conn->Region = nullptr;
-		}
-	}
-
-	//----- Panel / taskbar: Start launcher + running-window list + clock, always on top -----
-	constexpr int32_t PanelHeight = 28;
-	constexpr int32_t StartWidth  = 68;
-	constexpr int32_t TaskWidth   = 160;
-	constexpr int32_t TaskGap     = 4;
-	constexpr int32_t ClockWidth  = 92;
-
-	//Start menu
-	struct AppEntry { const char* Label; const char* Exe; };
-	constexpr AppEntry g_apps[] =
-	{
-		{ "Terminal",  "term.exe" },
-		{ "Doom",      "doom.exe" },
-		{ "Fire",      "fire.exe" },
-		{ "Calc",      "calc.exe" },
-		{ "Processes", "ps.exe"   },
-	};
-	constexpr size_t  g_appCount     = sizeof(g_apps) / sizeof(g_apps[0]);
-	constexpr int32_t MenuWidth      = 160;
-	constexpr int32_t MenuItemHeight = 24;
-
-	int32_t PanelTop() { return (int32_t)g_gfx.Height - PanelHeight; }
-	int32_t StartMenuTop() { return PanelTop() - (int32_t)g_appCount * MenuItemHeight; }
-
-	//Write a zero-padded 2-digit value into out[0..1].
-	void Fmt2(char* const out, const uint32_t v)
-	{
-		out[0] = (char)('0' + (v / 10) % 10);
-		out[1] = (char)('0' + v % 10);
-	}
-
-	void DrawPanel()
-	{
-		const int32_t y0 = PanelTop();
-		const int32_t w = (int32_t)g_gfx.Width;
-		const Color panelBg = { 0x20, 0x20, 0x20 };
-		const Color taskBg  = { 0x50, 0x50, 0x50 };
-
-		//Background + blue top edge
-		Draw2D::DrawRectangle(g_back, panelBg, { 0, y0, (uint32_t)w, PanelHeight });
-		Draw2D::DrawRectangle(g_back, Colors::Blue, { 0, y0, (uint32_t)w, 2 });
-
-		//Start button
-		Draw2D::DrawRectangle(g_back, Colors::Blue, { 4, y0 + 4, StartWidth - 8, PanelHeight - 8 });
-		Draw2D::DrawText(g_back, { 12, y0 + 10 }, CString("Start"), Colors::White);
-
-		//Taskbar: one button per window (slot order); focused highlighted, hovered lit, ellipsized.
-		int32_t x = StartWidth + TaskGap;
-		for (size_t i = 0; i < g_windowCount; i++)
-		{
-			if (!g_windows[i].Used || x + TaskWidth > w - ClockWidth)
-				continue;
-
-			const bool focused = (&g_windows[i] == g_focus);
-			const bool hover = g_mouse.X >= x && g_mouse.X < x + TaskWidth && g_mouse.Y >= y0;
-			const Color bg = focused ? Colors::Blue : (hover ? Color{ 0x68, 0x68, 0x68 } : taskBg);
-			Draw2D::DrawRectangle(g_back, bg, { x, y0 + 4, TaskWidth, PanelHeight - 8 });
-
-			//Title, ellipsized to ~14 chars so it fits the button.
-			const char* const t = g_windows[i].Title;
-			size_t tlen = 0;
-			while (t[tlen])
-				tlen++;
-			char label[16];
-			size_t n;
-			if (tlen <= 14)
-			{
-				for (n = 0; n < tlen; n++)
-					label[n] = t[n];
-			}
-			else
-			{
-				for (n = 0; n < 11; n++)
-					label[n] = t[n];
-				label[11] = label[12] = label[13] = '.';
-				n = 14;
-			}
-			Draw2D::DrawText(g_back, { x + 6, y0 + 10 }, CString(label, n), Colors::White);
-			x += TaskWidth + TaskGap;
-		}
-
-		//Clock (HH:MM:SS) on the right
-		SystemTime t = {};
-		if (GetSystemTime(&t) == SyscallResult::Success)
-		{
-			char clock[9];
-			Fmt2(&clock[0], t.Hour);   clock[2] = ':';
-			Fmt2(&clock[3], t.Minute); clock[5] = ':';
-			Fmt2(&clock[6], t.Second); clock[8] = '\0';
-			Draw2D::DrawText(g_back, { w - ClockWidth + 10, y0 + 10 }, CString(clock, 8), Colors::White);
-		}
-	}
-
-	void HandlePanelClick(const Point2D& point)
-	{
-		const int32_t w = (int32_t)g_gfx.Width;
-
-		//Start button -> toggle the app menu
-		if (point.X >= 4 && point.X < StartWidth)
-		{
-			g_startMenuOpen = !g_startMenuOpen;
-			return;
-		}
-
-		//Any other panel click dismisses the menu.
-		g_startMenuOpen = false;
-
-		//Taskbar button -> focus + raise its window (same layout as DrawPanel)
-		int32_t x = StartWidth + TaskGap;
-		for (size_t i = 0; i < g_windowCount; i++)
-		{
-			if (!g_windows[i].Used || x + TaskWidth > w - ClockWidth)
-				continue;
-			if (point.X >= x && point.X < x + TaskWidth)
-			{
-				WmWindow* const w = &g_windows[i];
-				if (w->Minimized)
-					RestoreAndFocus(w);   //restore a minimized window
-				else if (w == g_focus)
-					Minimize(w);          //click the focused window's button to minimize it
-				else
-				{
-					g_focus = w;          //otherwise bring it to the front
-					Raise(w);
-				}
-				return;
-			}
-			x += TaskWidth + TaskGap;
-		}
-	}
-
-	void DrawStartMenu()
-	{
-		if (!g_startMenuOpen)
-			return;
-
-		const int32_t x = 4;
-		const int32_t y0 = StartMenuTop();
-		const int32_t h = (int32_t)g_appCount * MenuItemHeight;
-		const Color menuBg = { 0x30, 0x30, 0x30 };
-
-		Draw2D::DrawRectangle(g_back, menuBg, { x, y0, MenuWidth, (uint32_t)h });
-		Draw2D::DrawRectangle(g_back, Colors::Blue, { x, y0, MenuWidth, 2 });
-
-		for (size_t i = 0; i < g_appCount; i++)
-		{
-			const int32_t iy = y0 + (int32_t)i * MenuItemHeight;
-			//Highlight the item under the cursor.
-			if (g_mouse.X >= x && g_mouse.X < x + MenuWidth && g_mouse.Y >= iy && g_mouse.Y < iy + MenuItemHeight)
-				Draw2D::DrawRectangle(g_back, Colors::Blue, { x, iy, MenuWidth, MenuItemHeight });
-			Draw2D::DrawText(g_back, { x + 8, iy + 8 }, CString(g_apps[i].Label), Colors::White);
-		}
-	}
-
-	bool InStartMenu(const Point2D& point)
-	{
-		if (!g_startMenuOpen)
-			return false;
-		const int32_t y0 = StartMenuTop();
-		return point.X >= 4 && point.X < 4 + MenuWidth && point.Y >= y0 && point.Y < PanelTop();
-	}
-
-	void HandleStartMenuClick(const Point2D& point)
-	{
-		const size_t idx = (size_t)((point.Y - StartMenuTop()) / MenuItemHeight);
-		if (idx < g_appCount)
-			CreateProcess(g_apps[idx].Exe, nullptr, nullptr);
-		g_startMenuOpen = false;
-	}
-
 	void Composite()
 	{
 		Draw2D::FillScreen(g_back, Colors::Black);
@@ -585,14 +538,10 @@ namespace
 		FlushFramebuffer();
 
 		//Request repaints
-		for (size_t i = 0; i < g_windowCount; i++)
+		for (WmWindow& window : g_windows)
 		{
-			if (!g_windows[i].Used)
-				continue;
-			Message message = {};
-			message.Header.MessageType = MessageType::PaintEvent;
-			message.PaintEvent.Region = g_windows[i].Rect;
-			Post(g_windows[i].Owner, message);
+			if (window.Surface)
+				PostEvent(window.Owner, MessageType::PaintEvent);
 		}
 	}
 }

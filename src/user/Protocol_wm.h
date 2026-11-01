@@ -31,9 +31,7 @@ namespace Wm
 		Op       Code;
 		uint32_t WindowId;         //client-assigned, unique per connection
 		Graphics::Rectangle Rect;  //AllocWindow / MoveWindow position+size
-		uint64_t SurfaceGrant;     //AllocWindow: capability token for the shared surface
-		uint32_t Width;            //AllocWindow: surface dimensions
-		uint32_t Height;
+		uint64_t SurfaceGrant;     //AllocWindow: capability token for the shared surface (Rect gives its size)
 		char     Title[MaxTitle];  //AllocWindow: window title (null-terminated), for the taskbar
 		bool     ShowTitle;        //AllocWindow: draw WM chrome (title/minimize/close); false = chromeless
 	};

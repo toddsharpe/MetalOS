@@ -42,11 +42,6 @@ struct MouseEvent
 	uint16_t YPosition;
 };
 
-struct PaintEvent
-{
-	Graphics::Rectangle Region;
-};
-
 struct Message
 {
 	MessageHeader Header;
@@ -54,6 +49,5 @@ struct Message
 	{
 		KeyEvent KeyEvent;
 		MouseEvent MouseEvent;
-		PaintEvent PaintEvent;
 	};
 };

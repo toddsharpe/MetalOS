@@ -213,7 +213,7 @@ void HyperVNic::SendNvspCompletion(const nvsp_message& msg, uint64_t transId)
 		HyperV::VM_PKT_COMP, 0);
 }
 
-void HyperVNic::SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion, uint32_t section)
+bool HyperVNic::SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion, uint32_t section)
 {
 	Assert(rndisLen <= m_sendSectionSize);
 	Assert(section < m_sendSectionCount);
@@ -229,7 +229,7 @@ void HyperVNic::SendRndisPacket(uint32_t channelType, const void* rndisData, uin
 	//trans_id names the section so its SendRndisPacketComplete can release it (control messages use 0)
 	const uint64_t transId = (section == 0) ? 0 : (SendSectionTag | section);
 	const uint32_t flags = requestCompletion ? VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED : 0;
-	m_channel.SendPacket(&msg, sizeof(nvsp_message), transId, HyperV::VM_PKT_DATA_INBAND, flags);
+	return m_channel.SendPacket(&msg, sizeof(nvsp_message), transId, HyperV::VM_PKT_DATA_INBAND, flags);
 }
 
 //Returns a free data section (never 0), or 0 if all are still owned by the host
@@ -251,15 +251,17 @@ uint32_t HyperVNic::AcquireSendSection()
 	return section;
 }
 
-//Called from OnCallback (interrupts off) when the host completes a data frame
+//Called when the host completes a data frame, or when the frame never reached the ring
 void HyperVNic::ReleaseSendSection(const uint64_t transId)
 {
 	if ((transId & SendSectionTagMask) != SendSectionTag)
 		return;
 
 	const uint64_t section = transId & ~SendSectionTagMask;
+	const cpu_flags_t flags = ArchDisableInterrupts();
 	if (section != 0 && section < m_sendSectionCount)
 		m_sendSectionsInUse &= ~(1ULL << section);
+	ArchRestoreFlags(flags);
 }
 
 uint32_t HyperVNic::CreateGpadl(paddr_t address, size_t pageCount)
@@ -453,7 +455,12 @@ Result HyperVNic::SendFrame(const void* data, size_t length)
 	// Transmit over the data channel using the send-buffer section mechanism — the same
 	// path that works for control RNDIS messages. (The prior inline scheme, with a 16-byte
 	// NVSP prefix and section_index=INVALID, never actually put frames on the wire.)
-	SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, buf, rndisLen, true, section);
+	if (!SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, buf, rndisLen, true, section))
+	{
+		//Ring full: no completion will come, so the section is still ours
+		ReleaseSendSection(SendSectionTag | section);
+		return Result::Failed;
+	}
 	return Result::Success;
 }
 

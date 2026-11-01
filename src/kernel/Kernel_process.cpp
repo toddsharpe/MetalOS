@@ -12,6 +12,28 @@ extern LinkedList<UProcess*> m_processes;
 
 static constexpr CString RuntimeDLL = "MetalOS-RT.dll";
 
+//An image installs at its fixed ImageBase, so it must be page-aligned and end inside user space
+static bool FitsUserSpace(const Loader::LoadedImage& image)
+{
+	const uintptr_t start = reinterpret_cast<uintptr_t>(image.UserBase);
+	if ((start & Arch::PageMask) != 0 || start >= UserEnd)
+		return false;
+	return x64::SizeToPages(image.Size) <= ((UserEnd - start) >> Arch::PageShift);
+}
+
+//Checked before the process exists, so KeAliasInto's fixed-address reserve can't fail
+static bool CanInstall(const Loader::LoadedImage& exe, const Loader::LoadedImage& runtime)
+{
+	if (!FitsUserSpace(exe) || !FitsUserSpace(runtime))
+		return false;
+
+	const uintptr_t exeStart = reinterpret_cast<uintptr_t>(exe.UserBase);
+	const uintptr_t runtimeStart = reinterpret_cast<uintptr_t>(runtime.UserBase);
+	const uintptr_t exeEnd = exeStart + (x64::SizeToPages(exe.Size) << Arch::PageShift);
+	const uintptr_t runtimeEnd = runtimeStart + (x64::SizeToPages(runtime.Size) << Arch::PageShift);
+	return exeEnd <= runtimeStart || runtimeEnd <= exeStart;
+}
+
 const KModule* KeLoadLibrary(const char* const name)
 {
 	const CString moduleName(name);
@@ -71,6 +93,14 @@ UProcess* KeCreateProcess(const char* const cmd)
 	void* const initThread = WinPE::GetProcAddress(runtime.Alias, "InitThread");
 	if (!Loader::ResolveImports(exe, runtime, RuntimeDLL) || !initProcess || !initThread)
 	{
+		KeVirtualFree(m_process, exe.Alias);
+		KeVirtualFree(m_process, runtime.Alias);
+		return nullptr;
+	}
+
+	if (!CanInstall(exe, runtime))
+	{
+		Printf("%s: ImageBase 0x%016x is outside user space or overlaps %s\n", path.c_str(), exe.UserBase, RuntimeDLL.c_str());
 		KeVirtualFree(m_process, exe.Alias);
 		KeVirtualFree(m_process, runtime.Alias);
 		return nullptr;

@@ -3,7 +3,6 @@
 #include "Net/Net.h"
 #include "Net/Packet.h"
 #include "Net/NetDriver.h"
-#include "Lib/StaticArray.h"
 #include "Lib/StaticVector.h"
 
 namespace Net
@@ -44,7 +43,7 @@ namespace Net
 		 * Config.
 		 */
 		StaticVector<ipv4_addr_t, 4> mc_groups;
-		StaticArray<ipv4_mc_route_t, 4> mc_routes;
+		StaticVector<ipv4_mc_route_t, 4> mc_routes;
 		ipv4_addr_t addr;
 		ipv4_addr_t subnet_mask;
 		ipv4_addr_t gateway;

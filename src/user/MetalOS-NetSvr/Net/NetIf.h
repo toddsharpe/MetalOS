@@ -2,9 +2,9 @@
 
 #include "Net/Net.h"
 #include "Net/Packet.h"
-#include "Net/BufferPool.h"
 #include "Net/NetDriver.h"
 #include "Lib/StaticArray.h"
+#include "Lib/StaticVector.h"
 
 namespace Net
 {
@@ -13,15 +13,13 @@ namespace Net
 		constexpr eth_data_t() :
 			addr(),
 			filters(),
-			pending_tx(),
 			arp_pending()
 		{
 
 		}
-		
+
 		eth_mac_t addr;
-		StaticArray<eth_mac_t, 4> filters;
-		Packet pending_tx;
+		StaticVector<eth_mac_t, 4> filters; //extra accepted destination MACs (joined multicast groups)
 		bool arp_pending;
 	};
 
@@ -39,18 +37,13 @@ namespace Net
 
 		bool is_joined(const ipv4_addr_t mc_group) const
 		{
-			for (const ipv4_addr_t &addr : mc_groups)
-			{
-				if (addr == mc_group)
-					return true;
-			}
-			return false;
+			return mc_groups.Contains(mc_group);
 		}
 
 		/*
 		 * Config.
 		 */
-		StaticArray<ipv4_addr_t, 4> mc_groups;
+		StaticVector<ipv4_addr_t, 4> mc_groups;
 		StaticArray<ipv4_mc_route_t, 4> mc_routes;
 		ipv4_addr_t addr;
 		ipv4_addr_t subnet_mask;
@@ -87,12 +80,6 @@ namespace Net
 		void PreDispatch()
 		{
 			driver.Receive(*this);
-		}
-
-		void PostDispatch()
-		{
-			if (l2 == l2_t::Ethernet)
-				Net::Ethernet::TxFlush(*this);
 		}
 
 		NetDriver& driver;

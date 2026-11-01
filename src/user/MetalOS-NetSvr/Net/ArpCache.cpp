@@ -13,21 +13,6 @@ namespace
 
 namespace Net::ArpCache
 {
-	bool Contains(const Net::ipv4_addr_t& ip_addr)
-	{
-		//Multicast or broadcast doesnt need arp
-		if (Net::is_multicast(ip_addr) || ip_addr == Net::broadcast)
-			return true;
-		
-		for (const entry_t& entry : cache)
-		{
-			if (entry.ip_addr == ip_addr)
-				return true;
-		}
-
-		return false;
-	}
-
 	bool Update(const Net::ipv4_addr_t& ip_addr, const Net::eth_mac_t& eth_addr)
 	{
 		//Search for existing device
@@ -85,23 +70,5 @@ namespace Net::ArpCache
 		}
 
 		return false;
-	}
-
-	void Display()
-	{
-		printf("ArpCache:\n");
-		for (const entry_t& entry : cache)
-		{
-			if (entry.ip_addr == Net::empty)
-			{
-				printf("    <free>\n");
-			}
-			else
-			{
-				printf("    %d.%d.%d.%d -> %02X:%02X:%02X:%02X:%02X:%02X\n",
-					entry.ip_addr.bytes[3], entry.ip_addr.bytes[2], entry.ip_addr.bytes[1], entry.ip_addr.bytes[0],
-					entry.eth_addr.bytes[5], entry.eth_addr.bytes[4], entry.eth_addr.bytes[3], entry.eth_addr.bytes[2], entry.eth_addr.bytes[1], entry.eth_addr.bytes[0]);
-			}
-		}
 	}
 }

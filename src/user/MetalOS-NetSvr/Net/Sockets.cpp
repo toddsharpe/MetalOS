@@ -8,11 +8,13 @@
 
 using namespace Net;
 
-//Userland SOCK_*/IPPROTO_* values (kept in sync with src/User/MetalOS.Types.h).
-static constexpr int kSockDgram = 2;
-static constexpr int kSockRaw   = 3;
-static constexpr int kProtoIcmp = 1;
-static constexpr int kProtoUdp  = 17;
+//TODO(tsharpe): Implement rand for this method
+uint16_t Net::rand_port()
+{
+	static uint16_t port = 1024;
+	port++;
+	return (port % UINT16_MAX);
+}
 
 //Bound-socket registry + inbound demux. netstack is single-threaded (one RX/IPC loop),
 //so no lock is needed. Sockets are owned by the IPC layer (one per app socket handle);
@@ -21,28 +23,12 @@ namespace
 {
 	LinkedList<KSocket*> g_sockets;
 
-	bool ProtoMatches(const proto_t bound, const proto_t incoming)
-	{
-		if (bound == proto_t::Udp)
-			return incoming == proto_t::Udp;
-
-		//Raw ICMP sockets accept every ICMP-family message.
-		if (bound == proto_t::Icmp)
-		{
-			return incoming == proto_t::Icmp
-				|| incoming == proto_t::EchoReply
-				|| incoming == proto_t::EchoRequest
-				|| incoming == proto_t::DestUnreachable;
-		}
-
-		return false;
-	}
-
+	//Udp::Receive delivers Udp and Icmp::Receive delivers whole ICMP messages (raw sockets) as Icmp
 	KSocket* FindBound(const proto_t proto, const uint16_t port)
 	{
 		for (KSocket* socket : g_sockets)
 		{
-			if (!ProtoMatches(socket->Proto, proto))
+			if (socket->Proto != proto)
 				continue;
 			if (socket->Proto == proto_t::Udp && socket->Local.port != port)
 				continue;
@@ -74,9 +60,9 @@ namespace
 KSocket* SocketCreate(const int type, const int proto)
 {
 	proto_t p;
-	if (proto == kProtoUdp || (proto == 0 && type == kSockDgram))
+	if (proto == IPPROTO_UDP || (proto == 0 && type == SOCK_DGRAM))
 		p = proto_t::Udp;
-	else if (proto == kProtoIcmp || (type == kSockRaw && proto == 0))
+	else if (proto == IPPROTO_ICMP || (type == SOCK_RAW && proto == 0))
 		p = proto_t::Icmp;
 	else
 		return nullptr;
@@ -92,20 +78,18 @@ KSocket* SocketCreate(const int type, const int proto)
 	return socket;
 }
 
-bool SocketBind(KSocket& socket, const endpoint_t& local)
+void SocketBind(KSocket& socket, const endpoint_t& local)
 {
 	socket.Local = local;
 	if (socket.Local.port == 0)
 		socket.Local.port = rand_port();
 	Register(socket);
-	return true;
 }
 
-bool SocketConnect(KSocket& socket, const endpoint_t& peer)
+void SocketConnect(KSocket& socket, const endpoint_t& peer)
 {
 	socket.Peer = peer;
 	socket.Connected = true;
-	return true;
 }
 
 bool SocketSend(KSocket& socket, const endpoint_t& dst, const void* const buffer, const size_t length)
@@ -130,20 +114,14 @@ bool SocketSend(KSocket& socket, const endpoint_t& dst, const void* const buffer
 
 //Non-blocking receive: returns one queued datagram or Empty. Apps block by polling
 //their reply ring, so netstack never blocks its single loop here.
-Net::Socket::read_t SocketRecv(KSocket& socket, endpoint_t& src, void* const buffer, const size_t maxLength, size_t& bytesRead)
+bool SocketRecv(KSocket& socket, endpoint_t& src, void* const buffer, const size_t maxLength, size_t& bytesRead)
 {
 	bytesRead = 0;
-	if (socket.Closed)
-		return Net::Socket::read_t::Failure;
-
-	return socket.Dequeue(src, buffer, maxLength, bytesRead)
-		? Net::Socket::read_t::Success
-		: Net::Socket::read_t::Empty;
+	return socket.Dequeue(src, buffer, maxLength, bytesRead);
 }
 
 void SocketClose(KSocket& socket)
 {
-	socket.MarkClosed();
 	Unregister(socket);
 	delete &socket;
 }

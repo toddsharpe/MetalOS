@@ -32,11 +32,6 @@ namespace Net
 			return true;
 		}
 
-		bool Push(const CBuffer &packet)
-		{
-			return Push(packet.Data, packet.Size);
-		}
-
 		bool Pop(Buffer &out, size_t &bytes_read)
 		{
 			if (IsEmpty())
@@ -56,11 +51,6 @@ namespace Net
 		bool IsEmpty() const
 		{
 			return m_count == 0;
-		}
-
-		size_t Count() const
-		{
-			return m_count;
 		}
 
 	private:

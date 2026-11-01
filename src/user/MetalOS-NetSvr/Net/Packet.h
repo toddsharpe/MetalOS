@@ -65,27 +65,6 @@ namespace Net
 			count += size;
 		}
 
-#if 0
-		void display()
-		{
-			printf("Count: 0x%lx, offset: 0x%lx\n", count, offset);
-			printf("\t: %s(%d): %d.%d.%d.%d:%d -> %d.%d.%d.%d:%d\n",
-				ToString(proto),
-				(int)proto,
-				src.addr.bytes[3],
-				src.addr.bytes[2],
-				src.addr.bytes[1],
-				src.addr.bytes[0],
-				src.port,
-				dst.addr.bytes[3],
-				dst.addr.bytes[2],
-				dst.addr.bytes[1],
-				dst.addr.bytes[0],
-				dst.port
-			);
-		}
-#endif
-
 		Buffer backing;
 
 		//Layer specific data

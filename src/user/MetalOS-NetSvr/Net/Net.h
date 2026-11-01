@@ -25,42 +25,8 @@ namespace Net
 		Udp,
 		Icmp,
 		EchoReply,
-		EchoRequest,
-		DestUnreachable
+		EchoRequest
 	};
-
-	static constexpr char proto_None[] = "None";
-	static constexpr char proto_Eth[] = "Eth";
-	static constexpr char proto_Arp[] = "Arp";
-	static constexpr char proto_Ipv4[] = "Ipv4";
-	static constexpr char proto_Udp[] = "Udp";
-	static constexpr char proto_Icmp[] = "Icmp";
-	static constexpr char proto_EchoReply[] = "EchoReply";
-	static constexpr char proto_EchoRequest[] = "EchoRequest";
-
-	constexpr const char* to_string(const proto_t proto)
-	{
-		switch (proto)
-		{
-			case proto_t::Eth:
-				return proto_Eth;
-			case proto_t::Arp:
-				return proto_Arp;
-			case proto_t::Ipv4:
-				return proto_Ipv4;
-			case proto_t::Udp:
-				return proto_Udp;
-			case proto_t::Icmp:
-				return proto_Icmp;
-			case proto_t::EchoReply:
-				return proto_EchoReply;
-			case proto_t::EchoRequest:
-				return proto_EchoRequest;
-			default:
-				Assert(false);
-				return proto_None;
-		}
-	}
 
 	enum class l2_t
 	{
@@ -95,12 +61,6 @@ namespace Net
 		}
 	};
 	static constexpr eth_mac_t eth_broadcast = { .bytes = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF} };
-	static constexpr eth_mac_t eth_empty = { .bytes = {} };
-
-	constexpr eth_mac_t build_mac(const uint8_t a0, const uint8_t a1, const uint8_t a2, const uint8_t a3, const uint8_t a4, const uint8_t a5)
-	{
-		return { .bytes = {a5, a4, a3, a2, a1, a0} };
-	}
 
 	struct eth_hdr_t
 	{
@@ -141,8 +101,6 @@ namespace Net
 	 * IPv4.
 	 */
 	static constexpr uint8_t ip_proto_icmp = 0x01;
-	static constexpr uint8_t ip_proto_igmp = 0x02;
-	static constexpr uint8_t ip_proto_tcp = 0x06;
 	static constexpr uint8_t ip_proto_udp = 0x11;
 
 	constexpr uint8_t get_ipv4_proto(const proto_t proto)
@@ -204,13 +162,7 @@ namespace Net
 	}
 
 	constexpr ipv4_addr_t empty = build_ip(0, 0, 0, 0);
-	constexpr ipv4_addr_t localhost = build_ip(127, 0, 0, 1);
-	constexpr ipv4_addr_t server_ip = build_ip(192, 168, 0, 0);
-	constexpr ipv4_addr_t telem_ip = build_ip(239, 9, 9, 9);
 	constexpr ipv4_addr_t broadcast = build_ip(0xFF, 0xFF, 0xFF, 0xFF);
-
-	constexpr ipv4_addr_t subnet_16 = build_ip(0xFF, 0xFF, 0, 0);
-	constexpr ipv4_addr_t subnet_24 = build_ip(0xFF, 0xFF, 0xFF, 0);
 	constexpr ipv4_addr_t subnet_32 = build_ip(0xFF, 0xFF, 0xFF, 0xFF);
 
 	constexpr bool is_network(const ipv4_addr_t ip_1, const ipv4_addr_t ip_2, const ipv4_addr_t subnet)
@@ -262,7 +214,6 @@ namespace Net
 	 * ICMP.
 	 */
 	static constexpr uint8_t icmp_type_echo_reply = 0x00;
-	static constexpr uint8_t icmp_type_dest_unreachable = 0x03;
 	static constexpr uint8_t icmp_type_echo_request = 0x08;
 
 	struct icmp_hdr_t
@@ -273,12 +224,6 @@ namespace Net
 	};
 	static constexpr size_t icmp_hdr_checksum_offset = 2;
 	static constexpr size_t icmp_hdr_size = 4;
-
-	struct dest_unreachable_t
-	{
-		uint32_t unused;
-	};
-	static constexpr size_t dst_unreachable_size = 4;
 
 	struct echo_hdr_t
 	{
@@ -324,9 +269,6 @@ namespace Net
 	};
 
 	uint16_t checksum(const void* const buffer, const size_t length);
-	uint32_t checksum_add(const uint32_t current, const void* const buffer, const size_t length);
-	uint16_t checksum_finalize(const uint32_t current);
-	bool checksum_valid(const void* const buffer, const size_t length);
 
 	uint16_t rand_port();
 
@@ -347,7 +289,6 @@ namespace Net
 	{
 		bool Receive(NetIf& net_if, Packet& packet);
 		bool Send(NetIf& net_if, Packet& packet);
-		void TxFlush(NetIf& net_if);
 	}
 
 	namespace TunEth
@@ -358,7 +299,6 @@ namespace Net
 
 	namespace IPv4
 	{
-		bool Meta(Packet &packet);
 		bool Receive(NetIf &net_if, Packet &packet);
 		bool Send(NetIf &net_if, Packet &packet);
 	}
@@ -371,16 +311,12 @@ namespace Net
 
 	namespace ArpCache
 	{
-		bool Contains(const ipv4_addr_t& ip_addr);
 		bool Update(const ipv4_addr_t& ip_addr, const eth_mac_t& eth_addr);
 		bool Lookup(const ipv4_addr_t& ipAddr, eth_mac_t& eth_addr);
-
-		void Display();
 	}
 
 	namespace Udp
 	{
-		bool Meta(Packet& packet);
 		bool Receive(NetIf& net_if, Packet& packet);
 		bool Send(NetIf& net_if, Packet& packet);
 	}
@@ -399,14 +335,6 @@ namespace Net
 
 	namespace Socket
 	{
-		enum class read_t
-		{
-			Empty,
-			Success,
-			Unreachable,
-			Failure
-		};
-		
 		bool Receive(NetIf& net_if, Packet& packet);
 
 		bool SendUdp(const endpoint_t dst, const uint16_t src_port, const void* const buffer, const size_t length);
@@ -433,9 +361,4 @@ namespace Net
 		const handler_tx Send;
 		const size_t HeaderSize;
 	};
-}
-
-inline uint16_t htons(const uint16_t host)
-{
-	return ByteSwap<uint16_t>(host);
 }

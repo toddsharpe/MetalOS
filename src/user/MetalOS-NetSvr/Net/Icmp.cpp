@@ -4,24 +4,6 @@
 
 namespace Net::Icmp
 {
-	static void ReceiveEchoReply(NetIf& net_if, Packet& packet)
-	{
-		if (packet.length() < echo_hdr_size)
-			return;
-		
-		Deserializer deser(packet.buffer(), packet.length());
-		const echo_hdr_t hdr =
-		{
-			.id = deser.ReadU16(),
-			.seq_num = deser.ReadU16(),
-		};
-		UNUSED(hdr);
-		packet.mask(echo_hdr_size);
-		packet.proto = proto_t::EchoReply;
-
-		//The full ICMP message was already delivered to raw sockets in Receive().
-	}
-
 	static void ReceiveEchoRequest(NetIf& net_if, Packet& packet)
 	{
 		if (packet.length() < echo_hdr_size)
@@ -59,32 +41,6 @@ namespace Net::Icmp
 		Icmp::Send(net_if, reply);
 	}
 
-	static void ReceiveDestUnreachable(NetIf& net_if, Packet& packet)
-	{
-		if (packet.length() < dst_unreachable_size)
-			return;
-
-		Deserializer deser(packet.buffer(), packet.length());
-		const dest_unreachable_t unreachable =
-		{
-			.unused = deser.ReadU32()
-		};
-		UNUSED(unreachable);
-		packet.mask(dst_unreachable_size);
-		
-		//Process reflected bytes of packet
-		const bool result = IPv4::Meta(packet);
-		if (!result)
-			return;
-
-		//Report to socket layer, swap src and dest to deliver to read
-		const endpoint_t temp = packet.src;
-		packet.src = packet.dst;
-		packet.dst = temp;
-		packet.proto = proto_t::DestUnreachable;
-		Assert(Socket::Receive(net_if, packet));
-	}
-	
 	bool Receive(NetIf& net_if, Packet& packet)
 	{
 		if (packet.length() < icmp_hdr_size)
@@ -103,27 +59,10 @@ namespace Net::Icmp
 		packet.proto = proto_t::Icmp;
 		Socket::Receive(net_if, packet);
 
+		//Only echo requests need a reply from the stack; any other type is just for raw sockets
 		packet.mask(icmp_hdr_size);
-		packet.proto = proto_t::Icmp;
-
-		switch (hdr.type)
-		{
-			case icmp_type_echo_reply:
-				ReceiveEchoReply(net_if, packet);
-				break;
-
-			case icmp_type_dest_unreachable:
-				ReceiveDestUnreachable(net_if, packet);
-				break;
-
-			case icmp_type_echo_request:
-				ReceiveEchoRequest(net_if, packet);
-				break;
-
-			default:
-				Assert(false);
-				break;
-		}
+		if (hdr.type == icmp_type_echo_request)
+			ReceiveEchoRequest(net_if, packet);
 
 		return false;
 	}

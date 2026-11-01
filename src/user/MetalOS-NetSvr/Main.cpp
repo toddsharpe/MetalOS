@@ -22,7 +22,6 @@ int __cdecl _purecall(void) { Assert(false); return 0; }
 
 //The TCP/IP stack, compiled here as a unity build (the sources #include each other as
 //"Net/X.h", which resolves relative to this file).
-#include "Net/Util.cpp"
 #include "Net/Checksum.cpp"
 #include "Net/Net.cpp"
 #include "Net/ArpCache.cpp"
@@ -39,8 +38,6 @@ namespace
 {
 	//App IPC: each app's duplex channel gets per-connection socket ids backed by KSockets.
 	//sockaddr_in is network order, the stack host order, so convert here (ByteSwap == hton/ntoh).
-	using read_t = Net::Socket::read_t;
-
 	Net::endpoint_t ToEndpoint(const sockaddr_in& sa)
 	{
 		Net::endpoint_t ep = {};
@@ -69,28 +66,60 @@ namespace
 
 	struct Connection
 	{
-		void* Region;
+		void* Region;      //mapped channel; null when the slot is free
+		HSharedMem Handle; //our handle to the channel; CloseHandle releases it
 		KSocket* Sockets[MaxSocketsPerConn];
 	};
 
 	Connection g_conns[MaxConns] = {};
-	size_t g_connCount = 0;
+
+	Connection* FreeSlot()
+	{
+		for (Connection& conn : g_conns)
+		{
+			if (!conn.Region)
+				return &conn;
+		}
+		return nullptr;
+	}
 
 	void AcceptConnections()
 	{
+		//Only take a token when a slot is free; the rest stay queued on the endpoint
 		uint64_t token = 0;
-		while (PollEndpoint(NetIpc::ControlEndpoint, &token) == SyscallResult::Success)
+		for (Connection* slot = FreeSlot(); slot && PollEndpoint(NetIpc::ControlEndpoint, &token) == SyscallResult::Success; slot = FreeSlot())
 		{
-			if (g_connCount >= MaxConns)
-				break;
-
 			HSharedMem handle = nullptr;
 			void* region = nullptr;
 			if (!IpcClaim(token, handle, region))
 				continue;
 
-			g_conns[g_connCount].Region = region;
-			g_connCount++;
+			*slot = {};
+			slot->Region = region;
+			slot->Handle = handle;
+		}
+	}
+
+	//Close the sockets and channel of apps that exited (clean or crash), freeing the slot and their ports
+	void ReapDeadConnections()
+	{
+		for (Connection& conn : g_conns)
+		{
+			if (!conn.Region)
+				continue;
+
+			const uint32_t pid = reinterpret_cast<NetIpc::Channel::Header*>(conn.Region)->ProcessId;
+			if (pid == 0 || IsProcessAlive(pid))
+				continue;
+
+			for (KSocket*& socket : conn.Sockets)
+			{
+				if (socket)
+					SocketClose(*socket);
+				socket = nullptr;
+			}
+			CloseHandle((Handle)conn.Handle);
+			conn.Region = nullptr;
 		}
 	}
 
@@ -126,77 +155,10 @@ namespace
 			return;
 		}
 
-		case NetIpc::Op::Bind:
-		{
-			KSocket* s = GetSock(conn, req.Socket);
-			if (!s) { reply.Result = SyscallResult::InvalidHandle; return; }
-			reply.Result = SocketBind(*s, ToEndpoint(req.Addr)) ? SyscallResult::Success : SyscallResult::Failed;
-			return;
-		}
-
-		case NetIpc::Op::Connect:
-		{
-			KSocket* s = GetSock(conn, req.Socket);
-			if (!s) { reply.Result = SyscallResult::InvalidHandle; return; }
-			reply.Result = SocketConnect(*s, ToEndpoint(req.Addr)) ? SyscallResult::Success : SyscallResult::Failed;
-			return;
-		}
-
-		case NetIpc::Op::SendTo:
-		{
-			KSocket* s = GetSock(conn, req.Socket);
-			if (!s) { reply.Result = SyscallResult::InvalidHandle; return; }
-			const size_t len = req.Length < NetIpc::MaxPayload ? req.Length : NetIpc::MaxPayload;
-			reply.Result = SocketSend(*s, ToEndpoint(req.Addr), req.Data, len) ? SyscallResult::Success : SyscallResult::Failed;
-			return;
-		}
-
-		case NetIpc::Op::Send:
-		{
-			KSocket* s = GetSock(conn, req.Socket);
-			if (!s || !s->Connected) { reply.Result = SyscallResult::InvalidHandle; return; }
-			const size_t len = req.Length < NetIpc::MaxPayload ? req.Length : NetIpc::MaxPayload;
-			reply.Result = SocketSend(*s, s->Peer, req.Data, len) ? SyscallResult::Success : SyscallResult::Failed;
-			return;
-		}
-
-		case NetIpc::Op::RecvFrom:
-		case NetIpc::Op::Recv:
-		{
-			KSocket* s = GetSock(conn, req.Socket);
-			if (!s) { reply.Result = SyscallResult::InvalidHandle; return; }
-			Net::endpoint_t src = {};
-			size_t bytes = 0;
-			if (SocketRecv(*s, src, reply.Data, NetIpc::MaxPayload, bytes) == read_t::Success)
-			{
-				reply.Length = (uint32_t)bytes;
-				if (req.Code == NetIpc::Op::RecvFrom)
-					FromEndpoint(src, reply.From);
-				reply.Result = SyscallResult::Success;
-			}
-			else
-			{
-				reply.Result = SyscallResult::Failed; //empty: the client retries until timeout
-			}
-			return;
-		}
-
-		case NetIpc::Op::Close:
-		{
-			KSocket* s = GetSock(conn, req.Socket);
-			if (s)
-			{
-				SocketClose(*s);
-				conn.Sockets[req.Socket - 1] = nullptr;
-			}
-			reply.Result = SyscallResult::Success;
-			return;
-		}
-
 		//Interface config: index in req.Socket. Single NIC (index 0).
 		case NetIpc::Op::GetInterfaceIp:
 		{
-			if (req.Socket != 0 || !g_netif) { reply.Result = SyscallResult::InvalidArg; return; }
+			if (req.Socket != 0) { reply.Result = SyscallResult::InvalidArg; return; }
 			reply.Ip = FromIpv4(g_netif->ipv4.addr);
 			reply.Subnet = FromIpv4(g_netif->ipv4.subnet_mask);
 			reply.Result = SyscallResult::Success;
@@ -205,15 +167,15 @@ namespace
 
 		case NetIpc::Op::GetGateway:
 		{
-			if (req.Socket != 0 || !g_netif) { reply.Result = SyscallResult::InvalidArg; return; }
-			reply.Gateway = FromIpv4(g_netif->ipv4.gateway);
+			if (req.Socket != 0) { reply.Result = SyscallResult::InvalidArg; return; }
+			reply.Ip = FromIpv4(g_netif->ipv4.gateway);
 			reply.Result = SyscallResult::Success;
 			return;
 		}
 
 		case NetIpc::Op::SetInterfaceIp:
 		{
-			if (req.Socket != 0 || !g_netif) { reply.Result = SyscallResult::InvalidArg; return; }
+			if (req.Socket != 0) { reply.Result = SyscallResult::InvalidArg; return; }
 			g_netif->ipv4.addr = ToIpv4(req.Ip);
 			g_netif->ipv4.subnet_mask = ToIpv4(req.Subnet);
 			reply.Result = SyscallResult::Success;
@@ -222,29 +184,84 @@ namespace
 
 		case NetIpc::Op::SetGateway:
 		{
-			if (req.Socket != 0 || !g_netif) { reply.Result = SyscallResult::InvalidArg; return; }
+			if (req.Socket != 0) { reply.Result = SyscallResult::InvalidArg; return; }
 			g_netif->ipv4.gateway = ToIpv4(req.Ip);
 			reply.Result = SyscallResult::Success;
 			return;
 		}
 
+		default:
+			break;
+		}
+
+		//The remaining ops act on one of the connection's sockets
+		KSocket* const s = GetSock(conn, req.Socket);
+		if (!s)
+		{
+			reply.Result = (req.Code == NetIpc::Op::Close) ? SyscallResult::Success : SyscallResult::InvalidHandle;
+			return;
+		}
+
+		switch (req.Code)
+		{
+		case NetIpc::Op::Bind:
+			SocketBind(*s, ToEndpoint(req.Addr));
+			reply.Result = SyscallResult::Success;
+			return;
+
+		case NetIpc::Op::Connect:
+			SocketConnect(*s, ToEndpoint(req.Addr));
+			reply.Result = SyscallResult::Success;
+			return;
+
+		case NetIpc::Op::SendTo:
+		case NetIpc::Op::Send:
+		{
+			//Send goes to the connected peer
+			if (req.Code == NetIpc::Op::Send && !s->Connected) { reply.Result = SyscallResult::InvalidHandle; return; }
+			const Net::endpoint_t dst = (req.Code == NetIpc::Op::Send) ? s->Peer : ToEndpoint(req.Addr);
+			const size_t len = req.Length < NetIpc::MaxPayload ? req.Length : NetIpc::MaxPayload;
+			reply.Result = SocketSend(*s, dst, req.Data, len) ? SyscallResult::Success : SyscallResult::Failed;
+			return;
+		}
+
+		case NetIpc::Op::RecvFrom:
+		{
+			Net::endpoint_t src = {};
+			size_t bytes = 0;
+			if (!SocketRecv(*s, src, reply.Data, NetIpc::MaxPayload, bytes))
+				return; //empty (Failed): the client retries until timeout
+			reply.Length = (uint32_t)bytes;
+			FromEndpoint(src, reply.From);
+			reply.Result = SyscallResult::Success;
+			return;
+		}
+
+		case NetIpc::Op::Close:
+			SocketClose(*s);
+			conn.Sockets[req.Socket - 1] = nullptr;
+			reply.Result = SyscallResult::Success;
+			return;
+
+		default:
+			return;
 		}
 	}
 
 	void ProcessRequests()
 	{
-		for (size_t i = 0; i < g_connCount; i++)
+		for (Connection& conn : g_conns)
 		{
-			if (!g_conns[i].Region)
+			if (!conn.Region)
 				continue;
 
-			SharedRing<NetIpc::Request> reqRing = NetIpc::Channel::Requests(g_conns[i].Region);
+			SharedRing<NetIpc::Request> reqRing = NetIpc::Channel::Requests(conn.Region);
 			NetIpc::Request req;
 			while (reqRing.Dequeue(req))
 			{
 				NetIpc::Reply reply = {};
-				HandleRequest(g_conns[i], req, reply);
-				NetIpc::Channel::Replies(g_conns[i].Region).Enqueue(reply);
+				HandleRequest(conn, req, reply);
+				NetIpc::Channel::Replies(conn.Region).Enqueue(reply);
 			}
 		}
 	}
@@ -287,9 +304,7 @@ int main(int argc, char** argv)
 		//Service app socket IPC: accept new connections, process pending requests.
 		AcceptConnections();
 		ProcessRequests();
-
-		//Flush any ARP-pending transmits now that replies may have arrived.
-		net_if.PostDispatch();
+		ReapDeadConnections();
 
 		Sleep(1);
 	}

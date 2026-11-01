@@ -10,7 +10,27 @@ namespace Net::Arp
 	static_assert(hw_len == sizeof(eth_mac_t));
 	static constexpr uint16_t proto_len = 4;
 	static_assert(proto_len == sizeof(ipv4_addr_t));
-	
+
+	//Writes the ARP message at the packet's current offset and broadcasts it
+	static bool SendMessage(NetIf& net_if, Packet& packet, const arp_t& arp)
+	{
+		Serializer ser(packet.buffer(), packet.length());
+		ser.Write(arp.hw_type);
+		ser.Write(arp.proto);
+		ser.Write(arp.hw_len);
+		ser.Write(arp.proto_len);
+		ser.Write(arp.op);
+		ser.Write(arp.sender_hw.bytes);
+		ser.Write(arp.sender_proto.bytes);
+		ser.Write(arp.target_hw.bytes);
+		ser.Write(arp.target_proto.bytes);
+		packet.trim(ser.Bytes());
+
+		packet.proto = proto_t::Arp;
+		packet.dst.addr = Net::broadcast;
+		return get_l2(net_if.l2).Send(net_if, packet);
+	}
+
 	static void RequestReceive(NetIf& net_if, const arp_t& request)
 	{
 		//Check query target
@@ -33,29 +53,10 @@ namespace Net::Arp
 			.target_proto = request.sender_proto,
 		};
 
-		const NetLayer& l2 = get_l2(net_if.l2);
-
 		StaticBuffer<Net::buffer_size> buffer;
 		Packet packet(buffer);
-		packet.mask(l2.HeaderSize);
-
-		//Write packet out
-		Serializer ser(packet.buffer(), packet.length());
-		ser.Write(reply.hw_type);
-		ser.Write(reply.proto);
-		ser.Write(reply.hw_len);
-		ser.Write(reply.proto_len);
-		ser.Write(reply.op);
-		ser.Write(reply.sender_hw.bytes);
-		ser.Write(reply.sender_proto.bytes);
-		ser.Write(reply.target_hw.bytes);
-		ser.Write(reply.target_proto.bytes);
-		packet.trim(ser.Bytes());
-
-		//Send reply
-		packet.proto = proto_t::Arp;
-		packet.dst.addr = Net::broadcast;
-		l2.Send(net_if, packet);
+		packet.mask(get_l2(net_if.l2).HeaderSize);
+		SendMessage(net_if, packet, reply);
 	}
 
 	static void ReplyReceive(NetIf& net_if, const arp_t& reply)
@@ -66,8 +67,7 @@ namespace Net::Arp
 
 		Assert(ArpCache::Update(reply.sender_proto, reply.sender_hw));
 
-		//Resolution done; allow future ARP requests. (pending_tx is not re-sent: its
-		//buffer belonged to the caller's stack. Senders retry once the cache is warm.)
+		//Resolution done; allow future ARP requests (senders retry once the cache is warm)
 		net_if.ethernet.arp_pending = false;
 	}
 	
@@ -86,16 +86,10 @@ namespace Net::Arp
 			.op = deser.ReadU16(),
 		};
 
-		uint8_t sender_proto[proto_len] = {};
-		uint8_t target_proto[proto_len] = {};
-
 		deser.Read(hdr.sender_hw.bytes);
-		deser.Read(sender_proto);
+		deser.Read(hdr.sender_proto.bytes);
 		deser.Read(hdr.target_hw.bytes);
-		deser.Read(target_proto);
-
-		memcpy(hdr.sender_proto.bytes, sender_proto, sizeof(sender_proto));
-		memcpy(hdr.target_proto.bytes, target_proto, sizeof(target_proto));
+		deser.Read(hdr.target_proto.bytes);
 
 		switch (hdr.op)
 		{
@@ -131,23 +125,6 @@ namespace Net::Arp
 			.target_proto = packet.dst.addr
 		};
 
-		//Write packet out
-		Serializer ser(packet.buffer(), packet.length());
-		ser.Write(arp.hw_type);
-		ser.Write(arp.proto);
-		ser.Write(arp.hw_len);
-		ser.Write(arp.proto_len);
-		ser.Write(arp.op);
-		ser.Write(arp.sender_hw.bytes);
-		ser.Write(arp.sender_proto.bytes);
-		ser.Write(arp.target_hw.bytes);
-		ser.Write(arp.target_proto.bytes);
-		packet.trim(ser.Bytes());
-
-		packet.proto = proto_t::Arp;
-		packet.dst.addr = Net::broadcast;
-
-		const NetLayer& l2 = get_l2(net_if.l2);
-		return l2.Send(net_if, packet);
+		return SendMessage(net_if, packet, arp);
 	}
 }

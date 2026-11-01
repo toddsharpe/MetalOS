@@ -27,47 +27,6 @@ namespace Net::IPv4
 		l2.Send(dst_if, cloned);
 	}
 
-	bool Meta(Packet& packet)
-	{
-		if (packet.length() < ipv4_hdr_size)
-		{
-			return false;
-		}
-
-		Deserializer deser(packet.buffer(), packet.length());
-		const ipv4_hdr_t ip_hdr =
-		{
-			.ihl_version = deser.ReadU8(),
-			.dscp = deser.ReadU8(),
-			.length = deser.ReadU16(),
-			.id = deser.ReadU16(),
-			.fragment_flags = deser.ReadU16(),
-			.ttl = deser.ReadU8(),
-			.proto = deser.ReadU8(),
-			.checksum = deser.ReadU16(),
-			.src = {.addr = deser.ReadU32() },
-			.dst = {.addr = deser.ReadU32() },
-		};
-		packet.mask(ipv4_hdr_size);
-
-		//TODO(tsharpe): Checksum
-
-		//Populate packet values
-		packet.src = { ip_hdr.src, 0 };
-		packet.dst = { ip_hdr.dst, 0 };
-		packet.proto = proto_t::Ipv4;
-
-		switch (ip_hdr.proto)
-		{
-			case ip_proto_udp:
-				return Udp::Meta(packet);
-
-			default:
-				Assert(false);
-				return false;
-		}
-	}
-	
 	bool Receive(NetIf& net_if, Packet& packet)
 	{
 		if (packet.length() < ipv4_hdr_size)

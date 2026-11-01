@@ -7,19 +7,7 @@ namespace Net::Ethernet
 {
 	static bool Accept(NetIf& net_if, const eth_mac_t& dst)
 	{
-		if (eth_broadcast == dst)
-			return true;
-		
-		if (net_if.ethernet.addr == dst)
-			return true;
-
-		for (const eth_mac_t& filter : net_if.ethernet.filters)
-		{
-			if (filter == dst)
-				return true;
-		}
-
-		return false;
+		return eth_broadcast == dst || net_if.ethernet.addr == dst || net_if.ethernet.filters.Contains(dst);
 	}
 
 	bool Receive(NetIf& net_if, Packet& packet)
@@ -73,17 +61,14 @@ namespace Net::Ethernet
 		if (!is_broadcast && !Net::is_network(packet.dst.addr, net_if.ipv4.addr, net_if.ipv4.subnet_mask))
 			nexthop = net_if.ipv4.gateway;
 
-		//If arp isnt resolved, enqueue
-		const bool resolved = is_broadcast || ArpCache::Contains(nexthop);
-		if (!resolved)
+		//Unresolved next hop: drop the packet and ARP for it (senders retry once the cache is warm)
+		eth_mac_t dst_mac = {};
+		if (!ArpCache::Lookup(nexthop, dst_mac))
 		{
 			//One arp supported at a time
 			if (net_if.ethernet.arp_pending)
 				return false;
-
-			//Save off tx packet
 			net_if.ethernet.arp_pending = true;
-			net_if.ethernet.pending_tx = packet;
 
 			//Build arp (reserve room for the ethernet + ARP headers)
 			StaticBuffer<Net::buffer_size> buffer;
@@ -95,44 +80,20 @@ namespace Net::Ethernet
 			//Issue arp
 			return Arp::Send(net_if, arp);
 		}
-		else
+
+		const eth_hdr_t hdr =
 		{
-			//Send packet
-			eth_mac_t dst_mac = {};
-			if (is_broadcast)
-				dst_mac = Net::eth_broadcast;
-			else
-				Assert(ArpCache::Lookup(nexthop, dst_mac));
-	
-			const eth_hdr_t hdr =
-			{
-				.dst = dst_mac,
-				.src = net_if.ethernet.addr,
-				.type = get_eth_type(packet.proto)
-			};
-			packet.unmask(eth_hdr_size);
-	
-			Serializer ser(packet.buffer(), packet.length());
-			ser.Write(hdr.dst.bytes);
-			ser.Write(hdr.src.bytes);
-			ser.Write(hdr.type);
-	
-			return net_if.driver.Send(net_if, packet);
-		}
-	}
+			.dst = dst_mac,
+			.src = net_if.ethernet.addr,
+			.type = get_eth_type(packet.proto)
+		};
+		packet.unmask(eth_hdr_size);
 
-	void TxFlush(NetIf& net_if)
-	{
-		if (!net_if.ethernet.arp_pending)
-			return;
+		Serializer ser(packet.buffer(), packet.length());
+		ser.Write(hdr.dst.bytes);
+		ser.Write(hdr.src.bytes);
+		ser.Write(hdr.type);
 
-		const bool resolved = ArpCache::Contains(net_if.ethernet.pending_tx.dst.addr);
-		if (!resolved)
-			return;
-
-		//Attempt to send pending packet once. if it couldnt be sent, free the buffer.
-		Send(net_if, net_if.ethernet.pending_tx);
-		net_if.ethernet.pending_tx = Packet();
-		net_if.ethernet.arp_pending = false;
+		return net_if.driver.Send(net_if, packet);
 	}
 }

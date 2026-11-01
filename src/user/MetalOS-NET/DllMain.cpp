@@ -42,7 +42,6 @@ extern "C" HSocket SocketCreate(int af, int type, int protocol)
 	const NetIpc::Request req =
 	{
 		.Code = NetIpc::Op::Create,
-		.Af = af,
 		.Type = type,
 		.Proto = protocol,
 	};
@@ -122,7 +121,7 @@ extern "C" SyscallResult SocketSend(HSocket sock, const void* buf, size_t len)
 
 //Blocking recv: netstack replies immediately (data or empty); we poll until data or
 //the timeout elapses (timeoutMs == 0 polls once).
-static SyscallResult RecvImpl(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs, bool wantFrom)
+static SyscallResult RecvImpl(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs)
 {
 	if (!buf)
 		return SyscallResult::InvalidPointer;
@@ -132,9 +131,8 @@ static SyscallResult RecvImpl(HSocket sock, void* buf, size_t maxLen, size_t* by
 	{
 		const NetIpc::Request req =
 		{
-			.Code = wantFrom ? NetIpc::Op::RecvFrom : NetIpc::Op::Recv,
+			.Code = NetIpc::Op::RecvFrom,
 			.Socket = ToId(sock),
-			.Timeout = timeoutMs,
 		};
 
 		NetIpc::Reply reply = {};
@@ -147,7 +145,7 @@ static SyscallResult RecvImpl(HSocket sock, void* buf, size_t maxLen, size_t* by
 			memcpy(buf, reply.Data, n);
 			if (bytesRecv)
 				*bytesRecv = n;
-			if (from && wantFrom)
+			if (from)
 				*from = reply.From;
 			return SyscallResult::Success;
 		}
@@ -161,12 +159,12 @@ static SyscallResult RecvImpl(HSocket sock, void* buf, size_t maxLen, size_t* by
 
 extern "C" SyscallResult SocketRecvFrom(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs)
 {
-	return RecvImpl(sock, buf, maxLen, bytesRecv, from, timeoutMs, true);
+	return RecvImpl(sock, buf, maxLen, bytesRecv, from, timeoutMs);
 }
 
 extern "C" SyscallResult SocketRecv(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, milli_t timeoutMs)
 {
-	return RecvImpl(sock, buf, maxLen, bytesRecv, nullptr, timeoutMs, false);
+	return RecvImpl(sock, buf, maxLen, bytesRecv, nullptr, timeoutMs);
 }
 
 extern "C" SyscallResult SocketClose(HSocket sock)
@@ -218,7 +216,7 @@ extern "C" SyscallResult GetGateway(uint32_t index, in_addr* gateway)
 	if (!Call(req, reply) || reply.Result != SyscallResult::Success)
 		return SyscallResult::Failed;
 
-	*gateway = reply.Gateway;
+	*gateway = reply.Ip;
 	return SyscallResult::Success;
 }
 

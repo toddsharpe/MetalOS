@@ -21,7 +21,6 @@ public:
 		Local(),
 		Peer(),
 		Connected(false),
-		Closed(false),
 		Registered(false),
 		m_queue(),
 		m_scratch()
@@ -60,23 +59,10 @@ public:
 		return true;
 	}
 
-	void MarkClosed()
-	{
-		Closed = true;
-	}
-
-	//KPredicate hook: signalled when a datagram is available or the socket is closed.
-	static bool RecvReady(void* const arg)
-	{
-		const KSocket* const socket = static_cast<const KSocket*>(arg);
-		return socket->Closed || !socket->m_queue.IsEmpty();
-	}
-
 	Net::proto_t Proto;
 	Net::endpoint_t Local;  //bound local addr+port (port demux key)
 	Net::endpoint_t Peer;   //connected default peer
 	bool Connected;
-	bool Closed;
 	bool Registered;        //present in the demux registry
 
 private:

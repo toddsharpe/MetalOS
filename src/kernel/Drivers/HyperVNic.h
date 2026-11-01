@@ -277,7 +277,7 @@ private:
 	void OnCallback();
 	void SendNvsp(const nvsp_message& msg, bool requestCompletion = false);
 	void SendNvspCompletion(const nvsp_message& msg, uint64_t transId);
-	void SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion = false, uint32_t section = 0);
+	bool SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion = false, uint32_t section = 0);
 	uint32_t AcquireSendSection();
 	void ReleaseSendSection(uint64_t transId);
 	uint32_t CreateGpadl(paddr_t address, size_t pageCount);

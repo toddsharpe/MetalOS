@@ -124,8 +124,7 @@ ArchUserThreadStart endp
 x64_SYSTEMCALL PROC
 	swapgs ; Swap to KThread
 
-	; RSP is still the (untrusted) user stack: nothing may push/pop until the kernel stack is loaded.
-	; IF is clear here (IA32_FMASK), so RSP itself is used as scratch while loading it.
+	; RSP is the user stack: no push/pop until the kernel stack is loaded (IF is clear, so RSP is safe scratch)
 	mov qword ptr gs:[16], rsp ; offsetof(CpuContext, UserStack)
 
 	; Load kernel stack

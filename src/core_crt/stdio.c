@@ -70,8 +70,7 @@ static void snprintf_func(int ch, void *arg)
 	}
 }
 
-// Stores at most _BufferCount - 1 characters plus the NUL. Returns the number of characters
-// stored (not the untruncated length), so callers indexing _Buffer[retval] stay in bounds.
+// Returns the count stored (at most _BufferCount - 1, plus the NUL), not the untruncated length
 int vsnprintf(char *const _Buffer, size_t const _BufferCount, char const *const _Format, va_list _ArgList)
 {
 	struct snprintf_arg info;

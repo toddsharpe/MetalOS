@@ -30,31 +30,68 @@ namespace Loader
 		}
 	};
 
+	//Reads exactly length bytes at offset, failing on a short (truncated) file
+	static bool ReadAt(KFile& file, const size_t offset, void* const buffer, const size_t length)
+	{
+		size_t read = 0;
+		return KeSetFilePosition(file, offset) && KeReadFile(file, buffer, length, &read) && read == length;
+	}
+
+	//Copies the headers and each section's raw data into the alias, bounds-checked against the image
+	static bool LoadSections(KFile& file, void* const alias, const IMAGE_DOS_HEADER& dosHeader, const IMAGE_NT_HEADERS64& peHeader)
+	{
+		const size_t imageSize = peHeader.OptionalHeader.SizeOfImage;
+		const size_t headersSize = peHeader.OptionalHeader.SizeOfHeaders;
+		const size_t sectionsEnd = (size_t)dosHeader.e_lfanew + offsetof(IMAGE_NT_HEADERS64, OptionalHeader) +
+			peHeader.FileHeader.SizeOfOptionalHeader + (size_t)peHeader.FileHeader.NumberOfSections * sizeof(IMAGE_SECTION_HEADER);
+		if (headersSize > imageSize || sectionsEnd > headersSize)
+			return false;
+
+		if (!ReadAt(file, 0, alias, headersSize))
+			return false;
+
+		PIMAGE_NT_HEADERS64 pNtHeader = MakePointer<PIMAGE_NT_HEADERS64>(alias, dosHeader.e_lfanew);
+		PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
+		for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
+		{
+			const size_t rawSize = section[i].SizeOfRawData;
+			if (rawSize == 0)
+				continue;
+			if ((size_t)section[i].VirtualAddress + rawSize > imageSize)
+				return false;
+
+			void* const destination = MakePointer<void*>(alias, section[i].VirtualAddress);
+			if (!ReadAt(file, section[i].PointerToRawData, destination, rawSize))
+				return false;
+		}
+		return true;
+	}
+
 	/**
 	 * Loads a PE image into the kernel address space (contiguous) for reading and patching.
 	 */
 	static LoadedImage Load(const CString& path)
 	{
+		//A missing, truncated, or non-x64 PE file returns a null UserBase
 		KFile file = {};
 		if (!KeCreateFile(file, path.c_str(), KFileAccess::Read))
 			return { nullptr, nullptr, 0 };
-		size_t read = 0;
 
 		//Headers go into kernel-local buffers - no process memory needed yet.
 		IMAGE_DOS_HEADER dosHeader = {};
-		Assert(KeReadFile(file, &dosHeader, sizeof(IMAGE_DOS_HEADER), &read));
-		AssertEqual(read, sizeof(IMAGE_DOS_HEADER));
-		AssertEqual(dosHeader.e_magic, IMAGE_DOS_SIGNATURE);
+		if (!ReadAt(file, 0, &dosHeader, sizeof(IMAGE_DOS_HEADER)) || dosHeader.e_magic != IMAGE_DOS_SIGNATURE)
+			return { nullptr, nullptr, 0 };
 
 		IMAGE_NT_HEADERS64 peHeader = {};
-		Assert(KeSetFilePosition(file, dosHeader.e_lfanew));
-		Assert(KeReadFile(file, &peHeader, sizeof(IMAGE_NT_HEADERS), &read));
-		AssertEqual(read, sizeof(IMAGE_NT_HEADERS));
+		if (dosHeader.e_lfanew < 0 || !ReadAt(file, dosHeader.e_lfanew, &peHeader, sizeof(IMAGE_NT_HEADERS64)))
+			return { nullptr, nullptr, 0 };
 
 		//Verify image
-		AssertEqual(peHeader.Signature, IMAGE_NT_SIGNATURE);
-		AssertEqual(peHeader.FileHeader.Machine, IMAGE_FILE_MACHINE_AMD64);
-		AssertEqual(peHeader.OptionalHeader.Magic, IMAGE_NT_OPTIONAL_HDR64_MAGIC);
+		if (peHeader.Signature != IMAGE_NT_SIGNATURE ||
+			peHeader.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 ||
+			peHeader.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC ||
+			peHeader.OptionalHeader.SizeOfImage == 0)
+			return { nullptr, nullptr, 0 };
 
 		const size_t imageSize = peHeader.OptionalHeader.SizeOfImage;
 		void* const userBase = (void*)peHeader.OptionalHeader.ImageBase;
@@ -65,26 +102,10 @@ namespace Loader
 		void* const alias = KeVirtualAlloc(imageSize);
 		Assert(alias);
 
-		//Load headers into the alias.
-		Assert(KeSetFilePosition(file, 0));
-		Assert(KeReadFile(file, alias, peHeader.OptionalHeader.SizeOfHeaders, &read));
-		AssertEqual(read, peHeader.OptionalHeader.SizeOfHeaders);
-
-		//Write sections into the alias.
-		PIMAGE_NT_HEADERS64 pNtHeader = MakePointer<PIMAGE_NT_HEADERS64>(alias, dosHeader.e_lfanew);
-		PIMAGE_SECTION_HEADER section = IMAGE_FIRST_SECTION(pNtHeader);
-		for (WORD i = 0; i < pNtHeader->FileHeader.NumberOfSections; i++)
+		if (!LoadSections(file, alias, dosHeader, peHeader))
 		{
-			void* destination = MakePointer<void*>(alias, section[i].VirtualAddress);
-
-			//If physical size is non-zero, read data to the aliased address
-			DWORD rawSize = section[i].SizeOfRawData;
-			if (rawSize != 0)
-			{
-				Assert(KeSetFilePosition(file, section[i].PointerToRawData));
-				Assert(KeReadFile(file, destination, rawSize, &read));
-				AssertEqual(read, section[i].SizeOfRawData);
-			}
+			KeVirtualFree(alias);
+			return { nullptr, nullptr, 0 };
 		}
 
 		return { userBase, alias, imageSize };
@@ -92,7 +113,7 @@ namespace Loader
 
 	//Processes imports in the target image that resolve to the library. Operates entirely through
 	//kernel aliases; the IAT is stamped with the library's user-space export addresses.
-	static void ResolveImports(const LoadedImage& image, const LoadedImage& library, const CString& libraryName)
+	static bool ResolveImports(const LoadedImage& image, const LoadedImage& library, const CString& libraryName)
 	{
 		//Headers
 		PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(image.Alias);
@@ -118,6 +139,11 @@ namespace Loader
 						//Resolve against the library's alias, then store its USER address (the process
 						//will call through this IAT entry).
 						void* const funcAlias = WinPE::GetProcAddress(library.Alias, CString((char*)pImportByName->Name));
+						if (!funcAlias)
+						{
+							Printf("Loader: %s does not export %s\n", libraryName.c_str(), (char*)pImportByName->Name);
+							return false;
+						}
 						pThunkData->u1.Function = (ULONGLONG)library.ToUser(funcAlias);
 						pThunkData++;
 					}
@@ -125,5 +151,6 @@ namespace Loader
 				importDescriptor++;
 			}
 		}
+		return true;
 	}
 }

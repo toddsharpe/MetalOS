@@ -62,8 +62,6 @@ Result VmBusDriver::Enumerate()
 
 HyperV::HV_HYPERCALL_RESULT_VALUE VmBusDriver::PostMessage(const uint32_t size, const void* message, HyperV::VmBusResponse& response)
 {
-	//TODO: this should probably be protected by a spinlock
-	
 	HyperV::HV_CONNECTION_ID connectionId = { 0 };
 	connectionId.Id = m_msg_conn_id;
 
@@ -77,14 +75,14 @@ HyperV::HV_HYPERCALL_RESULT_VALUE VmBusDriver::PostMessage(const uint32_t size, 
 		{
 			HyperV::vmbus_channel_gpadl_header* gpadlHeader = (HyperV::vmbus_channel_gpadl_header*)message;
 			gpadlHeader->gpadl = _InterlockedIncrement64((volatile __int64*)&m_nextGpadlHandle);
-			m_requests.Add({ gpadlHeader->gpadl, 0, 0, &event, &response});
+			AddRequest({ gpadlHeader->gpadl, 0, 0, &event, &response });
 		}
 		break;
 
 		case HyperV::vmbus_channel_message_type::CHANNELMSG_OPENCHANNEL:
 		{
 			HyperV::vmbus_channel_open_channel* header = (HyperV::vmbus_channel_open_channel*)message;
-			m_requests.Add({ 0, header->child_relid, header->openid, &event, &response });
+			AddRequest({ 0, header->child_relid, header->openid, &event, &response });
 		}
 		break;
 
@@ -105,7 +103,7 @@ uint32_t VmBusDriver::BeginGpadl(const uint32_t size, void* message, HyperV::VmB
 {
 	HyperV::vmbus_channel_gpadl_header* gpadlHeader = (HyperV::vmbus_channel_gpadl_header*)message;
 	gpadlHeader->gpadl = _InterlockedIncrement64((volatile __int64*)&m_nextGpadlHandle);
-	m_requests.Add({ gpadlHeader->gpadl, 0, 0, &event, &response });
+	AddRequest({ gpadlHeader->gpadl, 0, 0, &event, &response });
 
 	HyperV::HV_CONNECTION_ID connectionId = { 0 };
 	connectionId.Id = m_msg_conn_id;
@@ -131,28 +129,30 @@ void VmBusDriver::SetCallback(uint32_t id, const ActionContext& context)
 	m_channelCallbacks.Add(id, context);
 }
 
-VmBusDriver::BusRequest* VmBusDriver::FindRequest(uint32_t gpadl)
+//The ISR removes answered requests, so add with interrupts off
+void VmBusDriver::AddRequest(const BusRequest& request)
 {
-	for (BusRequest& request : m_requests)
-	{
-		if (request.Gpadl == gpadl)
-			return &request;
-	}
-
-	Assert(false);
-	return nullptr;
+	const cpu_flags_t flags = ArchDisableInterrupts();
+	const bool added = m_requests.Add(request);
+	ArchRestoreFlags(flags);
+	Assert(added);
 }
 
-VmBusDriver::BusRequest* VmBusDriver::FindRequest(uint32_t child_relid, uint32_t openid)
+//Called from the ISR: removes the answered request so its stack-owned event and response aren't kept
+VmBusDriver::BusRequest VmBusDriver::TakeRequest(const uint32_t gpadl, const uint32_t child_relid, const uint32_t openid)
 {
-	for (auto& request : m_requests)
+	for (size_t i = 0; i < m_requests.Count(); i++)
 	{
-		if (request.child_relid == child_relid && request.openid == openid)
-			return &request;
+		const BusRequest request = m_requests[i];
+		if (request.Gpadl == gpadl && request.child_relid == child_relid && request.openid == openid)
+		{
+			m_requests.RemoveAt(i);
+			return request;
+		}
 	}
 
 	Assert(false);
-	return nullptr;
+	return {};
 }
 
 void VmBusDriver::OnInterrupt()
@@ -247,24 +247,22 @@ void VmBusDriver::OnInterrupt()
 			case HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_CREATED:
 			{
 				HyperV::vmbus_channel_gpadl_created* created = (HyperV::vmbus_channel_gpadl_created*)message.Payload;
-				BusRequest* request = FindRequest(created->gpadl);
-				//TODO: remove
+				const BusRequest request = TakeRequest(created->gpadl, 0, 0);
 
 				//Save response to caller and signal
-				request->Response->gpadl_created = *created;
-				request->Event->Set();
+				request.Response->gpadl_created = *created;
+				request.Event->Set();
 			}
 			break;
 
 			case HyperV::vmbus_channel_message_type::CHANNELMSG_OPENCHANNEL_RESULT:
 			{
 				HyperV::vmbus_channel_open_result* result = (HyperV::vmbus_channel_open_result*)message.Payload;
-				BusRequest* request = FindRequest(result->child_relid, result->openid);
-				//TODO: remove
+				const BusRequest request = TakeRequest(0, result->child_relid, result->openid);
 
 				//Save response to caller and signal
-				request->Response->open_result = *result;
-				request->Event->Set();
+				request.Response->open_result = *result;
+				request.Event->Set();
 			}
 			break;
 

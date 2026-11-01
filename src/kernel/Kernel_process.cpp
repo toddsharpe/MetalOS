@@ -128,6 +128,9 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 		top = process.GetObject();
 	}
 
+	//Free the names it served so a restarted server can register them
+	KeEndpointRelease(process.Id);
+
 	//Kill all KThreads in process (does not return for a self-terminating process)
 	Scheduler::KillProcess(process);
 }

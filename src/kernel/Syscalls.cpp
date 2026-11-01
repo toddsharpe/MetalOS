@@ -71,6 +71,20 @@ namespace
 		return length;
 	}
 
+	//Copies a NUL-terminated user endpoint name; one that doesn't fit is rejected, not truncated
+	bool CopyEndpointName(const UProcess& proc, const char* const name, char (&copy)[MaxEndpointName])
+	{
+		const size_t length = UserStringLength(proc, name, MaxEndpointName);
+		if (length == 0 || length == MaxEndpointName)
+			return false;
+		if (!proc.Space.IsValidRange(name + length, 1) || name[length] != '\0')
+			return false;
+
+		memcpy(copy, name, length);
+		copy[length] = '\0';
+		return true;
+	}
+
 	//Resolve a child's standard handle: only the matching end of a pipe can be redirected
 	SyscallResult GetStdPipe(UProcess& proc, const HFile handle, const KPipeOp op, KPipe*& pipe)
 	{
@@ -1065,8 +1079,11 @@ SyscallResult RegisterEndpoint(const char* name, const uint64_t id)
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!name || !proc.Space.IsValidPointer(name))
 		return SyscallResult::InvalidPointer;
+	char copy[MaxEndpointName];
+	if (!CopyEndpointName(proc, name, copy))
+		return SyscallResult::InvalidArg;
 
-	return KeEndpointRegister(name, id) ? SyscallResult::Success : SyscallResult::Failed;
+	return KeEndpointRegister(copy, id, proc.Id) ? SyscallResult::Success : SyscallResult::Failed;
 }
 
 SyscallResult LookupEndpoint(const char* name, uint64_t* id)
@@ -1076,8 +1093,11 @@ SyscallResult LookupEndpoint(const char* name, uint64_t* id)
 		return SyscallResult::InvalidPointer;
 	if (!id || !proc.Space.IsValid(id))
 		return SyscallResult::InvalidPointer;
+	char copy[MaxEndpointName];
+	if (!CopyEndpointName(proc, name, copy))
+		return SyscallResult::InvalidArg;
 
-	return KeEndpointLookup(name, *id) ? SyscallResult::Success : SyscallResult::Failed;
+	return KeEndpointLookup(copy, *id) ? SyscallResult::Success : SyscallResult::Failed;
 }
 
 SyscallResult PostEndpoint(const char* name, const uint64_t value)
@@ -1085,8 +1105,11 @@ SyscallResult PostEndpoint(const char* name, const uint64_t value)
 	UProcess& proc = Scheduler::GetUProcess();
 	if (!name || !proc.Space.IsValidPointer(name))
 		return SyscallResult::InvalidPointer;
+	char copy[MaxEndpointName];
+	if (!CopyEndpointName(proc, name, copy))
+		return SyscallResult::InvalidArg;
 
-	return KeEndpointPost(name, value) ? SyscallResult::Success : SyscallResult::Failed;
+	return KeEndpointPost(copy, value) ? SyscallResult::Success : SyscallResult::Failed;
 }
 
 SyscallResult PollEndpoint(const char* name, uint64_t* value)
@@ -1096,8 +1119,11 @@ SyscallResult PollEndpoint(const char* name, uint64_t* value)
 		return SyscallResult::InvalidPointer;
 	if (!value || !proc.Space.IsValid(value))
 		return SyscallResult::InvalidPointer;
+	char copy[MaxEndpointName];
+	if (!CopyEndpointName(proc, name, copy))
+		return SyscallResult::InvalidArg;
 
-	return KeEndpointPoll(name, *value) ? SyscallResult::Success : SyscallResult::Failed;
+	return KeEndpointPoll(copy, proc.Id, *value) ? SyscallResult::Success : SyscallResult::Failed;
 }
 
 /*

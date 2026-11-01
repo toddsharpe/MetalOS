@@ -3,6 +3,13 @@
 #include "Lib/LinkedList.h"
 #include <cstdlib>
 
+//Whether a reservation's mapped pages are its own (released when it is freed) or the caller's
+enum class PageOwnership
+{
+	Borrowed,
+	Owned
+};
+
 class AddressSpace
 {
 public:
@@ -26,10 +33,11 @@ public:
 	template <typename T>
 	bool IsValid(const T* const object) const { return IsValidRange(object, sizeof(T)); }
 
-	uintptr_t Reserve(const size_t count);
-	bool Reserve(const uintptr_t address, const size_t count);
+	uintptr_t Reserve(const size_t count, const PageOwnership ownership = PageOwnership::Borrowed);
+	bool Reserve(const uintptr_t address, const size_t count, const PageOwnership ownership = PageOwnership::Borrowed);
 	bool Free(const uintptr_t address, const size_t count);
 	size_t GetCount(const uintptr_t address) const;
+	bool OwnsPages(const uintptr_t address) const; //Whether freeing the reservation releases its physical pages
 	size_t ReservedBytes() const;
 
 	void Display() const;
@@ -46,6 +54,7 @@ private:
 	{
 		uintptr_t Address;
 		size_t PageCount;
+		bool OwnsPages; //Holds a reference on each mapped page (KeVirtualAlloc, KeAliasInto), unlike caller-supplied maps
 
 		//Reservations are keyed by their (unique) address, so equality compares Address only.
 		bool operator==(const Reservation& other) const { return Address == other.Address; }

@@ -48,6 +48,7 @@ struct PageFrame
 	//Pointers when placing frames on the lists
 	ListEntry Link;
 	PageState State;
+	uint32_t Refs; //Active pages: the allocation plus each owning mapping; freed when it drops to zero
 };
 
 //No point in supporting multiple monitors since this is built for hyper-v

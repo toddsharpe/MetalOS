@@ -883,6 +883,10 @@ bool VirtualFree(const void* address)
 	if (proc.Space.GetCount((uintptr_t)address) == 0)
 		return false;
 
+	//Only VirtualAlloc'd memory: shared memory and the framebuffer are released through their handles
+	if (!proc.Space.OwnsPages((uintptr_t)address))
+		return false;
+
 	return KeVirtualFree(proc, address);
 }
 

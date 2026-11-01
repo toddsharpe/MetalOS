@@ -215,7 +215,14 @@ bool KePhysicalTryAlloc(paddr_t& address)
 paddr_t KePhysicalAlloc(const size_t count)
 {
 	paddr_t address = 0;
-	Assert(_PMEM::Alloc(address, count));
+	Assert(KePhysicalTryAlloc(address, count));
+	return address;
+}
+
+bool KePhysicalTryAlloc(paddr_t& address, const size_t count)
+{
+	if (!_PMEM::Alloc(address, count))
+		return false;
 
 	//Zero out the page
 	for (size_t i = 0; i < count; i++)
@@ -223,9 +230,7 @@ paddr_t KePhysicalAlloc(const size_t count)
 		const paddr_t paddr = address + (i << Arch::PageShift);
 		memset(reinterpret_cast<void*>(KernelPhysicalStart + paddr), 0, Arch::PageSize);
 	}
-
-	//Printf("KePhysicalAlloc: Addr: %p, Count: %d\n", address, count);
-	return address;
+	return true;
 }
 
 void KePhysicalFree(const paddr_t address)

@@ -10,9 +10,10 @@ KSharedMemory* KeShmCreate(const size_t size)
 	Assert(size);
 	const size_t pageCount = x64::SizeToPages(size);
 
-	//Acquire contiguous physical pages so the region maps as one range
-	const paddr_t physical = KePhysicalAlloc(pageCount);
-	Assert(physical);
+	//Acquire contiguous physical pages so the region maps as one range (a process picks the size, so this can fail)
+	paddr_t physical = 0;
+	if (!KePhysicalTryAlloc(physical, pageCount))
+		return nullptr;
 
 	//No global registry: regions are reached only through the handles/grants that
 	//reference them, and freed by KeShmUnref when the last reference drops.

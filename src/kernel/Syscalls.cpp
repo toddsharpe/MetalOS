@@ -877,7 +877,7 @@ SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** a
 		return SyscallResult::InvalidPointer;
 	if (!address || !proc.Space.IsValid(address))
 		return SyscallResult::InvalidPointer;
-	if (!size)
+	if (!size || size > UserEnd)
 		return SyscallResult::InvalidArg;
 
 	KSharedMemory* const shm = KeShmCreate(size);

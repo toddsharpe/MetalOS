@@ -22,8 +22,6 @@ HyperVVideoDriver::HyperVVideoDriver(KDevice& device) :
 
 Result HyperVVideoDriver::Initialize()
 {
-	m_device.Class = KDeviceClass::Display;
-
 	//Open the VMBus channel (rings + GPADL happen here).
 	m_channel.Initialize(&m_device.m_channel);
 
@@ -91,6 +89,9 @@ Result HyperVVideoDriver::Initialize()
 		SendSituationUpdate(m_width, m_height, m_pitchBytes);
 
 	Printf("HyperVVideo: %dx%d, VRAM at 0x%016x (gpa 0x%016x)\n", m_width, m_height, m_framebuffer, m_framebufferGpa);
+
+	//Only a negotiated display is discoverable; on failure MapFramebuffer falls back to the boot GOP
+	m_device.Class = KDeviceClass::Display;
 	return Result::Success;
 }
 

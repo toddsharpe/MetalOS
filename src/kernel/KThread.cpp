@@ -12,6 +12,7 @@ KThread::KThread(const KThreadStart start, void* const arg, const CString& name)
 	Id(++LastId),
 
 	Sched(),
+	NextDead(),
 
 	m_start(start),
 	m_arg(arg),
@@ -36,6 +37,16 @@ void KThread::Init(void* const entry)
 void KThread::Start()
 {
 	m_start(m_arg);
+}
+
+void KThread::ReleaseStack()
+{
+	if (!m_stack)
+		return;
+
+	KeVirtualFree(m_stack);
+	m_stack = nullptr;
+	m_stackPointer = nullptr;
 }
 
 void KThread::Display() const

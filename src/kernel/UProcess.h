@@ -46,6 +46,9 @@ public:
 	//teardown (consumers like the WM liveness check read this directly).
 	ProcessState State;
 
+	uint32_t Refs; //Its own until reaped, plus each process handle; the record is freed at zero (KeReleaseUProcess)
+	bool Reaped; //Memory, page tables and modules freed; only the record remains
+
 private:
 	static uint32_t LastId;
 

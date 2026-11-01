@@ -360,6 +360,7 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 		//Add uobject to calling process
 		UObject* obj = proc.CreateObject(UObjectType::Process);
 		obj->Process = created;
+		created->Refs++; //Released when the handle closes
 
 		result->Process = (HProcess)obj->Handle;
 	}
@@ -420,6 +421,7 @@ HThread CreateThread(size_t stackSize, ThreadStart startAddress, void* arg)
 	//Add uobject to calling process
 	UObject* obj = proc.CreateObject(UObjectType::Thread);
 	obj->Thread = created;
+	created->Refs++; //Released when the handle closes
 
 	return (HThread)obj->Handle;
 }

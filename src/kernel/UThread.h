@@ -21,6 +21,8 @@ public:
 		Stack(),
 		Name(),
 		Id(++LastUThreadId),
+		StackBase(),
+		Refs(1),
 		m_messages(),
 		m_context(),
 		m_fpu(),
@@ -97,6 +99,8 @@ public:
 	void* Stack; //Saved from asm on syscalls
 	CString Name;
 	const uint32_t Id;
+	void* StackBase; //User stack reservation, freed by the reaper when the thread exits
+	uint32_t Refs; //Its KThread plus each handle; the record is freed at zero (KeReleaseUThread)
 
 private:
 	//Scheduler

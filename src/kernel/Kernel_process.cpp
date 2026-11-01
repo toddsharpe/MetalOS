@@ -47,7 +47,32 @@ UProcess* KeCreateProcess(const char* const cmd)
 	StaticString<64> path;
 	path.Append(CString(cmd, i));
 
-	//Create UProcess on the kernel heap and track it in the process list.
+	//Load exe and runtime into the kernel (each returns a temporary kernel alias for patching).
+	Loader::LoadedImage exe = Loader::Load(path);
+	if (!exe.UserBase)
+	{
+		Printf("Failed to load %s\n", path.c_str());
+		return nullptr;
+	}
+
+	Loader::LoadedImage runtime = Loader::Load(RuntimeDLL);
+	if (!runtime.UserBase)
+	{
+		KeVirtualFree(m_process, exe.Alias);
+		return nullptr;
+	}
+
+	//Resolve runtime imports (stamps the exe's IAT with the runtime's user addresses) and the init entry points
+	void* const initProcess = WinPE::GetProcAddress(runtime.Alias, "InitProcess");
+	void* const initThread = WinPE::GetProcAddress(runtime.Alias, "InitThread");
+	if (!Loader::ResolveImports(exe, runtime, RuntimeDLL) || !initProcess || !initThread)
+	{
+		KeVirtualFree(m_process, exe.Alias);
+		KeVirtualFree(m_process, runtime.Alias);
+		return nullptr;
+	}
+
+	//Bad images are rejected above, so a failed load never leaves a half-built process in the list
 	UProcess* created = KeAlloc<UProcess>(AllocType::User, path);
 	Assert(created);
 	Assert(m_processes.Add(created));
@@ -59,26 +84,9 @@ UProcess* KeCreateProcess(const char* const cmd)
 	Assert(created->Tables.IsValid());
 	created->Tables.LoadKernelMappings();
 
-	//Load exe and runtime into the kernel (each returns a temporary kernel alias for patching).
-	Loader::LoadedImage exe = Loader::Load(path);
-	if (!exe.UserBase)
-		return nullptr;
-
-	Loader::LoadedImage runtime = Loader::Load(RuntimeDLL);
-	if (!runtime.UserBase)
-	{
-		KeVirtualFree(m_process, exe.Alias);
-		return nullptr;
-	}
-
-	//Resolve runtime imports (stamps the exe's IAT with the runtime's user addresses)
-	Loader::ResolveImports(exe, runtime, RuntimeDLL);
-
-	//Init pointers: resolve in the runtime alias, store the process (user) address
-	created->InitProcess = runtime.ToUser(WinPE::GetProcAddress(runtime.Alias, "InitProcess"));
-	Assert(created->InitProcess);
-	created->InitThread = runtime.ToUser(WinPE::GetProcAddress(runtime.Alias, "InitThread"));
-	Assert(created->InitThread);
+	//Init pointers: store the process (user) address of each runtime entry point
+	created->InitProcess = runtime.ToUser(initProcess);
+	created->InitThread = runtime.ToUser(initThread);
 
 	//Install the images into the process at their ImageBase (aliasing the kernel-loaded pages)
 	KeAliasInto(*created, exe.Alias, exe.UserBase, exe.Size);

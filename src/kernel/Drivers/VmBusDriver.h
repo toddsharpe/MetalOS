@@ -41,8 +41,8 @@ private:
 		HyperV::VmBusResponse* Response;
 	};
 
-	BusRequest* FindRequest(uint32_t gpadl);
-	BusRequest* FindRequest(uint32_t child_relid, uint32_t openid);
+	void AddRequest(const BusRequest& request);
+	BusRequest TakeRequest(const uint32_t gpadl, const uint32_t child_relid, const uint32_t openid);
 
 	void OnInterrupt();
 
@@ -57,7 +57,7 @@ private:
 	uint32_t m_msg_conn_id;
 	uint32_t m_nextGpadlHandle;
 
-	//Bus Requests
+	//Requests awaiting a host response; each is removed when answered
 	StaticVector<BusRequest, 16> m_requests;
 };
 

@@ -188,4 +188,17 @@ void AddressSpace_test()
         Assert(!space.Reserve((uintptr_t)0x20000, (size_t)1 << 52)); // count << PageShift == 2^64
         AssertEqual(space.ReservedBytes(), (size_t)0);
     }
+
+    // Page ownership is recorded per reservation; borrowed is the default
+    {
+        AddressSpace space(TestStart, TestEnd, AllocationGranularity);
+
+        const uintptr_t owned = space.Reserve(2, PageOwnership::Owned);
+        const uintptr_t borrowed = space.Reserve(2);
+        Assert(space.Reserve((uintptr_t)0x80000, 1, PageOwnership::Owned));
+        Assert(space.OwnsPages(owned));
+        Assert(!space.OwnsPages(borrowed));
+        Assert(space.OwnsPages((uintptr_t)0x80000));
+        Assert(!space.OwnsPages((uintptr_t)0x90000)); // not a reservation
+    }
 }

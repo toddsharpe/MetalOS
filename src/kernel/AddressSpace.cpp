@@ -39,7 +39,7 @@ bool AddressSpace::IsValidRange(const void* const address, const size_t length) 
 	return true;
 }
 
-uintptr_t AddressSpace::Reserve(const size_t count)
+uintptr_t AddressSpace::Reserve(const size_t count, const PageOwnership ownership)
 {
 	Assert(count);
 	CPrintf(Debug, "Reserve: Any in [0x%016x, 0x%016x] Size: 0x%x\n", Start, End, count);
@@ -65,7 +65,7 @@ uintptr_t AddressSpace::Reserve(const size_t count)
 	//Claim address
 	m_watermark = test;
 	const uintptr_t address = m_watermark;
-	Assert(m_reservations.Add(Reservation{address, count}));
+	Assert(m_reservations.Add(Reservation{address, count, ownership == PageOwnership::Owned}));
 
 	//Increment watermark
 	m_watermark += ByteAlign(bytes, AllocationGranularity);
@@ -75,7 +75,7 @@ uintptr_t AddressSpace::Reserve(const size_t count)
 	return address;
 }
 
-bool AddressSpace::Reserve(const uintptr_t address, const size_t count)
+bool AddressSpace::Reserve(const uintptr_t address, const size_t count, const PageOwnership ownership)
 {
 	CPrintf(Debug, "Reserve: 0x%016x in [0x%016x, 0x%016x] Size: 0x%x\n", address, Start, End, count);
 	Assert(count != 0);
@@ -85,7 +85,7 @@ bool AddressSpace::Reserve(const uintptr_t address, const size_t count)
 		return false;
 
 	//Claim
-	Assert(m_reservations.Add(Reservation{address, count}));
+	Assert(m_reservations.Add(Reservation{address, count, ownership == PageOwnership::Owned}));
 
 	CPrintf(Debug, "  Received: 0x%016x Count:0x%x\n", address, count);
 
@@ -100,6 +100,16 @@ size_t AddressSpace::GetCount(const uintptr_t address) const
 			return res.PageCount;
 	}
 	return 0;
+}
+
+bool AddressSpace::OwnsPages(const uintptr_t address) const
+{
+	for (const Reservation& res : m_reservations)
+	{
+		if (res.Address == address)
+			return res.OwnsPages;
+	}
+	return false;
 }
 
 size_t AddressSpace::ReservedBytes() const

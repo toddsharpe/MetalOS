@@ -55,7 +55,7 @@ namespace _VMEM
 		Assert(count);
 
 		//Reserve region, returning nullptr if it isn't free
-		const uintptr_t reserved = process.Space.Reserve(count);
+		const uintptr_t reserved = process.Space.Reserve(count, PageOwnership::Owned);
 		if (!reserved)
 			return nullptr;
 
@@ -70,7 +70,7 @@ namespace _VMEM
 
 		//Reserve region, returning nullptr if it isn't free
 		const uintptr_t reserved = reinterpret_cast<uintptr_t>(address);
-		if (!process.Space.Reserve(reserved, count))
+		if (!process.Space.Reserve(reserved, count, PageOwnership::Owned))
 			return nullptr;
 
 		return Commit(process, reserved, count) ? (void*)reserved : nullptr;
@@ -107,7 +107,22 @@ namespace _VMEM
 		CPrintf(process.Debug, "Free: 0x%016x Count: 0x%x\n", virt, count);
 		Assert(count);
 
-		Assert(process.Tables.UnmapPages(virt, count));
+		//An owning mapping drops its reference on each page; caller-supplied physical stays with the caller
+		if (process.Space.OwnsPages(virt))
+		{
+			for (size_t i = 0; i < count; i++)
+			{
+				const uintptr_t page = virt + (i << Arch::PageShift);
+				const paddr_t paddr = process.Tables.ResolvePhysical(reinterpret_cast<void*>(page));
+				Assert(process.Tables.UnmapPages(page, 1));
+				if (paddr)
+					KePhysicalFree(paddr);
+			}
+		}
+		else
+		{
+			Assert(process.Tables.UnmapPages(virt, count));
+		}
 		return process.Space.Free(virt, count);
 	}
 }
@@ -249,7 +264,7 @@ void KeAliasInto(KProcess& process, const void* const source, const void* const 
 	const uintptr_t destVA = reinterpret_cast<uintptr_t>(dest);
 
 	//Reserve the destination range in the process (a fixed address = the image's ImageBase).
-	Assert(process.Space.Reserve(destVA, count));
+	Assert(process.Space.Reserve(destVA, count, PageOwnership::Owned));
 
 	//Map the source's (kernel-resident) physical frames into the process, no new physical.
 	const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
@@ -258,6 +273,7 @@ void KeAliasInto(KProcess& process, const void* const source, const void* const 
 		const uintptr_t srcPage = reinterpret_cast<uintptr_t>(source) + (i << Arch::PageShift);
 		const paddr_t phys = m_process.Tables.ResolvePhysical(reinterpret_cast<void*>(srcPage));
 		Assert(phys);
+		KePhysicalRef(phys & ~0xFFFull); //The alias owns the page too, so freeing the source leaves it with the process
 		Assert(process.Tables.MapPages(destVA + (i << Arch::PageShift), phys & ~0xFFFull, 1, attributes));
 	}
 }

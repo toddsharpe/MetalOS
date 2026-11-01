@@ -44,6 +44,7 @@ namespace _PMEM
 		PageFrame* entry = m_freeList.Pop();
 		Assert(entry->State == PageState::Free);
 		entry->State = PageState::Active;
+		entry->Refs = 1;
 
 		const size_t idx = GetIndex(entry);
 		const size_t buddyIdx = idx / BuddySize;
@@ -86,6 +87,7 @@ namespace _PMEM
 		for (size_t i = 0; i < count; i++)
 		{
 			m_frames[pageIdx + i].State = PageState::Active;
+			m_frames[pageIdx + i].Refs = 1;
 			m_freeList.Remove(m_frames[pageIdx + i]);
 		}
 
@@ -94,6 +96,17 @@ namespace _PMEM
 		return true;
 	}
 
+	void Ref(const paddr_t address)
+	{
+		const size_t idx = address >> Arch::PageShift;
+		Assert(idx < m_count);
+
+		PageFrame& frame = m_frames[idx];
+		Assert(frame.State == PageState::Active);
+		frame.Refs++;
+	}
+
+	//Drops one reference; the page returns to the free list when the last one goes
 	void Free(const paddr_t address)
 	{
 		const size_t idx = address >> Arch::PageShift;
@@ -101,6 +114,9 @@ namespace _PMEM
 
 		PageFrame& frame = m_frames[idx];
 		Assert(frame.State == PageState::Active);
+		Assert(frame.Refs);
+		if (--frame.Refs != 0)
+			return;
 		frame.State = PageState::Free;
 		m_freeList.InsertHead(frame);
 
@@ -231,6 +247,11 @@ bool KePhysicalTryAlloc(paddr_t& address, const size_t count)
 		memset(reinterpret_cast<void*>(KernelPhysicalStart + paddr), 0, Arch::PageSize);
 	}
 	return true;
+}
+
+void KePhysicalRef(const paddr_t address)
+{
+	_PMEM::Ref(address);
 }
 
 void KePhysicalFree(const paddr_t address)

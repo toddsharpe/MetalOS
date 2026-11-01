@@ -76,9 +76,10 @@ extern "C" void ArchInitialize()
 	__writecr4(__readcr4() | (1 << 16));
 }
 
+//Home area plus the return-address slot of an entry point reached by jmp or sysret rather than call
 size_t ArchStackReserve()
 {
-	return 32;
+	return 40;
 }
 
 void ArchSetPagingRoot(paddr_t root)

@@ -22,7 +22,8 @@ ArchMain PROC
 	add rsp, LENGTHOF BootStack
 
 	; Register parameter area
-	sub rsp, StackReserve 
+	sub rsp, StackReserve
+	sub rsp, 8 ; Return-address slot: KeMain is jumped to, and expects RSP 8 off 16-byte alignment like a call leaves
 
 	; Jump to KeMain
 	jmp KeMain
@@ -133,6 +134,7 @@ x64_SYSTEMCALL PROC
 	mov rsp, qword ptr [rsp+8] ; offsetof(CpuContext, Thread)
 	mov rsp, qword ptr [rsp] ; offsetof(KThread, ContextPtr)
 	mov rsp, qword ptr [rsp+64] ; Get Stack pointer (8th item)
+	and rsp, -16 ; The saved stack pointer isn't necessarily 16-aligned (a fresh thread's sits in its entry slot)
 
 	; Save user stack and RBX on the kernel stack (two pushes keep KeSyscall's stack alignment)
 	push qword ptr gs:[16] ; offsetof(CpuContext, UserStack)

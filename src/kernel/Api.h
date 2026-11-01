@@ -45,6 +45,7 @@ void KeGetSystemTime(KSystemTime& time);
 void KePhysicalInitialize();
 paddr_t KePhysicalAlloc();
 paddr_t KePhysicalAlloc(const size_t count);
+bool KePhysicalTryAlloc(paddr_t& address); //False when out of memory, for allocations a process can trigger
 void KePhysicalFree(const paddr_t address);
 void KePhysicalFree(const paddr_t address, const size_t count);
 
@@ -86,8 +87,7 @@ static constexpr PageTablesOps PtOps =
 	},
 	.PhyAlloc = [](paddr_t &address) -> bool
 	{
-		address = KePhysicalAlloc();
-		return true;
+		return KePhysicalTryAlloc(address);
 	}
 };
 using KernelPageTables = PageTabes<PtOps>;

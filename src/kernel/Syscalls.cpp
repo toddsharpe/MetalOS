@@ -844,7 +844,7 @@ SyscallResult ResetEvent(const HEvent event)
 void* VirtualAlloc(const void* address, const size_t size)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!size)
+	if (!size || size > UserEnd) //Larger can never fit, and would overflow the page count
 		return nullptr;
 
 	if (!address)

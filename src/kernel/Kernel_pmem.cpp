@@ -198,13 +198,18 @@ void KePhysicalInitialize()
 paddr_t KePhysicalAlloc()
 {
 	paddr_t paddr = 0;
-	Assert(_PMEM::Alloc(paddr));
+	Assert(KePhysicalTryAlloc(paddr));
+	return paddr;
+}
+
+bool KePhysicalTryAlloc(paddr_t& address)
+{
+	if (!_PMEM::Alloc(address))
+		return false;
 
 	//Zero out the page
-	memset(reinterpret_cast<void*>(KernelPhysicalStart + paddr), 0, Arch::PageSize);
-
-	//Printf("KePhysicalAlloc: Addr: %p\n", paddr);
-	return paddr;
+	memset(reinterpret_cast<void*>(KernelPhysicalStart + address), 0, Arch::PageSize);
+	return true;
 }
 
 paddr_t KePhysicalAlloc(const size_t count)

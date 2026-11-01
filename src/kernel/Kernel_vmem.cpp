@@ -12,6 +12,43 @@ extern KProcess m_process;
 //Reserves space in a process, acquires physical pages, maps into its page tables
 namespace _VMEM
 {
+	//Unmaps and frees the pages a failed commit had mapped, then drops its reservation
+	void Release(KProcess& process, const uintptr_t reserved, const size_t count, const size_t mapped)
+	{
+		for (size_t i = 0; i < mapped; i++)
+		{
+			const uintptr_t virt = reserved + (i << Arch::PageShift);
+			const paddr_t paddr = process.Tables.ResolvePhysical(reinterpret_cast<void*>(virt));
+			Assert(process.Tables.UnmapPages(virt, 1));
+			KePhysicalFree(paddr);
+		}
+		Assert(process.Space.Free(reserved, count));
+	}
+
+	//Backs a reserved range with fresh pages; out of memory undoes it all, including the reservation
+	bool Commit(KProcess& process, const uintptr_t reserved, const size_t count)
+	{
+		//TODO(tsharpe): Support read/execute only
+		const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
+		for (size_t i = 0; i < count; i++)
+		{
+			const uintptr_t virt = reserved + (i << Arch::PageShift);
+			paddr_t paddr = 0;
+			if (!KePhysicalTryAlloc(paddr))
+			{
+				Release(process, reserved, count, i);
+				return false;
+			}
+			if (!process.Tables.MapPages(virt, paddr, 1, attributes))
+			{
+				KePhysicalFree(paddr);
+				Release(process, reserved, count, i);
+				return false;
+			}
+		}
+		return true;
+	}
+
 	void* Allocate(KProcess& process, const size_t count)
 	{
 		CPrintf(process.Debug, "Allocate: Any, Count: 0x%x Global: %d\n", count, process.IsGlobal);
@@ -22,17 +59,7 @@ namespace _VMEM
 		if (!reserved)
 			return nullptr;
 
-		//Map into the process's page tables
-		const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
-		for (size_t i = 0; i < count; i++)
-		{
-			const paddr_t paddr = KePhysicalAlloc();
-			Assert(paddr)
-			const uintptr_t virt = reserved + (i << Arch::PageShift);
-			Assert(process.Tables.MapPages(virt, paddr, 1, attributes));
-		}
-
-		return (void*)reserved;
+		return Commit(process, reserved, count) ? (void*)reserved : nullptr;
 	}
 
 	void* Allocate(KProcess& process, const void* address, const size_t count)
@@ -46,18 +73,7 @@ namespace _VMEM
 		if (!process.Space.Reserve(reserved, count))
 			return nullptr;
 
-		//Map into the process's page tables
-		//TODO(tsharpe): Support read/execute only
-		const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
-		for (size_t i = 0; i < count; i++)
-		{
-			const paddr_t paddr = KePhysicalAlloc();
-			Assert(paddr)
-			const uintptr_t virt = reserved + (i << Arch::PageShift);
-			Assert(process.Tables.MapPages(virt, paddr, 1, attributes));
-		}
-
-		return (void*)reserved;
+		return Commit(process, reserved, count) ? (void*)reserved : nullptr;
 	}
 
 	void* VirtualMap(KProcess& process, const paddr_t* addresses, const size_t count)

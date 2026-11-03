@@ -43,7 +43,6 @@ public:
 		m_publics.Load(stream, arena);
 	}
 
-	#define MAXPATH 255
 	bool ResolveFunction(const uint32_t rva, PdbLookup& lookup)
 	{
 		const uint32_t offset = rva - m_textSection->VirtualAddress;
@@ -64,9 +63,9 @@ public:
 			return false;
 		}
 
-		char buffer[MAXPATH];
-		Assert(m_stream.ReadString(buffer)); //Module
-		Assert(m_stream.ReadString(buffer)); //Object
+		//Module and object names follow; skipped rather than copied, since object paths can be arbitrarily long
+		m_stream.SkipString();
+		m_stream.SkipString();
 
 		MsfStream& moduleStream = m_file.GetStream(info.ModuleSymStream);
 		uint32_t header = moduleStream.Read<uint32_t>();

@@ -18,6 +18,8 @@
 #include "Lib/StaticHeap_test.cpp"
 #include "Lib/LinkedList_test.cpp"
 #include "Lib/TextBuffer_test.cpp"
+#include "WinPE_test.cpp"
+#include "kernel/Pdb/Pdb_test.cpp"
 
 #define Test(name)                     \
 	{                                  \
@@ -43,6 +45,8 @@ int main()
 	Test(StaticHeap);
 	Test(LinkedList);
 	Test(TextBuffer);
+	Test(WinPE);
+	Test(Pdb);
 
 	return 0;
 }

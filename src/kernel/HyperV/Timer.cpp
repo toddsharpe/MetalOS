@@ -23,15 +23,4 @@ namespace HyperV::Timer
 		config.DirectMode = true;
 		__writemsr(configReg, config.AsUint64);
 	}
-
-	void Disable(const size_t timerId)
-	{
-		Assert(timerId < NumTimers);
-		const uint32_t configReg = static_cast<uint32_t>(MSR::HV_X64_MSR_STIMER0_CONFIG) + timerId;
-
-		TimerConfigReg config = { };
-		config.AsUint64 = __readmsr(configReg);
-		config.Enable = false;
-		__writemsr(configReg, config.AsUint64);
-	}
 };

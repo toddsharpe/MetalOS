@@ -1,18 +1,15 @@
-#pragma once
-
 #include "kernel/Drivers/VmBusDriver.h"
 #include "kernel/HyperV/VmBus.h"
 #include "x64/intrin.h"
 #include "Assert.h"
 
-//These aren't used
+//Monitor pages handed to the host in CHANNELMSG_INITIATE_CONTACT
 volatile uint8_t VmBusDriver::MonitorPage1[Arch::PageSize] = { 0 }; //Parent->child notifications
 volatile uint8_t VmBusDriver::MonitorPage2[Arch::PageSize] = { 0 }; //Child->parent notifications
 
 VmBusDriver::VmBusDriver(KDevice& device) :
 	Driver(device),
 	m_connectEvent(false, false),
-	m_thread(),
 	m_channelCallbacks(),
 	m_msg_conn_id(),
 	m_nextGpadlHandle(),
@@ -275,7 +272,7 @@ void VmBusDriver::OnInterrupt()
 
 			default:
 			{
-				Printf("HyperV::ThreadLoop - Type: %d Header: %d\n", message.Header.MessageType, header->msgtype);
+				Printf("VmBus: unhandled message Type: %d Header: %d\n", message.Header.MessageType, header->msgtype);
 				//NotImplemented();
 			}
 			break;
@@ -284,9 +281,3 @@ void VmBusDriver::OnInterrupt()
 	
 	HyperV::Interrupts::EOI();
 }
-
-/*
-Connection order:
-Guest: CHANNELMSG_INITIATE_CONTACT. Host: CHANNELMSG_VERSION_RESPONSE
-Guest: CHANNELMSG_REQUESTOFFERS. Host: multiple CHANNELMSG_OFFERCHANNEL, ended with CHANNELMSG_ALLOFFERS_DELIVERED
-*/

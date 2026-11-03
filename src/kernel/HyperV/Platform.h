@@ -71,11 +71,6 @@ namespace HyperV::Platform
 
 
 		//8. Page is mapped by loader
-
-		//9. Read Features
-		CpuId::Result result = {};
-		CpuId::Get(result, static_cast<uint32_t>(CPUID_LEAF::Features));
-		//TODO(tsharpe): Use result
 	}
 
 

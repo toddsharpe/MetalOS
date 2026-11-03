@@ -188,19 +188,11 @@ namespace HyperV
 		uint32_t status;
 	};
 
-	struct vmbus_channel_gpadl_torndown
-	{
-		vmbus_channel_message_header header;
-		uint32_t gpadl;
-	};
-
 	union VmBusResponse
 	{
 		// vmbus_channel_version_supported version_supported;
 		vmbus_channel_open_result open_result;
-		vmbus_channel_gpadl_torndown gpadl_torndown;
 		vmbus_channel_gpadl_created gpadl_created;
-		vmbus_channel_version_response version_response;
 	};
 
 	/* Open Channel parameters */
@@ -238,13 +230,6 @@ namespace HyperV
 		unsigned char userdata[MAX_USER_DEFINED_BYTES];
 	};
 
-	/* Close channel parameters; */
-	struct vmbus_channel_close_channel
-	{
-		struct vmbus_channel_message_header header;
-		uint32_t child_relid;
-	};
-
 /*
  * This structure defines a range in guest physical space that can be made to
  * look virtually contiguous.
@@ -256,11 +241,6 @@ namespace HyperV
 		uint32_t byte_offset;
 		uint64_t pfn_array[ANYSIZE_ARRAY];
 	};
-
-/* Channel Message GPADL */
-#define GPADL_TYPE_RING_BUFFER 1
-#define GPADL_TYPE_SERVER_SAVE_AREA 2
-#define GPADL_TYPE_TRANSACTION 8
 
 	/*
 	 * The number of PFNs in a GPADL message is defined by the number of
@@ -302,9 +282,6 @@ namespace HyperV
 		VM_PKT_DATA_USING_ADDITIONAL_PKT = 0xc,
 		VM_PKT_ADDITIONAL_DATA = 0xd
 	};
-
-	/* The size of the user defined data buffer for non-pipe offers. */
-	#define MAX_USER_DEFINED_BYTES		120
 
 	struct vmpacket_descriptor {
 		uint16_t type;

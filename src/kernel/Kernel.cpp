@@ -171,8 +171,7 @@ namespace
 		//WM process (MetalOS-WMSvr.exe), which maps the framebuffer and drains this ring.
 		KeInputInitialize();
 
-		//Initialize the kernel net device (RX ring + NIC MAC published for netstack).
-		//The TCP/IP stack lives in the usermode netstack process.
+		//Initialize the kernel net device: publishes the RX ring for the usermode netstack, which runs TCP/IP
 		KeInitNetDevice();
 
 		//System displays

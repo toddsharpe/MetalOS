@@ -1,5 +1,3 @@
-#pragma once
-
 #include "HyperVNic.h"
 #include "kernel/KDevice.h"
 #include "kernel/Drivers/VmBusDriver.h"
@@ -17,10 +15,6 @@ HyperVNic::HyperVNic(KDevice& device) :
 	m_sendSectionCount(0),
 	m_sendSectionsInUse(0),
 	m_recvBuf(nullptr),
-	m_recvBufGpadl(0),
-	m_recvSectionCount(0),
-	m_recvSectionSize(0),
-	m_recvSections(),
 	m_response()
 {
 }
@@ -40,17 +34,12 @@ Result HyperVNic::Initialize()
 
 	Assert(m_response.header.msg_type == NvspMessageType::InitComplete);
 	Assert(m_response.msg.init_complete.status == NVSP_STATUS_SUCCESS);
-	// negotiated_protocol_ver is reserved/unused for V1/V2 — always 0xffffffff.
-	// Track the version we sent instead, same as Linux netvsc.c.
-	const uint32_t negotiatedVer = msg.msg.init.max_protocol_ver;
 
-	// Step 2: report NDIS version matching negotiated NVSP version (no response)
+	// Step 2: report NDIS version 6.30 (no response)
 	msg = {};
 	msg.header.msg_type = NvspMessageType::SendNdisVersion;
 	msg.msg.send_ndis_version.ndis_major_ver = 6;
-	msg.msg.send_ndis_version.ndis_minor_ver = (negotiatedVer >= NVSP_PROTOCOL_VERSION_61) ? 61 :
-	                                            (negotiatedVer >= NVSP_PROTOCOL_VERSION_6)  ? 60 :
-	                                            (negotiatedVer >= NVSP_PROTOCOL_VERSION_5)  ? 50 : 30;
+	msg.msg.send_ndis_version.ndis_minor_ver = 30;
 	SendNvsp(msg);
 
 	// Step 3: allocate and register receive buffer
@@ -59,17 +48,16 @@ Result HyperVNic::Initialize()
 	Assert(m_recvBuf);
 	memset(m_recvBuf, 0, NIC_RECV_BUFFER_PAGES * Arch::PageSize);
 
-	m_recvBufGpadl = CreateGpadl(recvBufAddr, NIC_RECV_BUFFER_PAGES);
+	const uint32_t recvBufGpadl = CreateGpadl(recvBufAddr, NIC_RECV_BUFFER_PAGES);
 
 	msg = {};
 	msg.header.msg_type = NvspMessageType::SendReceiveBuffer;
-	msg.msg.send_recv_buf.gpadl_handle = m_recvBufGpadl;
+	msg.msg.send_recv_buf.gpadl_handle = recvBufGpadl;
 	msg.msg.send_recv_buf.id = NIC_RECV_BUFFER_ID;
 	SendNvsp(msg, true);
 	KeWait(m_event);
 
 	Assert(m_response.header.msg_type == NvspMessageType::SendReceiveBufferComplete);
-	m_recvSectionSize = (m_recvSectionCount > 0) ? m_recvSections[0].sub_alloc_size : 0;
 
 	// Step 4: register send buffer — host requires this before activating the RNDIS layer
 	{
@@ -93,17 +81,6 @@ Result HyperVNic::Initialize()
 
 		const size_t sections = (NIC_SEND_BUFFER_PAGES * Arch::PageSize) / m_sendSectionSize;
 		m_sendSectionCount = (sections < MaxSendSections) ? (uint32_t)sections : MaxSendSections;
-	}
-
-	// Step 4b: SendNdisConfig — required for NVSP V5+; not sent for V2
-	if (negotiatedVer >= NVSP_PROTOCOL_VERSION_5)
-	{
-		nvsp_message cfg = {};
-		cfg.header.msg_type = NvspMessageType::SendNdisConfig;
-		cfg.msg.send_ndis_config.mtu = 1514;
-		cfg.msg.send_ndis_config.reserved = 0;
-		cfg.msg.send_ndis_config.capability_flags = 0;
-		SendNvsp(cfg, false);
 	}
 
 	// Step 5: initialize RNDIS
@@ -193,11 +170,6 @@ Result HyperVNic::Initialize()
 Result HyperVNic::Enumerate()
 {
 	return Result::Success;
-}
-
-bool HyperVNic::IsLinkUp() const
-{
-	return m_recvBuf != nullptr;
 }
 
 void HyperVNic::SendNvsp(const nvsp_message& msg, bool requestCompletion)
@@ -342,18 +314,6 @@ void HyperVNic::OnCallback()
 					type == NvspMessageType::SendSendBufferComplete ||
 					type == NvspMessageType::SendRndisPacketComplete)
 				{
-					// SendReceiveBufferComplete has a variable sections[] array;
-					// read directly from ring buffer memory before the fixed memcpy.
-					if (type == NvspMessageType::SendReceiveBufferComplete)
-					{
-						nvsp_send_recv_buf_complete_message* complete = &nvsp->msg.send_recv_buf_complete;
-						m_recvSectionCount = complete->num_sections;
-						if (m_recvSectionCount > ArraySize(m_recvSections))
-							m_recvSectionCount = ArraySize(m_recvSections);
-						for (uint32_t i = 0; i < m_recvSectionCount; i++)
-							m_recvSections[i] = ((nvsp_recv_buf_section*)complete->sections)[i];
-					}
-
 					//A data frame's send section belongs to the host until this completion
 					if (type == NvspMessageType::SendRndisPacketComplete)
 						ReleaseSendSection(packet->trans_id);
@@ -452,9 +412,7 @@ Result HyperVNic::SendFrame(const void* data, size_t length)
 	if (section == 0)
 		return Result::Failed;
 
-	// Transmit over the data channel using the send-buffer section mechanism — the same
-	// path that works for control RNDIS messages. (The prior inline scheme, with a 16-byte
-	// NVSP prefix and section_index=INVALID, never actually put frames on the wire.)
+	// Transmit over the data channel through the send-buffer section, the same path as control RNDIS messages
 	if (!SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, buf, rndisLen, true, section))
 	{
 		//Ring full: no completion will come, so the section is still ours

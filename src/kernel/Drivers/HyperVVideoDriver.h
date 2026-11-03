@@ -4,10 +4,7 @@
 #include "kernel/Drivers/HyperVChannel.h"
 #include "kernel/Objects/KEvent.h"
 
-//Hyper-V synthetic video (VSC), device class {DA0A7802-E377-4AAC-8E77-0558EB1073F8}. Negotiates
-//the synthvid protocol with the host, points it at a guest-physical VRAM buffer, and reports a
-//display situation (resolution / pitch). Draw 32bpp pixels into Framebuffer(), then call Flush()
-//to push the changed region to the host.
+//Hyper-V synthetic video (VSC) {DA0A7802-E377-4AAC-8E77-0558EB1073F8}: negotiates synthvid, points the host at the VRAM and sets the mode
 class HyperVVideoDriver : public DisplayDriver
 {
 public:
@@ -24,18 +21,10 @@ public:
 
 	static void Callback(void* context) { ((HyperVVideoDriver*)context)->OnCallback(); }
 
-	//Guest VRAM (linear, 32bpp), or nullptr until Initialize() succeeds.
-	void* Framebuffer() const { return m_framebuffer; }
-
 	//Tell the host the whole screen changed.
 	void Flush() override;
 
 private:
-	//synthvid protocol version 3.2 (Windows 8.1 / Server 2012 R2 and later, Gen2 VMs).
-	static constexpr uint32_t SYNTHVID_VERSION_MAJOR = 3;
-	static constexpr uint32_t SYNTHVID_VERSION_MINOR = 2;
-	static constexpr uint32_t SYNTHVID_VERSION = (SYNTHVID_VERSION_MINOR << 16) | SYNTHVID_VERSION_MAJOR;
-
 	//The synthvid channel runs over the VMBus "pipe" protocol: every message is prefixed with a
 	//pipe_msg_hdr { type=PIPE_MSG_DATA, size=<synthvid message bytes> }.
 	static constexpr uint32_t PIPE_MSG_DATA = 1;
@@ -138,7 +127,6 @@ private:
 	uint32_t m_pitchBytes;
 	size_t m_barSize; //bytes of the framebuffer BAR (upper bound on a mode's VRAM)
 	paddr_t m_framebufferGpa;
-	void* m_framebuffer; //kernel VA of the VRAM (KernelPhysicalStart + gpa)
 
 	synthvid_version_response m_versionResponse;
 	KEvent m_event;

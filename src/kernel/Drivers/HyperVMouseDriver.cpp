@@ -21,8 +21,6 @@ Result HyperVMouseDriver::Initialize()
 {
 	m_device.Class = KDeviceClass::Mouse;
 
-	uint32_t childRelid = m_device.child_relid;
-	uint32_t connectionId = m_device.m_msg_conn_id;
 	//Initialize channel with the device's offer, not a stack copy: the channel keeps the pointer for SetEvent
 	m_channel.Initialize(&m_device.m_channel);
 
@@ -65,8 +63,6 @@ void HyperVMouseDriver::OnCallback()
 {
 	HyperV::vmpacket_descriptor* packet;
 	const uint32_t length = sizeof(HyperV::vmpacket_descriptor);
-	//The nuance here is that this structure vmpacket_descriptor is what is sent, which has an extra field (transactionid)
-	//compared to what is received. the code uses the offset field from desc pointer to compensate for this, but it should really be refactored
 	do
 	{
 		while ((packet = (HyperV::vmpacket_descriptor*)m_channel.ReadPacket(length)) != nullptr)

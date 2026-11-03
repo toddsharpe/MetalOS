@@ -16,12 +16,8 @@ namespace
 #define NIC_SEND_BUFFER_PAGES        4096  // 16 MB
 
 #define NVSP_PROTOCOL_VERSION_2      0x30002
-#define NVSP_PROTOCOL_VERSION_5      0x50000
-#define NVSP_PROTOCOL_VERSION_6      0x60000
-#define NVSP_PROTOCOL_VERSION_61     0x60001
 #define NVSP_STATUS_SUCCESS          1
 #define NVSP_CHANNEL_TYPE_DATA       0
-#define NVSP_INVALID_SECTION_INDEX   0xFFFFFFFF
 
 enum class NvspMessageType : uint32_t
 {
@@ -31,13 +27,10 @@ enum class NvspMessageType : uint32_t
 	SendNdisVersion = 100,
 	SendReceiveBuffer = 101,
 	SendReceiveBufferComplete = 102,
-	RevokeReceiveBuffer = 103,
 	SendSendBuffer = 104,
 	SendSendBufferComplete = 105,
-	RevokeSendBuffer = 106,
 	SendRndisPacket = 107,
 	SendRndisPacketComplete = 108,
-	SendNdisConfig = 200,
 };
 
 #pragma pack(push, 1)
@@ -84,7 +77,7 @@ struct nvsp_send_recv_buf_complete_message
 {
 	uint32_t status;
 	uint32_t num_sections;
-	nvsp_recv_buf_section sections[1]; // host may return more; read via raw pointer
+	nvsp_recv_buf_section sections[1]; // unread, but it makes this the largest member: sizeof(nvsp_message) must be 28
 };
 
 struct nvsp_send_send_buf_message
@@ -106,28 +99,9 @@ struct nvsp_send_rndis_packet_message
 	uint32_t send_buf_section_size;
 };
 
-// Minimal 16-byte NVSP prefix for inline RNDIS sends.
-// nvsp_message pads to 28 bytes due to union; using that as a header
-// displaces inline RNDIS data by 12 bytes and the host reads garbage.
-struct nvsp_rndis_prefix
-{
-	NvspMessageType msg_type;        // 4
-	uint32_t channel_type;           // 4
-	uint32_t send_buf_section_index; // 4
-	uint32_t send_buf_section_size;  // 4
-};
-static_assert(sizeof(nvsp_rndis_prefix) == 16, "nvsp_rndis_prefix must be exactly 16 bytes");
-
 struct nvsp_send_rndis_packet_complete_message
 {
 	uint32_t status;
-};
-
-struct nvsp_send_ndis_config_message
-{
-	uint32_t mtu;
-	uint16_t reserved;
-	uint16_t capability_flags;
 };
 
 struct nvsp_message
@@ -144,9 +118,9 @@ struct nvsp_message
 		nvsp_send_send_buf_complete_message send_send_buf_complete;
 		nvsp_send_rndis_packet_message send_rndis_pkt;
 		nvsp_send_rndis_packet_complete_message send_rndis_pkt_complete;
-		nvsp_send_ndis_config_message send_ndis_config;
 	} msg;
 };
+static_assert(sizeof(nvsp_message) == 28, "Host requires the full 28-byte nvsp_message (sized by send_recv_buf_complete)");
 
 // Transfer page packet header (follows vmpacket_descriptor for VM_PKT_DATA_USING_XFER_PAGES)
 struct vmtransfer_page_range
@@ -166,24 +140,19 @@ struct vmtransfer_page_packet_header
 
 // RNDIS
 #define RNDIS_MSG_INIT    0x00000002U
-#define RNDIS_MSG_INIT_C  0x80000002U
 #define RNDIS_MSG_QUERY   0x00000004U
 #define RNDIS_MSG_QUERY_C 0x80000004U
 #define RNDIS_MSG_SET     0x00000005U
-#define RNDIS_MSG_SET_C   0x80000005U
 #define RNDIS_MSG_PACKET  0x00000001U
 
 #define OID_802_3_PERMANENT_ADDRESS  0x01010101U
-#define OID_802_3_CURRENT_ADDRESS    0x01010102U
 
 #define NVSP_CHANNEL_TYPE_CONTROL 1
 
 #define OID_GEN_CURRENT_PACKET_FILTER   0x0001010EU
 #define RNDIS_PACKET_TYPE_DIRECTED      0x00000001U
-#define RNDIS_PACKET_TYPE_MULTICAST     0x00000002U
 #define RNDIS_PACKET_TYPE_ALL_MULTICAST 0x00000004U
 #define RNDIS_PACKET_TYPE_BROADCAST     0x00000008U
-#define RNDIS_PACKET_TYPE_PROMISCUOUS   0x00000020U
 
 struct rndis_message_header
 {
@@ -206,21 +175,6 @@ struct rndis_set_request
 	uint32_t info_buflen;
 	uint32_t info_buf_offset;
 	uint32_t device_vc_handle;
-};
-
-struct rndis_initialize_complete
-{
-	uint32_t req_id;
-	uint32_t status;
-	uint32_t major_version;
-	uint32_t minor_version;
-	uint32_t device_flags;
-	uint32_t medium;
-	uint32_t max_packets_per_msg;
-	uint32_t max_transfer_size;
-	uint32_t packet_alignment_factor;
-	uint32_t af_list_offset;
-	uint32_t af_list_size;
 };
 
 struct rndis_query_request
@@ -265,8 +219,6 @@ public:
 	Result Initialize() override;
 	Result Enumerate() override;
 
-	bool IsLinkUp() const;
-
 	static void Callback(void* context) { ((HyperVNic*)context)->OnCallback(); }
 
 	// NicDriver interface
@@ -298,10 +250,6 @@ private:
 	uint64_t m_sendSectionsInUse; //Bit per section; changed with interrupts off (completions run in the ISR)
 
 	uint8_t* m_recvBuf;
-	uint32_t m_recvBufGpadl;
-	uint32_t m_recvSectionCount;
-	uint32_t m_recvSectionSize;
-	nvsp_recv_buf_section m_recvSections[16];
 
 	nvsp_message m_response;
 };

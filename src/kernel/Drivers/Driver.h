@@ -26,18 +26,6 @@ protected:
 	KDevice& m_device;
 };
 
-class IoDriver : public Driver
-{
-public:
-	IoDriver(KDevice& device) : Driver(device)
-	{
-
-	}
-
-	virtual Result Read(char* const buffer, size_t length, size_t* bytesRead = nullptr) = 0;
-	virtual Result Write(const char* const buffer, const size_t length) = 0;
-};
-
 class StorageDriver : public Driver
 {
 public:

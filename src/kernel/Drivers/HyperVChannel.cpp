@@ -22,7 +22,7 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	m_channel = offerChannel;
 	
 	if (buffer != nullptr)
-		Assert(buffer->Size <= MAX_USER_DEFINED_BYTES);
+		Assert(buffer->Size <= HyperV::MAX_USER_DEFINED_BYTES);
 
 	Assert((m_outbound.Size % Arch::PageSize) == 0);
 	Assert((m_inbound.Size % Arch::PageSize) == 0);
@@ -143,12 +143,4 @@ void HyperVChannel::SetEvent()
 bool HyperVChannel::StopRead()
 {
 	return m_inbound.CommitRead();
-}
-
-void HyperVChannel::Display()
-{
-	Printf("Inbound:\n");
-	m_inbound.Display();
-	Printf("Outbound:\n");
-	m_outbound.Display();
 }

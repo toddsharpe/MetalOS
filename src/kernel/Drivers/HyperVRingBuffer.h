@@ -13,8 +13,6 @@ public:
 	void* Read(const uint32_t length);
 	bool CommitRead();
 
-	void Display();
-
 	const size_t Size;
 	const size_t DataSize;
 

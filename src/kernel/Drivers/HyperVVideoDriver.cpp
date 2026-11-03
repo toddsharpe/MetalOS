@@ -12,7 +12,6 @@ HyperVVideoDriver::HyperVVideoDriver(KDevice& device) :
 	m_pitchBytes(),
 	m_barSize(),
 	m_framebufferGpa(),
-	m_framebuffer(),
 	m_versionResponse(),
 	m_event(false, false),
 	m_channel(VSC_SEND_RING_BUFFER_SIZE, VSC_RECV_RING_BUFFER_SIZE, { &HyperVVideoDriver::Callback, this })
@@ -65,7 +64,6 @@ Result HyperVVideoDriver::Initialize()
 	m_pitchBytes = fb.Pitch * sizeof(uint32_t); //Pitch is in pixels
 	m_framebufferGpa = fb.Base;
 	m_barSize = fb.Size; //size of the framebuffer BAR; a mode can't need more VRAM than this
-	m_framebuffer = reinterpret_cast<void*>(KernelPhysicalStart + m_framebufferGpa);
 
 	//3) Point the host at the VRAM (a guest-physical address inside the MMIO framebuffer region).
 	VramLocationMsg vram = {};
@@ -88,7 +86,7 @@ Result HyperVVideoDriver::Initialize()
 	if (SetMode(1920, 1080, 32) != Result::Success)
 		SendSituationUpdate(m_width, m_height, m_pitchBytes);
 
-	Printf("HyperVVideo: %dx%d, VRAM at 0x%016x (gpa 0x%016x)\n", m_width, m_height, m_framebuffer, m_framebufferGpa);
+	Printf("HyperVVideo: %dx%d, VRAM at 0x%016x (gpa 0x%016x)\n", m_width, m_height, KernelPhysicalStart + m_framebufferGpa, m_framebufferGpa);
 
 	//Only a negotiated display is discoverable; on failure MapFramebuffer falls back to the boot GOP
 	m_device.Class = KDeviceClass::Display;

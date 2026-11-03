@@ -14,8 +14,13 @@ extern "C"
 
 	void* calloc(size_t _Count, size_t _Size)
 	{
+		//A wrapped-around size would hand back a block smaller than asked for
+		if (_Size != 0 && _Count > (size_t)-1 / _Size)
+			return nullptr;
+
 		void* ptr = CrtHeap.Allocate(_Count * _Size);
-		memset(ptr, 0, _Count * _Size);
+		if (ptr)
+			memset(ptr, 0, _Count * _Size);
 		return ptr;
 	}
 

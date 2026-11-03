@@ -1,7 +1,7 @@
 del "..\build\*.obj"
 mkdir ..\build_tests
 
-set CompileIncludes=-I..\src\
+set CompileIncludes=-I..\src\ -I..\external\
 
 set CompileFlags=/std:c++20 /GS- /Gy /Gw /GR- /Z7 %CompileIncludes%
 set LinkFlags=/OPT:REF

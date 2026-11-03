@@ -3,7 +3,8 @@
 #include "core_crt/stdint.h"
 #include "Lib/StaticVector.h"
 #include "Lib/List.h"
-#include "kernel/Arch.h"
+#include "Lib/Arena.h"
+#include "Lib/Math.h"
 #include "kernel/Pdb/MsfStream.h"
 #include "Assert.h"
 
@@ -37,7 +38,6 @@ public:
 		m_header = static_cast<const Header*>(m_image);
 		
 		AssertEqual(memcmp((void*)m_image, &Magic, sizeof(Magic)), 0);
-		AssertEqual(m_header->BlockSize, Arch::PageSize);
 
 		//Create directory
 		void* allocated = arena.Allocate(sizeof(MsfStream));
@@ -46,7 +46,7 @@ public:
 		directory->Size = m_header->NumDirectoryBytes;
 
 		//Load directory mapping, a list of block numbers for the directory stream
-		const size_t numDirBlocks = x64::SizeToPages(m_header->NumDirectoryBytes);
+		const size_t numDirBlocks = DivRoundUp(m_header->NumDirectoryBytes, m_header->BlockSize);
 		const uint32_t* dirBlockNum = (uint32_t*)GetBlock(m_header->BlockMapAddr);
 		for (size_t i = 0; i < numDirBlocks; i++)
 		{
@@ -73,7 +73,7 @@ public:
 			else
 			{
 				stream->Size = streamSize;
-				stream->BlockCount = x64::SizeToPages(streamSize);
+				stream->BlockCount = DivRoundUp(streamSize, m_header->BlockSize);
 			}
 		}
 
@@ -105,7 +105,7 @@ public:
 
 	void* GetBlock(const uint32_t blockNumber) const
 	{
-		return (void*)(((uintptr_t)m_header) + ((uintptr_t)blockNumber << Arch::PageShift));
+		return (void*)(((uintptr_t)m_header) + (uintptr_t)blockNumber * m_header->BlockSize);
 	}
 
 	uint32_t BlockSize() const

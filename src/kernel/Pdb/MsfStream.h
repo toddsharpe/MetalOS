@@ -41,12 +41,14 @@ public:
 		return value;
 	}
 
+	//Names longer than the destination are clipped, but the whole string is still consumed
 	bool ReadString(StringStorage& value)
 	{
 		char* blockPointer = (char*)GetPointer();
 		while ((*blockPointer) != '\0')
 		{
-			value.Append(*blockPointer);
+			if (value.Count() < value.Capacity - 1)
+				value.Append(*blockPointer);
 
 			m_position++;
 			blockPointer = (char*)GetPointer();

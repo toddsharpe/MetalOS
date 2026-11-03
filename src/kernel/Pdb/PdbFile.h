@@ -3,7 +3,6 @@
 #include "kernel/Types.h"
 #include "kernel/Pdb/MsfFile.h"
 #include "kernel/Pdb/PdbDbi.h"
-#include "kernel/Arch.h"
 #include "kernel/Pdb/MsfStream.h"
 
 // https://github.com/willglynn/pdb

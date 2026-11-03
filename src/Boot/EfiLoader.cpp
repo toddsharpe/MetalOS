@@ -90,8 +90,8 @@ namespace EfiLoader
 		imageSizeOut = pNtHeader->OptionalHeader.SizeOfImage;
 		entryPointOut = pNtHeader->OptionalHeader.ImageBase + pNtHeader->OptionalHeader.AddressOfEntryPoint;
 
-		Print(L"  ImageBase: 0x%016x ImageSize: 0x%08x\r\n", KernelBase, imageSizeOut);
-		Print(L"  Entry: 0x%016x Physical: 0x%016x\r\n", entryPointOut, physicalImageBaseOut);
+		Print("  ImageBase: 0x%016x ImageSize: 0x%08x\r\n", KernelBase, imageSizeOut);
+		Print("  Entry: 0x%016x Physical: 0x%016x\r\n", entryPointOut, physicalImageBaseOut);
 
 		return EFI_SUCCESS;
 	}

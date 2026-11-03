@@ -7,42 +7,40 @@ extern EFI_BOOT_SERVICES* BS;
 
 static constexpr size_t MaxBuffer = 256;
 
-EFI_STATUS UartPrintf(const CHAR16* format, ...)
+EFI_STATUS UartPrintf(const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	CHAR16 wideBuffer[MaxBuffer] = { };
-	vswprintf(wideBuffer, MaxBuffer, format, args);
+	char buffer[MaxBuffer] = { };
+	vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
 
-	char convert[MaxBuffer / 2] = { };
-	wcstombs(convert, wideBuffer, sizeof(convert));
-
 	DirectUart uart(DirectUart::ComPort::Com1);
-	uart.Write(convert);
+	uart.Write(buffer);
 	return EFI_SUCCESS;
 }
 
-EFI_STATUS Print(const CHAR16* format, ...)
+EFI_STATUS Print(const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
 
 	EFI_STATUS status;
-	CHAR16 buffer[MaxBuffer] = { 0 };
-	vswprintf(buffer, MaxBuffer, format, args);
+	char buffer[MaxBuffer] = { 0 };
+	vsnprintf(buffer, sizeof(buffer), format, args);
 	va_end(args);
 
-	//Write to UEFI
-	if (EFI_ERROR((status = ST->ConOut->OutputString(ST->ConOut, buffer))))
-		return status;
+	//mbstowcs doesn't null-terminate, so keep the zeroed last element
+	CHAR16 wide[MaxBuffer] = { 0 };
+	mbstowcs(wide, buffer, MaxBuffer - 1);
 
-	char convert_buffer[MaxBuffer / 2] = { 0 };
-	wcstombs(convert_buffer, buffer, sizeof(convert_buffer));
+	//Write to UEFI
+	if (EFI_ERROR((status = ST->ConOut->OutputString(ST->ConOut, wide))))
+		return status;
 
 	//Write to UART
 	DirectUart uart(DirectUart::ComPort::Com1);
-	uart.Write(convert_buffer);
+	uart.Write(buffer);
 
 	return EFI_SUCCESS;
 }

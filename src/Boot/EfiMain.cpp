@@ -55,15 +55,12 @@ using BootloaderPageTables = PageTabes<PtOps>;
 
 static EFI_STATUS PrintCpuDetails()
 {
-	CHAR16 wideVendor[13] = { };
 	const char* vendor = CpuId::GetVendor();
-	mbstowcs(wideVendor, vendor, sizeof(wideVendor) / sizeof(CHAR16));
-
-	ReturnIfNotSuccess(Print(L"CPU Vendor: %s,", wideVendor));
+	ReturnIfNotSuccess(Print("CPU Vendor: %s,", vendor));
 
 	const UINT64 cr0 = __readcr0();
 	const int paging = (cr0 & ((UINT32)1 << 31)) != 0;
-	ReturnIfNotSuccess(Print(L" Paging: %d\r\n", (UINT32)paging));
+	ReturnIfNotSuccess(Print(" Paging: %d\r\n", (UINT32)paging));
 
 	return EFI_SUCCESS;
 }
@@ -122,17 +119,17 @@ static EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL
 
 static EFI_STATUS DisplayLoaderParams(const LoaderParams& params)
 {
-	ReturnIfNotSuccess(Print(L"LoaderParams: 0x%016x, Pages: 0x%x\r\n", &params, x64::SizeToPages(sizeof(LoaderParams))));
-	ReturnIfNotSuccess(Print(L"  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", params.KernelAddress, x64::SizeToPages(params.KernelImageSize)));
-	ReturnIfNotSuccess(Print(L"  FreeRanges: 0x%016x, RuntimeRanges: 0x%016x\r\n", params.FreeRanges, params.RuntimeRanges));
-	ReturnIfNotSuccess(Print(L"  PFN Database-Address: 0x%016x, Count: 0x%x\r\n", params.PageFrameAddr, params.PageFrameCount));
-	ReturnIfNotSuccess(Print(L"  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", params.ConfigTables, params.ConfigTablesCount));
-	ReturnIfNotSuccess(Print(L"  RamDrive-Address: 0x%016x, Size: 0x%x\r\n", params.RamDriveAddress, RamDriveSize));
-	ReturnIfNotSuccess(Print(L"  PDB-Address: 0x%016x, Size: 0x%x\r\n", params.PdbAddress, params.PdbSize));
+	ReturnIfNotSuccess(Print("LoaderParams: 0x%016x, Pages: 0x%x\r\n", &params, x64::SizeToPages(sizeof(LoaderParams))));
+	ReturnIfNotSuccess(Print("  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", params.KernelAddress, x64::SizeToPages(params.KernelImageSize)));
+	ReturnIfNotSuccess(Print("  FreeRanges: 0x%016x, RuntimeRanges: 0x%016x\r\n", params.FreeRanges, params.RuntimeRanges));
+	ReturnIfNotSuccess(Print("  PFN Database-Address: 0x%016x, Count: 0x%x\r\n", params.PageFrameAddr, params.PageFrameCount));
+	ReturnIfNotSuccess(Print("  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", params.ConfigTables, params.ConfigTablesCount));
+	ReturnIfNotSuccess(Print("  RamDrive-Address: 0x%016x, Size: 0x%x\r\n", params.RamDriveAddress, RamDriveSize));
+	ReturnIfNotSuccess(Print("  PDB-Address: 0x%016x, Size: 0x%x\r\n", params.PdbAddress, params.PdbSize));
 
-	ReturnIfNotSuccess(Print(L"Graphics:\r\n"));
-	ReturnIfNotSuccess(Print(L"  FrameBuffer-Base 0x%016x, Size: 0x%08x\r\n", params.Display.FrameBufferBase, params.Display.FrameBufferSize));
-	ReturnIfNotSuccess(Print(L"  Resulution 0x%04x (0x%04x) x 0x%04x\r\n", params.Display.HorizontalResolution, params.Display.PixelsPerScanLine, params.Display.VerticalResolution));
+	ReturnIfNotSuccess(Print("Graphics:\r\n"));
+	ReturnIfNotSuccess(Print("  FrameBuffer-Base 0x%016x, Size: 0x%08x\r\n", params.Display.FrameBufferBase, params.Display.FrameBufferSize));
+	ReturnIfNotSuccess(Print("  Resulution 0x%04x (0x%04x) x 0x%04x\r\n", params.Display.HorizontalResolution, params.Display.PixelsPerScanLine, params.Display.VerticalResolution));
 	
 	return EFI_SUCCESS;
 }
@@ -160,16 +157,16 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	const CHAR16* BootFilePath = ((FILEPATH_DEVICE_PATH*)LoadedImage->FilePath)->PathName;
 
 	//Display some splash info
-	ReturnIfNotSuccess(Print(L"MetalOS.BootLoader\r\n"));
-	ReturnIfNotSuccess(Print(L"  Firmware Vendor: %s, Revision: %d\r\n", ST->FirmwareVendor, ST->FirmwareRevision));
-	ReturnIfNotSuccess(Print(L"  Bootloader: %s\r\n", BootFilePath));
-	ReturnIfNotSuccess(Print(L"  ImageHandle: 0x%016x\r\n", ImageHandle));
+	ReturnIfNotSuccess(Print("MetalOS.BootLoader\r\n"));
+	ReturnIfNotSuccess(Print("  Firmware Vendor: %ls, Revision: %d\r\n", ST->FirmwareVendor, ST->FirmwareRevision));
+	ReturnIfNotSuccess(Print("  Bootloader: %ls\r\n", BootFilePath));
+	ReturnIfNotSuccess(Print("  ImageHandle: 0x%016x\r\n", ImageHandle));
 	ReturnIfNotSuccess(PrintCpuDetails());
 
 	//Display time
 	EFI_TIME time = {};
 	ReturnIfNotSuccess(RT->GetTime(&time, nullptr));
-	Print(L"Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
+	Print("Date: %02d-%02d-%02d %02d:%02d:%02d\r\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
 	//Read the memory map. Needed up front to size the PFN DB.
 	EFI_MEMORY_MAP map = {};
@@ -179,7 +176,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Allocate space for Page Frame DB
 	const UINTN address = EfiMemory::GetPhysicalAddressSize(map);
-	Print(L"Physical Address Max: 0x%016x\r\n", address);
+	Print("Physical Address Max: 0x%016x\r\n", address);
 
 	const size_t pageCount = address >> x64::PageShift;
 	params.PageFrameCount = pageCount;
@@ -197,16 +194,13 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Populate
 	PopulateDrive(drive, fileSystem, CurrentDriveRoot);
-	UartPrintf(L"RamDrive:\n");
+	UartPrintf("RamDrive:\n");
 	for (const RamDrive::Entry& entry : drive)
 	{
 		if (*entry.Name == '\0')
 			break;
 
-		CHAR16 buffer[RamDrive::EntrySize] = {};
-		mbstowcs(buffer, entry.Name, RamDrive::EntrySize);
-
-		UartPrintf(L"  File: %s PageNumber: 0x%x Length: 0x%x\n", buffer, entry.PageNumber, entry.Length);
+		UartPrintf("  File: %s PageNumber: 0x%x Length: 0x%x\n", entry.Name, entry.PageNumber, entry.Length);
 	}
 
 	//Build path to kernel
@@ -215,7 +209,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	wcscpy(KernelPath + wcslen(KernelPath), Kernel);
 
 	EFI_FILE* KernelFile = nullptr;
-	Print(L"Loading: %s\r\n", KernelPath);
+	Print("Loading: %ls\r\n", KernelPath);
 	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelFile, KernelPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
 
 	//Map kernel into memory. It will be relocated at KernelBase
@@ -224,7 +218,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	LoaderParams* kParams = (LoaderParams*)EfiLoader::GetProcAddress((void*)params.KernelAddress, "BootParams");
 	Assert(kParams);
-	Print(L"  Params: 0x%016x\r\n", kParams);
+	Print("  Params: 0x%016x\r\n", kParams);
 
 	//Build path to kernelpdb
 	CHAR16 KernelPdbPath[MaxKernelPath] = {};
@@ -233,12 +227,12 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Load pdb file
 	EFI_FILE* KernelPdbFile = nullptr;
-	Print(L"Loading: %s\r\n", KernelPdbPath);
+	Print("Loading: %ls\r\n", KernelPdbPath);
 	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelPdbFile, KernelPdbPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
 
 	//Map PDB into memory
 	ReturnIfNotSuccess(EfiLoader::MapFile(KernelPdbFile, EfiLoaderData, params.PdbAddress, params.PdbSize));
-	Print(L"  Address: 0x%016x Size:0x%x\r\n", params.PdbAddress, params.PdbSize);
+	Print("  Address: 0x%016x Size:0x%x\r\n", params.PdbAddress, params.PdbSize);
 
 	//Initialize graphics
 	ReturnIfNotSuccess(EfiDevice::InitializeGraphics(params.Display));

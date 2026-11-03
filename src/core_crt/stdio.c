@@ -1,5 +1,6 @@
 #include "core_crt/stdio.h"
 #include "core_crt/stdarg.h"
+#include "core_crt/wchar.h"
 
 // Internal protypes
 int kvprintf(char const *fmt, void (*func)(int, void *), void *arg, int radix, va_list ap);
@@ -147,6 +148,7 @@ int kvprintf(char const *fmt, void (*func)(int, void *), void *arg, int radix, v
 	char nbuf[MAXNBUF];
 	char *d;
 	const char *p, *percent, *q;
+	const wchar_t *wp;
 	unsigned char *up;
 	int ch, n;
 	uintmax_t num;
@@ -346,22 +348,45 @@ int kvprintf(char const *fmt, void (*func)(int, void *), void *arg, int radix, v
 				goto handle_sign;
 			goto handle_nosign;
 		case 's':
-			p = va_arg(ap, char *);
-			if (p == NULL)
-				p = "(null)";
-			if (!dot)
-				n = (int)strlen(p);
+			if (lflag)
+			{
+				wp = va_arg(ap, wchar_t *);
+				if (wp == NULL)
+					wp = L"(null)";
+				if (!dot)
+					n = (int)wcslen(wp);
+				else
+					for (n = 0; n < dwidth && wp[n]; n++)
+						continue;
+			}
 			else
-				for (n = 0; n < dwidth && p[n]; n++)
-					continue;
+			{
+				p = va_arg(ap, char *);
+				if (p == NULL)
+					p = "(null)";
+				if (!dot)
+					n = (int)strlen(p);
+				else
+					for (n = 0; n < dwidth && p[n]; n++)
+						continue;
+			}
 
 			width -= n;
 
 			if (!ladjust && width > 0)
 				while (width--)
 					PCHAR(padc);
-			while (n--)
-				PCHAR(*p++);
+			if (lflag)
+			{
+				// %ls narrows each wide char: ASCII passes through, anything else becomes '?'
+				for (; n--; wp++)
+					PCHAR(*wp < 0x80 ? *wp : '?');
+			}
+			else
+			{
+				while (n--)
+					PCHAR(*p++);
+			}
 			if (ladjust && width > 0)
 				while (width--)
 					PCHAR(padc);

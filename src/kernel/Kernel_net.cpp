@@ -1,16 +1,13 @@
 #include "kernel/Api.h"
 #include "kernel/KProcess.h"
-#include "kernel/UObject.h"
 #include "kernel/DeviceTree.h"
 #include "kernel/Drivers/Driver.h"
-#include "kernel/Objects/KSharedMemory.h"
 #include "kernel/Objects/KSpinLock.h"
 #include "Lib/SharedRing.h"
 #include "user/Protocol_net.h"
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
-extern KProcess m_process;
 extern DeviceTree m_deviceTree;
 
 namespace _NETDEV
@@ -29,18 +26,9 @@ void KeInitNetDevice()
 {
 	using namespace NetDevice;
 
+	//The RX ring of raw frames, for netstack to claim
 	const size_t size = SharedRing<Frame>::RegionSize(RxCapacity);
-	KSharedMemory* shm = KeShmCreate(size);
-	Assert(shm);
-
-	//The kernel holds this ring for the life of the system.
-	shm->Refs.Increment();
-	_NETDEV::m_rxRegion = KeShmMap(m_process, *shm);
-	Assert(_NETDEV::m_rxRegion);
-	SharedRing<Frame>::Init(_NETDEV::m_rxRegion, RxCapacity);
-
-	//Publish the RX ring (as a capability grant) for netstack to claim.
-	Assert(KeEndpointRegister(RxEndpoint, KeGrantShare(UObjectType::SharedMemory, shm, KernelGrantOwner), KernelEndpointOwner));
+	_NETDEV::m_rxRegion = KePublishRegion(RxEndpoint, size, [](void* const region) { SharedRing<Frame>::Init(region, RxCapacity); });
 }
 
 void KeNetRxFrame(NicDriver* const nic, const void* const frame, const size_t length)

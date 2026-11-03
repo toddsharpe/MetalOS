@@ -113,6 +113,8 @@ KFramebufferInfo KeGetFramebuffer();
 KSharedMemory* KeShmCreate(const size_t size);
 void* KeShmMap(KProcess& process, KSharedMemory& shm);
 void KeShmUnref(KSharedMemory& shm);
+//A kernel-held region (e.g. a ring), initialized and then published as a grant under an endpoint for a server to claim
+void* KePublishRegion(const char* const endpoint, const size_t size, void (*const initialize)(void* region));
 
 /*
  * Handle grants (capability passing). Generic over handle types; the grant carries the

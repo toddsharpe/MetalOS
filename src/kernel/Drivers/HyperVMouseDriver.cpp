@@ -148,7 +148,6 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 		const bool rightClick = report->buffer[0] & 2;
 		const uint16_t x = *(uint16_t*)&report->buffer[1];
 		const uint16_t y = *(uint16_t*)&report->buffer[3];
-		const uint16_t wheel = *(uint16_t*)&report->buffer[5];
 		Message message = {};
 		message.Header.MessageType = MessageType::MouseEvent;
 		message.MouseEvent.Buttons.LeftPressed = leftClick;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <cstring>
 
 //Linear map, not an actual HashMap
 template <typename TKey, typename TValue, size_t N>

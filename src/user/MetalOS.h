@@ -87,8 +87,6 @@ extern "C"
 	uint32_t GetThreadId(HThread thread);
 	void Sleep(const milli_t time);
 	void SwitchToThread();
-	SyscallResult SuspendThread(const HThread file);
-	SyscallResult ResumeThread(const HThread file);
 	SyscallResult TerminateProcess(const HProcess proc, const uint32_t exitCode);
 	void ExitProcess(const uint32_t exitCode);
 	SyscallResult TerminateThread(const HThread thread, const uint32_t exitCode);

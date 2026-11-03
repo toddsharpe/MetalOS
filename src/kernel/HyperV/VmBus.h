@@ -190,7 +190,6 @@ namespace HyperV
 
 	union VmBusResponse
 	{
-		// vmbus_channel_version_supported version_supported;
 		vmbus_channel_open_result open_result;
 		vmbus_channel_gpadl_created gpadl_created;
 	};

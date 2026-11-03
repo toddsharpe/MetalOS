@@ -16,6 +16,7 @@ void WinPE_test()
 	const IMAGE_NT_HEADERS64* const nt = MakePointer<const IMAGE_NT_HEADERS64*>(image, __ImageBase.e_lfanew);
 
 	//Header fields
+	Assert(WinPE::GetNtHeaders(image) == nt);
 	AssertEqual(WinPE::GetEntryPoint(image), nt->OptionalHeader.AddressOfEntryPoint);
 	AssertEqual(WinPE::GetSizeOfImage(image), nt->OptionalHeader.SizeOfImage);
 	Assert(WinPE::IsConsole(image));

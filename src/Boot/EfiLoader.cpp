@@ -7,8 +7,6 @@
 
 namespace EfiLoader
 {
-	typedef void (*CrtInitializer)();
-
 	//Allocate file info and leave room for path
 	alignas(EFI_FILE_INFO) static uint8_t infoBuffer[sizeof(EFI_FILE_INFO) + 256] = {};
 
@@ -99,77 +97,6 @@ namespace EfiLoader
 	//This function doesn't do any error checking, should it?
 	EFI_STATUS CrtInitialization(const void* const imageBase)
 	{
-		//Find CRT section
-		const IMAGE_SECTION_HEADER* crtSection = WinPE::GetPESection(imageBase, ".CRT");
-		if (crtSection == nullptr)
-			return EFI_NOT_FOUND;
-
-		//https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-initialization?view=vs-2019
-		//https://docs.microsoft.com/en-us/cpp/error-messages/tool-errors/linker-tools-warning-lnk4210?view=vs-2019
-		//.CRT seems to be a list of function pointers (see asm). Loop through each one and invoke them
-		CrtInitializer* initializer = (CrtInitializer*)((uintptr_t)imageBase + crtSection->VirtualAddress);
-		while (*initializer)
-		{
-			(*initializer)();
-			initializer++;
-		}
-
-		return EFI_SUCCESS;
-	}
-
-	void* GetProcAddress(void* const imageBase, const CString& procName)
-	{
-		//Headers
-		PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(imageBase);
-		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
-
-		PIMAGE_NT_HEADERS64 ntHeader = MakePointer<PIMAGE_NT_HEADERS64>(imageBase, dosHeader->e_lfanew);
-		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
-
-		Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
-
-		PIMAGE_DATA_DIRECTORY directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
-		if ((directory->Size == 0) || (directory->VirtualAddress == 0))
-			return NULL;
-
-		PIMAGE_EXPORT_DIRECTORY exportDirectory = MakePointer<PIMAGE_EXPORT_DIRECTORY>(imageBase, directory->VirtualAddress);
-
-		PDWORD pNames = MakePointer<PDWORD>(imageBase, exportDirectory->AddressOfNames);
-		PWORD pOrdinals = MakePointer<PWORD>(imageBase, exportDirectory->AddressOfNameOrdinals);
-		PDWORD pFunctions = MakePointer<PDWORD>(imageBase, exportDirectory->AddressOfFunctions);
-
-		uintptr_t search = 0;
-		for (DWORD i = 0; i < exportDirectory->NumberOfNames; i++)
-		{
-			char * const name = MakePointer<char*>(imageBase, pNames[i]);
-			if (procName == CString(name))
-			{
-				WORD ordinal = pOrdinals[i];
-				search = MakePointer<uintptr_t>(imageBase, pFunctions[ordinal]);
-			}
-		}
-
-		//Check if forwarded
-		uintptr_t base = (uintptr_t)imageBase + directory->VirtualAddress;
-		if ((search >= base) && (search < (base + directory->Size)))
-		{
-			return NULL;
-		}
-
-		//If function is forwarded, (PCHAR)search is its name
-		//DWORD base = (DWORD)hModule + directory->VirtualAddress;
-		//if ((search >= base) && (search < (base + directory->Size)))
-		//{
-		//    char* name = (char*)search;
-		//    char* copy = (char*)malloc((strlen(name) + 1) * sizeof(char));
-		//    strcpy(copy, name);
-		//    char* library = strtok(copy, ".");
-		//    char* function = strtok(NULL, ".");
-
-		//    HMODULE hLibrary = LoadLibrary(library);//Get the address
-		//    return GetExportAddress(hLibrary, function);
-		//}
-
-		return (void*)search;
+		return WinPE::RunCrtInitializers(imageBase) ? EFI_SUCCESS : EFI_NOT_FOUND;
 	}
 }

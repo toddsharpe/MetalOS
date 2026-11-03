@@ -216,7 +216,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	UINT64 entryPoint;
 	ReturnIfNotSuccess(EfiLoader::MapKernel(KernelFile, params.KernelImageSize, entryPoint, params.KernelAddress));
 
-	LoaderParams* kParams = (LoaderParams*)EfiLoader::GetProcAddress((void*)params.KernelAddress, "BootParams");
+	LoaderParams* kParams = (LoaderParams*)WinPE::GetProcAddress((const void*)params.KernelAddress, "BootParams");
 	Assert(kParams);
 	Print("  Params: 0x%016x\r\n", kParams);
 

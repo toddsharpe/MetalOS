@@ -6,6 +6,6 @@
 
 namespace Loader
 {
-	typedef void (*CrtInitializer)();
-	void CrtInit(const void* const imageBase);
+	//Loads each imported module and patches the IAT, except for imports from skipModule (may be null)
+	void ResolveImports(void* const imageBase, const char* const skipModule);
 }

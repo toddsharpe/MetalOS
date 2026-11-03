@@ -54,8 +54,7 @@ namespace Net::Icmp
 			.checksum = deser.ReadU16(),
 		};
 
-		//Deliver the complete ICMP message (header + payload) to any raw ICMP socket
-		//(e.g. ping) before the kernel strips headers for its own handling.
+		//Deliver the complete ICMP message (header + payload) to any raw ICMP socket (e.g. ping) before stripping the header below.
 		packet.proto = proto_t::Icmp;
 		Socket::Receive(net_if, packet);
 

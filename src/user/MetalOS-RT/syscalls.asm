@@ -24,8 +24,6 @@ x64Syscall <CreateThread>, 202h
 x64Syscall <GetThreadId>, 203h
 x64Syscall <Sleep>, 204h
 x64Syscall <SwitchToThread>, 205h
-x64Syscall <SuspendThread>, 206h
-x64Syscall <ResumeThread>, 207h
 x64Syscall <TerminateProcess>, 208h
 x64Syscall <ExitProcess>, 209h
 x64Syscall <TerminateThread>, 20Ah

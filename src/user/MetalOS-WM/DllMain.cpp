@@ -16,9 +16,6 @@ namespace
 	{
 		uint32_t Id;
 		void* Surface;
-		HSharedMem SurfaceHandle; //our handle to the surface shm; DeleteSharedMemory on teardown
-		size_t SurfaceSize;
-		Rectangle Rect;
 	};
 
 	void* g_channel = nullptr;
@@ -62,9 +59,6 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 	{
 		.Id = id,
 		.Surface = surfaceAddr,
-		.SurfaceHandle = hSurface,
-		.SurfaceSize = surfaceSize,
-		.Rect = *frame,
 	};
 	g_windows.Add(window); //capacity checked above, so this succeeds
 
@@ -92,41 +86,6 @@ extern "C" void* GetWindowSurface(HWindow handle)
 {
 	ClientWindow* const window = Find(ToId(handle));
 	return window ? window->Surface : nullptr;
-}
-
-extern "C" SyscallResult MoveWindow(HWindow handle, const Graphics::Rectangle* frame)
-{
-	if (!frame)
-		return SyscallResult::InvalidPointer;
-
-	ClientWindow* const window = Find(ToId(handle));
-	if (!window)
-		return SyscallResult::InvalidHandle;
-
-	window->Rect.X = frame->X;
-	window->Rect.Y = frame->Y;
-
-	const Wm::Request request =
-	{
-		.Code = Wm::Op::MoveWindow,
-		.WindowId = window->Id,
-		.Rect = *frame,
-	};
-	Wm::Channel::Requests(g_channel).Enqueue(request);
-	return SyscallResult::Success;
-}
-
-extern "C" SyscallResult GetWindowRect(HWindow handle, Graphics::Rectangle* frame)
-{
-	if (!frame)
-		return SyscallResult::InvalidPointer;
-
-	ClientWindow* const window = Find(ToId(handle));
-	if (!window)
-		return SyscallResult::InvalidHandle;
-
-	*frame = window->Rect;
-	return SyscallResult::Success;
 }
 
 extern "C" SyscallResult GetMessage(Message* message)

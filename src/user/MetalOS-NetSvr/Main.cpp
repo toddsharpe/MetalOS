@@ -209,17 +209,9 @@ namespace
 			reply.Result = SyscallResult::Success;
 			return;
 
-		case NetIpc::Op::Connect:
-			SocketConnect(*s, ToEndpoint(req.Addr));
-			reply.Result = SyscallResult::Success;
-			return;
-
 		case NetIpc::Op::SendTo:
-		case NetIpc::Op::Send:
 		{
-			//Send goes to the connected peer
-			if (req.Code == NetIpc::Op::Send && !s->Connected) { reply.Result = SyscallResult::InvalidHandle; return; }
-			const Net::endpoint_t dst = (req.Code == NetIpc::Op::Send) ? s->Peer : ToEndpoint(req.Addr);
+			const Net::endpoint_t dst = ToEndpoint(req.Addr);
 			const size_t len = req.Length < NetIpc::MaxPayload ? req.Length : NetIpc::MaxPayload;
 			reply.Result = SocketSend(*s, dst, req.Data, len) ? SyscallResult::Success : SyscallResult::Failed;
 			return;

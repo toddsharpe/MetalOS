@@ -5,7 +5,6 @@
 /******************************/
 
 #include "Lib/String.h"
-#include "Lib/List.h"
 
 #include "user/MetalOS.Keys.h"
 #include "user/MetalOS.Types.h"
@@ -59,8 +58,6 @@ extern "C"
 	 * MetalOS Window Manager.
 	 */
 	SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame, const char* title, bool showTitle = true);
-	SyscallResult MoveWindow(HWindow handle, const Graphics::Rectangle* frame);
-	SyscallResult GetWindowRect(HWindow handle, Graphics::Rectangle* frame);
 	SyscallResult GetMessage(Message* message);
 	SyscallResult PeekMessage(Message* message);
 	SyscallResult GetScreenRect(Graphics::Rectangle* rect);
@@ -71,11 +68,8 @@ extern "C"
 	 */
 	HSocket SocketCreate(int af, int type, int protocol);
 	SyscallResult SocketBind(HSocket sock, const sockaddr_in* addr);
-	SyscallResult SocketConnect(HSocket sock, const sockaddr_in* peer);
 	SyscallResult SocketSendTo(HSocket sock, const void* buf, size_t len, const sockaddr_in* to);
-	SyscallResult SocketSend(HSocket sock, const void* buf, size_t len);
 	SyscallResult SocketRecvFrom(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs);
-	SyscallResult SocketRecv(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, milli_t timeoutMs);
 	SyscallResult SocketClose(HSocket sock);
 	SyscallResult GetInterfaceIp(uint32_t index, in_addr* addr, in_addr* subnet);
 	SyscallResult SetInterfaceIp(uint32_t index, const in_addr* addr, const in_addr* subnet);

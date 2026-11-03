@@ -4,10 +4,7 @@
 #include "Net/NetIf.h"
 #include "user/MetalOS.h"
 
-//The netstack's "NIC driver": a thin shim over the kernel net device. Transmit goes
-//through the NetSend syscall (the kernel copies the frame to the real NIC); receive is
-//driven by the main loop draining the kernel->netstack RX ring, so the pull-style
-//Receive() here is a no-op. The MAC comes from the kernel (published under "net.mac").
+//The netstack's NIC shim: TX via the NetSend syscall, RX drained from the kernel ring by the main loop (so Receive() is a no-op), MAC from GetInterfaces.
 class HostDriver : public Net::NetDriver
 {
 public:

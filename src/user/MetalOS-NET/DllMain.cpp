@@ -68,22 +68,6 @@ extern "C" SyscallResult SocketBind(HSocket sock, const sockaddr_in* addr)
 	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
 }
 
-extern "C" SyscallResult SocketConnect(HSocket sock, const sockaddr_in* peer)
-{
-	if (!peer)
-		return SyscallResult::InvalidPointer;
-
-	const NetIpc::Request req =
-	{
-		.Code = NetIpc::Op::Connect,
-		.Socket = ToId(sock),
-		.Addr = *peer,
-	};
-
-	NetIpc::Reply reply = {};
-	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
-}
-
 extern "C" SyscallResult SocketSendTo(HSocket sock, const void* buf, size_t len, const sockaddr_in* to)
 {
 	if (!buf || !to)
@@ -102,26 +86,8 @@ extern "C" SyscallResult SocketSendTo(HSocket sock, const void* buf, size_t len,
 	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
 }
 
-extern "C" SyscallResult SocketSend(HSocket sock, const void* buf, size_t len)
-{
-	if (!buf)
-		return SyscallResult::InvalidPointer;
-	if (!len || len > NetIpc::MaxPayload)
-		return SyscallResult::InvalidArg;
-
-	NetIpc::Request req = {};
-	req.Code = NetIpc::Op::Send;
-	req.Socket = ToId(sock);
-	req.Length = (uint32_t)len;
-	memcpy(req.Data, buf, len);
-
-	NetIpc::Reply reply = {};
-	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
-}
-
-//Blocking recv: netstack replies immediately (data or empty); we poll until data or
-//the timeout elapses (timeoutMs == 0 polls once).
-static SyscallResult RecvImpl(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs)
+//Blocking recv: netstack replies immediately (data or empty), so poll until data or the timeout elapses (timeoutMs == 0 polls once).
+extern "C" SyscallResult SocketRecvFrom(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs)
 {
 	if (!buf)
 		return SyscallResult::InvalidPointer;
@@ -155,16 +121,6 @@ static SyscallResult RecvImpl(HSocket sock, void* buf, size_t maxLen, size_t* by
 			return SyscallResult::Failed;
 		Sleep(5);
 	}
-}
-
-extern "C" SyscallResult SocketRecvFrom(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs)
-{
-	return RecvImpl(sock, buf, maxLen, bytesRecv, from, timeoutMs);
-}
-
-extern "C" SyscallResult SocketRecv(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, milli_t timeoutMs)
-{
-	return RecvImpl(sock, buf, maxLen, bytesRecv, nullptr, timeoutMs);
 }
 
 extern "C" SyscallResult SocketClose(HSocket sock)

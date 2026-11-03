@@ -136,16 +136,6 @@ namespace
 		}
 	}
 
-	WmWindow* FindWindow(Connection* const conn, const uint32_t windowId)
-	{
-		for (WmWindow& window : g_windows)
-		{
-			if (window.Surface && window.Owner == conn && window.WindowId == windowId)
-				return &window;
-		}
-		return nullptr;
-	}
-
 	void HandleRequest(Connection* const conn, const Wm::Request& request)
 	{
 		switch (request.Code)
@@ -186,17 +176,6 @@ namespace
 
 			g_zorder.InsertHead(window); //new window on top
 			g_focus = window;
-			break;
-		}
-
-		case Wm::Op::MoveWindow:
-		{
-			WmWindow* const window = FindWindow(conn, request.WindowId);
-			if (window)
-			{
-				window->Rect.X = request.Rect.X;
-				window->Rect.Y = request.Rect.Y;
-			}
 			break;
 		}
 		}

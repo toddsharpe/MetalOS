@@ -5,8 +5,7 @@
 
 namespace Net::Socket
 {
-	//Receive() is implemented in Kernel_sockets.cpp, where the bound-socket registry
-	//lives; it demuxes inbound packets into per-KSocket queues.
+	//Receive() lives in Sockets.cpp with the bound-socket registry; it demuxes inbound packets into per-KSocket queues.
 
 	namespace
 	{

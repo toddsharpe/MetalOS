@@ -258,8 +258,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-
-int atexit(void(__cdecl* func)(void))
-{
-	return 0;
-}

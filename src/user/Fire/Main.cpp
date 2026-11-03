@@ -33,9 +33,6 @@ bool UICallback(GUI& window, Message& message)
 
 int main(int argc, char** argv)
 {
-	ProcessInfo procInfo;
-	GetProcessInfo(&procInfo);
-	
 	Rectangle frame;
 	GetScreenRect(&frame);
 	frame.Width /= 2;

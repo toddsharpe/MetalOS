@@ -59,26 +59,6 @@ public:
 		}
 	}
 
-	void GetRectangle(Graphics::Rectangle &frame)
-	{
-		// GetWindowRect?
-		frame = Frame.GetBounds();
-	}
-
-	void Move(const Graphics::Rectangle &frame)
-	{
-		// Implement these later
-		Assert(frame.Height == Frame.Height);
-		Assert(frame.Width == Frame.Width);
-
-		MoveWindow(m_handle, &frame);
-	}
-
-	HWindow GetHandle() const
-	{
-		return m_handle;
-	}
-
 	Graphics::FrameBuffer Frame;
 
 private:

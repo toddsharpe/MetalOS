@@ -653,7 +653,7 @@ SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const S
 			break;
 
 		case Seek::End:
-			newPos = uFile->File.Position + position;
+			newPos = uFile->File.Length + position;
 			break;
 
 		default:

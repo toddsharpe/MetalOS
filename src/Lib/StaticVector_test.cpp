@@ -107,4 +107,15 @@ void StaticVector_test()
 		AssertEqual(v.Count(), 3);
 		AssertEqual(v[2], 99);
 	}
+
+	// Pop returns items last-in first-out and frees their slots
+	{
+		StaticVector<int, 2> v;
+		v.Add(1); v.Add(2);
+		Assert(!v.Add(3));
+		AssertEqual(v.Pop(), 2);
+		AssertEqual(v.Pop(), 1);
+		AssertEqual(v.Count(), 0);
+		Assert(v.Add(3));
+	}
 }

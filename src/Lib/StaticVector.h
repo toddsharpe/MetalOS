@@ -59,6 +59,14 @@ public:
 		return m_storage[0];
 	}
 
+	//Removes and returns the last item, so the vector also serves as a stack
+	T Pop()
+	{
+		Assert(m_count > 0);
+		m_count--;
+		return m_storage[m_count];
+	}
+
 	T operator[](const size_t index) const
 	{
 		Assert(index < m_count);

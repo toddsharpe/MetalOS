@@ -14,7 +14,7 @@
 #include "kernel/Drivers/HyperVMouseDriver.h"
 #include "kernel/Drivers/HyperVNic.h"
 #include "kernel/Drivers/HyperVVideoDriver.h"
-#include "Lib/StaticStack.h"
+#include "Lib/StaticVector.h"
 
 class DeviceTree
 {
@@ -65,17 +65,7 @@ public:
 
 	void AttachDrivers()
 	{
-		StaticStack<KDevice*, 32> stack;
-		Assert(stack.Push(m_root));
-
-		while (!stack.IsEmpty())
-		{
-			KDevice* current = stack.Pop();
-			AttachDriver(*current);
-
-			for (auto& child : current->Children)
-				Assert(stack.Push(child));
-		}
+		Walk([this](KDevice& device) { AttachDriver(device); return false; });
 	}
 	
 	void Display() const
@@ -86,45 +76,35 @@ public:
 
 	KDevice* GetDeviceByClass(const KDeviceClass kClass) const
 	{
-		Assert(m_root);
-		
-		StaticStack<KDevice*, 32> stack;
-		Assert(stack.Push(m_root));
-
-		while (!stack.IsEmpty())
-		{
-			KDevice* current = stack.Pop();
-			if (current->Class == kClass)
-				return current;
-
-			for (auto& child : current->Children)
-				Assert(stack.Push(child));
-		}
-
-		return nullptr;
+		return Walk([kClass](const KDevice& device) { return device.Class == kClass; });
 	}
 
 	KDevice* GetDevice(const CString& path) const
 	{
-		Assert(m_root);
-		
-		StaticStack<KDevice*, 32> stack;
-		Assert(stack.Push(m_root));
-
-		while (!stack.IsEmpty())
-		{
-			KDevice* current = stack.Pop();
-			if (current->Path == path)
-				return current;
-
-			for (auto& child : current->Children)
-				Assert(stack.Push(child));
-		}
-
-		return nullptr;
+		return Walk([&path](const KDevice& device) { return device.Path == path; });
 	}
 
 private:
+	//Depth-first from the root, visiting each device before its children (so children a driver enumerates are visited too); stops when visit returns true
+	template <typename Visit>
+	KDevice* Walk(Visit visit) const
+	{
+		Assert(m_root);
+
+		StaticVector<KDevice*, 32> stack;
+		Assert(stack.Add(m_root));
+		while (stack.Count() != 0)
+		{
+			KDevice* const current = stack.Pop();
+			if (visit(*current))
+				return current;
+
+			for (auto& child : current->Children)
+				Assert(stack.Add(child));
+		}
+		return nullptr;
+	}
+
 	struct AcpiContext
 	{
 		AcpiContext() : Nodes() {}

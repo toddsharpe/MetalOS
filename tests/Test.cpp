@@ -8,7 +8,6 @@
 #include "Lib/Arena_test.cpp"
 #include "Lib/Buffer_test.cpp"
 #include "Lib/String_test.cpp"
-#include "Lib/StaticStack_test.cpp"
 #include "Lib/CircularBuffer_test.cpp"
 #include "Lib/Bitset_test.cpp"
 #include "Lib/StaticVector_test.cpp"
@@ -33,7 +32,6 @@ int main()
 	Test(Arena);
 	Test(Buffer);
 	Test(String);
-	Test(StaticStack);
 	Test(CircularBuffer);
 	Test(Bitset);
 	Test(StaticVector);

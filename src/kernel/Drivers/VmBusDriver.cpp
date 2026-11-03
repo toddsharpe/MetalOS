@@ -273,7 +273,6 @@ void VmBusDriver::OnInterrupt()
 			default:
 			{
 				Printf("VmBus: unhandled message Type: %d Header: %d\n", message.Header.MessageType, header->msgtype);
-				//NotImplemented();
 			}
 			break;
 		}

@@ -83,7 +83,7 @@ KdPollBreakIn(
 );
 
 //
-// Debugger Enter, Exit, Enable and Disable
+// Debugger Enter and Exit
 //
 BOOLEAN
 NTAPI

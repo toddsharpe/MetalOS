@@ -83,49 +83,8 @@ namespace EfiLoader
 			}
 		}
 
-		//TODO: Remove relocation logic, it has no meaning as we are allocating in Identity Paging
-		bool relocate = pNtHeader->OptionalHeader.ImageBase != KernelBase;
-		Assert(!relocate);
-		//Update NTHeader to point to new virtual address
-		pNtHeader->OptionalHeader.ImageBase = KernelBase;
-
-		//Relocate image to KernelSpace. It gets allocated at KernelStart + ImageBase
-		IMAGE_DATA_DIRECTORY relocationDirectory = pNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-		if (relocationDirectory.Size)
-		{
-			PIMAGE_BASE_RELOCATION pBaseRelocation = (PIMAGE_BASE_RELOCATION)(physicalImageBaseOut + relocationDirectory.VirtualAddress);
-
-			//Calculate relative shift by subtracing location live ImageBase from ImageBase first read from image
-			UINT64 delta = (UINT64)pNtHeader->OptionalHeader.ImageBase - (UINT64)peHeader.OptionalHeader.ImageBase;
-
-			while (pBaseRelocation->VirtualAddress)
-			{
-				PBYTE locationBase = (PBYTE)(physicalImageBaseOut + pBaseRelocation->VirtualAddress);
-				PWORD locationData = (PWORD)((UINT64)pBaseRelocation + sizeof(IMAGE_BASE_RELOCATION));
-
-				for (DWORD i = 0; i < (pBaseRelocation->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD); i++, locationData++)
-				{
-					int type = (*locationData >> 12);
-					int offset = (*locationData & 0x0FFF);
-
-					switch (type)
-					{
-						case IMAGE_REL_BASED_ABSOLUTE:
-							break;
-
-						case IMAGE_REL_BASED_HIGHLOW:
-							*(DWORD*)(locationBase + offset) += (DWORD)delta;
-							break;
-
-						case IMAGE_REL_BASED_DIR64:
-							*(UINT64*)(locationBase + offset) += delta;
-							break;
-					}
-				}
-
-				pBaseRelocation = (PIMAGE_BASE_RELOCATION)((UINT64)pBaseRelocation + pBaseRelocation->SizeOfBlock);
-			}
-		}
+		//The kernel is linked at KernelBase and mapped there, so it never needs relocating
+		Assert(pNtHeader->OptionalHeader.ImageBase == KernelBase);
 
 		//Populate return variables
 		imageSizeOut = pNtHeader->OptionalHeader.SizeOfImage;

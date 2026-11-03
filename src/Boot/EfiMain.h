@@ -33,7 +33,6 @@
 
 //Bootloader includes
 #include "Boot/EfiDevice.h"
-#include "Boot/EfiDump.h"
 #include "Boot/EfiError.h"
 #include "Boot/EfiMemory.h"
 #include "Boot/EfiPrint.h"

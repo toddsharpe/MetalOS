@@ -9,7 +9,6 @@
 
 //Include sources
 #include "Boot/EfiDevice.cpp"
-#include "Boot/EfiDump.cpp"
 #include "Boot/EfiError.cpp"
 #include "Boot/EfiLoader.cpp"
 #include "Boot/EfiMemory.cpp"

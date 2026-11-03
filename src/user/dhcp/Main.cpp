@@ -1,15 +1,11 @@
 #include "Lib/Deserializer.h"
 #include "Lib/Serializer.h"
 #include "user/MetalOS.h"
+#include "user/NetUtil.h"
 #include <stdio.h>
 #include <string.h>
 
 // Minimal DHCP client (DISCOVER, OFFER, REQUEST, ACK) that applies the lease to interface 0; in_addr fields are already network order, so they skip the byte swap.
-
-static uint16_t Htons(const uint16_t v)
-{
-	return (uint16_t)((v >> 8) | (v << 8));
-}
 
 namespace Dhcp
 {
@@ -201,12 +197,6 @@ static bool AwaitReply(const HSocket sock, const uint8_t expectType, const uint3
 		}
 	}
 	return false;
-}
-
-static void PrintIp(const char *const label, const in_addr a)
-{
-	const uint8_t *const b = (const uint8_t *)&a.s_addr;
-	printf("%s%u.%u.%u.%u\n", label, b[0], b[1], b[2], b[3]);
 }
 
 int main(int argc, char **argv)

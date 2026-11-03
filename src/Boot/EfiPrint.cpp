@@ -23,19 +23,6 @@ EFI_STATUS UartPrintf(const CHAR16* format, ...)
 	return EFI_SUCCESS;
 }
 
-void UartPrintf(const char* format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	char buffer[MaxBuffer] = { 0 };
-	int retval = vsnprintf(buffer, sizeof(buffer), format, args);
-	buffer[retval] = '\0';
-	va_end(args);
-
-	DirectUart uart(DirectUart::ComPort::Com1);
-	uart.Write(buffer);
-}
-
 EFI_STATUS Print(const CHAR16* format, ...)
 {
 	va_list args;

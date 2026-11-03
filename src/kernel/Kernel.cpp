@@ -292,67 +292,12 @@ extern "C"
 						break;
 				}
 
-				//Convert context
-				//TODO(tsharpe): Remove this
-				CONTEXT ctx = {};
-				ctx.Rip = frame.RIP;
-				ctx.Rsp = frame.RSP;
-				ctx.Rbp = frame.RBP;
-
-				//Reset temp arena
-				m_tempArena.Reset();
-
-				//Print stack
-				StaticMap<const KModule*, PdbFile*, 32> map;
-				StackWalk sw(&ctx);
-				while (sw.HasNext())
-				{
-					//Get module
-					const KModule* module = proc.Modules.GetModule(ctx.Rip);
-					if (module)
-					{
-						PdbFile* pdb = nullptr;
-						if (!map.Get(module, pdb))
-						{
-							//Get PDB name
-							const char* fullPath = WinPE::GetPdbName(module->ImageBase);
-							Assert(fullPath);
-							const char* pdbName = GetFileName(fullPath);
-							Assert(pdbName);
-
-							//Load PDB into memory
-							void* const loaded = KeLoadFile(pdbName);
-
-							//Load PdbFile
-							pdb = m_tempArena.Allocate<PdbFile>();
-							pdb->Open(loaded, module->ImageBase, m_tempArena);
-							map.Add(module, pdb);
-						}
-
-						//Calculate RVA
-						const uint32_t rva = (uint32_t)(ctx.Rip - (uintptr_t)module->ImageBase);
-
-						//Lookup in PDB
-						PdbLookup lookup = {};
-						bool success = pdb->Resolve(rva, lookup);
-						if (success)
-						{
-							pipe.Print("    %s (%d)\n", lookup.Function.c_str(), lookup.Line);
-						}
-						else
-						{
-							pipe.Print("    <resolve failed>\n");
-						}
-						pipe.Print("        IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", ctx.Rip, module->ImageBase, rva);
-					}
-					else
-					{
-						//No module info for the IP, print it and exit
-						pipe.Print("    IP: 0x%016x\n", ctx.Rip);
-						break;
-					}
-					sw.Next((uintptr_t)module->ImageBase);
-				}
+				//Print the faulting thread's stack to its stdout
+				Arch::Context context = {};
+				context.Rip = frame.RIP;
+				context.Rsp = frame.RSP;
+				context.Rbp = frame.RBP;
+				PrintStack(&context, proc, &pipe);
 			}
 
 			//Kill process

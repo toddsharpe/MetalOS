@@ -86,16 +86,19 @@ bool KPipe::Write(const void* buffer, const size_t length, size_t& bytesWritten)
 //TODO(tsharpe): This method should be renamed printf, and kernel routine named KePrintf
 void KPipe::Print(const char* format, ...)
 {
-	char buffer[1024];
-
 	va_list args;
 	va_start(args, format);
-	int retval = vsprintf(buffer, format, args);
+	VPrint(format, args);
 	va_end(args);
-	buffer[retval] = '\0';
+}
+
+void KPipe::VPrint(const char* format, va_list args)
+{
+	char buffer[1024];
+	const int length = vsnprintf(buffer, sizeof(buffer), format, args); //Truncates long output
 
 	size_t bytesWritten = 0;
-	Write(buffer, retval, bytesWritten);
+	Write(buffer, length, bytesWritten);
 }
 
 size_t KPipe::Count() const

@@ -25,6 +25,7 @@ public:
 
 	//Convenience for kernel
 	void Print(const char* format, ...);
+	void VPrint(const char* format, va_list args); //Not a Print overload: va_list is char*, so it would capture Print("%s", buffer)
 
 	size_t Count() const;
 	size_t Space() const;

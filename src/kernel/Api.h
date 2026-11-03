@@ -219,7 +219,7 @@ void* KeLoadFile(const char* const path);
 void Printf(const char* format, va_list args);
 void Bugcheck(const char* file, const char* line, const char* format, va_list args);
 void PrintStack();
-void PrintStack(const Arch::Context* context, const KProcess& process);
+void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* const output = nullptr); //Null output prints to the kernel console
 void PrintBytes(const void* data, const size_t length);
 #define printf Printf
 

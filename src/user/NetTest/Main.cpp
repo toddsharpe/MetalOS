@@ -1,8 +1,6 @@
 #include "user/MetalOS.h"
+#include "user/NetUtil.h"
 #include <stdio.h>
-
-//sockaddr_in fields are network byte order; htons isn't in the public headers.
-static uint16_t Htons(uint16_t v) { return (uint16_t)((v >> 8) | (v << 8)); }
 
 int main(int argc, char** argv)
 {
@@ -20,9 +18,8 @@ int main(int argc, char** argv)
 	const InterfaceInfo& nic = ifaces[0];
 
 	//The IPv4 config is owned by netstack (GetInterfaceIp/GetGateway), not the kernel enumeration.
-	in_addr addr = {}, subnet = {}, gateway = {};
+	in_addr addr = {}, subnet = {};
 	GetInterfaceIp(nic.index, &addr, &subnet);
-	GetGateway(nic.index, &gateway);
 	const uint8_t* a = (const uint8_t*)&addr.s_addr;
 	const uint8_t* s = (const uint8_t*)&subnet.s_addr;
 	printf("  if%u %02x:%02x:%02x:%02x:%02x:%02x  ip %u.%u.%u.%u / %u.%u.%u.%u\n",
@@ -35,12 +32,8 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	//Prefer the DHCP-provided gateway; fall back to (ip & subnet) | .1.
-	in_addr gw = gateway;
-	if (gw.s_addr == 0)
-		gw.s_addr = (addr.s_addr & subnet.s_addr) | (1u << 24);
-	const uint8_t* g = (const uint8_t*)&gw.s_addr;
-	printf("  gateway %u.%u.%u.%u\n", g[0], g[1], g[2], g[3]);
+	const in_addr gw = GatewayOrGuess(nic.index, addr, subnet);
+	PrintIp("  gateway ", gw);
 
 	HSocket sock = SocketCreate(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock == INVALID_SOCKET)

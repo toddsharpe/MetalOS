@@ -3,10 +3,7 @@
 #include "Lib/Buffer.h"
 #include "Assert.h"
 #include <stdio.h>
-#include "user/CRT.cpp" //operator new/delete (malloc/free)
-
-//Pure-virtual fallback (NetDriver is abstract); never called since HostDriver overrides all.
-int __cdecl _purecall(void) { Assert(false); return 0; }
+#include "user/CRT.cpp" //operator new/delete (malloc/free) and _purecall (NetDriver is abstract)
 
 #include "Net/Net.h"
 #include "Net/NetIf.h"

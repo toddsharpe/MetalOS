@@ -21,22 +21,40 @@ namespace Graphics
 			}
 		}
 
+		//The part of a rectangle inside the frame, and where that part starts within the rectangle
+		struct ClipRect
+		{
+			int32_t X;
+			int32_t Y;
+			size_t Width;
+			size_t Height;
+			size_t OffsetX;
+			size_t OffsetY;
+		};
+
+		bool Clip(const Graphics::FrameBuffer &frame, const Rectangle &rect, ClipRect &clip)
+		{
+			const int32_t x0 = Max<int32_t>(0, rect.X);
+			const int32_t x1 = Min<int32_t>(static_cast<int32_t>(frame.Width),  rect.X + static_cast<int32_t>(rect.Width));
+			const int32_t y0 = Max<int32_t>(0, rect.Y);
+			const int32_t y1 = Min<int32_t>(static_cast<int32_t>(frame.Height), rect.Y + static_cast<int32_t>(rect.Height));
+			if (x0 >= x1 || y0 >= y1)
+				return false;
+
+			clip = { x0, y0, static_cast<size_t>(x1 - x0), static_cast<size_t>(y1 - y0), static_cast<size_t>(x0 - rect.X), static_cast<size_t>(y0 - rect.Y) };
+			return true;
+		}
+
 		void DrawRectangle(const Graphics::FrameBuffer &frame, const Color color, const Rectangle &region)
 		{
-			const int32_t x0 = Max<int32_t>(0, region.X);
-			const int32_t x1 = Min<int32_t>(static_cast<int32_t>(frame.Width),  region.X + static_cast<int32_t>(region.Width));
-			const int32_t y0 = Max<int32_t>(0, region.Y);
-			const int32_t y1 = Min<int32_t>(static_cast<int32_t>(frame.Height), region.Y + static_cast<int32_t>(region.Height));
-			if (x0 >= x1 || y0 >= y1)
+			ClipRect clip;
+			if (!Clip(frame, region, clip))
 				return;
 
-			const size_t visibleWidth  = static_cast<size_t>(x1 - x0);
-			const size_t visibleHeight = static_cast<size_t>(y1 - y0);
-
-			for (size_t y = 0; y < visibleHeight; y++)
+			for (size_t y = 0; y < clip.Height; y++)
 			{
-				Color *dst = frame.Buffer + (static_cast<size_t>(y0) + y) * frame.Width + static_cast<size_t>(x0);
-				SetPixels(dst, color, visibleWidth);
+				Color *dst = frame.Buffer + (static_cast<size_t>(clip.Y) + y) * frame.Width + static_cast<size_t>(clip.X);
+				SetPixels(dst, color, clip.Width);
 			}
 		}
 
@@ -90,46 +108,30 @@ namespace Graphics
 
 		void WriteFrame(Graphics::FrameBuffer &frame, const Rectangle &rect, const void *fromFrame)
 		{
-			const int32_t x0 = Max<int32_t>(0, rect.X);
-			const int32_t x1 = Min<int32_t>(static_cast<int32_t>(frame.Width),  rect.X + static_cast<int32_t>(rect.Width));
-			const int32_t y0 = Max<int32_t>(0, rect.Y);
-			const int32_t y1 = Min<int32_t>(static_cast<int32_t>(frame.Height), rect.Y + static_cast<int32_t>(rect.Height));
-			if (x0 >= x1 || y0 >= y1)
+			ClipRect clip;
+			if (!Clip(frame, rect, clip))
 				return;
 
-			const size_t visibleWidth  = static_cast<size_t>(x1 - x0);
-			const size_t visibleHeight = static_cast<size_t>(y1 - y0);
-			const size_t srcOffsetX    = static_cast<size_t>(x0 - rect.X);
-			const size_t srcOffsetY    = static_cast<size_t>(y0 - rect.Y);
-
-			for (size_t y = 0; y < visibleHeight; y++)
+			for (size_t y = 0; y < clip.Height; y++)
 			{
-				Color *dst = frame.Buffer + (static_cast<size_t>(y0) + y) * frame.Width + static_cast<size_t>(x0);
-				const uint32_t *src = reinterpret_cast<const uint32_t*>(fromFrame) + (srcOffsetY + y) * rect.Width + srcOffsetX;
-				memcpy(dst, src, visibleWidth * sizeof(Color));
+				Color *dst = frame.Buffer + (static_cast<size_t>(clip.Y) + y) * frame.Width + static_cast<size_t>(clip.X);
+				const uint32_t *src = reinterpret_cast<const uint32_t*>(fromFrame) + (clip.OffsetY + y) * rect.Width + clip.OffsetX;
+				memcpy(dst, src, clip.Width * sizeof(Color));
 			}
 		}
 
 		void WriteFrameGrayscale(Graphics::FrameBuffer &frame, const Rectangle &rect, const void *fromFrame)
 		{
-			const int32_t x0 = Max<int32_t>(0, rect.X);
-			const int32_t x1 = Min<int32_t>(static_cast<int32_t>(frame.Width),  rect.X + static_cast<int32_t>(rect.Width));
-			const int32_t y0 = Max<int32_t>(0, rect.Y);
-			const int32_t y1 = Min<int32_t>(static_cast<int32_t>(frame.Height), rect.Y + static_cast<int32_t>(rect.Height));
-			if (x0 >= x1 || y0 >= y1)
+			ClipRect clip;
+			if (!Clip(frame, rect, clip))
 				return;
 
-			const size_t visibleWidth  = static_cast<size_t>(x1 - x0);
-			const size_t visibleHeight = static_cast<size_t>(y1 - y0);
-			const size_t srcOffsetX    = static_cast<size_t>(x0 - rect.X);
-			const size_t srcOffsetY    = static_cast<size_t>(y0 - rect.Y);
-
-			for (size_t y = 0; y < visibleHeight; y++)
+			for (size_t y = 0; y < clip.Height; y++)
 			{
-				Color *dst = frame.Buffer + (static_cast<size_t>(y0) + y) * frame.Width + static_cast<size_t>(x0);
-				const Color *src = reinterpret_cast<const Color*>(fromFrame) + (srcOffsetY + y) * rect.Width + srcOffsetX;
+				Color *dst = frame.Buffer + (static_cast<size_t>(clip.Y) + y) * frame.Width + static_cast<size_t>(clip.X);
+				const Color *src = reinterpret_cast<const Color*>(fromFrame) + (clip.OffsetY + y) * rect.Width + clip.OffsetX;
 
-				for (size_t x = 0; x < visibleWidth; x++)
+				for (size_t x = 0; x < clip.Width; x++)
 				{
 					size_t sum = src->Blue + src->Green + src->Red;
 					uint8_t average = static_cast<uint8_t>(sum / 3);

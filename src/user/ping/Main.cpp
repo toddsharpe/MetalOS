@@ -1,4 +1,5 @@
 #include "user/MetalOS.h"
+#include "user/NetUtil.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -49,23 +50,17 @@ int main(int argc, char** argv)
 		//Enumeration is a kernel syscall; the IPv4 config is owned by netstack (GetInterfaceIp).
 		InterfaceInfo ifaces[4] = {};
 		size_t ifcount = 0;
-		in_addr addr = {}, subnet = {}, gateway = {};
+		in_addr addr = {}, subnet = {};
 		if (GetInterfaces(ifaces, 4, &ifcount) != SyscallResult::Success || ifcount == 0 ||
 			GetInterfaceIp(ifaces[0].index, &addr, &subnet) != SyscallResult::Success || addr.s_addr == 0)
 		{
 			printf("ping: no configured interface (run dhcp.exe first)\n");
 			return 1;
 		}
-		//Prefer the DHCP-provided gateway; fall back to a network|.1 guess.
-		GetGateway(ifaces[0].index, &gateway);
-		if (gateway.s_addr != 0)
-			target = gateway;
-		else
-			target.s_addr = (addr.s_addr & subnet.s_addr) | (1u << 24);
+		target = GatewayOrGuess(ifaces[0].index, addr, subnet);
 	}
 
-	const uint8_t* t = (const uint8_t*)&target.s_addr;
-	printf("ping %u.%u.%u.%u\n", t[0], t[1], t[2], t[3]);
+	PrintIp("ping ", target);
 
 	HSocket sock = SocketCreate(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (sock == INVALID_SOCKET)

@@ -1,12 +1,7 @@
 #include "user/MetalOS.h"
 #include "user/MetalOS.UI.h"
 #include "user/GUI.h"
-
-int __cdecl _purecall(void)
-{
-	Assert(false);
-	return 0;
-}
+#include "user/CRT.cpp"
 
 using namespace Graphics;
 using namespace UI;

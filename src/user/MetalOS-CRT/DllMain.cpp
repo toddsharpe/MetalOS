@@ -1,9 +1,6 @@
 #include "user/MetalOS-CRT/CRT.h"
 #include "user/MetalOS.h"
 
-//Core crt
-#include "core_crt/core_crt.c"
-
 #include "user/MetalOS-CRT/stdio.cpp"
 #include "user/MetalOS-CRT/stdlib.cpp"
 #include "user/MetalOS-CRT/string.cpp"

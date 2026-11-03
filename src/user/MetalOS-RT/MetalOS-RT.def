@@ -78,3 +78,28 @@ EXPORTS
 	; 0xA00: Handle capabilities
 	ShareHandle
 	ClaimHandle
+
+	; Core libc (core_crt), the only copy in the process; MetalOS-CRT builds on it
+	snprintf
+	vsnprintf
+	vsprintf
+	abs
+	rand
+	atoi
+	memcpy
+	memmove
+	strlen
+	memcmp
+	memset
+	strcmp
+	strncmp
+	stricmp
+	strnicmp
+	strcpy
+	strrchr
+	strchr
+	strncpy
+	strstr
+	tolower
+	toupper
+	isspace

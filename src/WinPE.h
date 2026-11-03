@@ -26,61 +26,40 @@ namespace WinPE
 		CHAR        name[1];
 	} OMFSignatureRSDS;
 	
-	DWORD GetEntryPoint(const void* const imageBase)
+	//Validates the DOS and NT signatures and returns the NT headers
+	const IMAGE_NT_HEADERS64* GetNtHeaders(const void* const imageBase)
 	{
-		//Headers
 		const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
 		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
 
 		const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
 		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
 
-		return ntHeader->OptionalHeader.AddressOfEntryPoint;
+		return ntHeader;
+	}
+
+	DWORD GetEntryPoint(const void* const imageBase)
+	{
+		return GetNtHeaders(imageBase)->OptionalHeader.AddressOfEntryPoint;
 	}
 	DWORD GetSizeOfImage(const void* const imageBase)
 	{
-		//Headers
-		const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
-		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
-
-		const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
-		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
-
-		return ntHeader->OptionalHeader.SizeOfImage;
+		return GetNtHeaders(imageBase)->OptionalHeader.SizeOfImage;
 	}
 
 	bool IsConsole(const void* const imageBase)
 	{
-		//Headers
-		const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
-		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
-
-		const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
-		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
-
-		return ntHeader->OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI;
+		return GetNtHeaders(imageBase)->OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI;
 	}
 
 	ULONGLONG GetStackSize(const void* const imageBase)
 	{
-		//Headers
-		const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
-		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
-
-		const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
-		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
-
-		return ntHeader->OptionalHeader.SizeOfStackReserve;
+		return GetNtHeaders(imageBase)->OptionalHeader.SizeOfStackReserve;
 	}
 
 	const IMAGE_SECTION_HEADER* GetPESection(const void* const imageBase, const CString& name)
 	{
-		//Headers
-		const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
-		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
-
-		const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
-		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
+		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 
 		//Find section
 		const IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(ntHeader);
@@ -95,13 +74,7 @@ namespace WinPE
 
 	const IMAGE_SECTION_HEADER* GetPESection(const void* const imageBase, const uint32_t index)
 	{
-		//Headers
-		const IMAGE_DOS_HEADER* dosHeader = reinterpret_cast<const IMAGE_DOS_HEADER*>(imageBase);
-		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
-
-		const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
-		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
-
+		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 		Assert(index < ntHeader->FileHeader.NumberOfSections);
 
 		//Find section
@@ -109,15 +82,28 @@ namespace WinPE
 		return &section[index];
 	}
 
+	typedef void (*CrtInitializer)();
+
+	//Calls each static initializer in the .CRT section's null-terminated list, returns false if there is no .CRT section
+	bool RunCrtInitializers(const void* const imageBase)
+	{
+		const IMAGE_SECTION_HEADER* crtSection = GetPESection(imageBase, ".CRT");
+		if (crtSection == nullptr)
+			return false;
+
+		CrtInitializer* initializer = MakePointer<CrtInitializer*>(imageBase, crtSection->VirtualAddress);
+		while (*initializer)
+		{
+			(*initializer)();
+			initializer++;
+		}
+
+		return true;
+	}
+
 	void* GetProcAddress(const void* const imageBase, const CString& procName)
 	{
-		//Headers
-		const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
-		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
-
-		const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
-		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
-
+		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 		Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
 
 		const IMAGE_DATA_DIRECTORY* directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
@@ -157,13 +143,7 @@ namespace WinPE
 
 	const char* GetPdbName(const void* const imageBase)
 	{
-		//Headers
-		const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
-		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
-
-		const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, dosHeader->e_lfanew);
-		AssertEqual(ntHeader->Signature, IMAGE_NT_SIGNATURE);
-
+		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 		Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size);
 
 		const IMAGE_DATA_DIRECTORY* directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];

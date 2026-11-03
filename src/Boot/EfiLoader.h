@@ -11,6 +11,4 @@ namespace EfiLoader
 
 	//This function doesn't do any error checking, should it?
 	EFI_STATUS CrtInitialization(const void* const imageBase);
-
-	void* GetProcAddress(void* const imageBase, const CString& procName);
 }

@@ -92,12 +92,12 @@ namespace EfiMemory
 		  L"EfiMaxMemoryType          "
 		};
 
-		UartPrintf(L"MapSize: 0x%016X, Size: 0x%x, DescSize: 0x%x\n", map.Table, map.Size, map.DescriptorSize);
+		UartPrintf("MapSize: 0x%016X, Size: 0x%x, DescSize: 0x%x\n", map.Table, map.Size, map.DescriptorSize);
 
 		for (EFI_MEMORY_DESCRIPTOR* current = map.Table; current < NextMemoryDescriptor(map.Table, map.Size); current = NextMemoryDescriptor(current, map.DescriptorSize))
 		{
 			const bool runtime = (current->Attribute & EFI_MEMORY_RUNTIME) != 0;
-			UartPrintf(L"P: %016x V: %016x T:%s #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, mem_types[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
+			UartPrintf("P: %016x V: %016x T:%ls #: 0x%x A:0x%016x %c\n", current->PhysicalStart, current->VirtualStart, mem_types[current->Type], current->NumberOfPages, current->Attribute, runtime ? 'R' : ' ');
 		}
 
 		return EFI_SUCCESS;

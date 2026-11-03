@@ -70,11 +70,11 @@ namespace EfiError
 {
 	EFI_STATUS DisplayError(const CHAR16* function, const CHAR16* file, const CHAR16* line, const EFI_STATUS status)
 	{
-		Print(L"Error:\r\n");
-		Print(L"  %s\r\n", function);
-		Print(L"  Status: %d ( %s )\r\n", status, StatusToString(status));
-		Print(L"  %s\r\n", file);
-		Print(L"  %s\r\n", line);
+		Print("Error:\r\n");
+		Print("  %ls\r\n", function);
+		Print("  Status: %d ( %ls )\r\n", status, StatusToString(status));
+		Print("  %ls\r\n", file);
+		Print("  %ls\r\n", line);
 
 		constexpr UINTN Stall = 1000 * 1000 * 60;//60 minute stall
 		BS->Stall(Stall);

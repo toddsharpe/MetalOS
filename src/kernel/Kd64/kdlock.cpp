@@ -25,14 +25,6 @@ extern BOOLEAN KdDebuggerEnabled;
 
 VOID
 NTAPI
-KdpPortLock(VOID)
-{
-	/* Acquire the lock */
-	//KiAcquireSpinLock(&KdpDebuggerLock);
-}
-
-VOID
-NTAPI
 KdpPortUnlock(VOID)
 {
 	/* Release the lock */
@@ -95,7 +87,6 @@ KdPollBreakIn(VOID)
 		if (KdpContext.KdpControlCPending)
 		{
 			/* Set it and prepare for break */
-			KdpControlCPressed = TRUE;
 			DoBreak = TRUE;
 			KdpContext.KdpControlCPending = FALSE;
 		}
@@ -110,7 +101,6 @@ KdPollBreakIn(VOID)
 			{
 				/* Successful breakin */
 				DoBreak = TRUE;
-				KdpControlCPressed = TRUE;
 			}
 
 			/* Let go of the port */

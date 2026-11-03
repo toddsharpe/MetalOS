@@ -8,9 +8,6 @@
 #include "Lib/StaticVector.h"
 #include "Lib/StaticMap.h"
 
-//These aren't used
-
-
 class VmBusDriver : public Driver
 {
 public:
@@ -48,7 +45,6 @@ private:
 
 
 	KEvent m_connectEvent;
-	KThread* m_thread;
 
 	//Channel callbacks
 	StaticMap<uint32_t, ActionContext, 16> m_channelCallbacks;

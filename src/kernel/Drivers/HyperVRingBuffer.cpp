@@ -121,12 +121,3 @@ uint32_t HyperVRingBuffer::Copy(const uint32_t location, const void* buffer, con
 	memcpy((void*)&m_header->buffer[location], buffer, length);
 	return (location + length) % DataSize;
 }
-
-void HyperVRingBuffer::Display()
-{
-	Printf("Read: 0x%08x\n", m_header->read_index);
-	Printf("Iterator: 0x%08x\n", m_iterator);
-	Printf("Write: 0x%08x\n", m_header->write_index);
-	Printf("Mask: 0x%08x\n", m_header->interrupt_mask);
-	PrintBytes((const char*)&m_header->buffer[0], 256);
-}

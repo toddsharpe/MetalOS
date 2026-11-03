@@ -26,9 +26,6 @@ public:
 
 	void SetEvent();
 
-	void Display();
-
-
 private:
 	ActionContext m_callback;
 

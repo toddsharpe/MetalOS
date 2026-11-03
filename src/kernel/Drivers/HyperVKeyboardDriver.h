@@ -30,8 +30,6 @@ private:
 	//Event flags
 	static constexpr uint32_t IS_UNICODE = 0b0001;
 	static constexpr uint32_t IS_BREAK = 0b0010;
-	static constexpr uint32_t IS_E0 = 0b0100;
-	static constexpr uint32_t IS_E1 = 0b1000;
 
 	/*
 	 * Message types in the synthetic input protocol
@@ -42,7 +40,6 @@ private:
 		SYNTH_KBD_PROTOCOL_REQUEST = 1,
 		SYNTH_KBD_PROTOCOL_RESPONSE = 2,
 		SYNTH_KBD_EVENT = 3,
-		SYNTH_KBD_LED_INDICATORS = 4,
 	};
 
 	/*
@@ -51,12 +48,6 @@ private:
 	struct synth_kbd_msg_hdr
 	{
 		synth_kbd_msg_type type;
-	};
-
-	struct synth_kbd_msg
-	{
-		synth_kbd_msg_hdr header;
-		char data[]; /* Enclosed message */
 	};
 
 	union synth_kbd_version

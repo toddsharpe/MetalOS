@@ -33,5 +33,4 @@ namespace HyperV::Timer
 	};
 
 	void Enable(const nano_t value, const size_t timerId, const uint8_t irq);
-	void Disable(const size_t timerId);
 };

@@ -110,16 +110,9 @@ namespace HyperV
 	};
 
 	//hyperv_vmbus.h
-	static constexpr uint32_t VMBUS_MESSAGE_CONNECTION_I = 1;
 	static constexpr uint32_t VMBUS_MESSAGE_CONNECTION_ID_4 = 4;
-	static constexpr uint32_t VMBUS_MESSAGE_PORT_ID = 1;
-	static constexpr uint32_t VMBUS_EVENT_CONNECTION_I = 2;
-	static constexpr uint32_t VMBUS_EVENT_PORT_ID = 2;
-	static constexpr uint32_t VMBUS_MONITOR_CONNECTION_I = 3;
-	static constexpr uint32_t VMBUS_MONITOR_PORT_ID = 3;
 	static constexpr uint32_t VMBUS_MESSAGE_SINT = 2;
 
-	static constexpr uint32_t HV_MESSAGE_SIZE = 256;
 	static constexpr uint32_t HV_MESSAGE_PAYLOAD_BYTE_COUNT = 240;
 	static constexpr uint32_t HV_MESSAGE_MAX_PAYLOAD_QWORD_COUNT = 30;
 	static constexpr uint32_t MAX_SIZE_CHANNEL_MESSAGE = HV_MESSAGE_PAYLOAD_BYTE_COUNT;

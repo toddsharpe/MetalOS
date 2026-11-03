@@ -9,7 +9,6 @@
 #include "Lib/StaticMap.h"
 #include "kernel/DeviceHids.h"
 #include "kernel/Drivers/VmBusDriver.h"
-#include "kernel/Drivers/UartDriver.h"
 #include "kernel/Drivers/RamDriveDriver.h"
 #include "kernel/Drivers/HyperVKeyboardDriver.h"
 #include "kernel/Drivers/HyperVMouseDriver.h"
@@ -85,24 +84,6 @@ public:
 		this->m_root->Display();
 	}
 
-	KDevice* GetDeviceByName(const CString& name) const
-	{
-		StaticStack<KDevice*, 32> stack;
-		stack.Push(m_root);
-
-		while (!stack.IsEmpty())
-		{
-			KDevice* current = stack.Pop();
-			if (current->Name == name)
-				return current;
-
-			for (auto& child : current->Children)
-				stack.Push(child);
-		}
-
-		return nullptr;
-	}
-
 	KDevice* GetDeviceByClass(const KDeviceClass kClass) const
 	{
 		Assert(m_root);
@@ -123,7 +104,6 @@ public:
 		return nullptr;
 	}
 
-	//Device* GetDeviceByType(const DeviceType type) const;
 	KDevice* GetDevice(const CString& path) const
 	{
 		Assert(m_root);
@@ -150,9 +130,6 @@ private:
 		AcpiContext() : Nodes() {}
 		StaticMap<uacpi_namespace_node*, KDevice*, 32> Nodes;
 	};
-
-	//static ACPI_STATUS AddAcpiDevice(ACPI_HANDLE Object, UINT32 NestingLevel, void* Context, void** ReturnValue);
-	//static void AttachDriver(Device& device);
 
 	static uacpi_iteration_decision acpi_init_one_device(void *ctx, uacpi_namespace_node *node, uacpi_u32 node_depth)
 	{
@@ -190,7 +167,6 @@ private:
 		uacpi_namespace_node* const parent = uacpi_namespace_node_parent(node);
 		if (parent != nullptr)
 		{
-			const char *pp = uacpi_namespace_node_generate_absolute_path(parent);
 			KDevice* parentDevice = context->Nodes.Get(parent);
 			Assert(parentDevice);
 			parentDevice->Children.Add(device);
@@ -206,11 +182,6 @@ private:
 		if (device.Hid == "VMBUS" || device.Hid == "MSFT1000")
 		{
 			device.Driver = KeAlloc<VmBusDriver>(AllocType::Kernel, device);
-			Assert(device.Driver);
-		}
-		else if (device.Hid == "PNP0501")
-		{
-			device.Driver = KeAlloc<UartDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
 		else if (device.Hid == RamDriveHid)

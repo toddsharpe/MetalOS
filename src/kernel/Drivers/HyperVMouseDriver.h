@@ -18,9 +18,6 @@ namespace
 		unsigned short reserved[11];
 	};
 
-	/* The maximum size of a synthetic input message. */
-#define SYNTHHID_MAX_INPUT_REPORT_SIZE 16
-
 /*
  * Current version
  *
@@ -43,8 +40,7 @@ namespace
 		SYNTH_HID_PROTOCOL_RESPONSE,
 		SYNTH_HID_INITIAL_DEVICE_INFO,
 		SYNTH_HID_INITIAL_DEVICE_INFO_ACK,
-		SYNTH_HID_INPUT_REPORT,
-		SYNTH_HID_MAX
+		SYNTH_HID_INPUT_REPORT
 	};
 
 	/*
@@ -120,9 +116,7 @@ namespace
 
 
 	enum pipe_prot_msg_type {
-		PIPE_MESSAGE_INVALID,
-		PIPE_MESSAGE_DATA,
-		PIPE_MESSAGE_MAXIMUM
+		PIPE_MESSAGE_DATA = 1
 	};
 
 

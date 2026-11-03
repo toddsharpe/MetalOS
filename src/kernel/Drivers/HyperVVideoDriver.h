@@ -29,8 +29,6 @@ private:
 	//pipe_msg_hdr { type=PIPE_MSG_DATA, size=<synthvid message bytes> }.
 	static constexpr uint32_t PIPE_MSG_DATA = 1;
 
-	//Kept small so both rings' page frames fit in a single GPADL header (HyperVChannel doesn't
-	//split into a GPADL body). synthvid messages are tiny, so this is plenty.
 	static constexpr size_t VSC_SEND_RING_BUFFER_SIZE = (40 * 1024);
 	static constexpr size_t VSC_RECV_RING_BUFFER_SIZE = (40 * 1024);
 

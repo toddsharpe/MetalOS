@@ -232,7 +232,6 @@ private:
 	bool SendRndisPacket(uint32_t channelType, const void* rndisData, uint32_t rndisLen, bool requestCompletion = false, uint32_t section = 0);
 	uint32_t AcquireSendSection();
 	void ReleaseSendSection(uint64_t transId);
-	uint32_t CreateGpadl(paddr_t address, size_t pageCount);
 
 	//Send-buffer sections: 0 is for init-time control messages; a data frame holds one until SendRndisPacketComplete
 	static constexpr uint32_t MaxSendSections = 64; //Width of m_sendSectionsInUse

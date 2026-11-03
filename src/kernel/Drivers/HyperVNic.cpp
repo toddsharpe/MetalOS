@@ -42,13 +42,18 @@ Result HyperVNic::Initialize()
 	msg.msg.send_ndis_version.ndis_minor_ver = 30;
 	SendNvsp(msg);
 
+	//Get reference to vmbus, which creates the receive and send buffer GPADLs
+	KDevice* bus = KeGetDevice("\\_SB_.VMOD.VMBS");
+	Assert(bus);
+	VmBusDriver* const vmbus = static_cast<VmBusDriver*>(bus->Driver);
+
 	// Step 3: allocate and register receive buffer
 	const paddr_t recvBufAddr = KePhysicalAlloc(NIC_RECV_BUFFER_PAGES);
 	m_recvBuf = (uint8_t*)KeVirtualMap(recvBufAddr, NIC_RECV_BUFFER_PAGES * Arch::PageSize);
 	Assert(m_recvBuf);
 	memset(m_recvBuf, 0, NIC_RECV_BUFFER_PAGES * Arch::PageSize);
 
-	const uint32_t recvBufGpadl = CreateGpadl(recvBufAddr, NIC_RECV_BUFFER_PAGES);
+	const uint32_t recvBufGpadl = vmbus->CreateGpadl(m_device.child_relid, recvBufAddr, NIC_RECV_BUFFER_PAGES);
 
 	msg = {};
 	msg.header.msg_type = NvspMessageType::SendReceiveBuffer;
@@ -66,7 +71,7 @@ Result HyperVNic::Initialize()
 		Assert(m_sendBuf);
 		memset(m_sendBuf, 0, NIC_SEND_BUFFER_PAGES * Arch::PageSize);
 
-		const uint32_t sendBufGpadl = CreateGpadl(sendBufAddr, NIC_SEND_BUFFER_PAGES);
+		const uint32_t sendBufGpadl = vmbus->CreateGpadl(m_device.child_relid, sendBufAddr, NIC_SEND_BUFFER_PAGES);
 
 		msg = {};
 		msg.header.msg_type = NvspMessageType::SendSendBuffer;
@@ -236,156 +241,89 @@ void HyperVNic::ReleaseSendSection(const uint64_t transId)
 	ArchRestoreFlags(flags);
 }
 
-uint32_t HyperVNic::CreateGpadl(paddr_t address, size_t pageCount)
-{
-	KDevice* bus = KeGetDevice("\\_SB_.VMOD.VMBS");
-	Assert(bus);
-	VmBusDriver* vmbus = static_cast<VmBusDriver*>(bus->Driver);
-
-	static constexpr size_t MaxHeaderPfns = 26;
-	static constexpr size_t MaxBodyPfns = 28;
-
-	const size_t headerPfns = pageCount < MaxHeaderPfns ? pageCount : MaxHeaderPfns;
-	const size_t headerMsgSize = sizeof(HyperV::vmbus_channel_gpadl_header)
-		+ sizeof(HyperV::gpa_range)
-		+ (headerPfns - ANYSIZE_ARRAY) * sizeof(uint64_t);
-
-	StaticBuffer<256> headerBuf;
-	HyperV::vmbus_channel_gpadl_header* header =
-		(HyperV::vmbus_channel_gpadl_header*)headerBuf.Data;
-	memset(header, 0, headerMsgSize);
-	header->header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_HEADER;
-	header->child_relid = m_device.child_relid;
-	header->rangecount = 1;
-	header->range_buflen = (uint16_t)(sizeof(HyperV::gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t));
-	header->range[0].byte_count = (uint32_t)(pageCount << Arch::PageShift);
-	header->range[0].byte_offset = 0;
-	for (size_t i = 0; i < headerPfns; i++)
-		header->range[0].pfn_array[i] = (address >> Arch::PageShift) + i;
-
-	KEvent event(false, false);
-	HyperV::VmBusResponse response;
-	const uint32_t gpadl = vmbus->BeginGpadl((uint32_t)headerMsgSize, header, response, event);
-
-	size_t pfnsSent = headerPfns;
-	uint32_t bodyNum = 0;
-	while (pfnsSent < pageCount)
-	{
-		const size_t batchSize = (pageCount - pfnsSent) < MaxBodyPfns ? (pageCount - pfnsSent) : MaxBodyPfns;
-		const size_t bodyMsgSize = sizeof(HyperV::vmbus_channel_gpadl_body)
-			+ (batchSize - ANYSIZE_ARRAY) * sizeof(uint64_t);
-
-		StaticBuffer<256> bodyBuf;
-		HyperV::vmbus_channel_gpadl_body* body =
-			(HyperV::vmbus_channel_gpadl_body*)bodyBuf.Data;
-		memset(body, 0, bodyMsgSize);
-		body->header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_BODY;
-		body->msgnumber = bodyNum++;
-		body->gpadl = gpadl;
-		for (size_t i = 0; i < batchSize; i++)
-			body->pfn[i] = (address >> Arch::PageShift) + pfnsSent + i;
-
-		vmbus->PostGpadlBody((uint32_t)bodyMsgSize, body);
-		pfnsSent += batchSize;
-	}
-
-	KeWait(event);
-	Assert(response.gpadl_created.creation_status == 0);
-	return response.gpadl_created.gpadl;
-}
-
 void HyperVNic::OnCallback()
 {
-	HyperV::vmpacket_descriptor* packet;
-	const uint32_t length = sizeof(HyperV::vmpacket_descriptor);
-	do
+	m_channel.Drain([this](const HyperV::vmpacket_descriptor& packet, uint8_t* const payload, const uint32_t)
 	{
-		while ((packet = (HyperV::vmpacket_descriptor*)m_channel.ReadPacket(length)) != nullptr)
+		switch (packet.type)
 		{
-			switch (packet->type)
-			{
-			case HyperV::VM_PKT_COMP:
-			{
-				nvsp_message* nvsp = (nvsp_message*)((uintptr_t)packet + (packet->offset8 << 3));
-				const NvspMessageType type = nvsp->header.msg_type;
+		case HyperV::VM_PKT_COMP:
+		{
+			nvsp_message* nvsp = (nvsp_message*)payload;
+			const NvspMessageType type = nvsp->header.msg_type;
 
-				if (type == NvspMessageType::InitComplete ||
-					type == NvspMessageType::SendReceiveBufferComplete ||
-					type == NvspMessageType::SendSendBufferComplete ||
-					type == NvspMessageType::SendRndisPacketComplete)
+			if (type == NvspMessageType::InitComplete ||
+				type == NvspMessageType::SendReceiveBufferComplete ||
+				type == NvspMessageType::SendSendBufferComplete ||
+				type == NvspMessageType::SendRndisPacketComplete)
+			{
+				//A data frame's send section belongs to the host until this completion
+				if (type == NvspMessageType::SendRndisPacketComplete)
+					ReleaseSendSection(packet.trans_id);
+
+				memcpy(&m_response, nvsp, sizeof(nvsp_message));
+				m_event.Set();
+			}
+		}
+		break;
+
+		case HyperV::VM_PKT_DATA_USING_XFER_PAGES:
+		{
+			const uint64_t transId = packet.trans_id;
+			vmtransfer_page_packet_header* xfer =
+				(vmtransfer_page_packet_header*)((uintptr_t)&packet + sizeof(HyperV::vmpacket_descriptor));
+
+			nvsp_message* nvsp = (nvsp_message*)payload;
+
+			if (nvsp->header.msg_type != NvspMessageType::SendRndisPacket)
+				break;
+
+			if (nvsp->msg.send_rndis_pkt.channel_type == NVSP_CHANNEL_TYPE_CONTROL)
+			{
+				const uint32_t offset = xfer->ranges[0].byte_offset;
+				rndis_message_header* hdr = (rndis_message_header*)(m_recvBuf + offset);
+
+				if (hdr->ndis_msg_type == RNDIS_MSG_QUERY_C)
 				{
-					//A data frame's send section belongs to the host until this completion
-					if (type == NvspMessageType::SendRndisPacketComplete)
-						ReleaseSendSection(packet->trans_id);
-
-					memcpy(&m_response, nvsp, sizeof(nvsp_message));
+					rndis_query_complete* qc = (rndis_query_complete*)(hdr + 1);
+					const uint8_t* info = (const uint8_t*)qc + qc->info_buf_offset;
+					const uint32_t copyLen = qc->info_buflen < sizeof(m_macAddress) ? qc->info_buflen : sizeof(m_macAddress);
+					//RNDIS returns the MAC in canonical (wire) order; store it little-endian to match the kernel convention
+					for (uint32_t i = 0; i < copyLen; i++)
+						m_macAddress.bytes[copyLen - 1 - i] = info[i];
 					m_event.Set();
 				}
 			}
-			break;
-
-			case HyperV::VM_PKT_DATA_USING_XFER_PAGES:
+			else if (nvsp->msg.send_rndis_pkt.channel_type == NVSP_CHANNEL_TYPE_DATA)
 			{
-				const uint64_t transId = packet->trans_id;
-				vmtransfer_page_packet_header* xfer =
-					(vmtransfer_page_packet_header*)((uintptr_t)packet + sizeof(HyperV::vmpacket_descriptor));
-
-				nvsp_message* nvsp = (nvsp_message*)((uintptr_t)packet + (packet->offset8 << 3));
-
-				if (nvsp->header.msg_type != NvspMessageType::SendRndisPacket)
-					break;
-
-				if (nvsp->msg.send_rndis_pkt.channel_type == NVSP_CHANNEL_TYPE_CONTROL)
+				for (uint32_t r = 0; r < xfer->range_cnt; r++)
 				{
-					const uint32_t offset = xfer->ranges[0].byte_offset;
+					const uint32_t offset = xfer->ranges[r].byte_offset;
 					rndis_message_header* hdr = (rndis_message_header*)(m_recvBuf + offset);
+					if (hdr->ndis_msg_type != RNDIS_MSG_PACKET)
+						continue;
 
-					if (hdr->ndis_msg_type == RNDIS_MSG_QUERY_C)
-					{
-						rndis_query_complete* qc = (rndis_query_complete*)(hdr + 1);
-						const uint8_t* info = (const uint8_t*)qc + qc->info_buf_offset;
-						const uint32_t copyLen = qc->info_buflen < sizeof(m_macAddress) ? qc->info_buflen : sizeof(m_macAddress);
-						//RNDIS returns the MAC in canonical (wire) order; store it little-endian
-						//to match the kernel convention (the serializer swaps back to wire order).
-						for (uint32_t i = 0; i < copyLen; i++)
-							m_macAddress.bytes[copyLen - 1 - i] = info[i];
-						m_event.Set();
-					}
+					rndis_packet* pkt = (rndis_packet*)(hdr + 1);
+					uint8_t* const frame = (uint8_t*)pkt + pkt->data_offset;
+					const uint32_t frameLen = pkt->data_length;
+
+					//Hand the raw ethernet frame to the kernel net device (interrupt context); the usermode netstack drains it from the RX ring
+					KeNetRxFrame(this, frame, frameLen);
 				}
-				else if (nvsp->msg.send_rndis_pkt.channel_type == NVSP_CHANNEL_TYPE_DATA)
-				{
-					for (uint32_t r = 0; r < xfer->range_cnt; r++)
-					{
-						const uint32_t offset = xfer->ranges[r].byte_offset;
-						rndis_message_header* hdr = (rndis_message_header*)(m_recvBuf + offset);
-						if (hdr->ndis_msg_type != RNDIS_MSG_PACKET)
-							continue;
-
-						rndis_packet* pkt = (rndis_packet*)(hdr + 1);
-						uint8_t* const frame = (uint8_t*)pkt + pkt->data_offset;
-						const uint32_t frameLen = pkt->data_length;
-
-						//Hand the raw ethernet frame to the kernel net device (interrupt
-						//context); the usermode netstack drains it from the RX ring.
-						KeNetRxFrame(this, frame, frameLen);
-					}
-				}
-
-				// Return receive buffer sections to host
-				nvsp_message complete = {};
-				complete.header.msg_type = NvspMessageType::SendRndisPacketComplete;
-				complete.msg.send_rndis_pkt_complete.status = NVSP_STATUS_SUCCESS;
-				SendNvspCompletion(complete, transId);
-			}
-			break;
-
-			default:
-				break;
 			}
 
-			m_channel.NextPacket(packet->len8 << 3);
+			// Return receive buffer sections to host
+			nvsp_message complete = {};
+			complete.header.msg_type = NvspMessageType::SendRndisPacketComplete;
+			complete.msg.send_rndis_pkt_complete.status = NVSP_STATUS_SUCCESS;
+			SendNvspCompletion(complete, transId);
 		}
-	} while (m_channel.StopRead());
+		break;
+
+		default:
+			break;
+		}
+	});
 }
 
 Result HyperVNic::SendFrame(const void* data, size_t length)

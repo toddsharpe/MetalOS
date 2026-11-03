@@ -45,32 +45,7 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	m_inbound.Initialize(address + m_outbound.Size);
 	
 	//Establish GPADL for ring buffers
-	const size_t pfnsize = HyperV::MAX_SIZE_CHANNEL_MESSAGE - sizeof(HyperV::vmbus_channel_gpadl_header) - (sizeof(HyperV::gpa_range) - ANYSIZE_ARRAY * sizeof(uint64_t));
-	const size_t pfncount = pfnsize / sizeof(uint64_t);
-
-	//If this assertion fails, gpadl body message is needed
-	Assert(!(pageCount > pfncount));
-
-	StaticBuffer<256> arena;
-
-	//Everything fits in the header
-	const size_t msgsize = sizeof(HyperV::vmbus_channel_gpadl_header) + sizeof(HyperV::gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t);
-	HyperV::vmbus_channel_gpadl_header* msg = (HyperV::vmbus_channel_gpadl_header*)arena.Data;
-	memset(msg, 0, msgsize);
-	const uint16_t bodySize = (uint16_t)(sizeof(HyperV::gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t));
-	msg->rangecount = 1;
-	msg->range_buflen = bodySize;
-	msg->range[0].byte_offset = 0;
-	msg->range[0].byte_count = (uint32_t)(pageCount << Arch::PageShift);
-	for (size_t i = 0; i < pageCount; i++)
-		msg->range[0].pfn_array[i] = (address >> Arch::PageShift) + i;
-
-	msg->header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_HEADER;
-	msg->child_relid = m_channel->child_relid;
-
-	HyperV::VmBusResponse response;
-	HyperV::HV_HYPERCALL_RESULT_VALUE result = vmbus->PostMessage((uint32_t)msgsize, msg, response);
-	m_gpadlHandle = response.gpadl_created.gpadl;
+	m_gpadlHandle = vmbus->CreateGpadl(m_channel->child_relid, address, pageCount);
 
 	//Register the channel callback BEFORE opening: the host can signal the channel the instant it
 	//is open, and if no handler is registered yet that notification is dropped (and the host may
@@ -87,7 +62,8 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	openChannel.downstream_ringbuffer_pageoffset = (uint32_t)sendCount;
 	if (buffer != nullptr)
 		memcpy(openChannel.userdata, buffer->Data, buffer->Size);
-	result = vmbus->PostMessage(sizeof(HyperV::vmbus_channel_open_channel), &openChannel, response);
+	HyperV::VmBusResponse response;
+	vmbus->OpenChannel(openChannel, response);
 }
 
 //Format is vmpacket_descriptor followed by buffer, alignment if needed, and then old indexes

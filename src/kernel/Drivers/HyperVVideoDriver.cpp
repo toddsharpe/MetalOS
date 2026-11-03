@@ -181,38 +181,29 @@ void HyperVVideoDriver::Flush()
 
 void HyperVVideoDriver::OnCallback()
 {
-	HyperV::vmpacket_descriptor* packet;
-	uint32_t length = sizeof(HyperV::vmpacket_descriptor);
-	do
+	m_channel.Drain([this](const HyperV::vmpacket_descriptor& packet, uint8_t* const data, const uint32_t size)
 	{
-		while ((packet = (HyperV::vmpacket_descriptor*)m_channel.ReadPacket(length)) != nullptr)
+		switch (packet.type)
 		{
-			switch (packet->type)
-			{
-				case HyperV::VM_PKT_COMP:
-					break;
-
-				case HyperV::VM_PKT_DATA_INBAND:
-				{
-					//Incoming messages are pipe-wrapped: [pipe_msg_hdr][synthvid_msg_hdr][payload].
-					const uint32_t size = (packet->len8 << 3) - (packet->offset8 << 3);
-					uint8_t* const data = (uint8_t*)packet + (packet->offset8 << 3);
-					pipe_msg_hdr* const pipe = (pipe_msg_hdr*)data;
-					if (size >= sizeof(pipe_msg_hdr) + sizeof(synthvid_msg_hdr) && pipe->type == PIPE_MSG_DATA)
-					{
-						synthvid_msg_hdr* header = (synthvid_msg_hdr*)(data + sizeof(pipe_msg_hdr));
-						ProcessMessage(header, size - sizeof(pipe_msg_hdr));
-					}
-				}
+			case HyperV::VM_PKT_COMP:
 				break;
 
-				default:
-					break;
+			case HyperV::VM_PKT_DATA_INBAND:
+			{
+				//Incoming messages are pipe-wrapped: [pipe_msg_hdr][synthvid_msg_hdr][payload].
+				pipe_msg_hdr* const pipe = (pipe_msg_hdr*)data;
+				if (size >= sizeof(pipe_msg_hdr) + sizeof(synthvid_msg_hdr) && pipe->type == PIPE_MSG_DATA)
+				{
+					synthvid_msg_hdr* header = (synthvid_msg_hdr*)(data + sizeof(pipe_msg_hdr));
+					ProcessMessage(header, size - sizeof(pipe_msg_hdr));
+				}
 			}
+			break;
 
-			m_channel.NextPacket(packet->len8 << 3);
+			default:
+				break;
 		}
-	} while (m_channel.StopRead());
+	});
 }
 
 void HyperVVideoDriver::ProcessMessage(synthvid_msg_hdr* header, const uint32_t size)

@@ -3,7 +3,11 @@
 #include "kernel/Arch.h"
 #include "x64/x64.h"
 #include "kernel/Objects/KSharedMemory.h"
+#include "kernel/UObject.h"
 #include "Assert.h"
+
+//Kernel globals (defined in Kernel.cpp).
+extern KProcess m_process;
 
 KSharedMemory* KeShmCreate(const size_t size)
 {
@@ -40,4 +44,20 @@ void KeShmUnref(KSharedMemory& shm)
 		KePhysicalFree(shm.Physical, shm.PageCount);
 		KeFree(&shm, AllocType::Shared);
 	}
+}
+
+void* KePublishRegion(const char* const endpoint, const size_t size, void (*const initialize)(void* region))
+{
+	KSharedMemory* const shm = KeShmCreate(size);
+	Assert(shm);
+
+	//The kernel keeps its mapping for the life of the system, so it holds a reference like a handle would
+	shm->Refs.Increment();
+	void* const region = KeShmMap(m_process, *shm);
+	Assert(region);
+	initialize(region);
+
+	//Published only once initialized; the grant holds its own reference until a server claims it
+	Assert(KeEndpointRegister(endpoint, KeGrantShare(UObjectType::SharedMemory, shm, KernelGrantOwner), KernelEndpointOwner));
+	return region;
 }

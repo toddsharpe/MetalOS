@@ -1,15 +1,10 @@
 #include "kernel/Api.h"
 #include "kernel/KProcess.h"
-#include "kernel/UObject.h"
-#include "kernel/Objects/KSharedMemory.h"
 #include "kernel/Objects/KSpinLock.h"
 #include "Lib/SharedRing.h"
 #include "user/MetalOS.UI.h"
 #include "user/Protocol_wm.h"
 #include "Assert.h"
-
-//Kernel globals (defined in Kernel.cpp).
-extern KProcess m_process;
 
 //Kernel -> WM input event channel. The mouse/keyboard drivers post Message
 //records here (from driver/interrupt context); the usermode WM maps the region
@@ -27,18 +22,7 @@ namespace _INPUT
 void KeInputInitialize()
 {
 	const size_t size = SharedRing<Message>::RegionSize(_INPUT::Capacity);
-	KSharedMemory* shm = KeShmCreate(size);
-	Assert(shm);
-
-	//The kernel holds this region for the life of the system; take a handle reference
-	//for its permanent mapping (mapping itself no longer bumps the refcount).
-	shm->Refs.Increment();
-	_INPUT::m_region = KeShmMap(m_process, *shm);
-	Assert(_INPUT::m_region);
-	SharedRing<Message>::Init(_INPUT::m_region, _INPUT::Capacity);
-
-	//Publish a capability token for the WM to claim (KeGrantShare takes its own ref).
-	Assert(KeEndpointRegister(Wm::InputEndpoint, KeGrantShare(UObjectType::SharedMemory, shm, KernelGrantOwner), KernelEndpointOwner));
+	_INPUT::m_region = KePublishRegion(Wm::InputEndpoint, size, [](void* const region) { SharedRing<Message>::Init(region, _INPUT::Capacity); });
 }
 
 void KeInputPost(const Message& message)

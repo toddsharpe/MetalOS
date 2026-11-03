@@ -34,7 +34,8 @@ bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* byte
 
 bool KeSetFilePosition(KFile& file, const size_t position)
 {
-	if (position >= file.Length)
+	//The end itself is a valid position (reads there return nothing), so SEEK_END and ftell at end of file work
+	if (position > file.Length)
 		return false;
 
 	file.Position = position;

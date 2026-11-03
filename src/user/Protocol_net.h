@@ -39,7 +39,7 @@ namespace NetIpc
 	//kernel syscall).
 	enum class Op : uint32_t
 	{
-		Create, Bind, Connect, SendTo, Send, RecvFrom, Close,
+		Create, Bind, SendTo, RecvFrom, Close,
 		GetInterfaceIp, SetInterfaceIp, GetGateway, SetGateway,
 	};
 
@@ -50,11 +50,11 @@ namespace NetIpc
 		uint32_t Socket;   //socket id (netstack-assigned) for socket ops; interface index for config ops
 		int32_t  Type;     //Create
 		int32_t  Proto;
-		sockaddr_in Addr;  //Bind / Connect / SendTo destination
-		uint32_t Length;   //SendTo / Send payload length
+		sockaddr_in Addr;  //Bind / SendTo destination
+		uint32_t Length;   //SendTo payload length
 		in_addr  Ip;       //SetInterfaceIp addr / SetGateway gateway (network order)
 		in_addr  Subnet;   //SetInterfaceIp subnet (network order)
-		uint8_t  Data[MaxPayload]; //SendTo / Send payload
+		uint8_t  Data[MaxPayload]; //SendTo payload
 	};
 
 	//Fixed-size netstack -> app reply.

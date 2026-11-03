@@ -2,9 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-//Usermode ping over a raw ICMP socket (SOCK_RAW/IPPROTO_ICMP). The app builds the full
-//ICMP echo request (incl. checksum); the kernel only adds the IP header. Replies arrive
-//as complete ICMP messages, matched by id/seq.
+//Ping over a raw ICMP socket: we build the whole echo request (incl. checksum), netstack adds the IP header, and replies are matched by id/seq.
 
 static uint16_t IcmpChecksum(const uint8_t* data, size_t len)
 {

@@ -4,12 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-// Minimal DHCP client. Broadcasts DISCOVER, waits for OFFER, sends REQUEST, waits for ACK,
-// then applies the lease (address, subnet, gateway) to interface 0.
-//
-// The wire format mirrors the kernel's Net/Dhcp.h. Serializer/Deserializer byte-swap the
-// integer fields to/from network order; IPv4 addresses are opaque 4-byte blobs (in_addr,
-// already network order) written/read with WriteBytes/ReadBytes so they aren't swapped.
+// Minimal DHCP client (DISCOVER, OFFER, REQUEST, ACK) that applies the lease to interface 0; in_addr fields are already network order, so they skip the byte swap.
 
 static uint16_t Htons(const uint16_t v)
 {

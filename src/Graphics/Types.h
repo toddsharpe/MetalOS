@@ -73,11 +73,6 @@ namespace Graphics
 			return static_cast<size_t>(Height) * Width * sizeof(Color);
 		}
 
-		Graphics::Rectangle GetBounds()
-		{
-			return { 0, 0, Width, Height };
-		}
-
 		Color* Buffer;
 		uint32_t Height;
 		uint32_t Width;

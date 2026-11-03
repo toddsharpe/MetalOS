@@ -86,12 +86,6 @@ void SocketBind(KSocket& socket, const endpoint_t& local)
 	Register(socket);
 }
 
-void SocketConnect(KSocket& socket, const endpoint_t& peer)
-{
-	socket.Peer = peer;
-	socket.Connected = true;
-}
-
 bool SocketSend(KSocket& socket, const endpoint_t& dst, const void* const buffer, const size_t length)
 {
 	if (socket.Proto == proto_t::Udp)

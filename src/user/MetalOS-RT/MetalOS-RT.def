@@ -26,8 +26,6 @@ EXPORTS
 	GetThreadId
 	Sleep
 	SwitchToThread
-	SuspendThread
-	ResumeThread
 	TerminateProcess
 	ExitProcess
 	TerminateThread
@@ -35,10 +33,13 @@ EXPORTS
 	IsProcessAlive
 	GetProcesses
 
-	; 0x300: Devices (framebuffer export lives near memory; network interface enumeration)
+	; 0x300: Devices (framebuffer, network interface enumeration, raw ethernet frame TX)
+	MapFramebuffer
 	GetInterfaces
+	NetSend
+	FlushFramebuffer
 
-	; 0x400
+	; 0x400: Files/pipes
 	CreateFile
 	ReadFile
 	WriteFile
@@ -50,28 +51,23 @@ EXPORTS
 	PeekNamedPipe
 	CloseHandle
 
-	; 0x500
+	; 0x500: Synchronization
 	WaitForSingleObject
 	CreateEvent
 	SetEvent
 	ResetEvent
 
-	; 0x600
+	; 0x600: Memory
 	VirtualAlloc
 	VirtualFree
 	CreateSharedMemory
 	MapSharedMemory
 	DeleteSharedMemory
-	MapFramebuffer
-	FlushFramebuffer
 
-	; 0x700
+	; 0x700: Debug
 	DebugPrint
 	DebugPrintBytes
 	DebugPrintStack
-
-	; 0x800: Network device (raw ethernet frame TX; the TCP/IP stack is in usermode netstack)
-	NetSend
 
 	; 0x900: IPC endpoints
 	RegisterEndpoint

@@ -2,8 +2,6 @@
 
 //Forward declare kernel types
 
-#include "Lib/List.h"
-#include "Lib/StaticVector.h"
 #include "Lib/String.h"
 
 #define DECLARE_HANDLE(name) struct name##__; typedef struct name##__ *name
@@ -56,7 +54,6 @@ constexpr size_t MaxModuleName = 32; //Including NUL; longer names are truncated
 struct Module
 {
 	void* ImageBase;
-	void* PDB;
 	char Name[MaxModuleName];
 };
 
@@ -183,7 +180,7 @@ struct sockaddr_in
 
 
 
-//Network interface descriptor (addr/subnet are network byte order).
+//Network interface descriptor returned by GetInterfaces.
 struct InterfaceInfo
 {
 	uint32_t index;

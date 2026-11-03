@@ -11,33 +11,10 @@ int __cdecl _purecall(void)
 using namespace Graphics;
 using namespace UI;
 
-#define TEST_MODE 0
-
 bool UICallback(GUI& gui, Message& message)
 {
 	return false;
 }
-
-#if TEST_MODE
-//Test method to reposition window at 10hz
-size_t MoveThread(void* arg)
-{
-	GUI* window = (GUI*)arg;
-	
-	Graphics::Rectangle rect;
-	window->GetRectangle(rect);
-	DebugPrintf("Rect: 0x%x 0x%x 0x%x 0x%x\n", rect.X, rect.Y, rect.Width, rect.Height);
-
-	while (true)
-	{
-		rect.X++;
-		rect.Y++;
-		window->Move(rect);
-
-		Sleep(1000 / 10);
-	}
-}
-#endif
 
 void B7Pressed(Button& button)
 {
@@ -91,9 +68,6 @@ int main(int argc, char** argv)
 	Label l1("HI!", {5, 175, 20, 20});
 	gui.Children.Add(&l1);
 
-#if TEST_MODE
-	CreateThread(0, MoveThread, (void*)&gui);
-#endif
 	gui.Run();
 
 	return 0;

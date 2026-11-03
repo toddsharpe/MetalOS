@@ -19,8 +19,6 @@ public:
 	KSocket(const Net::proto_t proto) :
 		Proto(proto),
 		Local(),
-		Peer(),
-		Connected(false),
 		Registered(false),
 		m_queue(),
 		m_scratch()
@@ -38,7 +36,7 @@ public:
 		return m_queue.Push(m_scratch, sizeof(Net::endpoint_t) + length);
 	}
 
-	//Pop one datagram into the caller buffer (thread context). Returns false if empty.
+	//Pop one datagram into the caller buffer. Returns false if empty.
 	bool Dequeue(Net::endpoint_t& src, void* const buffer, const size_t maxLength, size_t& bytesRead)
 	{
 		if (m_queue.IsEmpty())
@@ -61,8 +59,6 @@ public:
 
 	Net::proto_t Proto;
 	Net::endpoint_t Local;  //bound local addr+port (port demux key)
-	Net::endpoint_t Peer;   //connected default peer
-	bool Connected;
 	bool Registered;        //present in the demux registry
 
 private:

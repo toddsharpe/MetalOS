@@ -47,12 +47,6 @@ public:
 		m_offset += N;
 	}
 
-	void Write(const char* const str)
-	{
-		WriteBytes(str, strlen(str));
-		Write('\0');
-	}
-
 	template <size_t N>
 	void WriteBytes(const uint8_t (&from)[N])
 	{
@@ -83,16 +77,6 @@ public:
 		const size_t remaining = m_length - m_offset;
 		Assert(remaining >= skip);
 		m_offset += skip;
-	}
-
-	void PadTo(const size_t size)
-	{
-		if (m_offset > size)
-			return;
-		Assert(size <= m_length);
-
-		const size_t diff = size - m_offset;
-		m_offset += diff;
 	}
 
 private:

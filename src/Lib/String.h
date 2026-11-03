@@ -176,16 +176,6 @@ protected:
 	}
 
 public:
-	const StringStorage& operator=(const CString& buffer) 
-	{
-		Assert(buffer.Length < Capacity);
-		Trace();
-		memcpy(Data, buffer.c_str(), buffer.Length);
-		m_count = buffer.Length;
-
-		return *this;
-	}
-
 	void ToLower()
 	{
 		for (size_t i = 0; i < m_count; i++)
@@ -278,11 +268,6 @@ public:
 	operator CString() const
 	{
 		return {Data, m_count};
-	}
-
-	const CString Ref() const
-	{
-		return { Data, m_count};
 	}
 
 	size_t Count() const

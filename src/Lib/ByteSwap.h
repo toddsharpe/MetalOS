@@ -66,29 +66,3 @@ inline int64_t ByteSwap<int64_t>(const int64_t value)
 {
 	return _byteswap_uint64(value);
 }
-
-template <>
-inline float ByteSwap<float>(const float value)
-{
-	uint32_t temp = 0;
-	memcpy(&temp, &value, sizeof(value));
-
-	temp = _byteswap_ulong(temp);
-
-	float swapped = 0;
-	memcpy(&swapped, &temp, sizeof(value));
-	return swapped;
-}
-
-template <>
-inline double ByteSwap<double>(const double value)
-{
-	uint64_t temp = 0;
-	memcpy(&temp, &value, sizeof(value));
-
-	temp = _byteswap_uint64(temp);
-
-	double swapped = 0;
-	memcpy(&swapped, &temp, sizeof(value));
-	return swapped;
-}

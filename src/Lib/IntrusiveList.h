@@ -2,14 +2,10 @@
 
 #include "Lib/List.h"
 
-//Intrusive doubly-linked list (elements embed a `ListEntry Link`). Holds only the structural
-//core: insert, remove, O(1) Count/IsEmpty. Range-for + ItemType make it Linq-compatible, so
-//queries (First/Any/ForEach/Count-by-predicate) come from Linq.h and work on every container.
+//Intrusive doubly-linked list (elements embed a `ListEntry Link`): insert, remove, O(1) Count/IsEmpty.
 template <typename T>
 struct IntrusiveList
 {
-	using ItemType = T;
-
 	constexpr IntrusiveList() :
 		Head()
 	{
@@ -53,7 +49,7 @@ struct IntrusiveList
 		return LIST_CONTAINING_RECORD(popped, T, Link);
 	}
 
-	//Range-for support (yields T), so Linq algorithms operate on this list.
+	//Range-for support (yields T).
 	struct Iterator
 	{
 		ListEntry* Node;

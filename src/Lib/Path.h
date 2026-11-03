@@ -3,27 +3,6 @@
 #include <cstring>
 #include "core_crt/wchar.h"
 
-void GetDirectoryName(const char* source, char* destination)
-{
-	size_t current = 0;
-	size_t marker = 0;
-	while (source[current] != L'\0')
-	{
-		if (source[current] == L'\\')
-			marker = current;
-		current++;
-	}
-
-	//Include trailing slash
-	marker++;
-
-	//Copy to destination
-	strncpy(destination, source, marker);
-
-	//Add null
-	destination[marker + 1] = L'\0';
-}
-
 void GetDirectoryName(const wchar_t* source, wchar_t* destination)
 {
 	size_t current = 0;

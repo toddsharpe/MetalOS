@@ -17,8 +17,6 @@ private:
 	};
 
 public:
-	using ItemType = T;
-
 	constexpr LinkedList() :
 		m_head(),
 		m_tail(),
@@ -186,32 +184,6 @@ public:
 		}
 	};
 
-	struct ConstReverseIterator
-	{
-		const Node* Current;
-
-		ConstReverseIterator(const Node* n) :
-			Current(n)
-		{
-		}
-
-		bool operator!=(const ConstReverseIterator& other) const
-		{
-			return Current != other.Current;
-		}
-
-		ConstReverseIterator& operator++()
-		{
-			Current = Current->Prev;
-			return *this;
-		}
-
-		const T& operator*() const
-		{
-			return Current->Value;
-		}
-	};
-
 	Iterator begin()
 	{
 		return {m_head};
@@ -240,19 +212,7 @@ public:
 		ReverseIterator end() const { return {nullptr}; }
 	};
 
-	struct ConstReverseView
-	{
-		const LinkedList* List;
-		ConstReverseIterator begin() const { return {List->m_tail}; }
-		ConstReverseIterator end() const { return {nullptr}; }
-	};
-
 	ReverseView Reversed()
-	{
-		return {this};
-	}
-
-	ConstReverseView Reversed() const
 	{
 		return {this};
 	}

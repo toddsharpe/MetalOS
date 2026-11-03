@@ -31,23 +31,6 @@ public:
 		return true;
 	}
 
-	bool Remove(const TKey key)
-	{
-		size_t index = 0;
-		if (!Find(key, index))
-			return false;
-
-		if (index < m_count - 1)
-		{
-			//Shift items down
-			const size_t num = m_count - index - 1;
-			memcpy(&m_storage[index], &m_storage[index + 1], num * sizeof(Entry));
-		}
-
-		m_count--;
-		return true;
-	}
-
 	TValue Get(const TKey key)
 	{
 		size_t index = 0;
@@ -70,11 +53,6 @@ public:
 	size_t Count() const
 	{
 		return m_count;
-	}
-
-	void Display() const
-	{
-		Printf("StaticMap::Display: Count: %d\n", m_count);
 	}
 
 	const Entry *begin() const { return reinterpret_cast<const Entry*>(&m_storage[0]); }

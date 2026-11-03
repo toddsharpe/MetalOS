@@ -18,17 +18,9 @@ extern "C"
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 #define Assert(x) if (!(x)) { Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
-#define AssertEval(x, f) if (!(x)) { Printf(__FILE__ "-" STR(__LINE__) "\n"); f; Bugcheck("File: " __FILE__, "Line: " STR(__LINE__),  #x); }
-#define AssertPrintInt(x, y) if (!(x)) { Bugcheck("File: " __FILE__, "Line: " STR(__LINE__), "Assert Failed: %s, %s=%x\n", #x, #y, y); }
 #define AssertEqual(x, y) \
 	if (!(x == y)) \
 	{ \
-		Bugcheck("File: " __FILE__, "Line: " STR(__LINE__), #x " (0x%x) != " #y " (0x%x)", x, y); \
-	}
-#define AssertEqualEval(x, y, f) \
-	if (!(x == y)) \
-	{ \
-		f; \
 		Bugcheck("File: " __FILE__, "Line: " STR(__LINE__), #x " (0x%x) != " #y " (0x%x)", x, y); \
 	}
 #define AssertNotEqual(x, y) \
@@ -45,4 +37,3 @@ extern "C"
 #define NotImplemented() Fatal(Not Implemented);
 #define Unreachable() Fatal(Unreachable);
 #define Trace() Printf(__FILE__ "-" STR(__LINE__) "\n");
-#define DebugTrace() DebugPrintf(__FILE__ "-" STR(__LINE__) "\n");

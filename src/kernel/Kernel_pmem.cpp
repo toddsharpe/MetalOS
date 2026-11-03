@@ -162,9 +162,8 @@ void KePhysicalInitialize()
 	//Zero out memory region
 	memset(_PMEM::m_frames, 0, sizeof(PageFrame) * _PMEM::m_count);
 
-	//Initialize free list and buddy map
+	//Initialize free list
 	_PMEM::m_freeList.Initialize();
-	_PMEM::m_buddyMap.Initialize();
 
 	//Default everything to reserved with all buddies in use. The bootloader's
 	//FreeRanges then carve out the pages the allocator may hand out.

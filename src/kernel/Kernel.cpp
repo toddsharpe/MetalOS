@@ -273,7 +273,7 @@ extern "C"
 			UObject* obj = proc.GetObject((handle_t)Handles::StdOut);
 			if (obj && obj->Type == UObjectType::Pipe)
 			{
-				KPipe& pipe = obj->Pipe->KPipe;
+				KPipe& pipe = *obj->Pipe;
 
 				//Write exception
 				switch (vector)

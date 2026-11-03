@@ -2,6 +2,7 @@
 
 #include "kernel/Types.h"
 #include "kernel/Objects/KEvent.h"
+#include "kernel/Objects/KPipe.h"
 #include "Assert.h"
 
 enum class UObjectType
@@ -29,7 +30,6 @@ namespace Handles
 
 class UThread;
 class UProcess;
-class UPipe;
 class KSharedMemory;
 class UObject
 {
@@ -50,7 +50,10 @@ public:
 	UProcess* Process;
 
 	KFile File;
-	UPipe* Pipe;
+
+	//Pipe: the shared kernel pipe plus which end this handle is
+	KPipe* Pipe;
+	KPipeOp PipeOp;
 
 	KEvent* Event;
 

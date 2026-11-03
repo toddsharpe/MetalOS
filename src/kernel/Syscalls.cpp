@@ -8,7 +8,6 @@
 #include "kernel/Api.h"
 #include "kernel/Objects/KPredicate.h"
 #include "kernel/Objects/KPipe.h"
-#include "kernel/Objects/UPipe.h"
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/Drivers/Driver.h"
 #include "Assert.h"
@@ -82,16 +81,29 @@ namespace
 		return true;
 	}
 
+	//Look up a caller's handle that must refer to an object of the given type
+	SyscallResult GetObject(UProcess& proc, const Handle handle, const UObjectType type, UObject*& obj)
+	{
+		obj = proc.GetObject((handle_t)handle);
+		if (!obj)
+			return SyscallResult::InvalidHandle;
+		if (obj->Type != type)
+			return SyscallResult::InvalidObject;
+
+		return SyscallResult::Success;
+	}
+
 	//Resolve a child's standard handle: only the matching end of a pipe can be redirected
 	SyscallResult GetStdPipe(UProcess& proc, const HFile handle, const KPipeOp op, KPipe*& pipe)
 	{
-		UObject* const obj = proc.GetObject((handle_t)handle);
-		if (!obj)
-			return SyscallResult::InvalidHandle;
-		if (obj->Type != UObjectType::Pipe || obj->Pipe->Op != op)
+		UObject* obj = nullptr;
+		const SyscallResult status = GetObject(proc, handle, UObjectType::Pipe, obj);
+		if (status != SyscallResult::Success)
+			return status;
+		if (obj->PipeOp != op)
 			return SyscallResult::InvalidObject;
 
-		pipe = &obj->Pipe->KPipe;
+		pipe = obj->Pipe;
 		return SyscallResult::Success;
 	}
 }
@@ -314,25 +326,28 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 	if ((!proc.Space.IsValidPointer(commandLine)) || (args && !proc.Space.IsValid(args)) || (result && !proc.Space.IsValid(result)))
 		return SyscallResult::InvalidPointer;
 
+	//Caller's pipe end for each of the child's standard handles
+	struct StdRedirect
+	{
+		HFile Source;
+		KPipeOp Op;
+		handle_t Target;
+		KPipe* Pipe;
+	};
+	StdRedirect redirects[] =
+	{
+		{ args ? args->StdInput : nullptr, KPipeOp::Read, Handles::StdIn, nullptr },
+		{ args ? args->StdOutput : nullptr, KPipeOp::Write, Handles::StdOut, nullptr },
+		{ args ? args->StdError : nullptr, KPipeOp::Write, Handles::StdErr, nullptr }
+	};
+
 	//Resolve standard handles before creating the process, so a bad one can't leave a half-built child
-	KPipe* stdIn = nullptr;
-	KPipe* stdOut = nullptr;
-	KPipe* stdErr = nullptr;
-	if (args && args->StdInput)
+	for (StdRedirect& redirect : redirects)
 	{
-		const SyscallResult status = GetStdPipe(proc, args->StdInput, KPipeOp::Read, stdIn);
-		if (status != SyscallResult::Success)
-			return status;
-	}
-	if (args && args->StdOutput)
-	{
-		const SyscallResult status = GetStdPipe(proc, args->StdOutput, KPipeOp::Write, stdOut);
-		if (status != SyscallResult::Success)
-			return status;
-	}
-	if (args && args->StdError)
-	{
-		const SyscallResult status = GetStdPipe(proc, args->StdError, KPipeOp::Write, stdErr);
+		if (!redirect.Source)
+			continue;
+
+		const SyscallResult status = GetStdPipe(proc, redirect.Source, redirect.Op, redirect.Pipe);
 		if (status != SyscallResult::Success)
 			return status;
 	}
@@ -358,40 +373,20 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 	//If console application, redirect standard handles (without args it keeps the debug output)
 	if (created->IsConsole)
 	{
-		if (stdIn)
+		for (const StdRedirect& redirect : redirects)
 		{
-			stdIn->Readers.Increment();
+			if (!redirect.Pipe)
+				continue;
 
-			//Set stdin to new process
-			UObject* stdin = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe, Handles::StdIn);
-			stdin->Pipe = KeAlloc<UPipe>(AllocType::User, *stdIn, KPipeOp::Read);
-			Assert(created->Objects.Add(stdin));
-		}
+			//Replace the default debug output (there is no default stdin, so that close is a no-op)
+			created->CloseObject(redirect.Target);
 
-		if (stdOut)
-		{
-			//Delete existing stdout
-			created->CloseObject((handle_t)Handles::StdOut);
+			KRef& ends = (redirect.Op == KPipeOp::Read) ? redirect.Pipe->Readers : redirect.Pipe->Writers;
+			ends.Increment();
 
-			stdOut->Writers.Increment();
-
-			//Set stdout to new process
-			UObject* stdout = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe, Handles::StdOut);
-			stdout->Pipe = KeAlloc<UPipe>(AllocType::User, *stdOut, KPipeOp::Write);
-			Assert(created->Objects.Add(stdout));
-		}
-
-		if (stdErr)
-		{
-			//Delete existing stderr
-			created->CloseObject((handle_t)Handles::StdErr);
-
-			stdErr->Writers.Increment();
-
-			//Set stderr to new process
-			UObject* stderr = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe, Handles::StdErr);
-			stderr->Pipe = KeAlloc<UPipe>(AllocType::User, *stdErr, KPipeOp::Write);
-			Assert(created->Objects.Add(stderr));
+			UObject* const obj = created->CreateObject(UObjectType::Pipe, redirect.Target);
+			obj->Pipe = redirect.Pipe;
+			obj->PipeOp = redirect.Op;
 		}
 	}
 
@@ -436,11 +431,8 @@ SyscallResult GetProcesses(ProcessListEntry* buffer, const size_t maxCount, size
 uint32_t GetThreadId(HThread thread)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	UObject* obj = proc.GetObject((handle_t)thread);
-	if (!obj)
-		return 0;
-
-	if (obj->Type != UObjectType::Thread)
+	UObject* obj = nullptr;
+	if (GetObject(proc, thread, UObjectType::Thread, obj) != SyscallResult::Success)
 		return 0;
 
 	return obj->Thread->Id;
@@ -463,12 +455,10 @@ void SwitchToThread()
 SyscallResult TerminateProcess(const HProcess hProc, const uint32_t exitCode)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	UObject* obj = proc.GetObject((handle_t)hProc);
-	if (!obj)
-		return SyscallResult::InvalidHandle;
-
-	if (obj->Type != UObjectType::Process)
-		return SyscallResult::InvalidObject;
+	UObject* obj = nullptr;
+	const SyscallResult status = GetObject(proc, hProc, UObjectType::Process, obj);
+	if (status != SyscallResult::Success)
+		return status;
 
 	KeTerminateProcess(*obj->Process, exitCode);
 	return SyscallResult::Success;
@@ -487,12 +477,10 @@ SyscallResult TerminateThread(const HThread thread, const uint32_t exitCode)
 	UNUSED(exitCode);
 	
 	UProcess& proc = Scheduler::GetUProcess();
-	UObject* obj = proc.GetObject((handle_t)thread);
-	if (!obj)
-		return SyscallResult::InvalidHandle;
-
-	if (obj->Type != UObjectType::Thread)
-		return SyscallResult::InvalidObject;
+	UObject* obj = nullptr;
+	const SyscallResult status = GetObject(proc, thread, UObjectType::Thread, obj);
+	if (status != SyscallResult::Success)
+		return status;
 
 	//Already exited
 	if (!obj->Thread->Thread)
@@ -563,11 +551,8 @@ SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize
 
 		case UObjectType::Pipe:
 		{
-			if (obj->Pipe->Op != KPipeOp::Read)
-				return SyscallResult::InvalidObject;
-			
 			//Create read wait
-			KPipeSignal signal(obj->Pipe->KPipe, KPipeOp::Read, bufferSize);
+			KPipeSignal signal(*obj->Pipe, KPipeOp::Read, bufferSize);
 			KPredicate wait(&KPipe::EventSignal, &signal);
 
 			//Wait for pipe signal
@@ -576,11 +561,11 @@ SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize
 
 			//Read
 			size_t bytes = 0;
-			Assert(obj->Pipe->KPipe.Read(buffer, bufferSize, bytes));
+			Assert(obj->Pipe->Read(buffer, bufferSize, bytes));
 			if (bytesRead)
 				*bytesRead = bytes;
 
-			return obj->Pipe->KPipe.IsBroken() ? SyscallResult::BrokenPipe : SyscallResult::Success;
+			return obj->Pipe->IsBroken() ? SyscallResult::BrokenPipe : SyscallResult::Success;
 		}
 		break;
 
@@ -609,11 +594,8 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 	{
 		case UObjectType::Pipe:
 		{
-			if (obj->Pipe->Op != KPipeOp::Write)
-				return SyscallResult::InvalidObject;
-
 			//Create read wait
-			KPipeSignal signal(obj->Pipe->KPipe, KPipeOp::Write, bufferSize);
+			KPipeSignal signal(*obj->Pipe, KPipeOp::Write, bufferSize);
 			KPredicate wait(&KPipe::EventSignal, &signal);
 
 			//Wait for pipe signal
@@ -621,12 +603,12 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 			Assert(result == KWaitResult::Signaled);
 
 			//The wait also ends when the reader is gone, with possibly no room to write
-			if (obj->Pipe->KPipe.IsBroken())
+			if (obj->Pipe->IsBroken())
 				return SyscallResult::BrokenPipe;
 
 			//Write
 			size_t bytes = 0;
-			if (!obj->Pipe->KPipe.Write(buffer, bufferSize, bytes))
+			if (!obj->Pipe->Write(buffer, bufferSize, bytes))
 				return SyscallResult::Failed;
 			return SyscallResult::Success;
 		}
@@ -654,9 +636,10 @@ SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const S
 	if (newPosition && !proc.Space.IsValid(newPosition))
 		return SyscallResult::InvalidPointer;
 
-	UObject* uFile = proc.GetObject((handle_t)handle);
-	if (!uFile)
-		return SyscallResult::InvalidHandle;
+	UObject* uFile = nullptr;
+	const SyscallResult status = GetObject(proc, handle, UObjectType::File, uFile);
+	if (status != SyscallResult::Success)
+		return status;
 
 	size_t newPos = 0;
 	switch (seek)
@@ -723,17 +706,17 @@ SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle)
 
 	//Create reader
 	{
-		UObject* reader = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe);
-		reader->Pipe = KeAlloc<UPipe>(AllocType::User, *pipe, KPipeOp::Read);
-		proc.Objects.Add(reader);
+		UObject* reader = proc.CreateObject(UObjectType::Pipe);
+		reader->Pipe = pipe;
+		reader->PipeOp = KPipeOp::Read;
 		*readHandle = (HFile)reader->Handle;
 	}
 
 	//Create writer
 	{
-		UObject* writer = KeAlloc<UObject>(AllocType::User, UObjectType::Pipe);
-		writer->Pipe = KeAlloc<UPipe>(AllocType::User, *pipe, KPipeOp::Write);
-		proc.Objects.Add(writer);
+		UObject* writer = proc.CreateObject(UObjectType::Pipe);
+		writer->Pipe = pipe;
+		writer->PipeOp = KPipeOp::Write;
 		*writeHandle = (HFile)writer->Handle;
 	}
 
@@ -746,15 +729,13 @@ SyscallResult PeekNamedPipe(const HFile file, size_t* bytesAvailable)
 	if (!bytesAvailable || !proc.Space.IsValid(bytesAvailable))
 		return SyscallResult::InvalidPointer;
 
-	UObject* obj = proc.GetObject((handle_t)file);
-	if (!obj)
-		return SyscallResult::InvalidHandle;
+	UObject* obj = nullptr;
+	const SyscallResult status = GetObject(proc, file, UObjectType::Pipe, obj);
+	if (status != SyscallResult::Success)
+		return status;
 
-	if (obj->Type != UObjectType::Pipe)
-		return SyscallResult::InvalidObject;
-
-	*bytesAvailable = obj->Pipe->KPipe.Count();
-	return obj->Pipe->KPipe.IsBroken() ? SyscallResult::BrokenPipe : SyscallResult::Success;
+	*bytesAvailable = obj->Pipe->Count();
+	return obj->Pipe->IsBroken() ? SyscallResult::BrokenPipe : SyscallResult::Success;
 }
 
 SyscallResult CloseHandle(const Handle handle)
@@ -798,9 +779,8 @@ SyscallResult CreateEvent(HEvent* event, const bool manual, const bool initial)
 		return SyscallResult::InvalidPointer;
 
 	//Create Event
-	UObject* created = KeAlloc<UObject>(AllocType::User, UObjectType::Event);
+	UObject* created = proc.CreateObject(UObjectType::Event);
 	created->Event = KeAlloc<KEvent>(AllocType::User, manual, initial);
-	proc.Objects.Add(created);
 
 	*event = (HEvent)created->Handle;
 	return SyscallResult::Success;
@@ -809,11 +789,10 @@ SyscallResult CreateEvent(HEvent* event, const bool manual, const bool initial)
 SyscallResult SetEvent(const HEvent event)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	UObject* obj = proc.GetObject((handle_t)event);
-	if (!obj)
-		return SyscallResult::InvalidHandle;
-	if (obj->Type != UObjectType::Event)
-		return SyscallResult::InvalidObject;
+	UObject* obj = nullptr;
+	const SyscallResult status = GetObject(proc, event, UObjectType::Event, obj);
+	if (status != SyscallResult::Success)
+		return status;
 
 	Assert(obj->Event);
 	obj->Event->Set();
@@ -823,11 +802,10 @@ SyscallResult SetEvent(const HEvent event)
 SyscallResult ResetEvent(const HEvent event)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	UObject* obj = proc.GetObject((handle_t)event);
-	if (!obj)
-		return SyscallResult::InvalidHandle;
-	if (obj->Type != UObjectType::Event)
-		return SyscallResult::InvalidObject;
+	UObject* obj = nullptr;
+	const SyscallResult status = GetObject(proc, event, UObjectType::Event, obj);
+	if (status != SyscallResult::Success)
+		return status;
 
 	Assert(obj->Event);
 	obj->Event->Reset();
@@ -910,12 +888,10 @@ SyscallResult MapSharedMemory(const HSharedMem handle, void** address)
 	if (!address || !proc.Space.IsValid(address))
 		return SyscallResult::InvalidPointer;
 
-	UObject* const obj = proc.GetObject((handle_t)handle);
-	if (!obj || obj->Type != UObjectType::SharedMemory)
-		return SyscallResult::InvalidHandle;
-
-	if (!obj->Shm)
-		return SyscallResult::InvalidObject;
+	UObject* obj = nullptr;
+	const SyscallResult status = GetObject(proc, handle, UObjectType::SharedMemory, obj);
+	if (status != SyscallResult::Success)
+		return status;
 
 	if (!obj->ShmAddress)
 	{
@@ -935,9 +911,10 @@ SyscallResult DeleteSharedMemory(const HSharedMem handle)
 {
 	UProcess& proc = Scheduler::GetUProcess();
 
-	UObject* const obj = proc.GetObject((handle_t)handle);
-	if (!obj || obj->Type != UObjectType::SharedMemory)
-		return SyscallResult::InvalidHandle;
+	UObject* obj = nullptr;
+	const SyscallResult status = GetObject(proc, handle, UObjectType::SharedMemory, obj);
+	if (status != SyscallResult::Success)
+		return status;
 
 	return proc.CloseObject((handle_t)handle) ? SyscallResult::Success : SyscallResult::Failed;
 }
@@ -958,8 +935,6 @@ SyscallResult ShareHandle(const Handle handle, uint64_t* token)
 	switch (obj->Type)
 	{
 		case UObjectType::SharedMemory:
-			if (!obj->Shm)
-				return SyscallResult::InvalidObject;
 			*token = KeGrantShare(UObjectType::SharedMemory, obj->Shm, proc.Id);
 			return SyscallResult::Success;
 

@@ -52,14 +52,12 @@ void KePhysicalFree(const paddr_t address); //Drops one reference; frees the pag
 void KePhysicalFree(const paddr_t address, const size_t count);
 
 /*
- * Virtual memory. All sizes are in bytes; each routine has an m_process form
- * and a form taking an explicit KProcess.
+ * Virtual memory. All sizes are in bytes; forms without a KProcess act on m_process.
  */
 
 //Allocate backed by fresh physical pages
 void* KeVirtualAlloc(const size_t size);
 void* KeVirtualAlloc(KProcess& process, const size_t size);
-void* KeVirtualAlloc(const void* address, const size_t size);
 void* KeVirtualAlloc(KProcess& process, const void* address, const size_t size);
 
 //Free
@@ -67,7 +65,6 @@ bool KeVirtualFree(const void* const address);
 bool KeVirtualFree(KProcess& process, const void* const address);
 
 //Map caller-supplied physical addresses
-bool KeVirtualMap(const void* const virtualAddr, const paddr_t physicalAddr, const size_t size);
 bool KeVirtualMap(KProcess& process, const void* const virtualAddr, const paddr_t physicalAddr, const size_t size);
 void* KeVirtualMap(const paddr_t* addresses, const size_t size);
 void* KeVirtualMap(KProcess& process, const paddr_t* addresses, const size_t size);
@@ -127,8 +124,7 @@ bool KeGrantClaim(const uint64_t token, UObjectType& type, void*& object);
 void KeGrantRevoke(const uint32_t granter);
 
 /*
- * IPC endpoint registry: a name -> shared-memory-id rendezvous so unrelated
- * processes can find a server's well-known shared region.
+ * IPC endpoint registry: a name -> opaque value (e.g. a grant token) rendezvous so unrelated processes can find a server.
  */
 static constexpr size_t MaxEndpointName = 32; //Including the NUL
 static constexpr uint32_t KernelEndpointOwner = 0; //Process ids start at 1
@@ -147,10 +143,8 @@ enum class AllocType
 	Boot,
 	Kernel,
 	Acpi,
-	Temp,
 	Shared,
 	Malloc,
-	WM,
 	User
 };
 
@@ -222,7 +216,6 @@ void* KeLoadFile(const char* const path);
 /*
  * Prints.
  */
-void CPrintf(const bool enabled, const char* format, ...);
 void Printf(const char* format, va_list args);
 void Bugcheck(const char* file, const char* line, const char* format, va_list args);
 void PrintStack();

@@ -30,8 +30,6 @@ public:
 	size_t Space() const;
 	bool IsBroken() const;
 
-	void Display() const;
-
 	KRef Readers;
 	KRef Writers;
 

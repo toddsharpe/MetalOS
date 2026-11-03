@@ -279,11 +279,7 @@ KWaitResult Scheduler::ObjectWait(KSignal& object, const milli_t timeout)
 	AssertEqual(current.Sched.State, KThreadState::Running);
 	AssertEqual(current.Sched.Signal, nullptr);
 
-	//Disable interrupts so the signal check and the SignalWait arm are atomic.
-	//Without this, a timer could fire between IsSignalled()=false and
-	//m_state=SignalWait, context-switch to the windowing thread, enqueue a
-	//message, and Schedule() would not see this thread in SignalWait - missing
-	//the wakeup until the next timer tick.
+	//Disable interrupts so the signal check and the SignalWait arm are atomic, else a wakeup between them is missed until the next tick
 	const cpu_flags_t flags = ArchDisableInterrupts();
 
 	if (object.IsSignalled())
@@ -296,8 +292,7 @@ KWaitResult Scheduler::ObjectWait(KSignal& object, const milli_t timeout)
 	const nano100_t tscStart = m_readTsc();
 	const nano100_t deadline = tscStart + ToNano(timeout) / 100;
 
-	//m_signal and m_timeout must be written before m_state=SignalWait so that
-	//any Schedule() seeing SignalWait always finds a valid m_signal.
+	//Sched.Signal and Sched.Timeout must be written before State=SignalWait so any Schedule() seeing SignalWait finds a valid Signal
 	current.Sched.Signal = &object;
 	current.Sched.Timeout = deadline;
 	current.Sched.State = KThreadState::SignalWait;

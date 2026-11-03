@@ -2,7 +2,6 @@
 
 #include "Assert.h"
 #include "kernel/Objects/KSpinLock.h"
-extern void PrintStack();
 
 class KRef
 {

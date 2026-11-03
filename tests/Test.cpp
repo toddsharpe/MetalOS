@@ -51,17 +51,6 @@ int main()
 	return 0;
 }
 
-void CPrintf(const bool enabled, const char* format, ...)
-{
-	if (!enabled)
-		return;
-
-	va_list args;
-	va_start(args, format);
-	Printf(format, args);
-	va_end(args);
-}
-
 void Printf(const char* format, ...)
 {
 	va_list args;

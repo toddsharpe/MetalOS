@@ -14,8 +14,6 @@ namespace Arch
 
 static constexpr size_t AllocationGranularity = 0x10000; // 64K
 
-void CPrintf(const bool, const char*, ...);
-
 #include "kernel/AddressSpace.h"
 #include "kernel/AddressSpace.cpp"
 

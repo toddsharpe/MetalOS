@@ -106,7 +106,6 @@ namespace
 		 * - Create new page tables (requires physical memory to be initialized).
 		 */
 		m_process.Tables = KernelPageTables::CreateNew();
-		m_process.Debug = false;
 		Assert(KeVirtualMap(m_process, (void*)KernelBase, m_params.KernelAddress, m_params.KernelImageSize));
 		Assert(KeVirtualMap(m_process, (void*)KernelPdb, m_params.PdbAddress, m_params.PdbSize));
 		Assert(KeVirtualMap(m_process, (void*)KernelGraphicsDevice, m_params.Display.FrameBufferBase, m_params.Display.FrameBufferSize));
@@ -196,9 +195,7 @@ namespace
 	}
 }
 
-//API split out by subsystem. Included after the kernel globals are defined so that any
-//static objects in these files (e.g. _WM::m_backBuffer, built from m_display) initialize
-//after the globals they read. Each file declares what it uses via its own `extern`s.
+//API split out by subsystem, included after the kernel globals so any statics in these files initialize after the globals they read
 #include "kernel/Kernel_thread.cpp"
 #include "kernel/Kernel_file.cpp"
 #include "kernel/Kernel_process.cpp"

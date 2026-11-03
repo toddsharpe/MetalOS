@@ -51,7 +51,6 @@ namespace _VMEM
 
 	void* Allocate(KProcess& process, const size_t count)
 	{
-		CPrintf(process.Debug, "Allocate: Any, Count: 0x%x Global: %d\n", count, process.IsGlobal);
 		Assert(count);
 
 		//Reserve region, returning nullptr if it isn't free
@@ -64,7 +63,6 @@ namespace _VMEM
 
 	void* Allocate(KProcess& process, const void* address, const size_t count)
 	{
-		CPrintf(process.Debug, "Allocate: 0x%016x, Count: 0x%x Global: %d\n", address, count, process.IsGlobal);
 		Assert(address);
 		Assert(count);
 
@@ -78,7 +76,6 @@ namespace _VMEM
 
 	void* VirtualMap(KProcess& process, const paddr_t* addresses, const size_t count)
 	{
-		CPrintf(process.Debug, "VirtualMap: Any, Count: 0x%x\n", count);
 		Assert(count != 0);
 
 		//Reserve region, returning nullptr if it isn't free
@@ -104,7 +101,6 @@ namespace _VMEM
 	{
 		const uintptr_t virt = reinterpret_cast<uintptr_t>(address);
 		const size_t count = process.Space.GetCount(virt);
-		CPrintf(process.Debug, "Free: 0x%016x Count: 0x%x\n", virt, count);
 		Assert(count);
 
 		//An owning mapping drops its reference on each page; caller-supplied physical stays with the caller
@@ -128,11 +124,7 @@ namespace _VMEM
 }
 
 /*
- * Virtual memory.
- *
- * All sizes are in bytes. Each routine has an m_process (kernel) form and a
- * form taking an explicit KProcess. KeVirtualAlloc backs the range with fresh
- * physical pages; KeVirtualMap maps caller-supplied physical addresses.
+ * Virtual memory: sizes in bytes; KeVirtualAlloc backs the range with fresh pages, KeVirtualMap maps caller-supplied physical addresses.
  */
 
 //Allocate anywhere
@@ -147,11 +139,6 @@ void* KeVirtualAlloc(KProcess& process, const size_t size)
 }
 
 //Allocate at a fixed virtual address
-void* KeVirtualAlloc(const void* address, const size_t size)
-{
-	return KeVirtualAlloc(m_process, address, size);
-}
-
 void* KeVirtualAlloc(KProcess& process, const void* address, const size_t size)
 {
 	return _VMEM::Allocate(process, address, x64::SizeToPages(size));
@@ -169,14 +156,8 @@ bool KeVirtualFree(KProcess& process, const void* const address)
 }
 
 //Map a fixed virtual address to a contiguous physical range
-bool KeVirtualMap(const void* const virtualAddr, const paddr_t physicalAddr, const size_t size)
-{
-	return KeVirtualMap(m_process, virtualAddr, physicalAddr, size);
-}
-
 bool KeVirtualMap(KProcess& process, const void* const virtualAddr, const paddr_t physicalAddr, const size_t size)
 {
-	CPrintf(process.Debug, "Map: VA: 0x%016x, PA: 0x%016x, Size: 0x%x, Global: %d\n", virtualAddr, physicalAddr, size, process.IsGlobal);
 	Assert(virtualAddr);
 	Assert(size);
 
@@ -214,7 +195,6 @@ void* KeVirtualMap(const paddr_t address, const size_t size)
 
 void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size)
 {
-	CPrintf(process.Debug, "Map: PA: 0x%016x, Size: 0x%x, Global: %d\n", address, size, process.IsGlobal);
 	Assert(size);
 
 	const size_t count = x64::SizeToPages(size);

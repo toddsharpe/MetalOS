@@ -13,7 +13,6 @@ enum class UObjectType
 	Pipe,
 	Debug,
 
-	Semaphore,
 	Event,
 
 	SharedMemory
@@ -30,7 +29,6 @@ namespace Handles
 
 class UThread;
 class UProcess;
-class UWindow;
 class UPipe;
 class KSharedMemory;
 class UObject

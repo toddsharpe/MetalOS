@@ -22,22 +22,6 @@ void* ConfigTables::GetAcpiTable() const
 	return table;
 }
 
-void ConfigTables::Display() const
-{
-	for (size_t i = 0; i < m_count; i++)
-	{
-		const EFI_GUID guid = m_tables[i].VendorGuid;
-		const void* address = m_tables[i].VendorTable;
-
-		Printf("Guid: {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}, Address: 0x%016x\n",
-			guid.Data1, guid.Data2, guid.Data3,
-			guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
-			guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7],
-			address
-		);
-	}
-}
-
 bool ConfigTables::GetTableByGuid(const EFI_GUID& guid, void*& vendorTable) const
 {
 	for (size_t i = 0; i < m_count; i++)

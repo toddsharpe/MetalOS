@@ -1,6 +1,6 @@
 #pragma once
 
-//Keep in sync with MetalOS.KernalApi syscalls.asm
+//Keep in sync with src/user/MetalOS-RT/syscalls.asm
 enum class Syscall : uint64_t
 {
 	//0x100: System

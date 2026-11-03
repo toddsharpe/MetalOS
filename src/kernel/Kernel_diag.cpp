@@ -98,17 +98,6 @@ void Printf(const char* format, ...)
 	va_end(args);
 }
 
-void CPrintf(const bool enabled, const char* format, ...)
-{
-	if (!enabled)
-		return;
-
-	va_list args;
-	va_start(args, format);
-	Printf(format, args);
-	va_end(args);
-}
-
 void PrintBytes(const void* data, const size_t length)
 {
 	const uint32_t width = 16;

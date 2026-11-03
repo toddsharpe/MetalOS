@@ -10,11 +10,8 @@
 #include "kernel/Objects/KPipe.h"
 #include "kernel/Objects/UPipe.h"
 #include "kernel/Objects/KSharedMemory.h"
-#include "Lib/ByteSwap.h"
 #include "kernel/Drivers/Driver.h"
 #include "Assert.h"
-
-//TODO(tsharpe): Syscalls should be going through Kernel Api, but theres no kernel internal use for windows?
 
 namespace
 {
@@ -135,12 +132,6 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 			SwitchToThread();
 			return 0;
 
-		case Syscall::SuspendThread:
-			return (uint64_t)SuspendThread((HThread)frame.Arg0);
-
-		case Syscall::ResumeThread:
-			return (uint64_t)ResumeThread((HThread)frame.Arg0);
-
 		case Syscall::TerminateProcess:
 			return (uint64_t)TerminateProcess((HProcess)frame.Arg0, (uint32_t)frame.Arg1);
 
@@ -160,8 +151,6 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 
 		case Syscall::GetProcesses:
 			return (uint64_t)GetProcesses((ProcessListEntry*)frame.Arg0, (size_t)frame.Arg1, (size_t*)frame.Arg2);
-
-		//0x300 windowing moved to the usermode WM (MetalOS-WM.dll <-> MetalOS-WMSvr.exe)
 
 		//0x400
 		case Syscall::CreateFile:
@@ -223,6 +212,7 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 		case Syscall::DeleteSharedMemory:
 			return (uint64_t)DeleteSharedMemory((HSharedMem)frame.Arg0);
 
+		//0x300
 		case Syscall::MapFramebuffer:
 			return (uint64_t)MapFramebuffer((GraphicsDevice*)frame.Arg0);
 		case Syscall::FlushFramebuffer:
@@ -241,7 +231,7 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 		case Syscall::DebugPrintStack:
 			return (uint64_t)DebugPrintStack(frame.UserIP);
 
-		//0x800: raw ethernet frame transmit (netstack owns the TCP/IP stack)
+		//0x302: raw ethernet frame transmit (netstack owns the TCP/IP stack)
 		case Syscall::NetSend:
 			return (uint64_t)NetSend((uint32_t)frame.Arg0, (const void*)frame.Arg1, (size_t)frame.Arg2);
 
@@ -470,16 +460,6 @@ void SwitchToThread()
 	KeYield();
 }
 
-SyscallResult SuspendThread(const HThread file)
-{
-	return SyscallResult::NotImplemented;
-}
-
-SyscallResult ResumeThread(const HThread file)
-{
-	return SyscallResult::NotImplemented;
-}
-
 SyscallResult TerminateProcess(const HProcess hProc, const uint32_t exitCode)
 {
 	UProcess& proc = Scheduler::GetUProcess();
@@ -497,8 +477,6 @@ SyscallResult TerminateProcess(const HProcess hProc, const uint32_t exitCode)
 void ExitProcess(const uint32_t exitCode)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-
-	//Free all windows
 	KeTerminateProcess(proc, exitCode);
 
 	Unreachable();
@@ -1020,7 +998,7 @@ SyscallResult ClaimHandle(const uint64_t token, Handle* handle)
 	}
 }
 
-//Map the linear framebuffer into the calling process (used by the usermode WM).
+//0x300: map the linear framebuffer into the calling process (used by the usermode WM).
 extern DeviceTree m_deviceTree;
 
 SyscallResult MapFramebuffer(GraphicsDevice* device)
@@ -1181,8 +1159,7 @@ SyscallResult DebugPrintStack(const uint64_t rip)
 	return SyscallResult::Success;
 }
 
-//0x800: Network device. The TCP/IP stack is the usermode netstack; the only kernel network
-//syscall transmits a raw ethernet frame through the NIC (netstack claims the RX ring + MAC).
+//0x302: transmit a raw ethernet frame through the NIC (the TCP/IP stack is the usermode netstack)
 SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length)
 {
 	UProcess& proc = Scheduler::GetUProcess();

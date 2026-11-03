@@ -113,16 +113,6 @@ bool KPipe::IsBroken() const
 	return Readers.IsEmpty() || Writers.IsEmpty();
 }
 
-void KPipe::Display() const
-{
-	Printf("KPipe::Display\n");
-	Printf("  Buffer: 0x%016x\n", m_buffer);
-	Printf("   Count: 0x%016x\n", m_count);
-	Printf("    Size: 0x%016x\n", m_size);
-	Printf("    Read: 0x%016x\n", m_readIndex);
-	Printf("   Write: 0x%016x\n", m_writeIndex);
-}
-
 bool KPipe::EventSignal(const KPipeOp op, const size_t count)
 {
 	if (IsBroken())

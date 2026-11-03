@@ -16,7 +16,6 @@ public:
 	constexpr AddressSpace(const uintptr_t start, const uintptr_t end, const uintptr_t offset = 0) :
 		Start(start),
 		End(end),
-		Debug(false),
 		m_watermark(start + offset),
 		m_reservations()
 	{
@@ -45,8 +44,6 @@ public:
 
 	const uintptr_t Start;
 	const uintptr_t End;
-
-	bool Debug;
 
 private:
 	static constexpr uint64_t AllocationGranularity = 0x1'0000; //64K

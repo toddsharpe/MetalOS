@@ -108,8 +108,7 @@ public:
 		//collides with the fixed low-memory regions (KernelBase, KdCom, KernelPdb, KernelHeap).
 		Space(get_start(type), get_end(type), get_offset(type)),
 		Tables(),
-		IsGlobal(type == KProcessType::Kernel),
-		Debug()
+		IsGlobal(type == KProcessType::Kernel)
 	{
 	}
 
@@ -130,7 +129,6 @@ public:
 	KernelPageTables Tables;
 
 	bool IsGlobal;
-	bool Debug;
 
 private:
 };

@@ -129,7 +129,6 @@ UObject* UProcess::GetObject()
 
 UObject* UProcess::GetObject(const handle_t handle)
 {
-	handle_t ctx = handle;
 	for (UObject*& obj : Objects)
 	{
 		if (obj->Handle == handle)

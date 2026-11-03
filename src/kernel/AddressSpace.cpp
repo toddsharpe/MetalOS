@@ -42,8 +42,6 @@ bool AddressSpace::IsValidRange(const void* const address, const size_t length) 
 uintptr_t AddressSpace::Reserve(const size_t count, const PageOwnership ownership)
 {
 	Assert(count);
-	CPrintf(Debug, "Reserve: Any in [0x%016x, 0x%016x] Size: 0x%x\n", Start, End, count);
-	CPrintf(Debug, "  Watermark: 0x%016x Gran: 0x%016x\n", m_watermark, AllocationGranularity);
 
 	//Reject sizes that can't fit at all (also keeps the shift and End - bytes below from wrapping)
 	if (count > ((End - Start) >> Arch::PageShift))
@@ -69,15 +67,12 @@ uintptr_t AddressSpace::Reserve(const size_t count, const PageOwnership ownershi
 
 	//Increment watermark
 	m_watermark += ByteAlign(bytes, AllocationGranularity);
-	CPrintf(Debug, "  NewWatermark: 0x%016x\n", m_watermark);
-	CPrintf(Debug, "  Received: 0x%016x Count:0x%x\n", address, count);
 
 	return address;
 }
 
 bool AddressSpace::Reserve(const uintptr_t address, const size_t count, const PageOwnership ownership)
 {
-	CPrintf(Debug, "Reserve: 0x%016x in [0x%016x, 0x%016x] Size: 0x%x\n", address, Start, End, count);
 	Assert(count != 0);
 
 	//Check requested address
@@ -86,8 +81,6 @@ bool AddressSpace::Reserve(const uintptr_t address, const size_t count, const Pa
 
 	//Claim
 	Assert(m_reservations.Add(Reservation{address, count, ownership == PageOwnership::Owned}));
-
-	CPrintf(Debug, "  Received: 0x%016x Count:0x%x\n", address, count);
 
 	return true;
 }
@@ -127,8 +120,6 @@ size_t AddressSpace::ReservedBytes() const
 
 bool AddressSpace::Free(const uintptr_t address, const size_t count)
 {
-	CPrintf(Debug, "Free: 0x%016x Count: 0x%x\n", address, count);
-
 	//operator== keys on Address; removes the matching reservation (count is validated by callers).
 	return m_reservations.Remove(Reservation{ address, count });
 }

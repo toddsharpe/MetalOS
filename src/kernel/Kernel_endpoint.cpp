@@ -5,14 +5,7 @@
 #include "Assert.h"
 #include <cstring>
 
-//Global name-based IPC rendezvous. Two uses, both mediated by the kernel so
-//unrelated processes never race on shared memory directly:
-//  - Register/Lookup: a name -> shared-memory-id map for a server's well-known
-//    single region (e.g. the "input" ring).
-//  - Post/Poll: a per-endpoint queue of client-supplied ids (connection handoff).
-//    A client Posts the id of a channel it created; the server Polls to accept it.
-//Everything above this (channel layout, message rings) is arranged inside shared
-//memory by usermode convention; the kernel only moves ids across, under a lock.
+//Global name-based IPC rendezvous: Register/Lookup publish an opaque value (e.g. a grant token) under a name, Post/Poll queue client values for connection handoff
 namespace _EP
 {
 	struct Endpoint

@@ -2,8 +2,6 @@
 
 #include "kernel/UProcess.h"
 #include "user/MetalOS.h"
-#include "kernel/Objects/KSpinLock.h"
-#include "Lib/StaticQueue.h"
 #include "x64/intrin.h"
 #include <cstring>
 
@@ -13,8 +11,6 @@ class KThread;
 class UThread
 {
 public:
-	static bool HasMessage(void* const arg) { return ((UThread*)arg)->HasMessage(); };
-
 	UThread(UProcess& process, ThreadEnvironmentBlock& teb) :
 		Process(process),
 		Thread(),
@@ -23,7 +19,6 @@ public:
 		Id(++LastUThreadId),
 		StackBase(),
 		Refs(1),
-		m_messages(),
 		m_context(),
 		m_fpu(),
 		m_teb(teb)
@@ -45,31 +40,6 @@ public:
 	void Start()
 	{
 		ArchUserThreadStart(&m_context, &m_teb);
-	}
-
-	void Enqueue(const Message& message)
-	{
-		const cpu_flags_t flags = m_lock.Acquire();
-		m_messages.Enqueue(message);
-		m_lock.Release(flags);
-	}
-
-	bool Dequeue(Message& message)
-	{
-		const cpu_flags_t flags = m_lock.Acquire();
-		if (m_messages.IsEmpty())
-		{
-			m_lock.Release(flags);
-			return false;
-		}
-		message = m_messages.Dequeue();
-		m_lock.Release(flags);
-		return true;
-	}
-
-	bool HasMessage() const
-	{
-		return !m_messages.IsEmpty();
 	}
 
 	void Display() const
@@ -103,12 +73,6 @@ public:
 	uint32_t Refs; //Its KThread plus each handle; the record is freed at zero (KeReleaseUThread)
 
 private:
-	//Scheduler
-
-	//Messages
-	KSpinLock m_lock;
-	StaticQueue<Message, 16> m_messages;
-
 	//Storage
 	Arch::Context m_context;
 	alignas(16) uint8_t m_fpu[512]; //FXSAVE image

@@ -17,8 +17,6 @@ public:
 
 	void* GetAcpiTable() const;
 
-	void Display() const;
-
 private:
 	bool GetTableByGuid(const EFI_GUID& guid, void*& vendorTable) const;
 

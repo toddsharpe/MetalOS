@@ -166,16 +166,6 @@ public:
 		return moved;
 	}
 
-	void Display() const
-	{
-		// Display the heap blocks for debugging
-		Printf("Heap at %p, size %zu:\n", m_heap, m_size);
-		for (Block *block = m_head; block != nullptr; block = block->Next)
-		{
-			Printf("  Block at %p: size %zu, %s\n", block, block->Size, block->Free ? "free" : "allocated");
-		}
-	}
-
 	bool IsValid() const
 	{
 		return m_heap && m_size;

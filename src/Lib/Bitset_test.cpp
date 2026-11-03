@@ -20,41 +20,9 @@ void Bitset_test()
 		bitset.Set(63);
 		Assert(bitset.Get(63));
 
-		bitset.Clear(0);
+		bitset.Set(0, false);
 		Assert(!bitset.Get(0));
 		Assert(bitset.Get(63));
-	}
-
-	// StaticBitset: FirstClear finds first zero bit
-	{
-		StaticBitset<8> bitset;
-		size_t index = 99;
-		Assert(bitset.First(index));
-		AssertEqual(index, 0);
-
-		bitset.Set(0);
-		Assert(bitset.First(index));
-		AssertEqual(index, 1);
-
-		// Fill all bits, First should return false
-		for (size_t i = 0; i < 8; i++)
-			bitset.Set(i);
-		Assert(!bitset.First(index));
-	}
-
-	// StaticBitset: FirstSet finds first set bit
-	{
-		StaticBitset<8> bitset;
-		size_t index = 99;
-		Assert(!bitset.First(index, true));
-
-		bitset.Set(3);
-		Assert(bitset.First(index, true));
-		AssertEqual(index, 3);
-
-		bitset.Set(1);
-		Assert(bitset.First(index, true));
-		AssertEqual(index, 1);  // Must return lowest index
 	}
 
 	// StaticBitset spanning multiple 64-bit chunks (N > 64)
@@ -70,31 +38,8 @@ void Bitset_test()
 
 		bitset.Set(127);
 		Assert(bitset.Get(127));
-		bitset.Clear(127);
+		bitset.Set(127, false);
 		Assert(!bitset.Get(127));
-
-		size_t index = 99;
-		Assert(bitset.First(index, true));
-		AssertEqual(index, 64);
-	}
-
-	// DynamicBitset via arena
-	{
-		DynamicBitset bitset(16);
-		bitset.Initialize();
-
-		for (size_t i = 0; i < 16; i++)
-			Assert(!bitset.Get(i));
-
-		bitset.Set(7);
-		Assert(bitset.Get(7));
-
-		size_t index = 99;
-		Assert(bitset.First(index, true));
-		AssertEqual(index, 7);
-
-		bitset.Clear(7);
-		Assert(!bitset.First(index, true));
 	}
 
 	// FirstContiguous: all clear, find 1

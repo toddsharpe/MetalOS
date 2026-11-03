@@ -37,12 +37,6 @@ typedef __int64         ssize_t;
 typedef __int64          ptrdiff_t;
 typedef __int64          intptr_t;
 
-#ifdef __cplusplus
-static constexpr uint64_t UINT64_MAX = 0xFFFF'FFFF'FFFF'FFFF;
-#else
-#define UINT64_MAX 0xffffffffffffffffui64
-#endif
-
 // Provide a typedef for wchar_t for use under /Zc:wchar_t-
 #ifndef _WCHAR_T_DEFINED
     #define _WCHAR_T_DEFINED

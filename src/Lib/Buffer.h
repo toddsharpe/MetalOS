@@ -59,11 +59,6 @@ public:
 		
 	}
 
-	bool IsValid() const
-	{
-		return Data != nullptr;
-	}
-
 	CBuffer Ref() const
 	{
 		return { Data, Count};
@@ -94,17 +89,4 @@ inline void Copy(Buffer& to, const CBuffer& from)
 	Assert(to.Capacity >= from.Size);
 	memcpy(to.Data, from.Data, to.Count);
 	to.Count = from.Size;
-}
-
-inline void Copy(Buffer& to, const void* from, const size_t size)
-{
-	Assert(to.Capacity >= size);
-	memcpy(to.Data, from, size);
-	to.Count = size;
-}
-
-inline void Copy(void* const to, const size_t to_size, const CBuffer&& from)
-{
-	Assert(to_size >= from.Size);
-	memcpy(to, from.Data, from.Size);
 }

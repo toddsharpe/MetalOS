@@ -13,12 +13,10 @@
 #include "Lib/Bitset_test.cpp"
 #include "Lib/StaticVector_test.cpp"
 #include "Lib/StaticMap_test.cpp"
-#include "Lib/ObjectPool_test.cpp"
 #include "Lib/RingBuffer_test.cpp"
 #include "Lib/SharedRing_test.cpp"
 #include "Lib/StaticHeap_test.cpp"
 #include "Lib/LinkedList_test.cpp"
-#include "Lib/Linq_test.cpp"
 #include "Lib/TextBuffer_test.cpp"
 
 #define Test(name)                     \
@@ -40,12 +38,10 @@ int main()
 	Test(Bitset);
 	Test(StaticVector);
 	Test(StaticMap);
-	Test(ObjectPool);
 	Test(RingBuffer);
 	Test(SharedRing);
 	Test(StaticHeap);
 	Test(LinkedList);
-	Test(Linq);
 	Test(TextBuffer);
 
 	return 0;

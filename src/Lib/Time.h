@@ -14,7 +14,6 @@ constexpr nano_t ToNano(const milli_t time)
 }
 
 typedef uint64_t nano100_t;//Time in 100 nanoseconds
-static constexpr nano100_t Second100Ns = Second / 100; //# of 100ns segments in a second
 static constexpr milli_t ToMilli(const nano100_t ns100)
 {
 	return (ns100 * 100) / 1'000'000;

@@ -20,6 +20,3 @@ static constexpr uintptr_t KernelPageFrameDBStart = 0xFFFF'8003'0000'0000;
 static constexpr uintptr_t KernelUefiStart        = 0xFFFF'8004'0000'0000;
 static constexpr uintptr_t KernelPhysicalStart    = 0xFFFF'8010'0000'0000;
 static constexpr uintptr_t KernelEnd              = 0xFFFF'8080'0000'0000;
-
-//static constexpr uintptr_t KernelMin = 0xFFFF'8000'0000'0000;
-//static constexpr uintptr_t KernelMax = 0xFFFF'FFFF'FFFF'FFFF;

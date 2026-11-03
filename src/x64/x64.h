@@ -23,11 +23,6 @@ namespace x64
 		return DivRoundUp(bytes, PageSize);
 	}
 
-	constexpr size_t PageAlign(const size_t size)
-	{
-		return ByteAlign(size, PageSize);
-	}
-
 	enum class InterruptVector : uint8_t
 	{
 		// External Interrupts
@@ -151,7 +146,7 @@ namespace x64
 			};
 			uint64_t Value;
 		};
-	} PML4E, *PPML4E;
+	} PML4E;
 	static_assert(sizeof(_PML4E) == sizeof(uintptr_t), "Size mismatch, only 64-bit supported.");
 
 	// Intel SDM Vol3A Table 4-15
@@ -181,7 +176,7 @@ namespace x64
 			};
 			uint64_t Value;
 		};
-	} PDPTE_PAGE, *PPDPTE_PAGE;
+	} PDPTE_PAGE;
 	static_assert(sizeof(_PDPTE_PAGE) == sizeof(uintptr_t), "Incorrect.");
 
 	// Intel SDM Vol3A Table 4-16
@@ -207,7 +202,7 @@ namespace x64
 			};
 			uint64_t Value;
 		};
-	} PDPTE_DIR, *PPDPTE_DIR;
+	} PDPTE_DIR;
 	static_assert(sizeof(_PDPTE_DIR) == sizeof(uintptr_t), "Incorrect.");
 
 	// Intel SDM Vol3A Table 4-17
@@ -237,7 +232,7 @@ namespace x64
 			};
 			uint64_t Value;
 		};
-	} PDE_PAGE, *PPDE_PAGE;
+	} PDE_PAGE;
 	static_assert(sizeof(_PDE_PAGE) == sizeof(uintptr_t), "Incorrect.");
 
 	// Intel SDM Vol3A Table 4-18
@@ -263,7 +258,7 @@ namespace x64
 			};
 			uint64_t Value;
 		};
-	} PDE_DIR, *PPDE_DIR;
+	} PDE_DIR;
 	static_assert(sizeof(_PDE_DIR) == sizeof(uintptr_t), "Size mismatch, only 64-bit supported.");
 
 	// Intel SDM Vol3A Table 4-19
@@ -293,7 +288,7 @@ namespace x64
 			};
 			uint64_t Value;
 		};
-	} PTE, *PPTE;
+	} PTE;
 	static_assert(sizeof(_PTE) == sizeof(uintptr_t), "Incorrect.");
 
 	struct VirtualAddress

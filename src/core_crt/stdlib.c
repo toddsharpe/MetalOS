@@ -5,8 +5,6 @@
 // https://wiki.osdev.org/Random_Number_Generator
 static unsigned long int next = 1;
 
-#define RAND_MAX 0x7fff
-
 int rand(void) // RAND_MAX assumed to be 32767
 {
 	next = next * 1103515245 + 12345;

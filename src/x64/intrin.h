@@ -38,11 +38,6 @@ extern "C"
 	unsigned long __indword(unsigned short);
 	void __outdword(unsigned short, unsigned long);
 
-	extern void __cdecl _writefsbase_u32(unsigned int);
-	extern void __cdecl _writegsbase_u32(unsigned int);
-	extern void __cdecl _writefsbase_u64(unsigned __int64);
-	extern void __cdecl _writegsbase_u64(unsigned __int64);
-
 	void _lgdt(void *);
 	void __lidt(void *);
 	void __writemsr(unsigned long, unsigned __int64);
@@ -62,7 +57,6 @@ extern "C"
 	__int64 _InterlockedCompareExchange64(__int64 volatile * _Destination, __int64 _Exchange, __int64 _Comparand);
 	__int64 _InterlockedIncrement64(__int64 volatile * _Addend);
 	__int64 _InterlockedExchange64(__int64 volatile * _Target, __int64 _Value);
-	long _InterlockedIncrement(long volatile * _Addend);
 	unsigned char _interlockedbittestandreset(long volatile * _BitBase, long _BitPos);
 
 	void __faststorefence(void);

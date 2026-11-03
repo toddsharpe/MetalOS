@@ -38,21 +38,6 @@ static constexpr PageAttr UserAll =
 	.IsGlobal = false
 };
 
-/*
-static constexpr PageAttr KernelCode =
-{
-	.CanWrite = false,
-	.CanExecute = true,
-	.IsGlobal = true
-};
-
-static constexpr PageAttr KernelData =
-{
-	.CanWrite = true,
-	.CanExecute = false,
-	.IsGlobal = true
-};
-*/
 template <PageTablesOps T_ops>
 class PageTabes
 {
@@ -268,32 +253,6 @@ public:
 
 		// copy all mappings from current PT's root to this PT's root
 		memcpy(&root[kernelStart], &currentRoot[kernelStart], PageSize / 2);
-	}
-
-	bool IsValid(const void* virtAddr) const
-	{
-		using namespace x64;
-
-		const VirtualAddress va = { .AsUint64 = reinterpret_cast<uint64_t>(virtAddr) };
-
-		PML4E* const pml4 = static_cast<PML4E*>(T_ops.Resolve(Root));
-		if (!pml4[va.index4].Present)
-			return false;
-
-		PDPTE_DIR* const pdpt = static_cast<PDPTE_DIR*>(T_ops.Resolve(pml4[va.index4].Value & ~0xFFFull));
-		if (!pdpt[va.index3].Present)
-			return false;
-		if (pdpt[va.index3].PageSize) // 1GB page
-			return true;
-
-		PDE_DIR* const pd = static_cast<PDE_DIR*>(T_ops.Resolve(pdpt[va.index3].Value & ~0xFFFull));
-		if (!pd[va.index2].Present)
-			return false;
-		if (pd[va.index2].PageSize) // 2MB page
-			return true;
-
-		PTE* const pt = static_cast<PTE*>(T_ops.Resolve(pd[va.index2].Value & ~0xFFFull));
-		return pt[va.index1].Present;
 	}
 
 	bool IsValid() const

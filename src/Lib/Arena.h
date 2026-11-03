@@ -4,7 +4,6 @@
 #include <cstring>
 #include "Lib/Math.h"
 #include "Lib/System.h"
-#include "Lib/Buffer.h"
 #include "Lib/String.h"
 #include "Assert.h"
 #include "new.h"
@@ -71,44 +70,6 @@ public:
 		return created;
 	}
 
-	void* Pack(const size_t size)
-	{
-		if (m_count + size > m_size)
-			return nullptr;
-
-		void* const address = (void*)&m_storage[m_count];
-		m_count += size;
-
-		memset(address, 0x00, size);
-		return address;
-	}
-
-	template <typename T>
-	T* Pack()
-	{
-		//Acquire memory
-		void* const allocated = Pack(sizeof(T));
-		if (!allocated)
-			return nullptr;
-
-		//Call constructor
-		T* created = new (allocated) T();
-		return created;
-	}
-
-	template <typename T, typename ...A>
-	T* Pack(A ...args)
-	{
-		//Acquire memory
-		void* const allocated = Pack(sizeof(T));
-		if (!allocated)
-			return nullptr;
-
-		//Call constructor
-		T* created = new (allocated) T(args...);
-		return created;
-	}
-
 	void Deallocate(const void* const pointer)
 	{
 		//TODO(tsharpe): Implement?
@@ -125,11 +86,6 @@ public:
 	void Reset()
 	{
 		m_count = 0;
-	}
-
-	void Display() const
-	{
-		Printf("Static Arena: Size: 0x%x, Count: 0x%x\n", m_size, m_count);
 	}
 
 private:

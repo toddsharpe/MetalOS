@@ -7,14 +7,12 @@ namespace x64
 {
 	enum class MSR : uint32_t
 	{
-		IA32_FS_BASE = 0xC0000100,
-		IA32_GS_BASE = 0xC0000101,
 		IA32_KERNELGS_BASE = 0xC0000102,
 
 		//INTEL SDM Vol 3A 5-22. 5.8.8
 		IA32_STAR = 0xC0000081, //IA32_STAR_REG
 		IA32_LSTAR = 0xC0000082, //Target RIP
-		IA32_FMASK = 0xC0000084, //IA32_FMASK_REG
+		IA32_FMASK = 0xC0000084,
 		IA32_EFER = 0xC0000080,
 	};
 
@@ -186,19 +184,6 @@ namespace x64
 		SEGMENT_DESCRIPTOR UserData;
 		SEGMENT_DESCRIPTOR UserCode;
 		TSS_LDT_ENTRY TssEntry;
-	};
-
-	struct IA32_FMASK_REG
-	{
-		union
-		{
-			struct
-			{
-				uint32_t EFlagsMask;
-				uint32_t Reserved;
-			};
-			uint64_t AsUint64;
-		};
 	};
 
 	struct IA32_STAR_REG

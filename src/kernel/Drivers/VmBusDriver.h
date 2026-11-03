@@ -18,9 +18,8 @@ public:
 	Result Initialize() override;
 	Result Enumerate() override;
 
-	HyperV::HV_HYPERCALL_RESULT_VALUE PostMessage(const uint32_t size, const void* message, HyperV::VmBusResponse& response);
-	uint32_t BeginGpadl(const uint32_t size, void* message, HyperV::VmBusResponse& response, KEvent& event);
-	void PostGpadlBody(const uint32_t size, const void* message);
+	uint32_t CreateGpadl(const uint32_t childRelid, const paddr_t address, const size_t pageCount);
+	HyperV::HV_HYPERCALL_RESULT_VALUE OpenChannel(const HyperV::vmbus_channel_open_channel& message, HyperV::VmBusResponse& response);
 	void SetCallback(uint32_t id, const ActionContext& context);
 
 private:

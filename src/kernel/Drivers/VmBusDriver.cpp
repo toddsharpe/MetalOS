@@ -1,5 +1,6 @@
 #include "kernel/Drivers/VmBusDriver.h"
 #include "kernel/HyperV/VmBus.h"
+#include "Lib/Buffer.h"
 #include "x64/intrin.h"
 #include "Assert.h"
 
@@ -57,67 +58,86 @@ Result VmBusDriver::Enumerate()
 	return Result::Success;
 }
 
-HyperV::HV_HYPERCALL_RESULT_VALUE VmBusDriver::PostMessage(const uint32_t size, const void* message, HyperV::VmBusResponse& response)
+//Sends a GPADL_HEADER with the first PFNs, then GPADL_BODY messages for the rest, and waits for GPADL_CREATED
+uint32_t VmBusDriver::CreateGpadl(const uint32_t childRelid, const paddr_t address, const size_t pageCount)
+{
+	static constexpr size_t MaxHeaderPfns = 26;
+	static constexpr size_t MaxBodyPfns = 28;
+
+	HyperV::HV_CONNECTION_ID connectionId = { 0 };
+	connectionId.Id = m_msg_conn_id;
+
+	const size_t headerPfns = pageCount < MaxHeaderPfns ? pageCount : MaxHeaderPfns;
+	const size_t headerMsgSize = sizeof(HyperV::vmbus_channel_gpadl_header)
+		+ sizeof(HyperV::gpa_range)
+		+ (headerPfns - ANYSIZE_ARRAY) * sizeof(uint64_t);
+
+	StaticBuffer<256> headerBuf;
+	HyperV::vmbus_channel_gpadl_header* header =
+		(HyperV::vmbus_channel_gpadl_header*)headerBuf.Data;
+	memset(header, 0, headerMsgSize);
+	header->header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_HEADER;
+	header->child_relid = childRelid;
+	header->rangecount = 1;
+	header->range_buflen = (uint16_t)(sizeof(HyperV::gpa_range) + (pageCount - ANYSIZE_ARRAY) * sizeof(uint64_t));
+	header->range[0].byte_count = (uint32_t)(pageCount << Arch::PageShift);
+	header->range[0].byte_offset = 0;
+	for (size_t i = 0; i < headerPfns; i++)
+		header->range[0].pfn_array[i] = (address >> Arch::PageShift) + i;
+
+	KEvent event(false, false);
+	HyperV::VmBusResponse response;
+	header->gpadl = _InterlockedIncrement64((volatile __int64*)&m_nextGpadlHandle);
+	AddRequest({ header->gpadl, 0, 0, &event, &response });
+
+	HyperV::HV_HYPERCALL_RESULT_VALUE result = HyperV::Platform::HvPostMessage(connectionId, (HyperV::HV_MESSAGE_TYPE)1, (uint32_t)headerMsgSize, header);
+	Assert(HV_SUCCESS(result.Status));
+	const uint32_t gpadl = header->gpadl;
+
+	size_t pfnsSent = headerPfns;
+	uint32_t bodyNum = 0;
+	while (pfnsSent < pageCount)
+	{
+		const size_t batchSize = (pageCount - pfnsSent) < MaxBodyPfns ? (pageCount - pfnsSent) : MaxBodyPfns;
+		const size_t bodyMsgSize = sizeof(HyperV::vmbus_channel_gpadl_body)
+			+ (batchSize - ANYSIZE_ARRAY) * sizeof(uint64_t);
+
+		StaticBuffer<256> bodyBuf;
+		HyperV::vmbus_channel_gpadl_body* body =
+			(HyperV::vmbus_channel_gpadl_body*)bodyBuf.Data;
+		memset(body, 0, bodyMsgSize);
+		body->header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_BODY;
+		body->msgnumber = bodyNum++;
+		body->gpadl = gpadl;
+		for (size_t i = 0; i < batchSize; i++)
+			body->pfn[i] = (address >> Arch::PageShift) + pfnsSent + i;
+
+		do {
+			result = HyperV::Platform::HvPostMessage(connectionId, (HyperV::HV_MESSAGE_TYPE)1, (uint32_t)bodyMsgSize, body);
+		} while (result.Status == HyperV::HV_STATUS_INSUFFICIENT_BUFFERS);
+		Assert(HV_SUCCESS(result.Status));
+		pfnsSent += batchSize;
+	}
+
+	KeWait(event);
+	Assert(response.gpadl_created.creation_status == 0);
+	return response.gpadl_created.gpadl;
+}
+
+HyperV::HV_HYPERCALL_RESULT_VALUE VmBusDriver::OpenChannel(const HyperV::vmbus_channel_open_channel& message, HyperV::VmBusResponse& response)
 {
 	HyperV::HV_CONNECTION_ID connectionId = { 0 };
 	connectionId.Id = m_msg_conn_id;
 
 	//Create wait event
 	KEvent event(false, false);
+	AddRequest({ 0, message.child_relid, message.openid, &event, &response });
 
-	HyperV::vmbus_channel_message_header* hdr = (HyperV::vmbus_channel_message_header*)message;
-	switch (hdr->msgtype)
-	{
-		case HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_HEADER:
-		{
-			HyperV::vmbus_channel_gpadl_header* gpadlHeader = (HyperV::vmbus_channel_gpadl_header*)message;
-			gpadlHeader->gpadl = _InterlockedIncrement64((volatile __int64*)&m_nextGpadlHandle);
-			AddRequest({ gpadlHeader->gpadl, 0, 0, &event, &response });
-		}
-		break;
-
-		case HyperV::vmbus_channel_message_type::CHANNELMSG_OPENCHANNEL:
-		{
-			HyperV::vmbus_channel_open_channel* header = (HyperV::vmbus_channel_open_channel*)message;
-			AddRequest({ 0, header->child_relid, header->openid, &event, &response });
-		}
-		break;
-
-		default:
-		{
-			Assert(false);
-		}
-	}
-
-	HyperV::HV_HYPERCALL_RESULT_VALUE result = HyperV::Platform::HvPostMessage(connectionId, (HyperV::HV_MESSAGE_TYPE)1, size, message);
+	HyperV::HV_HYPERCALL_RESULT_VALUE result = HyperV::Platform::HvPostMessage(connectionId, (HyperV::HV_MESSAGE_TYPE)1, sizeof(HyperV::vmbus_channel_open_channel), &message);
 	Assert(HV_SUCCESS(result.Status));
 
 	KeWait(event);
 	return result;
-}
-
-uint32_t VmBusDriver::BeginGpadl(const uint32_t size, void* message, HyperV::VmBusResponse& response, KEvent& event)
-{
-	HyperV::vmbus_channel_gpadl_header* gpadlHeader = (HyperV::vmbus_channel_gpadl_header*)message;
-	gpadlHeader->gpadl = _InterlockedIncrement64((volatile __int64*)&m_nextGpadlHandle);
-	AddRequest({ gpadlHeader->gpadl, 0, 0, &event, &response });
-
-	HyperV::HV_CONNECTION_ID connectionId = { 0 };
-	connectionId.Id = m_msg_conn_id;
-	HyperV::HV_HYPERCALL_RESULT_VALUE result = HyperV::Platform::HvPostMessage(connectionId, (HyperV::HV_MESSAGE_TYPE)1, size, message);
-	Assert(HV_SUCCESS(result.Status));
-	return gpadlHeader->gpadl;
-}
-
-void VmBusDriver::PostGpadlBody(const uint32_t size, const void* message)
-{
-	HyperV::HV_CONNECTION_ID connectionId = { 0 };
-	connectionId.Id = m_msg_conn_id;
-	HyperV::HV_HYPERCALL_RESULT_VALUE result;
-	do {
-		result = HyperV::Platform::HvPostMessage(connectionId, (HyperV::HV_MESSAGE_TYPE)1, size, message);
-	} while (result.Status == HyperV::HV_STATUS_INSUFFICIENT_BUFFERS);
-	Assert(HV_SUCCESS(result.Status));
 }
 
 void VmBusDriver::SetCallback(uint32_t id, const ActionContext& context)

@@ -20,13 +20,32 @@ public:
 	//TODO(tsharpe): Close (vmbus_close_internal)
 
 	bool SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint32_t flags); //False if the outbound ring is full
-	void* ReadPacket(const uint32_t length);
-	void NextPacket(const uint32_t length);
-	bool StopRead();
+
+	//Calls onPacket(descriptor, payload, payloadSize) per inbound packet; re-drains if StopRead reports more arrived
+	template <typename F>
+	void Drain(F onPacket)
+	{
+		HyperV::vmpacket_descriptor* packet;
+		do
+		{
+			while ((packet = (HyperV::vmpacket_descriptor*)ReadPacket(sizeof(HyperV::vmpacket_descriptor))) != nullptr)
+			{
+				uint8_t* const payload = (uint8_t*)packet + (packet->offset8 << 3);
+				const uint32_t size = (packet->len8 << 3) - (packet->offset8 << 3);
+				onPacket(*packet, payload, size);
+
+				NextPacket(packet->len8 << 3);
+			}
+		} while (StopRead());
+	}
 
 	void SetEvent();
 
 private:
+	void* ReadPacket(const uint32_t length);
+	void NextPacket(const uint32_t length);
+	bool StopRead();
+
 	ActionContext m_callback;
 
 	HyperVRingBuffer m_inbound;

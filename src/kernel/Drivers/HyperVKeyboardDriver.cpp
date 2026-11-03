@@ -69,35 +69,27 @@ Result HyperVKeyboardDriver::Enumerate()
 
 void HyperVKeyboardDriver::OnCallback()
 {
-	HyperV::vmpacket_descriptor* packet;
-	uint32_t length = sizeof(HyperV::vmpacket_descriptor);
-	do
+	m_channel.Drain([this](const HyperV::vmpacket_descriptor& packet, uint8_t* const payload, const uint32_t size)
 	{
-		while ((packet = (HyperV::vmpacket_descriptor*)m_channel.ReadPacket(length)) != nullptr)
+		switch (packet.type)
 		{
-			switch (packet->type)
-			{
-			case HyperV::VM_PKT_COMP:
-				break;
-
-			case HyperV::VM_PKT_DATA_INBAND:
-			{
-				const uint32_t size = (packet->len8 << 3) - (packet->offset8 << 3);
-				Assert(size > sizeof(struct synth_kbd_msg_hdr));
-
-				synth_kbd_msg_hdr* keyboardMessage = (synth_kbd_msg_hdr*)((uintptr_t)packet + (packet->offset8 << 3));
-				ProcessMessage(keyboardMessage, size);
-			}
+		case HyperV::VM_PKT_COMP:
 			break;
 
-			default:
-				Assert(false);
-				break;
-			}
+		case HyperV::VM_PKT_DATA_INBAND:
+		{
+			Assert(size > sizeof(struct synth_kbd_msg_hdr));
 
-			m_channel.NextPacket(packet->len8 << 3);
+			synth_kbd_msg_hdr* keyboardMessage = (synth_kbd_msg_hdr*)payload;
+			ProcessMessage(keyboardMessage, size);
 		}
-	} while (m_channel.StopRead());
+		break;
+
+		default:
+			Assert(false);
+			break;
+		}
+	});
 }
 
 void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint32_t size)

@@ -193,65 +193,6 @@ KdpCopyMemoryChunks(
 	return RemainingLength == 0 ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
 }
 
-//VOID
-//NTAPI
-//KdpQueryMemory(IN PDBGKD_MANIPULATE_STATE64 State,
-//	IN PCONTEXT Context)
-//{
-//	PDBGKD_QUERY_MEMORY Memory = &State->u.QueryMemory;
-//	STRING Header;
-//	NTSTATUS Status = STATUS_SUCCESS;
-//
-//	/* Validate the address space */
-//	if (Memory->AddressSpace == DBGKD_QUERY_MEMORY_VIRTUAL)
-//	{
-//		/* Check if this is process memory */
-//		if ((PVOID)(ULONG_PTR)Memory->Address < MmHighestUserAddress)
-//		{
-//			/* It is */
-//			Memory->AddressSpace = DBGKD_QUERY_MEMORY_PROCESS;
-//		}
-//		else
-//		{
-//			/* Check if it's session space */
-//			if (MmIsSessionAddress((PVOID)(ULONG_PTR)Memory->Address))
-//			{
-//				/* It is */
-//				Memory->AddressSpace = DBGKD_QUERY_MEMORY_SESSION;
-//			}
-//			else
-//			{
-//				/* Not session space but some other kernel memory */
-//				Memory->AddressSpace = DBGKD_QUERY_MEMORY_KERNEL;
-//			}
-//		}
-//
-//		/* Set flags */
-//		Memory->Flags = DBGKD_QUERY_MEMORY_READ |
-//			DBGKD_QUERY_MEMORY_WRITE |
-//			DBGKD_QUERY_MEMORY_EXECUTE;
-//	}
-//	else
-//	{
-//		/* Invalid */
-//		Status = STATUS_INVALID_PARAMETER;
-//	}
-//
-//	/* Return structure */
-//	State->ReturnStatus = Status;
-//	Memory->Reserved = 0;
-//
-//	/* Build header */
-//	Header.Length = sizeof(DBGKD_MANIPULATE_STATE64);
-//	Header.Buffer = (PCHAR)State;
-//
-//	/* Send the packet */
-//	KdSendPacket(PACKET_TYPE_KD_STATE_MANIPULATE,
-//		&Header,
-//		NULL,
-//		&KdpContext);
-//}
-
 VOID
 NTAPI
 KdpSearchMemory(IN PDBGKD_MANIPULATE_STATE64 State,
@@ -1665,155 +1606,6 @@ SendPacket:
 	}
 }
 
-VOID
-NTAPI
-KdpReportLoadSymbolsStateChange(IN PSTRING PathName,
-	IN PKD_SYMBOLS_INFO SymbolInfo,
-	IN BOOLEAN Unload,
-	IN OUT PCONTEXT Context)
-{
-	PSTRING ExtraData;
-	STRING Data, Header;
-	DBGKD_ANY_WAIT_STATE_CHANGE WaitStateChange;
-	ULONG PathNameLength;
-	KCONTINUE_STATUS Status;
-
-	/* Start wait loop */
-	do
-	{
-		/* Build the architecture common parts of the message */
-		KdpSetCommonState(DbgKdLoadSymbolsStateChange,
-			Context,
-			&WaitStateChange);
-
-		/* Now finish creating the structure */
-		KdpSetContextState(&WaitStateChange, Context);
-
-		/* Fill out load data */
-		WaitStateChange.u.LoadSymbols.UnloadSymbols = Unload;
-		WaitStateChange.u.LoadSymbols.BaseOfDll = (ULONG64)(LONG_PTR)SymbolInfo->BaseOfDll;
-		WaitStateChange.u.LoadSymbols.ProcessId = SymbolInfo->ProcessId;
-		WaitStateChange.u.LoadSymbols.CheckSum = SymbolInfo->CheckSum;
-		WaitStateChange.u.LoadSymbols.SizeOfImage = SymbolInfo->SizeOfImage;
-
-		/* Check if we have a path name */
-		if (PathName)
-		{
-			/* Copy it to the path buffer */
-			KdpCopyMemoryChunks((ULONG_PTR)PathName->Buffer,
-				KdpPathBuffer,
-				PathName->Length,
-				0,
-				MMDBG_COPY_UNSAFE,
-				&PathNameLength);
-
-			/* Null terminate */
-			KdpPathBuffer[PathNameLength++] = ANSI_NULL;
-
-			/* Set the path length */
-			WaitStateChange.u.LoadSymbols.PathNameLength = PathNameLength;
-
-			/* Set up the data */
-			Data.Buffer = KdpPathBuffer;
-			Data.Length = (USHORT)PathNameLength;
-			ExtraData = &Data;
-		}
-		else
-		{
-			/* No name */
-			WaitStateChange.u.LoadSymbols.PathNameLength = 0;
-			ExtraData = NULL;
-		}
-
-		/* Setup the header */
-		Header.Length = sizeof(DBGKD_ANY_WAIT_STATE_CHANGE);
-		Header.Buffer = (PCHAR)&WaitStateChange;
-
-		/* Send the packet */
-		Status = KdpSendWaitContinue(PACKET_TYPE_KD_STATE_CHANGE64,
-			&Header,
-			ExtraData,
-			Context);
-	} while (Status == ContinueProcessorReselected);
-}
-
-VOID
-NTAPI
-KdpReportCommandStringStateChange(IN PSTRING NameString,
-	IN PSTRING CommandString,
-	IN OUT PCONTEXT Context)
-{
-	STRING Header, Data;
-	DBGKD_ANY_WAIT_STATE_CHANGE WaitStateChange;
-	ULONG Length, ActualLength, TotalLength;
-	KCONTINUE_STATUS Status;
-
-	/* Start wait loop */
-	do
-	{
-		/* Build the architecture common parts of the message */
-		KdpSetCommonState(DbgKdCommandStringStateChange,
-			Context,
-			&WaitStateChange);
-
-		/* Set the context */
-		KdpSetContextState(&WaitStateChange, Context);
-
-		/* Clear the command string structure */
-		KdpZeroMemory(&WaitStateChange.u.CommandString,
-			sizeof(DBGKD_COMMAND_STRING));
-
-		/* Normalize name string to max */
-		Length = Min<USHORT>((USHORT)(128 - 1), NameString->Length);
-
-		/* Copy it to the message buffer */
-		KdpCopyMemoryChunks((ULONG_PTR)NameString->Buffer,
-			KdpMessageBuffer,
-			Length,
-			0,
-			MMDBG_COPY_UNSAFE,
-			&ActualLength);
-
-		/* Null terminate and calculate the total length */
-		TotalLength = ActualLength;
-		KdpMessageBuffer[TotalLength++] = ANSI_NULL;
-
-		/* Check if the command string is too long */
-		Length = CommandString->Length;
-		if (Length > (PACKET_MAX_SIZE -
-			sizeof(DBGKD_ANY_WAIT_STATE_CHANGE) - TotalLength))
-		{
-			/* Use maximum possible size */
-			Length = (PACKET_MAX_SIZE -
-				sizeof(DBGKD_ANY_WAIT_STATE_CHANGE) - TotalLength);
-		}
-
-		/* Copy it to the message buffer */
-		KdpCopyMemoryChunks((ULONG_PTR)CommandString->Buffer,
-			KdpMessageBuffer + TotalLength,
-			Length,
-			0,
-			MMDBG_COPY_UNSAFE,
-			&ActualLength);
-
-		/* Null terminate and calculate the total length */
-		TotalLength += ActualLength;
-		KdpMessageBuffer[TotalLength++] = ANSI_NULL;
-
-		/* Now set up the header and the data */
-		Header.Length = sizeof(DBGKD_ANY_WAIT_STATE_CHANGE);
-		Header.Buffer = (PCHAR)&WaitStateChange;
-		Data.Length = (USHORT)TotalLength;
-		Data.Buffer = KdpMessageBuffer;
-
-		/* Send State Change packet and wait for a reply */
-		Status = KdpSendWaitContinue(PACKET_TYPE_KD_STATE_CHANGE64,
-			&Header,
-			&Data,
-			Context);
-	} while (Status == ContinueProcessorReselected);
-}
-
 BOOLEAN
 NTAPI
 KdpReportExceptionStateChange(IN PEXCEPTION_RECORD ExceptionRecord,
@@ -1871,40 +1663,10 @@ KdpReportExceptionStateChange(IN PEXCEPTION_RECORD ExceptionRecord,
 
 BOOLEAN
 NTAPI
-KdpSwitchProcessor(IN PEXCEPTION_RECORD ExceptionRecord,
-	IN OUT PCONTEXT ContextRecord,
-	IN BOOLEAN SecondChanceException)
-{
-	BOOLEAN Status;
-
-	/* Report a state change */
-	Status = KdpReportExceptionStateChange(ExceptionRecord,
-		ContextRecord,
-		SecondChanceException);
-
-	return Status;
-}
-
-BOOLEAN
-NTAPI
 KdEnterDebugger(IN PKTRAP_FRAME TrapFrame,
 	IN PKEXCEPTION_FRAME ExceptionFrame)
 {
 	BOOLEAN Enable;
-
-	/* Check if we have a trap frame */
-	//if (TrapFrame)
-	//{
-	//	/* Calculate the time difference for the enter */
-	//	KdTimerStop = KdpQueryPerformanceCounter(TrapFrame);
-	//	KdTimerDifference.QuadPart = KdTimerStop.QuadPart -
-	//		KdTimerStart.QuadPart;
-	//}
-	//else
-	//{
-	//	/* No trap frame, so can't calculate */
-	//	KdTimerStop.QuadPart = 0;
-	//}
 
 	/* Save the current IRQL */
 	//KeGetCurrentPrcb()->DebuggerSavedIRQL = KeGetCurrentIrql();
@@ -1912,10 +1674,9 @@ KdEnterDebugger(IN PKTRAP_FRAME TrapFrame,
 	/* Freeze all CPUs */
 	Enable = KeFreezeExecution(TrapFrame, ExceptionFrame);
 
-	/* Lock the port, save the state and set debugger entered */
+	/* Lock the port and save the state */
 	KdpPortLocked = TRUE; //KeTryToAcquireSpinLockAtDpcLevel(&KdpDebuggerLock);
 	//KdSave(FALSE);
-	KdEnteredDebugger = TRUE;
 
 	/* Check freeze flag */
 	//if (KiFreezeFlag & 1)
@@ -1942,68 +1703,10 @@ VOID
 NTAPI
 KdExitDebugger(IN BOOLEAN Enable)
 {
-	ULONG TimeSlip;
-
 	/* Restore the state and unlock the port */
 	//KdRestore(FALSE);
 	if (KdpPortLocked) KdpPortUnlock();
 
 	/* Unfreeze the CPUs */
 	KeThawExecution(Enable);
-
-	///* Compare time with the one from KdEnterDebugger */
-	//if (!KdTimerStop.QuadPart)
-	//{
-	//	/* We didn't get a trap frame earlier in so never got the time */
-	//	KdTimerStart = KdTimerStop;
-	//}
-	//else
-	//{
-	//	/* Query the timer */
-	//	KdTimerStart = KeQueryPerformanceCounter(NULL);
-	//}
-
-	///* Check if a Time Slip was on queue */
-	//TimeSlip = InterlockedIncrement(&KdpTimeSlipPending);
-	//if (TimeSlip == 1)
-	//{
-	//	/* Queue a DPC for the time slip */
-	//	InterlockedIncrement(&KdpTimeSlipPending);
-	//	KeInsertQueueDpc(&KdpTimeSlipDpc, NULL, NULL); // FIXME: this can trigger context switches!
-	//}
-}
-
-/* PUBLIC FUNCTIONS **********************************************************/
-
-/*
- * @implemented
- */
-BOOLEAN
-NTAPI
-KdRefreshDebuggerNotPresent(VOID)
-{
-	BOOLEAN Enable, DebuggerNotPresent;
-
-	/* Check if the debugger is completely disabled */
-	if (KdPitchDebugger)
-	{
-		/* Don't try to refresh then, fail early */
-		return TRUE;
-	}
-
-	/* Enter the debugger */
-	Enable = KdEnterDebugger(NULL, NULL);
-
-	/*
-	 * Attempt to send a string to the debugger
-	 * to refresh the connection state.
-	 */
-	KdpDprintf("KDTARGET: Refreshing KD connection\n");
-
-	/* Save the state while we are holding the lock */
-	DebuggerNotPresent = KdDebuggerNotPresent;
-
-	/* Exit the debugger and return the state */
-	KdExitDebugger(Enable);
-	return DebuggerNotPresent;
 }

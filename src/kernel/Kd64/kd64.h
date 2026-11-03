@@ -12,15 +12,6 @@
 #include "reactos/ketypes.h"
 #include "reactos/amd64/ke.h"
 
- //
- // Default size of the DbgPrint log buffer
- //
-#if DBG
-#define KD_DEFAULT_LOG_BUFFER_SIZE  0x8000
-#else
-#define KD_DEFAULT_LOG_BUFFER_SIZE  0x1000
-#endif
-
 //
 // Maximum supported number of breakpoints
 //
@@ -43,7 +34,6 @@
 //
 #define KD_BREAKPOINT_ACTIVE    0x01
 #define KD_BREAKPOINT_PENDING   0x02
-#define KD_BREAKPOINT_SUSPENDED 0x04
 #define KD_BREAKPOINT_EXPIRED   0x08
 
 //
@@ -58,84 +48,8 @@ typedef struct _BREAKPOINT_ENTRY
 } BREAKPOINT_ENTRY, * PBREAKPOINT_ENTRY;
 
 //
-// Debug and Multi-Processor Switch Routine Definitions
-//
-typedef
-BOOLEAN
-(NTAPI* PKDEBUG_ROUTINE)(
-    IN PKTRAP_FRAME TrapFrame,
-    IN PKEXCEPTION_FRAME ExceptionFrame,
-    IN PEXCEPTION_RECORD ExceptionRecord,
-    IN PCONTEXT Context,
-    IN KPROCESSOR_MODE PreviousMode,
-    IN BOOLEAN SecondChance
-    );
-
-typedef
-BOOLEAN
-(NTAPI* PKDEBUG_SWITCH_ROUTINE)(
-    IN PEXCEPTION_RECORD ExceptionRecord,
-    IN PCONTEXT Context,
-    IN BOOLEAN SecondChance
-    );
-
-// Initialization Routines
-//
-BOOLEAN
-NTAPI
-KdInitSystem();
-
-VOID
-NTAPI
-KdUpdateDataBlock(
-    VOID
-);
-
-//
-// Determines if the kernel debugger must handle a particular trap
-//
-BOOLEAN
-NTAPI
-KdIsThisAKdTrap(
-    IN PEXCEPTION_RECORD ExceptionRecord,
-    IN PCONTEXT Context,
-    IN KPROCESSOR_MODE PreviousMode
-);
-
-//
-// Multi-Processor Switch Support
-//
-BOOLEAN
-NTAPI
-KdpSwitchProcessor(
-    IN PEXCEPTION_RECORD ExceptionRecord,
-    IN OUT PCONTEXT ContextRecord,
-    IN BOOLEAN SecondChanceException
-);
-
-//
-// Time Slip Support
-//
-VOID
-NTAPI
-KdpTimeSlipWork(
-    IN PVOID Context
-);
-
-//
 // Debug Trap Handlers
 //
-BOOLEAN
-NTAPI
-KdpStub(
-    IN PKTRAP_FRAME TrapFrame,
-    IN PKEXCEPTION_FRAME ExceptionFrame,
-    IN PEXCEPTION_RECORD ExceptionRecord,
-    IN PCONTEXT ContextRecord,
-    IN KPROCESSOR_MODE PreviousMode,
-    IN BOOLEAN SecondChanceException
-);
-
 BOOLEAN
 NTAPI
 KdpTrap(
@@ -150,12 +64,6 @@ KdpTrap(
 //
 // Port Locking
 //
-VOID
-NTAPI
-KdpPortLock(
-    VOID
-);
-
 VOID
 NTAPI
 KdpPortUnlock(
@@ -190,89 +98,9 @@ KdExitDebugger(
     IN BOOLEAN Enable
 );
 
-NTSTATUS
-NTAPI
-KdEnableDebuggerWithLock(
-    IN BOOLEAN NeedLock
-);
-
-NTSTATUS
-NTAPI
-KdDisableDebuggerWithLock(
-    IN BOOLEAN NeedLock
-);
-
-//
-// Debug Event Handlers
-//
-NTSTATUS
-NTAPI
-KdpPrint(
-    ULONG ComponentId,
-    ULONG Level,
-    PCHAR String,
-    USHORT Length,
-    KPROCESSOR_MODE PreviousMode,
-    PKTRAP_FRAME TrapFrame,
-    PKEXCEPTION_FRAME ExceptionFrame,
-    PBOOLEAN Handled
-);
-
-USHORT
-NTAPI
-KdpPrompt(
-    PCHAR PromptString,
-    USHORT PromptLength,
-    PCHAR ResponseString,
-    USHORT MaximumResponseLength,
-    KPROCESSOR_MODE PreviousMode,
-    PKTRAP_FRAME TrapFrame,
-    PKEXCEPTION_FRAME ExceptionFrame
-);
-
-VOID
-NTAPI
-KdpSymbol(
-    IN PSTRING DllPath,
-    IN PKD_SYMBOLS_INFO SymbolInfo,
-    IN BOOLEAN Unload,
-    IN KPROCESSOR_MODE PreviousMode,
-    IN PCONTEXT ContextRecord,
-    IN PKTRAP_FRAME TrapFrame,
-    IN PKEXCEPTION_FRAME ExceptionFrame
-);
-
-VOID
-NTAPI
-KdpCommandString(
-    IN PSTRING NameString,
-    IN PSTRING CommandString,
-    IN KPROCESSOR_MODE PreviousMode,
-    IN PCONTEXT ContextRecord,
-    IN PKTRAP_FRAME TrapFrame,
-    IN PKEXCEPTION_FRAME ExceptionFrame
-);
-
 //
 // State Change Notifications
 //
-VOID
-NTAPI
-KdpReportLoadSymbolsStateChange(
-    IN PSTRING PathName,
-    IN PKD_SYMBOLS_INFO SymbolInfo,
-    IN BOOLEAN Unload,
-    IN OUT PCONTEXT Context
-);
-
-VOID
-NTAPI
-KdpReportCommandStringStateChange(
-    IN PSTRING NameString,
-    IN PSTRING CommandString,
-    IN OUT PCONTEXT Context
-);
-
 BOOLEAN
 NTAPI
 KdpReportExceptionStateChange(
@@ -290,12 +118,6 @@ KdpAddBreakpoint(
     IN PVOID Address
 );
 
-VOID
-NTAPI
-KdSetOwedBreakpoints(
-    VOID
-);
-
 BOOLEAN
 NTAPI
 KdpDeleteBreakpoint(
@@ -307,33 +129,6 @@ NTAPI
 KdpDeleteBreakpointRange(
     IN PVOID Base,
     IN PVOID Limit
-);
-
-VOID
-NTAPI
-KdpSuspendBreakPoint(
-    IN ULONG BpEntry
-);
-
-VOID
-NTAPI
-KdpRestoreAllBreakpoints(
-    VOID
-);
-
-VOID
-NTAPI
-KdpSuspendAllBreakPoints(
-    VOID
-);
-
-//
-// Routine to determine if it is safe to disable the debugger
-//
-NTSTATUS
-NTAPI
-KdpAllowDisable(
-    VOID
 );
 
 //
@@ -524,36 +319,14 @@ VaKdpDprintf(
 extern BOOLEAN KdDebuggerEnabled;
 
 extern DBGKD_GET_VERSION64 KdVersionBlock;
-extern KDDEBUGGER_DATA64 KdDebuggerDataBlock;
-extern LIST_ENTRY KdpDebuggerDataListHead;
-extern LARGE_INTEGER KdPerformanceCounterRate;
-extern LARGE_INTEGER KdTimerStart;
-extern ULONG KdDisableCount;
 extern KD_CONTEXT KdpContext;
-extern PKDEBUG_ROUTINE KiDebugRoutine;
-extern PKDEBUG_SWITCH_ROUTINE KiDebugSwitchRoutine;
-extern BOOLEAN KdBreakAfterSymbolLoad;
-extern BOOLEAN KdPitchDebugger;
-extern BOOLEAN KdAutoEnableOnEvent;
-extern BOOLEAN KdBlockEnable;
-extern BOOLEAN KdIgnoreUmExceptions;
-extern BOOLEAN KdPreviouslyEnabled;
-extern BOOLEAN KdpDebuggerStructuresInitialized;
-extern BOOLEAN KdEnteredDebugger;
-extern LONG KdpTimeSlipPending;
 extern BOOLEAN KdpPortLocked;
-extern BOOLEAN KdpControlCPressed;
 extern BOOLEAN KdpContextSent;
-extern LARGE_INTEGER KdTimerStop, KdTimerStart, KdTimerDifference;
 
-extern CHAR KdpMessageBuffer[0x1000], KdpPathBuffer[0x1000];
-extern CHAR KdPrintDefaultCircularBuffer[KD_DEFAULT_LOG_BUFFER_SIZE];
+extern CHAR KdpMessageBuffer[0x1000];
 extern BREAKPOINT_ENTRY KdpBreakpointTable[KD_BREAKPOINT_MAX];
 extern KD_BREAKPOINT_TYPE KdpBreakpointInstruction;
-extern BOOLEAN KdpOweBreakpoint;
-extern BOOLEAN BreakpointsSuspended;
 extern ULONG KdpNumInternalBreakpoints;
-extern ULONG_PTR KdpCurrentSymbolStart, KdpCurrentSymbolEnd;
 extern ULONG TraceDataBuffer[40];
 extern ULONG TraceDataBufferPosition;
 

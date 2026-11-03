@@ -61,7 +61,6 @@ void Debugger::Initialize()
 
 	KeCreateThread(Debugger::ThreadLoop, this, "Debugger::ThreadLoop");
 
-	KdInitSystem();
 	KdDebuggerEnabled = TRUE;
 	KdDebuggerNotPresent = FALSE;
 }

@@ -68,15 +68,6 @@ KdpGetStateChange(IN PDBGKD_MANIPULATE_STATE64 State,
 
 		Context->Dr7 = State->u.Continue2.ControlSet.Dr7;
 		Context->Dr6 = 0;
-
-		/* Check if we have new symbol information */
-		if (State->u.Continue2.ControlSet.CurrentSymbolStart != 1)
-		{
-			/* Update it */
-			KdpCurrentSymbolStart =
-				State->u.Continue2.ControlSet.CurrentSymbolStart;
-			KdpCurrentSymbolEnd = State->u.Continue2.ControlSet.CurrentSymbolEnd;
-		}
 	}
 }
 
@@ -358,14 +349,6 @@ KdpSysCheckLowMemory(IN ULONG Flags)
 {
 	UNIMPLEMENTED_DBGBREAK();
 	return STATUS_UNSUCCESSFUL;
-}
-
-NTSTATUS
-NTAPI
-KdpAllowDisable(VOID)
-{
-	UNIMPLEMENTED_DBGBREAK();
-	return STATUS_ACCESS_DENIED;
 }
 
 /* EOF */

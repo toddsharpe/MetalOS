@@ -41,7 +41,6 @@
 #include "kernel/Kd64/kdapi.cpp"
 #include "kernel/Kd64/kdbreak.cpp"
 #include "kernel/Kd64/kddata.cpp"
-#include "kernel/Kd64/kdinit.cpp"
 #include "kernel/Kd64/kdlock.cpp"
 #include "kernel/Kd64/kdprint.cpp"
 #include "kernel/Kd64/kdtrap.cpp"

@@ -2,7 +2,6 @@
 
 #include "kernel/UObject.h"
 #include "kernel/Types.h"
-#include "kernel/Objects/UPipe.h"
 
 uintptr_t UObject::LastHandle = UObject::StartingHandle;
 
@@ -18,6 +17,7 @@ constexpr UObject::UObject(const UObjectType type, const handle_t handle) :
 	Process(),
 	File(),
 	Pipe(),
+	PipeOp(),
 	Event(),
 	Shm(),
 	ShmAddress()
@@ -33,7 +33,7 @@ bool UObject::CanRead() const
 			return (File.Access & KFileAccess::Read) == KFileAccess::Read;
 
 		case UObjectType::Pipe:
-			return Pipe->Op == KPipeOp::Read;
+			return PipeOp == KPipeOp::Read;
 
 		case UObjectType::Debug:
 			return false;
@@ -51,7 +51,7 @@ bool UObject::CanWrite() const
 			return (File.Access & KFileAccess::Write) == KFileAccess::Write;
 
 		case UObjectType::Pipe:
-			return Pipe->Op == KPipeOp::Write;
+			return PipeOp == KPipeOp::Write;
 
 		case UObjectType::Debug:
 			return true;
@@ -110,8 +110,8 @@ void UObject::Display() const
 
 		case UObjectType::Pipe:
 			Printf("  UReadPipe\n");
-			Printf("    Readers: %d\n", Pipe->KPipe.Readers.Count());
-			Printf("    Writers: %d\n", Pipe->KPipe.Writers.Count());
+			Printf("    Readers: %d\n", Pipe->Readers.Count());
+			Printf("    Writers: %d\n", Pipe->Writers.Count());
 			break;
 
 		case UObjectType::Debug:

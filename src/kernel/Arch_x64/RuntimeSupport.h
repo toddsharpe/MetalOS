@@ -68,7 +68,7 @@ namespace RuntimeSupport
 		//TODO: list is sorted, this can be faster
 		for (size_t i = 0; i < count; i++)
 		{
-			if (current->BeginAddress <= RVA && current->EndAddress >= RVA)
+			if (current->BeginAddress <= RVA && RVA < current->EndAddress) //EndAddress is one past the function's last byte
 				return current;
 
 			current++;
@@ -113,8 +113,6 @@ namespace RuntimeSupport
 		}
 		else 
 		{
-			Printf("Using rbp\n");
-
 			//The walk starts from RIP, RSP and RBP only, so another frame register's value isn't known
 			if (unwindInfo->FrameRegister != x64_NV_REG_NUM::Rbp)
 				return false;

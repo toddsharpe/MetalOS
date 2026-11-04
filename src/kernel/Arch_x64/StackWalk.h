@@ -41,7 +41,6 @@ public:
 		if (!functionEntry)
 		{
 			// Pop IP off stack
-			Printf("Got from stack\n");
 			if (!RuntimeSupport::IsReadable(m_space, m_context->Rsp, sizeof(DWORD64)))
 				return false;
 			m_context->Rip = *(DWORD64 *)m_context->Rsp;

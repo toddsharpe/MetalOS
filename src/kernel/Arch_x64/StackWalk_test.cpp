@@ -10,6 +10,23 @@ static __declspec(noinline) void StackWalk_test_capture(CONTEXT& context)
 	context.Rsp = (DWORD64)_AddressOfReturnAddress() + sizeof(DWORD64);
 }
 
+//Every function in this image is found from its first byte to its last, and not at its EndAddress, which is the next function's (or no function's) byte
+static void StackWalk_test_lookup(const uintptr_t imageBase)
+{
+	const IMAGE_DATA_DIRECTORY& directory = WinPE::GetNtHeaders(&__ImageBase)->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
+	const RUNTIME_FUNCTION* const functions = MakePointer<const RUNTIME_FUNCTION*>(&__ImageBase, directory.VirtualAddress);
+	const size_t count = directory.Size / sizeof(RUNTIME_FUNCTION);
+	Assert(count != 0);
+
+	for (size_t i = 0; i < count; i++)
+	{
+		const RUNTIME_FUNCTION& function = functions[i];
+		Assert(RuntimeSupport::LookupFunctionEntry(imageBase + function.BeginAddress, imageBase, nullptr) == &function);
+		Assert(RuntimeSupport::LookupFunctionEntry(imageBase + function.EndAddress - 1, imageBase, nullptr) == &function);
+		Assert(RuntimeSupport::LookupFunctionEntry(imageBase + function.EndAddress, imageBase, nullptr) != &function);
+	}
+}
+
 //Unwinds this test's own stack the way PrintStack walks a user process's, checking every read against an address space
 void StackWalk_test()
 {
@@ -50,4 +67,6 @@ void StackWalk_test()
 	leaf.Rip = imageBase + 0x10;
 	leaf.Rsp = 0x1000;
 	Assert(!StackWalk(&leaf, &space).Next(imageBase));
+
+	StackWalk_test_lookup(imageBase);
 }

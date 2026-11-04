@@ -238,6 +238,17 @@ namespace _REAP
 		thread.PipeWriteQueue = nullptr;
 	}
 
+	//A thread killed while blocked on a pipe never finished its syscall, so its hold on the pipe is dropped here
+	void ReleasePipeWait(UThread& thread)
+	{
+		if (!thread.PipeWait)
+			return;
+
+		KPipe& pipe = *thread.PipeWait;
+		thread.PipeWait = nullptr;
+		KePipeUnref(pipe, pipe.Waiters);
+	}
+
 	//A terminated process is reapable once its last thread record is gone
 	UProcess* FindReapable()
 	{
@@ -301,6 +312,7 @@ uint32_t KeReaperThread(void* const arg)
 			{
 				_REAP::ReleaseUserStack(*thread->UserThread);
 				_REAP::LeavePipeWriteQueue(*thread->UserThread);
+				_REAP::ReleasePipeWait(*thread->UserThread);
 				KeReleaseUThread(*thread->UserThread);
 			}
 			KeFree(thread, AllocType::Kernel);

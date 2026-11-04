@@ -150,21 +150,20 @@ bool UProcess::CloseObject(const handle_t handle)
 			break;
 
 		case UObjectType::Pipe:
-			//Drop this end's reference on the pipe
+			//Drop this end's reference on the pipe, which frees it once no end or blocked thread is left
 			switch (object->PipeOp)
 			{
 				case KPipeOp::Read:
-					object->Pipe->Readers.Decrement();
+					KePipeUnref(*object->Pipe, object->Pipe->Readers);
 					break;
 
 				case KPipeOp::Write:
-					object->Pipe->Writers.Decrement();
+					KePipeUnref(*object->Pipe, object->Pipe->Writers);
 					break;
 
 				default:
 					Assert(false);
 			}
-			//TODO(tsharpe): Free
 			break;
 
 		case UObjectType::SharedMemory:

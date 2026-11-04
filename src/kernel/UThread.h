@@ -21,6 +21,7 @@ public:
 		Refs(1),
 		PipeWriteLink(),
 		PipeWriteQueue(),
+		PipeWait(),
 		m_context(),
 		m_fpu(),
 		m_teb(teb)
@@ -75,6 +76,7 @@ public:
 	uint32_t Refs; //Its KThread plus each handle; the record is freed at zero (KeReleaseUThread)
 	ListEntry PipeWriteLink; //Place in PipeWriteQueue's writer queue while a WriteFile to a pipe is in progress
 	KPipe* PipeWriteQueue;
+	KPipe* PipeWait; //Pipe whose Waiters this thread holds in a syscall; the reaper drops it if the thread is killed there
 
 private:
 	//Storage

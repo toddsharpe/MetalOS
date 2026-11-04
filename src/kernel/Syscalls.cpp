@@ -106,6 +106,30 @@ namespace
 		pipe = obj->Pipe;
 		return SyscallResult::Success;
 	}
+
+	//Keeps a pipe alive while a syscall can block on it, as another thread may close the handle meanwhile
+	class PipeHold
+	{
+	public:
+		PipeHold(UThread& thread, KPipe& pipe) :
+			m_thread(thread)
+		{
+			Assert(!thread.PipeWait);
+			pipe.Waiters.Increment();
+			thread.PipeWait = &pipe;
+		}
+
+		//Never runs for a thread killed while blocked, so the reaper drops its hold instead
+		~PipeHold()
+		{
+			KPipe& pipe = *m_thread.PipeWait;
+			m_thread.PipeWait = nullptr;
+			KePipeUnref(pipe, pipe.Waiters);
+		}
+
+	private:
+		UThread& m_thread;
+	};
 }
 
 //Syscalls that the kernel adds params
@@ -552,8 +576,12 @@ SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize
 
 		case UObjectType::Pipe:
 		{
+			//The handle can be closed during the wait, so use the pipe itself and hold it until done
+			KPipe& pipe = *obj->Pipe;
+			PipeHold hold(Scheduler::GetUThread(), pipe);
+
 			//Create read wait
-			KPipeSignal signal(*obj->Pipe, KPipeOp::Read, bufferSize);
+			KPipeSignal signal(pipe, KPipeOp::Read, bufferSize);
 			KPredicate wait(&KPipe::EventSignal, &signal);
 
 			//Wait for pipe signal
@@ -562,11 +590,11 @@ SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize
 
 			//Read
 			size_t bytes = 0;
-			Assert(obj->Pipe->Read(buffer, bufferSize, bytes));
+			Assert(pipe.Read(buffer, bufferSize, bytes));
 			if (bytesRead)
 				*bytesRead = bytes;
 
-			return obj->Pipe->IsBroken() ? SyscallResult::BrokenPipe : SyscallResult::Success;
+			return pipe.IsBroken() ? SyscallResult::BrokenPipe : SyscallResult::Success;
 		}
 		break;
 
@@ -595,14 +623,16 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 	{
 		case UObjectType::Pipe:
 		{
+			//The handle can be closed during the wait, so use the pipe itself and hold it until done
 			KPipe& pipe = *obj->Pipe;
+			UThread& writer = Scheduler::GetUThread();
+			PipeHold hold(writer, pipe);
 			const uint8_t* const data = static_cast<const uint8_t*>(buffer);
 
 			//A write that fits in the pipe goes in whole, a larger one in pieces as the reader drains it
 			const size_t needed = (bufferSize <= pipe.Capacity()) ? bufferSize : 1;
 
 			//Writes are queued in arrival order and each finishes before the next starts, so writers' bytes never interleave
-			UThread& writer = Scheduler::GetUThread();
 			pipe.QueueWriter(writer.PipeWriteLink);
 			writer.PipeWriteQueue = &pipe;
 

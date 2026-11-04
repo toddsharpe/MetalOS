@@ -15,7 +15,7 @@ namespace Wm
 	static constexpr const char* ScreenEndpoint  = "screen"; //packed (width<<32)|height
 
 	static constexpr uint32_t RequestCapacity = 64;
-	static constexpr uint32_t MessageCapacity = 64;
+	static constexpr uint32_t MessageCapacity = 512; //holds a full drain of the kernel's input ring, so a typed burst reaches the app whole
 	static constexpr uint32_t MaxTitle = 32; //window title length (for the taskbar)
 
 	//app -> WM request opcodes

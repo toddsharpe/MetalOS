@@ -31,6 +31,12 @@ struct MouseButtonState
 {
 	uint8_t LeftPressed : 1;
 	uint8_t RightPressed : 1;
+
+	//Equal buttons on consecutive mouse events make the later one a move
+	bool operator==(const MouseButtonState& other) const
+	{
+		return LeftPressed == other.LeftPressed && RightPressed == other.RightPressed;
+	}
 };
 
 struct MouseEvent

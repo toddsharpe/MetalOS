@@ -17,6 +17,7 @@ namespace
 	constexpr size_t MaxWindows = 64;
 	constexpr size_t MaxConns = 16;
 	constexpr uint16_t HidMax = 32767; //HID absolute coordinate range (0..INT16_MAX)
+	constexpr uint32_t DroppableBacklog = 32; //mouse moves and paints are skipped while an app has this many messages waiting
 
 	struct Connection
 	{
@@ -91,18 +92,21 @@ namespace
 		return nullptr;
 	}
 
-	//Send a message to a connection's WM->app ring
-	void Post(Connection* const conn, const Message& message)
+	//Send a message to a connection's WM->app ring; a droppable one (a mouse move or paint, which the next one replaces) only while the app keeps up
+	void Post(Connection* const conn, const Message& message, const bool droppable = false)
 	{
-		Wm::Channel::Replies(conn->Region).Enqueue(message);
+		SharedRing<Message> ring = Wm::Channel::Replies(conn->Region);
+		if (droppable && ring.Count() >= DroppableBacklog)
+			return;
+		ring.Enqueue(message);
 	}
 
 	//Send a message that carries only its type (e.g. PaintEvent, CloseEvent)
-	void PostEvent(Connection* const conn, const MessageType type)
+	void PostEvent(Connection* const conn, const MessageType type, const bool droppable = false)
 	{
 		Message message = {};
 		message.Header.MessageType = type;
-		Post(conn, message);
+		Post(conn, message, droppable);
 	}
 
 	void AcceptConnections()
@@ -411,8 +415,11 @@ namespace
 		Message message;
 		while (ring.Dequeue(message))
 		{
+			bool move = false;
 			if (message.Header.MessageType == MessageType::MouseEvent)
 			{
+				move = message.MouseEvent.Buttons == g_prevButtons;
+
 				const uint16_t absX = (uint16_t)((uint32_t)g_gfx.Width * message.MouseEvent.XPosition / HidMax);
 				const uint16_t absY = (uint16_t)((uint32_t)g_gfx.Height * message.MouseEvent.YPosition / HidMax);
 				const Point2D mousePos = { absX, absY };
@@ -471,7 +478,7 @@ namespace
 
 			//Route input to the focused window's owner
 			if (g_focus)
-				Post(g_focus->Owner, message);
+				Post(g_focus->Owner, message, move);
 		}
 	}
 
@@ -520,7 +527,7 @@ namespace
 		for (WmWindow& window : g_windows)
 		{
 			if (window.Surface)
-				PostEvent(window.Owner, MessageType::PaintEvent);
+				PostEvent(window.Owner, MessageType::PaintEvent, true);
 		}
 	}
 }

@@ -111,6 +111,32 @@ void SharedRing_test()
 		Assert(deq == enq); // everything enqueued came back out, in order
 	}
 
+	// Count tracks the records waiting, including across a wrap
+	{
+		constexpr uint32_t cap = 4; // 3 usable
+		alignas(8) uint8_t region[SharedRing<uint32_t>::RegionSize(cap)] = {};
+		SharedRing<uint32_t>::Init(region, cap);
+		SharedRing<uint32_t> ring(region);
+
+		Assert(ring.Count() == 0);
+		Assert(ring.Enqueue(1));
+		Assert(ring.Enqueue(2));
+		Assert(ring.Count() == 2);
+		Assert(ring.Enqueue(3));
+		Assert(ring.Count() == 3); // full
+
+		uint32_t value = 0;
+		Assert(ring.Dequeue(value));
+		Assert(ring.Dequeue(value));
+		Assert(ring.Enqueue(4)); // head wraps to 0, tail is 2
+		Assert(ring.Count() == 2);
+		Assert(ring.Enqueue(5));
+		Assert(ring.Count() == 3);
+		while (ring.Dequeue(value))
+			;
+		Assert(ring.Count() == 0);
+	}
+
 	// Separate producer/consumer views over one region (the real cross-process use)
 	{
 		constexpr uint32_t cap = 8;
@@ -173,6 +199,7 @@ void SharedRing_test()
 		Assert(!pinned.Enqueue(1));
 		uint32_t value = 0;
 		Assert(!pinned.Dequeue(value));
+		Assert(pinned.Count() == 0);
 
 		//Zero capacity in the header rejects instead of dividing by zero
 		header->Head = 0;

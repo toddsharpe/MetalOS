@@ -13,10 +13,12 @@
 //serialized by a spinlock because more than one driver posts.
 namespace _INPUT
 {
-	constexpr uint32_t Capacity = 128;
+	constexpr uint32_t Capacity = 512;
+	constexpr uint32_t MoveLimit = Capacity / 2; //mouse moves stop going in at half full, keeping the rest for keys and clicks
 
 	KSpinLock m_lock;
 	void* m_region = nullptr;
+	MouseButtonState m_buttons = {}; //buttons of the last mouse event that went in
 }
 
 void KeInputInitialize()
@@ -32,5 +34,12 @@ void KeInputPost(const Message& message)
 
 	KSpinLockGuard guard(_INPUT::m_lock);
 	SharedRing<Message> ring(_INPUT::m_region, _INPUT::Capacity); //WM can rewrite the header; use our capacity
-	ring.Enqueue(message); //drops silently if the WM has fallen behind
+
+	//A move only repositions the cursor and the next one carries the new position, so moves give way when the WM falls behind
+	const bool mouse = message.Header.MessageType == MessageType::MouseEvent;
+	if (mouse && message.MouseEvent.Buttons == _INPUT::m_buttons && ring.Count() >= _INPUT::MoveLimit)
+		return;
+
+	if (ring.Enqueue(message) && mouse)
+		_INPUT::m_buttons = message.MouseEvent.Buttons;
 }

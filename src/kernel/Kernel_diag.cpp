@@ -10,23 +10,27 @@ extern StaticArena<TempArenaSize> m_tempArena;
 
 namespace
 {
-	//A stack trace goes to the kernel console, or to a faulting process's stdout pipe
-	void TracePrint(KPipe* const output, const char* const format, ...)
-	{
-		va_list args;
-		va_start(args, format);
-		if (output)
-			output->VPrint(format, args);
-		else
-			VPrintf(format, args);
-		va_end(args);
-	}
-
 	struct LoadedPdb
 	{
 		PdbFile* File; //Null when the module has no PDB to load, so its frames print without symbols
 		void* Image; //KeLoadFile copy the parser reads from, freed after the walk
 	};
+}
+
+void TracePrint(KPipe* const output, const char* const format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	VPrintf(format, args);
+	va_end(args);
+
+	//The pipe write never blocks and drops a line that doesn't fit, which is why the console always gets it too
+	if (!output)
+		return;
+
+	va_start(args, format);
+	output->VPrint(format, args);
+	va_end(args);
 }
 
 void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* const output)

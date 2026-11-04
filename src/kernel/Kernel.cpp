@@ -255,35 +255,40 @@ extern "C"
 		if (fromUser && current.UserThread)
 		{
 			UProcess& proc = current.UserThread->Process;
-			UObject* obj = proc.GetObject((handle_t)Handles::StdOut);
-			if (obj && obj->Type == UObjectType::Pipe)
+
+			//The report always goes to the kernel console, and to stdout as well when that is a pipe (a Debug stdout is the console)
+			UObject* const obj = proc.GetObject((handle_t)Handles::StdOut);
+			KPipe* const pipe = (obj && obj->Type == UObjectType::Pipe) ? obj->Pipe : nullptr;
+
+			//Write exception
+			switch (vector)
 			{
-				KPipe& pipe = *obj->Pipe;
+				case Arch::InterruptVector::DivideError:
+					TracePrint(pipe, "Exception: Divide by zero\n");
+					break;
 
-				//Write exception
-				switch (vector)
+				case Arch::InterruptVector::Breakpoint:
+					TracePrint(pipe, "Exception: Breakpoint\n");
+					break;
+
+				case Arch::InterruptVector::PageFault:
 				{
-					case Arch::InterruptVector::DivideError:
-						pipe.Print("Exception: Divide by zero\n");
-						break;
-
-					case Arch::InterruptVector::Breakpoint:
-						pipe.Print("Exception: Breakpoint\n");
-						break;
-
-					case Arch::InterruptVector::PageFault:
-						const uint64_t addr = __readcr2();
-						pipe.Print("Exception: Invalid virtual address: 0x%016x. %s\n", addr, addr == 0 ? "Null pointer" : "");
-						break;
+					const uint64_t addr = __readcr2();
+					TracePrint(pipe, "Exception: Invalid virtual address: 0x%016x. %s\n", addr, addr == 0 ? "Null pointer" : "");
 				}
+				break;
 
-				//Print the faulting thread's stack to its stdout
-				Arch::Context context = {};
-				context.Rip = frame.RIP;
-				context.Rsp = frame.RSP;
-				context.Rbp = frame.RBP;
-				PrintStack(&context, proc, &pipe);
+				default:
+					TracePrint(pipe, "Exception: Vector 0x%x, Code: 0x%x\n", (uint32_t)vector, frame.ErrorCode);
+					break;
 			}
+
+			//Print the faulting thread's stack
+			Arch::Context context = {};
+			context.Rip = frame.RIP;
+			context.Rsp = frame.RSP;
+			context.Rbp = frame.RBP;
+			PrintStack(&context, proc, pipe);
 
 			//Kill process
 			KeTerminateProcess(proc, -1);

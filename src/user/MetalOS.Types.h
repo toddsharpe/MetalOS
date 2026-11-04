@@ -184,5 +184,5 @@ struct sockaddr_in
 struct InterfaceInfo
 {
 	uint32_t index;
-	uint8_t  mac[6];
+	uint8_t  mac[6]; //Little-endian like Net::eth_mac_t: mac[5] is the first byte on the wire
 };

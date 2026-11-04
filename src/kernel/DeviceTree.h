@@ -79,11 +79,6 @@ public:
 		return Walk([kClass](const KDevice& device) { return device.Class == kClass; });
 	}
 
-	KDevice* GetDevice(const CString& path) const
-	{
-		return Walk([&path](const KDevice& device) { return device.Path == path; });
-	}
-
 private:
 	//Depth-first from the root, visiting each device before its children (so children a driver enumerates are visited too); stops when visit returns true
 	template <typename Visit>

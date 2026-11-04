@@ -1,7 +1,6 @@
 #include "HyperVChannel.h"
 #include "Arch.h"
 #include "kernel/HyperV/Types.h"
-#include "kernel/KDevice.h"
 #include "Kernel/HyperV/HyperV.h"
 #include "Lib/Buffer.h"
 #include "kernel/Drivers/HyperVRingBuffer.h"
@@ -17,7 +16,7 @@ HyperVChannel::HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize
 	
 }
 
-void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel, const CBuffer* buffer)
+void HyperVChannel::Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_channel* offerChannel, const CBuffer* buffer)
 {
 	m_channel = offerChannel;
 	
@@ -27,11 +26,6 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	Assert((m_outbound.Size % Arch::PageSize) == 0);
 	Assert((m_inbound.Size % Arch::PageSize) == 0);
 
-	//Get reference to vmbus
-	KDevice* bus = KeGetDevice("\\_SB_.VMOD.VMBS");
-	Assert(bus);
-	VmBusDriver* const vmbus = static_cast<VmBusDriver*>(bus->Driver);
-	
 	//Number of pages
 	const size_t sendCount = Arch::SizeToPages(m_outbound.Size);
 	const size_t receiveCount = Arch::SizeToPages(m_inbound.Size);
@@ -45,12 +39,12 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	m_inbound.Initialize(address + m_outbound.Size);
 	
 	//Establish GPADL for ring buffers
-	m_gpadlHandle = vmbus->CreateGpadl(m_channel->child_relid, address, pageCount);
+	m_gpadlHandle = vmbus.CreateGpadl(m_channel->child_relid, address, pageCount);
 
 	//Register the channel callback BEFORE opening: the host can signal the channel the instant it
 	//is open, and if no handler is registered yet that notification is dropped (and the host may
 	//rescind the channel). The rings are already initialized above, so the callback is safe to run.
-	vmbus->SetCallback(m_channel->child_relid, m_callback);
+	vmbus.SetCallback(m_channel->child_relid, m_callback);
 
 	//Open channel
 	HyperV::vmbus_channel_open_channel openChannel;
@@ -63,7 +57,7 @@ void HyperVChannel::Initialize(HyperV::vmbus_channel_offer_channel* offerChannel
 	if (buffer != nullptr)
 		memcpy(openChannel.userdata, buffer->Data, buffer->Size);
 	HyperV::VmBusResponse response;
-	vmbus->OpenChannel(openChannel, response);
+	vmbus.OpenChannel(openChannel, response);
 }
 
 //Format is vmpacket_descriptor followed by buffer, alignment if needed, and then old indexes

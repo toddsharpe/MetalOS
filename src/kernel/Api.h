@@ -228,7 +228,6 @@ void PrintBytes(const void* data, const size_t length);
 /*
  * Devices.
  */
-KDevice* KeGetDevice(const char* const path);
 
 //Network device: the kernel owns NIC enumeration + raw ethernet frame I/O (RX via KeNetRxFrame
 //from IRQ, published by KeInitNetDevice); the TCP/IP stack lives in the usermode netstack.

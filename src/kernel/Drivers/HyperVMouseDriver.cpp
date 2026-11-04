@@ -22,7 +22,7 @@ Result HyperVMouseDriver::Initialize()
 	m_device.Class = KDeviceClass::Mouse;
 
 	//Initialize channel with the device's offer, not a stack copy: the channel keeps the pointer for SetEvent
-	m_channel.Initialize(&m_device.m_channel);
+	m_channel.Initialize(*m_device.VmBus, &m_device.m_channel);
 
 	//Initialize keyboard
 	mousevsc_prt_msg request;

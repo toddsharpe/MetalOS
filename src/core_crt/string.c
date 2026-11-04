@@ -202,9 +202,10 @@ size_t strnlen_s(char const* _String, size_t _MaxCount)
 		return 0;
 	}
 
+	//Check the limit before reading, so no byte at or past _MaxCount is touched
 	size_t count = 0;
 
-	while (*_String++ && _MaxCount--) {
+	while (count < _MaxCount && _String[count]) {
 		count++;
 	}
 

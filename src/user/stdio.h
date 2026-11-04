@@ -53,6 +53,16 @@ extern "C"
 	int sscanf ( const char * s, const char * format, ...);
 	int vsscanf(const char* s, const char* format, va_list arg);
 
+	int fscanf(FILE* const _Stream, char const* const _Format, ...);
+	int vfscanf(FILE* const _Stream, char const* const _Format, va_list _ArgList);
+	int scanf(char const* const _Format, ...);
+	int vscanf(char const* const _Format, va_list _ArgList);
+
+	int fgetc(FILE* _Stream);
+	int getc(FILE* _Stream);
+	int getchar(void);
+	int ungetc(int _Character, FILE* _Stream);
+
 #ifdef __cplusplus
 }
 #endif

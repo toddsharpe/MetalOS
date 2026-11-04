@@ -22,6 +22,14 @@ EXPORTS
 	putchar
 	sscanf
 	vsscanf
+	fscanf
+	vfscanf
+	scanf
+	vscanf
+	fgetc
+	getc
+	getchar
+	ungetc
 
 	; stdlib
 	exit

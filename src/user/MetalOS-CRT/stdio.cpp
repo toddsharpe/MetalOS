@@ -77,31 +77,147 @@ namespace
 			StreamFlush(stream);
 	}
 
-	//Reads an integer of at most width characters (base 0 takes it from the prefix), returning the characters used or 0 if they aren't a number
-	size_t ScanInteger(const char* const input, const size_t width, unsigned base, uint64_t& value)
+	//A character pushed back onto a stream, which the next read takes first; Key is the handle plus one, so a zeroed slot is free (stdin is handle 0)
+	struct Pushback
+	{
+		volatile __int64 Key;
+		int Character;
+	};
+
+	//Handles count up without reuse, so they can't index a table: the few streams holding a character share these slots
+	Pushback Pushbacks[16];
+
+	//The stream's pushback slot, or with claim a free one for it that holds nothing yet (nullptr if none is left)
+	Pushback* FindPushback(const HFile file, const bool claim)
+	{
+		const __int64 key = (__int64)file + 1;
+		for (Pushback& slot : Pushbacks)
+		{
+			if (slot.Key == key)
+				return &slot;
+		}
+
+		if (!claim)
+			return nullptr;
+
+		//Threads using other streams can be claiming slots at the same time
+		for (Pushback& slot : Pushbacks)
+		{
+			if (slot.Key == 0 && _InterlockedCompareExchange64(&slot.Key, key, 0) == 0)
+			{
+				slot.Character = EOF;
+				return &slot;
+			}
+		}
+
+		return nullptr;
+	}
+
+	bool HasPushback(const HFile file)
+	{
+		const Pushback* const slot = FindPushback(file, false);
+		return slot && slot->Character != EOF;
+	}
+
+	//Takes the character pushed back onto a stream and frees its slot, or returns EOF if nothing is there
+	int TakePushback(const HFile file)
+	{
+		Pushback* const slot = FindPushback(file, false);
+		if (!slot || slot->Character == EOF)
+			return EOF;
+
+		const int character = slot->Character;
+		slot->Key = 0;
+		return character;
+	}
+
+	//Reads a character from the handle, or EOF at the end or on an error (which sets errno)
+	int ReadChar(const HFile file)
+	{
+		//BrokenPipe comes with nothing read: it is the end of a pipe
+		unsigned char character = 0;
+		size_t bytes = 0;
+		const SyscallResult result = ReadFile(file, &character, 1, &bytes);
+		if (bytes == 1)
+			return character;
+
+		if (result != SyscallResult::Success && result != SyscallResult::BrokenPipe)
+			errno = ToErrno(result);
+
+		return EOF;
+	}
+
+	//Characters for the scanners, read from a stream; the one looked at but not taken waits in the stream's pushback slot
+	struct StreamSource
+	{
+		HFile File;
+		Pushback* Slot;
+		bool Ended;
+
+		int Peek()
+		{
+			if (Slot->Character == EOF && !Ended)
+			{
+				Slot->Character = ReadChar(File);
+				Ended = Slot->Character == EOF;
+			}
+
+			return Slot->Character;
+		}
+
+		void Advance()
+		{
+			Slot->Character = EOF;
+		}
+	};
+
+	//Reads an integer of at most width characters (base 0 takes it from the prefix), returning the characters read or 0 if they aren't a number
+	template<typename Source>
+	size_t ScanInteger(Source& source, const size_t width, unsigned base, uint64_t& value)
 	{
 		size_t length = 0;
-		const bool negative = input[0] == '-';
-		if (negative || input[0] == '+')
-			length++;
-
-		//A 0x that fits in the width is a prefix, and a hex digit has to follow it
-		if ((base == 0 || base == 16) && length + 1 < width && input[length] == '0' && (input[length + 1] == 'x' || input[length + 1] == 'X'))
+		const auto peek = [&]() { return length < width ? source.Peek() : EOF; };
+		const auto next = [&]()
 		{
-			base = 16;
-			length += 2;
+			source.Advance();
+			length++;
+		};
+
+		const bool negative = peek() == '-';
+		if (negative || peek() == '+')
+			next();
+
+		//A 0x is a prefix where the base allows one, and a hex digit has to follow it
+		bool digits = false;
+		if ((base == 0 || base == 16) && peek() == '0')
+		{
+			next();
+			if (tolower(peek()) == 'x')
+			{
+				next();
+				base = 16;
+			}
+			else
+			{
+				digits = true;
+				if (base == 0)
+					base = 8;
+			}
 		}
 		else if (base == 0)
 		{
-			base = input[length] == '0' ? 8 : 10;
+			base = 10;
 		}
 
-		const size_t digits = length;
 		uint64_t result = 0;
-		while (length < width && ScanDigit(input[length]) < base)
-			result = result * base + ScanDigit(input[length++]);
+		while (ScanDigit(peek()) < base)
+		{
+			result = result * base + ScanDigit(peek());
+			next();
+			digits = true;
+		}
 
-		if (length == digits)
+		if (!digits)
 			return 0;
 
 		value = negative ? 0 - result : result;
@@ -217,13 +333,19 @@ extern "C"
 		if (!_ElementSize || !_ElementCount)
 			return 0;
 
-		//A pipe returns what has arrived so far, so keep reading until the count is met or the stream ends
+		//A character pushed back by ungetc or a scanf comes first
+		const HFile file = reinterpret_cast<HFile>(_Stream);
 		const size_t total = _ElementSize * _ElementCount;
+		const int pushed = TakePushback(file);
 		size_t bytes = 0;
+		if (pushed != EOF)
+			static_cast<unsigned char*>(_Buffer)[bytes++] = (unsigned char)pushed;
+
+		//A pipe returns what has arrived so far, so keep reading until the count is met or the stream ends
 		while (bytes < total)
 		{
 			size_t read = 0;
-			const SyscallResult result = ReadFile(reinterpret_cast<HFile>(_Stream), static_cast<char*>(_Buffer) + bytes, total - bytes, &read);
+			const SyscallResult result = ReadFile(file, static_cast<unsigned char*>(_Buffer) + bytes, total - bytes, &read);
 			if (result != SyscallResult::Success && result != SyscallResult::BrokenPipe)
 			{
 				errno = ToErrno(result);
@@ -272,31 +394,42 @@ extern "C"
 			return -1;
 		}
 
-		const SyscallResult result = SetFilePointer(reinterpret_cast<HFile>(_Stream), _Offset, move, nullptr);
+		//A pushed back character sits one before the handle's position, and a seek that works drops it
+		const HFile file = reinterpret_cast<HFile>(_Stream);
+		const long offset = _Origin == SEEK_CUR && HasPushback(file) ? _Offset - 1 : _Offset;
+		const SyscallResult result = SetFilePointer(file, offset, move, nullptr);
 		if (result != SyscallResult::Success)
 		{
 			errno = SeekErrno(result);
 			return -1;
 		}
 
+		TakePushback(file);
 		return 0;
 	}
 
 	long ftell(FILE* _Stream)
 	{
 		size_t position = 0;
-		const SyscallResult result = SetFilePointer(reinterpret_cast<HFile>(_Stream), 0, Seek::Current, &position);
+		const HFile file = reinterpret_cast<HFile>(_Stream);
+		const SyscallResult result = SetFilePointer(file, 0, Seek::Current, &position);
 		if (result != SyscallResult::Success)
 		{
 			errno = SeekErrno(result);
 			return -1;
 		}
 
+		//The caller hasn't read a character that is pushed back
+		if (position > 0 && HasPushback(file))
+			position--;
+
 		return (long)position;
 	}
 
 	int fclose(FILE* _Stream)
 	{
+		//The stream goes away whether or not the close works, and anything pushed back onto it with it
+		TakePushback(reinterpret_cast<HFile>(_Stream));
 		const SyscallResult result = CloseHandle(reinterpret_cast<HFile>(_Stream));
 		if (result != SyscallResult::Success)
 		{
@@ -382,14 +515,29 @@ extern "C"
 
 		return (unsigned char)c;
 	}
+}
 
-	int vsscanf(const char* const s, const char* format, va_list arg)
+namespace
+{
+	//The scanf engine: reads from a string or a stream as format directs, storing through arg
+	template<typename Source>
+	int Scan(Source& source, const char* format, va_list arg)
 	{
-		const char* input = s;
+		size_t count = 0;
 		int assigned = 0;
 
 		//Running out of input before anything was assigned is EOF, any other failure returns what was assigned
 		const auto failed = [&](const bool inputFailure) { return inputFailure && assigned == 0 ? EOF : assigned; };
+		const auto next = [&]()
+		{
+			source.Advance();
+			count++;
+		};
+		const auto skipSpace = [&]()
+		{
+			while (isspace(source.Peek()))
+				next();
+		};
 
 		while (*format != '\0')
 		{
@@ -399,9 +547,7 @@ extern "C"
 				while (isspace(*format))
 					format++;
 
-				while (isspace(*input))
-					input++;
-
+				skipSpace();
 				continue;
 			}
 
@@ -411,17 +557,17 @@ extern "C"
 				if (*format == '%')
 				{
 					format++;
-					while (isspace(*input))
-						input++;
+					skipSpace();
 				}
 
-				if (*input == '\0')
+				const int c = source.Peek();
+				if (c == EOF)
 					return failed(true);
 
-				if (*input != *format)
+				if (c != (unsigned char)*format)
 					return failed(false);
 
-				input++;
+				next();
 				format++;
 				continue;
 			}
@@ -489,17 +635,14 @@ extern "C"
 
 			//Every conversion but %c, %[ and %n skips leading whitespace
 			if (conversion != 'c' && conversion != '[' && conversion != 'n')
-			{
-				while (isspace(*input))
-					input++;
-			}
+				skipSpace();
 
 			unsigned base = 10;
 			switch (conversion)
 			{
 			case 'n':
 				if (!suppress)
-					ScanStore(va_arg(arg, void*), bytes, (uint64_t)(input - s));
+					ScanStore(va_arg(arg, void*), bytes, (uint64_t)count);
 				continue;
 
 			case 'c':
@@ -514,41 +657,44 @@ extern "C"
 						return failed(false);
 				}
 
-				if (*input == '\0')
+				if (source.Peek() == EOF)
 					return failed(true);
+
+				//Characters go straight into the destination as they are read
+				void* const destination = suppress ? nullptr : va_arg(arg, void*);
+				const auto store = [&](const size_t index, const int c)
+				{
+					if (wide)
+						static_cast<wchar_t*>(destination)[index] = (wchar_t)c;
+					else
+						static_cast<char*>(destination)[index] = (char)c;
+				};
 
 				//%c takes one character unless given a width
 				const size_t limit = width ? width : conversion == 'c' ? 1 : (size_t)-1;
 				size_t length = 0;
-				while (length < limit && input[length] != '\0')
+				for (; length < limit; length++)
 				{
-					const unsigned char c = input[length];
-					if ((conversion == 's' && isspace(c)) || (conversion == '[' && !set[c]))
+					const int c = source.Peek();
+					if (c == EOF || (conversion == 's' && isspace(c)) || (conversion == '[' && !set[c]))
 						break;
 
-					length++;
+					if (destination)
+						store(length, c);
+					next();
 				}
 
 				if (length == 0)
 					return failed(false);
 
-				if (!suppress)
+				//Only %c leaves the characters unterminated
+				if (destination)
 				{
-					//Only %c leaves the characters unterminated
-					void* const destination = va_arg(arg, void*);
-					const size_t stored = conversion == 'c' ? length : length + 1;
-					for (size_t i = 0; i < stored; i++)
-					{
-						const char c = i < length ? input[i] : '\0';
-						if (wide)
-							static_cast<wchar_t*>(destination)[i] = (unsigned char)c;
-						else
-							static_cast<char*>(destination)[i] = c;
-					}
+					if (conversion != 'c')
+						store(length, '\0');
 					assigned++;
 				}
 
-				input += length;
 				continue;
 			}
 
@@ -561,12 +707,12 @@ extern "C"
 			case 'g':
 			case 'G':
 			{
-				if (*input == '\0')
+				if (source.Peek() == EOF)
 					return failed(true);
 
 				//All of what was read has to be the number, so a 1e that stops short is a matching failure
-				StringSource source = { input };
 				const ScannedFloat number = ScanFloat(source, width ? width : (size_t)-1, !isDouble);
+				count += number.Read;
 				if (number.Length == 0 || number.Length < number.Read)
 					return failed(false);
 
@@ -579,7 +725,6 @@ extern "C"
 					assigned++;
 				}
 
-				input += number.Read;
 				continue;
 			}
 
@@ -610,24 +755,32 @@ extern "C"
 				return failed(false);
 			}
 
-			if (*input == '\0')
+			if (source.Peek() == EOF)
 				return failed(true);
 
 			uint64_t value = 0;
-			const size_t length = ScanInteger(input, width ? width : (size_t)-1, base, value);
+			const size_t length = ScanInteger(source, width ? width : (size_t)-1, base, value);
 			if (length == 0)
 				return failed(false);
 
+			count += length;
 			if (!suppress)
 			{
 				ScanStore(va_arg(arg, void*), bytes, value);
 				assigned++;
 			}
-
-			input += length;
 		}
 
 		return assigned;
+	}
+}
+
+extern "C"
+{
+	int vsscanf(const char* const s, const char* format, va_list arg)
+	{
+		StringSource source = { s };
+		return Scan(source, format, arg);
 	}
 
 	int sscanf ( const char * s, const char * format, ...)
@@ -637,5 +790,75 @@ extern "C"
 		const int result = vsscanf(s, format, args);
 		va_end(args);
 		return result;
+	}
+
+	int vfscanf(FILE* const _Stream, char const* const _Format, va_list _ArgList)
+	{
+		//The character the scan stops at stays with the stream, so the scan holds a pushback slot throughout
+		StreamSource source = {};
+		source.File = reinterpret_cast<HFile>(_Stream);
+		source.Slot = FindPushback(source.File, true);
+		if (!source.Slot)
+		{
+			errno = EMFILE;
+			return EOF;
+		}
+
+		const int result = Scan(source, _Format, _ArgList);
+		if (source.Slot->Character == EOF)
+			source.Slot->Key = 0;
+
+		return result;
+	}
+
+	int fscanf(FILE* const _Stream, char const* const _Format, ...)
+	{
+		va_list args;
+		va_start(args, _Format);
+		const int result = vfscanf(_Stream, _Format, args);
+		va_end(args);
+		return result;
+	}
+
+	int vscanf(char const* const _Format, va_list _ArgList)
+	{
+		return vfscanf(stdin, _Format, _ArgList);
+	}
+
+	int scanf(char const* const _Format, ...)
+	{
+		va_list args;
+		va_start(args, _Format);
+		const int result = vfscanf(stdin, _Format, args);
+		va_end(args);
+		return result;
+	}
+
+	int fgetc(FILE* _Stream)
+	{
+		const HFile file = reinterpret_cast<HFile>(_Stream);
+		const int pushed = TakePushback(file);
+		return pushed != EOF ? pushed : ReadChar(file);
+	}
+
+	int getc(FILE* _Stream)
+	{
+		return fgetc(_Stream);
+	}
+
+	int getchar(void)
+	{
+		return fgetc(stdin);
+	}
+
+	int ungetc(int _Character, FILE* _Stream)
+	{
+		//One character can wait on each stream, while a slot is free for it
+		Pushback* const slot = _Character == EOF ? nullptr : FindPushback(reinterpret_cast<HFile>(_Stream), true);
+		if (!slot || slot->Character != EOF)
+			return EOF;
+
+		slot->Character = (unsigned char)_Character;
+		return slot->Character;
 	}
 }

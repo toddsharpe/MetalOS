@@ -38,7 +38,7 @@ namespace Net::Arp
 			return;
 
 		//Add sender to arp cache
-		Assert(ArpCache::Update(request.sender_proto, request.sender_hw));
+		ArpCache::Update(request.sender_proto, request.sender_hw);
 
 		const arp_t reply =
 		{
@@ -65,7 +65,7 @@ namespace Net::Arp
 		if (reply.target_proto != net_if.ipv4.addr)
 			return;
 
-		Assert(ArpCache::Update(reply.sender_proto, reply.sender_hw));
+		ArpCache::Update(reply.sender_proto, reply.sender_hw);
 
 		//Resolution done; allow future ARP requests (senders retry once the cache is warm)
 		net_if.ethernet.arp_pending = false;

@@ -77,4 +77,21 @@ void CircularBuffer_test()
 			Assert(buffer.IsEmpty());
 		}
 	}
+
+	// Index from the oldest entry across the wrap, and update in place
+	{
+		CircularBuffer<int, 4> buffer;
+		for (int i = 1; i <= 4; i++)
+			Assert(buffer.Enqueue(i));
+		buffer.Dequeue();
+		Assert(buffer.Enqueue(5));  // tail wraps around
+
+		for (size_t i = 0; i < buffer.Count(); i++)
+			Assert(buffer[i] == (int)i + 2);
+
+		buffer[1] = 9;
+		Assert(buffer.Dequeue() == 2);
+		Assert(buffer.Dequeue() == 9);
+		Assert(buffer[0] == 4);
+	}
 }

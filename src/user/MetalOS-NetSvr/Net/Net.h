@@ -311,7 +311,7 @@ namespace Net
 
 	namespace ArpCache
 	{
-		bool Update(const ipv4_addr_t& ip_addr, const eth_mac_t& eth_addr);
+		void Update(const ipv4_addr_t& ip_addr, const eth_mac_t& eth_addr);
 		bool Lookup(const ipv4_addr_t& ipAddr, eth_mac_t& eth_addr);
 	}
 

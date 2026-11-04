@@ -648,6 +648,7 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 			writer.PipeWriteQueue = &pipe;
 
 			size_t written = 0;
+			SyscallResult status = SyscallResult::Success;
 			while (written < bufferSize)
 			{
 				//Wait for this write's turn and for room
@@ -658,7 +659,17 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 
 				//The wait also ends when the reader is gone, with possibly no room to write
 				if (pipe.IsBroken())
+				{
+					status = SyscallResult::BrokenPipe;
 					break;
+				}
+
+				//Another thread of the process may have freed the rest of the buffer during the wait
+				if (!proc.Space.IsValidRange(data + written, bufferSize - written))
+				{
+					status = SyscallResult::InvalidPointer;
+					break;
+				}
 
 				size_t bytes = 0;
 				const size_t piece = Min(bufferSize - written, pipe.Space());
@@ -669,9 +680,14 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 			pipe.DequeueWriter(writer.PipeWriteLink);
 			writer.PipeWriteQueue = nullptr;
 
+			//The count may have been freed during a wait as well
 			if (bytesWritten)
+			{
+				if (!proc.Space.IsValid(bytesWritten))
+					return SyscallResult::InvalidPointer;
 				*bytesWritten = written;
-			return (written == bufferSize) ? SyscallResult::Success : SyscallResult::BrokenPipe;
+			}
+			return status;
 		}
 		break;
 

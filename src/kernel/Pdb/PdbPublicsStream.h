@@ -72,6 +72,10 @@ private:
 			RecordHeader header;
 			Assert(stream.Read(&header));
 
+			//A record too short to hold its own type would never advance the walk
+			if (header.Length < sizeof(header.Type))
+				break;
+
 			switch (header.Type)
 			{
 				case S_PUB32:
@@ -91,22 +95,10 @@ private:
 				}
 				break;
 
-				//Known entries to skip for now
-				case S_LPROCREF:
-				case S_PROCREF:
-				case S_CONSTANT:
-				case S_UDT:
-				case S_LDATA32:
-				case S_GDATA32:
+				//Everything else is skipped by its length, including types not seen before (S_LTHREAD32 and S_GTHREAD32 come with thread_local)
+				default:
 					stream.Skip(header.Length - sizeof(header.Length));
 					continue;
-
-				//Bugcheck on unknown entries
-				default:
-				{
-					Printf("Unknown record type: %d", header.Type);
-					Assert(false);
-				}
 			}
 
 			stream.SkipAlign<uint32_t>();

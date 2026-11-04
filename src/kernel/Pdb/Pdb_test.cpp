@@ -5,6 +5,13 @@
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 extern "C" int WinPE_test_export();
 
+//Thread storage puts S_GTHREAD32 and S_LTHREAD32 records in this image's symbol stream, which the publics parser once asserted on
+thread_local int Pdb_test_tls;
+static thread_local int s_tls;
+
+//Data, for an IP outside .text
+static int s_data = 1;
+
 //Reads a whole file into memory, as KeLoadFile does for the kernel's stack walker
 static void* LoadFile(const char* const path)
 {
@@ -92,6 +99,10 @@ void Pdb_test()
 	Assert(storage);
 	Arena arena(storage, ArenaSize);
 
+	//Referenced, so the linker keeps the thread storage (and its records in the PDB)
+	Pdb_test_tls++;
+	s_tls++;
+
 	PdbFile file;
 	file.Open(pdb, image, arena);
 
@@ -100,6 +111,21 @@ void Pdb_test()
 	Assert(file.Resolve(rva, lookup));
 	Assert(lookup.Function == "WinPE_test_export");
 	Assert(lookup.Line != 0);
+
+	//An IP in data or the headers (a call through a bad pointer) is in no module's code, so it fails to resolve instead of asserting
+	Assert(!file.Resolve((uint32_t)((uintptr_t)&s_data - (uintptr_t)image), lookup));
+	Assert(!file.Resolve(0, lookup));
+
+	//Every IP in .text resolves or fails cleanly, including a function's last line, after which the line walk used to read mid-subsection
+	const IMAGE_SECTION_HEADER* const text = WinPE::GetPESection(image, ".text");
+	Assert(text);
+	size_t resolved = 0;
+	for (uint32_t offset = 0; offset < text->Misc.VirtualSize; offset += 16)
+	{
+		if (file.Resolve(text->VirtualAddress + offset, lookup))
+			resolved++;
+	}
+	Assert(resolved != 0);
 
 	arena.Reset();
 	PdbPublics_test(arena);

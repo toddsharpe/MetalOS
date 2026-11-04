@@ -141,8 +141,8 @@ namespace WinPE
 	#define MAKESIG(a,b,c,d)        ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
 	#define CODEVIEW_RSDS_SIG       MAKESIG('R','S','D','S')	
 
-	//Null for an image linked without a PDB (no debug directory, or no RSDS CodeView entry in it)
-	inline const char* GetPdbName(const void* const imageBase)
+	//The RSDS CodeView record naming the image's PDB and its GUID and age; null for an image linked without a PDB (no debug directory, or no RSDS entry in it)
+	inline const OMFSignatureRSDS* GetCodeView(const void* const imageBase)
 	{
 		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 
@@ -163,11 +163,17 @@ namespace WinPE
 			if (*(DWORD*)address != CODEVIEW_RSDS_SIG)
 				continue;
 
-			const OMFSignatureRSDS* rsds = (const OMFSignatureRSDS*)address;
-			return rsds->name;
+			return (const OMFSignatureRSDS*)address;
 		}
 
 		return nullptr;
+	}
+
+	//Null for an image linked without a PDB
+	inline const char* GetPdbName(const void* const imageBase)
+	{
+		const OMFSignatureRSDS* const rsds = GetCodeView(imageBase);
+		return rsds ? rsds->name : nullptr;
 	}
 }
 

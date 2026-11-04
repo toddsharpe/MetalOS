@@ -43,6 +43,11 @@ public:
 		m_publics.Load(stream, arena);
 	}
 
+	uint32_t GetAge() const
+	{
+		return m_header.Age;
+	}
+
 	bool ResolveFunction(const uint32_t rva, PdbLookup& lookup)
 	{
 		const uint32_t offset = rva - m_textSection->VirtualAddress;

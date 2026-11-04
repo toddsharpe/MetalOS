@@ -5,6 +5,7 @@
 /******************************/
 
 #include "Lib/String.h"
+#include "Graphics/Types.h"
 
 #include "user/MetalOS.Keys.h"
 #include "user/MetalOS.Types.h"

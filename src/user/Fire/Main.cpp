@@ -5,7 +5,6 @@
 #include "user/Fire/FireScreen.cpp"
 #include "user/CRT.cpp"
 
-using namespace UI;
 using namespace Graphics;
 
 FireScreen* screen;
@@ -43,10 +42,7 @@ int main(int argc, char** argv)
 	screen = new FireScreen(frame.Height, frame.Width);
 	screen->Initialize();
 
-	WindowStyle style = {};
-	style.IsBordered = true;
-
-	GUI gui("Fire", frame, style, UICallback);
+	GUI gui("Fire", frame, UICallback);
 	gui.Initialize();
 
 	gui.Run();

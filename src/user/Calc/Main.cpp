@@ -25,11 +25,8 @@ int main(int argc, char** argv)
 	
 	size_t pos = 25 + 50 * (procInfo.Id - 1);
 	Rectangle rectangle = { pos, pos, 100, 200 };
-	
-	WindowStyle style = {};
-	style.IsBordered = true;
 
-	GUI gui("Calc", rectangle, style, UICallback);
+	GUI gui("Calc", rectangle, UICallback);
 	gui.Initialize();
 
 	Button b7("7", { 5, 25, 20, 20 });

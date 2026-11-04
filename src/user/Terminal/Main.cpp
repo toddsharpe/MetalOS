@@ -237,10 +237,7 @@ int main(int argc, char** argv)
 
 	Rectangle rectangle = { 100, 100, 800, 400 };
 
-	WindowStyle style = {};
-	style.IsBordered = true;
-
-	GUI gui("Terminal", rectangle, style, UICallback);
+	GUI gui("Terminal", rectangle, UICallback);
 	gui.Initialize();
 
 	console.Background = Colors::Black;

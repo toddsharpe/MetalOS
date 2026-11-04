@@ -3,6 +3,7 @@
 #include "core_crt/stdint.h"
 #include "core_crt/stddef.h"
 #include "kernel/Objects/KRef.h"
+#include "Lib/List.h"
 
 enum class KPipeOp
 {
@@ -10,7 +11,7 @@ enum class KPipeOp
 	Write
 };
 
-//Full when indexes are equal
+//Ring over a double-mapped buffer; m_count tells full from empty, so all m_size bytes are usable
 class KPipe
 {
 public:
@@ -29,29 +30,35 @@ public:
 
 	size_t Count() const;
 	size_t Space() const;
+	size_t Capacity() const;
 	bool IsBroken() const;
+
+	//Writes are queued whole in arrival order, as on Windows: only the writer at the front may write
+	void QueueWriter(ListEntry& writer);
+	void DequeueWriter(ListEntry& writer);
 
 	KRef Readers;
 	KRef Writers;
 
 private:
-	bool EventSignal(const KPipeOp op, const size_t count);
+	bool EventSignal(const KPipeOp op, const size_t count, const ListEntry* const writer);
 	bool IsEmpty() const;
-	bool IsFull() const;
 
 	uint8_t* m_buffer;
 	size_t m_count;
 	size_t m_size;
 	size_t m_readIndex;
 	size_t m_writeIndex;
+	ListHead m_writers;
 };
 
 struct KPipeSignal
 {
-	KPipeSignal(KPipe& pipe, const KPipeOp op, const size_t count) :
+	KPipeSignal(KPipe& pipe, const KPipeOp op, const size_t count, const ListEntry* const writer = nullptr) :
 		Pipe(pipe),
 		Op(op),
-		Count(count)
+		Count(count),
+		Writer(writer)
 	{
 
 	}
@@ -59,4 +66,5 @@ struct KPipeSignal
 	KPipe& Pipe;
 	const KPipeOp Op;
 	const size_t Count;
+	const ListEntry* const Writer; //A write waits for its turn as well as for room
 };

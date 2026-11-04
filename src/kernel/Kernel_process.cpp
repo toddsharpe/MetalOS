@@ -210,6 +210,16 @@ namespace _REAP
 		thread.StackBase = nullptr;
 	}
 
+	//A thread killed while queued to write a pipe never finishes its write, so it leaves the queue here and the next writer goes
+	void LeavePipeWriteQueue(UThread& thread)
+	{
+		if (!thread.PipeWriteQueue)
+			return;
+
+		thread.PipeWriteQueue->DequeueWriter(thread.PipeWriteLink);
+		thread.PipeWriteQueue = nullptr;
+	}
+
 	//A terminated process is reapable once its last thread record is gone
 	UProcess* FindReapable()
 	{
@@ -272,6 +282,7 @@ uint32_t KeReaperThread(void* const arg)
 			if (thread->UserThread)
 			{
 				_REAP::ReleaseUserStack(*thread->UserThread);
+				_REAP::LeavePipeWriteQueue(*thread->UserThread);
 				KeReleaseUThread(*thread->UserThread);
 			}
 			KeFree(thread, AllocType::Kernel);

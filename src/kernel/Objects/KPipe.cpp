@@ -6,7 +6,7 @@
 bool KPipe::EventSignal(void* const arg)
 {
 	KPipeSignal* event = reinterpret_cast<KPipeSignal*>(arg);
-	return event->Pipe.EventSignal(event->Op, event->Count);
+	return event->Pipe.EventSignal(event->Op, event->Count, event->Writer);
 }
 
 constexpr KPipe::KPipe(const size_t size) :
@@ -16,13 +16,15 @@ constexpr KPipe::KPipe(const size_t size) :
 	m_count(),
 	m_size(size),
 	m_readIndex(),
-	m_writeIndex()
+	m_writeIndex(),
+	m_writers()
 {
-	
+
 }
 
 void KPipe::Init()
 {
+	ListInitializeHead(m_writers);
 	Assert(m_size % Arch::PageSize == 0);
 	const size_t count = Arch::SizeToPages(m_size);
 	
@@ -52,10 +54,8 @@ bool KPipe::Read(void* const buffer, const size_t length, size_t& bytesRead)
 	if (IsEmpty())
 		return true;
 
-	const size_t logicalWrite = m_writeIndex > m_readIndex ? m_writeIndex : m_writeIndex + m_size;
-	const size_t available = logicalWrite - m_readIndex;
-
-	bytesRead = Clamp<size_t>(available, 0, length);
+	//The second mapping makes a run from any index contiguous, so wrapped data is one copy
+	bytesRead = Clamp<size_t>(m_count, 0, length);
 	memcpy(buffer, &m_buffer[m_readIndex], bytesRead);
 	m_readIndex = (m_readIndex + bytesRead) % m_size;
 	m_count -= bytesRead;
@@ -66,13 +66,7 @@ bool KPipe::Read(void* const buffer, const size_t length, size_t& bytesRead)
 bool KPipe::Write(const void* buffer, const size_t length, size_t& bytesWritten)
 {
 	bytesWritten = 0;
-	if (IsFull())
-		return false;
-
-	const size_t logicalRead = m_readIndex > m_writeIndex ? m_readIndex : m_readIndex + m_size;
-	const size_t available = logicalRead - m_writeIndex - 1;
-
-	if (available < length)
+	if (Space() < length)
 		return false;
 
 	bytesWritten = length;
@@ -108,7 +102,12 @@ size_t KPipe::Count() const
 
 size_t KPipe::Space() const
 {
-	return m_size - m_count - 1;
+	return m_size - m_count;
+}
+
+size_t KPipe::Capacity() const
+{
+	return m_size;
 }
 
 bool KPipe::IsBroken() const
@@ -116,7 +115,17 @@ bool KPipe::IsBroken() const
 	return Readers.IsEmpty() || Writers.IsEmpty();
 }
 
-bool KPipe::EventSignal(const KPipeOp op, const size_t count)
+void KPipe::QueueWriter(ListEntry& writer)
+{
+	ListInsertTail(m_writers, writer);
+}
+
+void KPipe::DequeueWriter(ListEntry& writer)
+{
+	ListRemoveEntry(m_writers, writer);
+}
+
+bool KPipe::EventSignal(const KPipeOp op, const size_t count, const ListEntry* const writer)
 {
 	if (IsBroken())
 		return true;
@@ -127,7 +136,7 @@ bool KPipe::EventSignal(const KPipeOp op, const size_t count)
 			return Count() >= count;
 
 		case KPipeOp::Write:
-			return Space() >= count;
+			return m_writers.Link.Flink == writer && Space() >= count;
 
 		default:
 			Fatal("Invalid pipe op");
@@ -137,10 +146,5 @@ bool KPipe::EventSignal(const KPipeOp op, const size_t count)
 
 bool KPipe::IsEmpty() const
 {
-	return m_readIndex == m_writeIndex;
-}
-
-bool KPipe::IsFull() const
-{
-	return (m_writeIndex + 1) % m_size == m_readIndex;
+	return m_count == 0;
 }

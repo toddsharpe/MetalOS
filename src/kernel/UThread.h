@@ -19,6 +19,8 @@ public:
 		Id(++LastUThreadId),
 		StackBase(),
 		Refs(1),
+		PipeWriteLink(),
+		PipeWriteQueue(),
 		m_context(),
 		m_fpu(),
 		m_teb(teb)
@@ -71,6 +73,8 @@ public:
 	const uint32_t Id;
 	void* StackBase; //User stack reservation, freed by the reaper when the thread exits
 	uint32_t Refs; //Its KThread plus each handle; the record is freed at zero (KeReleaseUThread)
+	ListEntry PipeWriteLink; //Place in PipeWriteQueue's writer queue while a WriteFile to a pipe is in progress
+	KPipe* PipeWriteQueue;
 
 private:
 	//Storage

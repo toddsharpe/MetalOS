@@ -21,14 +21,11 @@ public:
 
 	void* Allocate(const size_t size)
 	{
-		if (m_count + size > m_size)
+		void* const address = Reserve(size);
+		if (!address)
 			return nullptr;
 
-		void* const address = (void*)&m_storage[m_count];
-		const size_t alignedSize = ByteAlign(size, Alignment);
-		m_count += alignedSize;
-
-		memset(address, 0x00, alignedSize);
+		memset(address, 0x00, ByteAlign(size, Alignment));
 		return address;
 	}
 
@@ -36,11 +33,13 @@ public:
 	//path (e.g. a different address space), so the arena must not touch it here.
 	void* Reserve(const size_t size)
 	{
-		if (m_count + size > m_size)
+		//The aligned size is what gets consumed; it wraps to a smaller value for sizes near SIZE_MAX
+		const size_t alignedSize = ByteAlign(size, Alignment);
+		if (alignedSize < size || alignedSize > m_size - m_count)
 			return nullptr;
 
 		void* const address = (void*)&m_storage[m_count];
-		m_count += ByteAlign(size, Alignment);
+		m_count += alignedSize;
 		return address;
 	}
 

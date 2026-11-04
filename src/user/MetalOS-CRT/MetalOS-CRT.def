@@ -13,7 +13,9 @@ EXPORTS
 	rename
 	remove
 	printf
+	sprintf
 	snprintf
+	vsprintf
 	vsnprintf
 	fflush
 	puts
@@ -37,21 +39,38 @@ EXPORTS
 	strcmp
 	strncmp
 	stricmp
+	_stricmp
 	strnicmp
 	strdup
 	strrchr
 	strchr
 	strncpy
 	strstr
+	strcpy
+	strcat
+	strncat
+	strnlen_s
 
 	; stdlib
 	rand
+	srand
 	atoi
+	mbstowcs
+	wcstombs
 
 	; ctype
 	tolower
 	toupper
 	isspace
+	isdigit
+	isxdigit
+	isprint
+
+	; wchar
+	wcscmp
+	wcslen
+	wcscpy
+	wcsncpy
 
 	; errno
 	_errno

@@ -3,9 +3,9 @@
 #include "Lib/Buffer.h"
 #include "Net/Net.h"
 #include "Assert.h"
-#include "core_crt/stdint.h"
-#include "core_crt/stddef.h"
-#include "core_crt/string.h"
+#include <cstdint>
+#include <cstddef>
+#include <cstring>
 
 namespace Net
 {

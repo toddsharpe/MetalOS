@@ -53,7 +53,7 @@ namespace Net::Ethernet
 			return false;
 
 		//Broadcast IP, limited or this subnet's, maps directly to the broadcast MAC (no ARP, e.g. DHCP DISCOVER).
-		const bool is_broadcast = packet.dst.addr == Net::broadcast || Net::is_subnet_broadcast(packet.dst.addr, net_if.ipv4.addr, net_if.ipv4.subnet_mask);
+		const bool is_broadcast = net_if.ipv4.is_broadcast(packet.dst.addr);
 
 		//L2 next hop: on-subnet destinations are reached directly; anything else goes via
 		//the default gateway (which must itself be on-subnet).

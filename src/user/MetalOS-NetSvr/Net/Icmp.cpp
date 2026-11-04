@@ -60,7 +60,9 @@ namespace Net::Icmp
 
 		//Only echo requests need a reply from the stack; any other type is just for raw sockets
 		packet.mask(icmp_hdr_size);
-		if (hdr.type == icmp_type_echo_request)
+
+		//A broadcast echo request gets no reply, which would go out with the broadcast address as its source
+		if (hdr.type == icmp_type_echo_request && !net_if.ipv4.is_broadcast(packet.dst.addr))
 			ReceiveEchoRequest(net_if, packet);
 
 		return false;

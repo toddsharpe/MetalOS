@@ -58,7 +58,7 @@ namespace Net::IPv4
 		packet.proto = proto_t::Ipv4;
 
 		//Forward packet if needed
-		const bool is_broadcast = packet.dst.addr == Net::broadcast;
+		const bool is_broadcast = net_if.ipv4.is_broadcast(packet.dst.addr);
 		const bool is_match = net_if.ipv4.addr == packet.dst.addr;
 		const bool is_joined = net_if.ipv4.is_joined(packet.dst.addr);
 		const bool is_multicast = Net::is_multicast(packet.dst.addr);
@@ -86,11 +86,11 @@ namespace Net::IPv4
 				Forward(packet, *route.dst);
 			}
 		}
-		else if (!is_match && net_if.ipv4.ip_forwarding)
+		else if (!accept && net_if.ipv4.ip_forwarding)
 		{
-			//Attempt to forward
+			//Only a unicast for someone else is forwarded; a broadcast never is, including the target subnet's
 			NetIf& target_if = Router::Resolve(packet.dst);
-			if (&target_if != &net_if)
+			if (&target_if != &net_if && !target_if.ipv4.is_broadcast(packet.dst.addr))
 				Forward(packet, target_if);
 		}
 		

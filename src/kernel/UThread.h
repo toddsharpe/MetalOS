@@ -5,7 +5,7 @@
 #include "x64/intrin.h"
 #include <cstring>
 
-static uint32_t LastUThreadId = 0;
+inline uint32_t LastUThreadId = 0;
 
 class KThread;
 class UThread

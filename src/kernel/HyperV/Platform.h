@@ -10,15 +10,15 @@
 namespace HyperV::Platform
 {
 	//Code page, map as execute
-	volatile HYPERV_PAGE_ALIGN uint8_t HypercallPage[Arch::PageSize] = { };
-	Hypercall hypercall = (Hypercall)(void*)HypercallPage;
+	inline volatile HYPERV_PAGE_ALIGN uint8_t HypercallPage[Arch::PageSize] = { };
+	inline Hypercall hypercall = (Hypercall)(void*)HypercallPage;
 
-	volatile HYPERV_PAGE_ALIGN uint8_t PostMessagePage[Arch::PageSize] = {};
+	inline volatile HYPERV_PAGE_ALIGN uint8_t PostMessagePage[Arch::PageSize] = {};
 
-	char Vendor[13] = { 0 };
-	
+	inline char Vendor[13] = { 0 };
+
 	//TLFS: 3.13
-	void Initialize()
+	inline void Initialize()
 	{
 		//1. Verify a hypervisor is present
 		Assert(CpuId::IsHypervisor());
@@ -80,7 +80,7 @@ namespace HyperV::Platform
 	//8 - MessageType (4 bytes), PayloadSize (4 bytes) - TopBit of MessageType is cleared. PayloadSize (up to 240 bytes)
 	//16 Message[0] (8 bytes)
 	//248 Message[29] (8 bytes)
-	HV_HYPERCALL_RESULT_VALUE HvPostMessage(
+	inline HV_HYPERCALL_RESULT_VALUE HvPostMessage(
 		HV_CONNECTION_ID ConnectionId, 
 		HV_MESSAGE_TYPE MessageType,
 		uint32_t PayloadSize,
@@ -109,7 +109,7 @@ namespace HyperV::Platform
 
 	//Code: 0x5D
 	//0 - ConnectionId (4 bytes), FlagNumber (2 bytes), Reserved (2 bytes)
-	HV_HYPERCALL_RESULT_VALUE HvSignalEvent(
+	inline HV_HYPERCALL_RESULT_VALUE HvSignalEvent(
 		HV_CONNECTION_ID ConnectionId,
 		uint16_t FlagNumber //relative to base number for port
 	)
@@ -131,7 +131,7 @@ namespace HyperV::Platform
 		return status;
 	}
 
-	void SignalEom()
+	inline void SignalEom()
 	{
 		__writemsr(static_cast<uint32_t>(MSR::EOM), 0);
 	}

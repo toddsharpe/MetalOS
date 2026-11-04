@@ -10,9 +10,9 @@ namespace Graphics
 	{
 		static constexpr size_t PixelScale = 10;
 		static constexpr size_t FontScale = 1;
-		static Font m_font;
+		inline Font m_font;
 
-		static void SetPixels(Color *_Dst, const Color _Val, const size_t _Size)
+		inline void SetPixels(Color *_Dst, const Color _Val, const size_t _Size)
 		{
 			for (size_t i = 0; i < _Size; i++)
 			{
@@ -32,7 +32,7 @@ namespace Graphics
 			size_t OffsetY;
 		};
 
-		bool Clip(const Graphics::FrameBuffer &frame, const Rectangle &rect, ClipRect &clip)
+		inline bool Clip(const Graphics::FrameBuffer &frame, const Rectangle &rect, ClipRect &clip)
 		{
 			const int32_t x0 = Max<int32_t>(0, rect.X);
 			const int32_t x1 = Min<int32_t>(static_cast<int32_t>(frame.Width),  rect.X + static_cast<int32_t>(rect.Width));
@@ -45,7 +45,7 @@ namespace Graphics
 			return true;
 		}
 
-		void DrawRectangle(const Graphics::FrameBuffer &frame, const Color color, const Rectangle &region)
+		inline void DrawRectangle(const Graphics::FrameBuffer &frame, const Color color, const Rectangle &region)
 		{
 			ClipRect clip;
 			if (!Clip(frame, region, clip))
@@ -58,18 +58,18 @@ namespace Graphics
 			}
 		}
 
-		void FillScreen(const Graphics::FrameBuffer &frame, const Color color)
+		inline void FillScreen(const Graphics::FrameBuffer &frame, const Color color)
 		{
 			DrawRectangle(frame, color, {0, 0, frame.Width, frame.Height});
 		}
 
-		void DrawPoint(Graphics::FrameBuffer &frame, const Color color, const Point2D &point)
+		inline void DrawPoint(Graphics::FrameBuffer &frame, const Color color, const Point2D &point)
 		{
 			Color *dst = frame.Buffer + point.Y * static_cast<int32_t>(frame.Width) + point.X;
 			*dst = color;
 		}
 
-		void DrawFrameBorder(Graphics::FrameBuffer &frame, const Color color, const size_t thickness)
+		inline void DrawFrameBorder(Graphics::FrameBuffer &frame, const Color color, const size_t thickness)
 		{
 			// Top
 			SetPixels(frame.Buffer, color, frame.Width * thickness);
@@ -91,7 +91,7 @@ namespace Graphics
 			}
 		}
 
-		void DrawBorder(Graphics::FrameBuffer &frame, const Color color, const Rectangle &rect, const uint32_t thickness)
+		inline void DrawBorder(Graphics::FrameBuffer &frame, const Color color, const Rectangle &rect, const uint32_t thickness)
 		{
 			// Top
 			DrawRectangle(frame, color, {rect.X, rect.Y, rect.Width, thickness});
@@ -106,7 +106,7 @@ namespace Graphics
 			DrawRectangle(frame, color, {rect.X, rect.Y + static_cast<int32_t>(rect.Height), rect.Width, thickness});
 		}
 
-		void WriteFrame(Graphics::FrameBuffer &frame, const Rectangle &rect, const void *fromFrame)
+		inline void WriteFrame(Graphics::FrameBuffer &frame, const Rectangle &rect, const void *fromFrame)
 		{
 			ClipRect clip;
 			if (!Clip(frame, rect, clip))
@@ -120,7 +120,7 @@ namespace Graphics
 			}
 		}
 
-		void WriteFrameGrayscale(Graphics::FrameBuffer &frame, const Rectangle &rect, const void *fromFrame)
+		inline void WriteFrameGrayscale(Graphics::FrameBuffer &frame, const Rectangle &rect, const void *fromFrame)
 		{
 			ClipRect clip;
 			if (!Clip(frame, rect, clip))
@@ -147,7 +147,7 @@ namespace Graphics
 			}
 		}
 
-		Color GetPixel(Graphics::FrameBuffer &frame, const Point2D &position)
+		inline Color GetPixel(Graphics::FrameBuffer &frame, const Point2D &position)
 		{
 			// Assert(position.X < frame.Width);
 			// Assert(position.Y < frame.Height);
@@ -155,7 +155,7 @@ namespace Graphics
 			return frame.Buffer[position.Y * static_cast<int32_t>(frame.Width) + position.X];
 		}
 
-		void DrawCharacter(Graphics::FrameBuffer &frame, const Point2D position, const char c, const Color color)
+		inline void DrawCharacter(Graphics::FrameBuffer &frame, const Point2D position, const char c, const Color color)
 		{
 			const uint8_t *map = m_font.GetCharacterMap(c);
 			uint8_t size = 8; // TODO: get from font
@@ -185,7 +185,7 @@ namespace Graphics
 			}
 		}
 
-		Point2D DrawText(Graphics::FrameBuffer &frame, const Point2D position, const CString &string, const Color color)
+		inline Point2D DrawText(Graphics::FrameBuffer &frame, const Point2D position, const CString &string, const Color color)
 		{
 			Point2D pos = position;
 			for (size_t i = 0; i < string.Length; i++)

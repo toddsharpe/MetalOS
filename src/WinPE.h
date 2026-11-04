@@ -27,7 +27,7 @@ namespace WinPE
 	} OMFSignatureRSDS;
 	
 	//Validates the DOS and NT signatures and returns the NT headers
-	const IMAGE_NT_HEADERS64* GetNtHeaders(const void* const imageBase)
+	inline const IMAGE_NT_HEADERS64* GetNtHeaders(const void* const imageBase)
 	{
 		const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
 		AssertEqual(dosHeader->e_magic, IMAGE_DOS_SIGNATURE);
@@ -38,26 +38,26 @@ namespace WinPE
 		return ntHeader;
 	}
 
-	DWORD GetEntryPoint(const void* const imageBase)
+	inline DWORD GetEntryPoint(const void* const imageBase)
 	{
 		return GetNtHeaders(imageBase)->OptionalHeader.AddressOfEntryPoint;
 	}
-	DWORD GetSizeOfImage(const void* const imageBase)
+	inline DWORD GetSizeOfImage(const void* const imageBase)
 	{
 		return GetNtHeaders(imageBase)->OptionalHeader.SizeOfImage;
 	}
 
-	bool IsConsole(const void* const imageBase)
+	inline bool IsConsole(const void* const imageBase)
 	{
 		return GetNtHeaders(imageBase)->OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI;
 	}
 
-	ULONGLONG GetStackSize(const void* const imageBase)
+	inline ULONGLONG GetStackSize(const void* const imageBase)
 	{
 		return GetNtHeaders(imageBase)->OptionalHeader.SizeOfStackReserve;
 	}
 
-	const IMAGE_SECTION_HEADER* GetPESection(const void* const imageBase, const CString& name)
+	inline const IMAGE_SECTION_HEADER* GetPESection(const void* const imageBase, const CString& name)
 	{
 		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 
@@ -72,7 +72,7 @@ namespace WinPE
 		return nullptr;
 	}
 
-	const IMAGE_SECTION_HEADER* GetPESection(const void* const imageBase, const uint32_t index)
+	inline const IMAGE_SECTION_HEADER* GetPESection(const void* const imageBase, const uint32_t index)
 	{
 		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 		Assert(index < ntHeader->FileHeader.NumberOfSections);
@@ -85,7 +85,7 @@ namespace WinPE
 	typedef void (*CrtInitializer)();
 
 	//Calls each static initializer in the .CRT section's null-terminated list, returns false if there is no .CRT section
-	bool RunCrtInitializers(const void* const imageBase)
+	inline bool RunCrtInitializers(const void* const imageBase)
 	{
 		const IMAGE_SECTION_HEADER* crtSection = GetPESection(imageBase, ".CRT");
 		if (crtSection == nullptr)
@@ -101,7 +101,7 @@ namespace WinPE
 		return true;
 	}
 
-	void* GetProcAddress(const void* const imageBase, const CString& procName)
+	inline void* GetProcAddress(const void* const imageBase, const CString& procName)
 	{
 		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 		Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
@@ -142,7 +142,7 @@ namespace WinPE
 	#define CODEVIEW_RSDS_SIG       MAKESIG('R','S','D','S')	
 
 	//Null for an image linked without a PDB (no debug directory, or no RSDS CodeView entry in it)
-	const char* GetPdbName(const void* const imageBase)
+	inline const char* GetPdbName(const void* const imageBase)
 	{
 		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 

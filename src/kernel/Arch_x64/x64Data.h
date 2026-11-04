@@ -17,13 +17,13 @@ namespace x64
 	static constexpr size_t IST_MCE_IDX = 4;
 
 	// "Known good stacks" Intel SDM Vol 3A 6.14.5
-	volatile uint8_t DOUBLEFAULT_STACK[IstStackSize] = { 0 };
-	volatile uint8_t NMI_Stack[IstStackSize] = { 0 };
-	volatile uint8_t DEBUG_STACK[IstStackSize] = { 0 };
-	volatile uint8_t MCE_STACK[IstStackSize] = { 0 };
+	inline volatile uint8_t DOUBLEFAULT_STACK[IstStackSize] = { 0 };
+	inline volatile uint8_t NMI_Stack[IstStackSize] = { 0 };
+	inline volatile uint8_t DEBUG_STACK[IstStackSize] = { 0 };
+	inline volatile uint8_t MCE_STACK[IstStackSize] = { 0 };
 
 	//Kernel Structures
-	volatile TASK_STATE_SEGMENT_64 TSS64 =
+	inline volatile TASK_STATE_SEGMENT_64 TSS64 =
 	{
 		0, //Reserved
 		0, 0, //RSP 0 low/high
@@ -42,7 +42,7 @@ namespace x64
 	};
 
 	//1 empty, 4 GDTs, and 1 TSS
-	volatile KERNEL_GDTS KernelGDT =
+	inline volatile KERNEL_GDTS KernelGDT =
 	{
 		{ 0 }, //First entry has to be empty
 		// Seg1   Base  type		   S    DPL		   P    Seg2   OS      L     DB   4GB   Base
@@ -62,7 +62,7 @@ namespace x64
 	//cs = starhigh + 2
 	//ss = starhigh + 1
 
-	volatile IdtGate IDT[IdtCount] =
+	inline volatile IdtGate IDT[IdtCount] =
 	{
 		IdtGate((uint64_t)&x64_interrupt_handler_0),
 		IdtGate((uint64_t)&x64_interrupt_handler_1),
@@ -322,13 +322,13 @@ namespace x64
 		IdtGate((uint64_t)&x64_interrupt_handler_255)
 	};
 
-	DescriptorTable GDTR =
+	inline DescriptorTable GDTR =
 	{
 		sizeof(KernelGDT) - 1,
 		(uint64_t)&KernelGDT
 	};
 
-	DescriptorTable IDTR =
+	inline DescriptorTable IDTR =
 	{
 		sizeof(IDT) - 1,
 		(uint64_t)IDT

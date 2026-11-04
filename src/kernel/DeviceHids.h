@@ -14,7 +14,7 @@ namespace DeviceHids
 	* ACPI/PNP Device IDs with description strings.
 	* NOTE(tsharpe): Ripped from ACPICA ahids.c
 	*/
-	const Entry  AslDeviceIds[] =
+	inline const Entry  AslDeviceIds[] =
 	{
 		//ACPICA
 		{"10EC5640",    "Realtek I2S Audio Codec"},
@@ -196,7 +196,7 @@ namespace DeviceHids
 		{NULL, NULL}
 	};
 
-	const Entry* Lookup(const char *HardwareId)
+	inline const Entry* Lookup(const char *HardwareId)
 	{
 		for (const Entry *Info = AslDeviceIds; Info->Name; Info++)
 		{

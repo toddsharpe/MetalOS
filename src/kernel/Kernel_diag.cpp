@@ -215,3 +215,10 @@ void Bugcheck(const char* file, const char* line, const char* format, ...)
 	VBugcheck(file, line, format, args);
 	va_end(args);
 }
+
+//Called through a vtable slot whose pure virtual was never overridden, which is always a bug
+int __cdecl _purecall(void)
+{
+	Assert(false);
+	return 0;
+}

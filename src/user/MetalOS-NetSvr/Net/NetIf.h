@@ -88,7 +88,7 @@ namespace Net
 		eth_data_t ethernet;
 	};
 
-	const NetLayer EthernetLayer = { Ethernet::Receive, Ethernet::Send, eth_hdr_size };
+	inline const NetLayer EthernetLayer = { Ethernet::Receive, Ethernet::Send, eth_hdr_size };
 	constexpr const NetLayer& get_l2(const l2_t l2)
 	{
 		switch (l2)

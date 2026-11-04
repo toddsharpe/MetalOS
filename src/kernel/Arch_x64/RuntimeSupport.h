@@ -9,8 +9,8 @@
 //https://stackoverflow.com/questions/5705650/stackwalk64-on-windows-get-symbol-name
 namespace RuntimeSupport
 {
-	void UnwindPrologue(const uintptr_t ImageBase, const uintptr_t ControlPc, const uintptr_t FrameBase, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers);
-	
+	inline void UnwindPrologue(const uintptr_t ImageBase, const uintptr_t ControlPc, const uintptr_t FrameBase, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers);
+
 	enum x64_NV_REG_NUM
 	{
 		Rax,
@@ -31,7 +31,7 @@ namespace RuntimeSupport
 		R15
 	};
 
-	const RUNTIME_FUNCTION* LookupFunctionEntry(const uint64_t ControlPC, const uintptr_t ImageBase, const void* HistoryTable)
+	inline const RUNTIME_FUNCTION* LookupFunctionEntry(const uint64_t ControlPC, const uintptr_t ImageBase, const void* HistoryTable)
 	{
 		const uint64_t RVA = (ControlPC - (uint64_t)ImageBase);
 		
@@ -52,12 +52,12 @@ namespace RuntimeSupport
 		return nullptr;
 	}
 
-	const UNWIND_INFO* GetUnwindInfo(const uintptr_t address)
+	inline const UNWIND_INFO* GetUnwindInfo(const uintptr_t address)
 	{
 		return reinterpret_cast<const UNWIND_INFO*>(address);
 	}
 
-	const UNWIND_INFO* GetUnwindInfo(const uintptr_t ImageBase, const RUNTIME_FUNCTION* function)
+	inline const UNWIND_INFO* GetUnwindInfo(const uintptr_t ImageBase, const RUNTIME_FUNCTION* function)
 	{
 		return reinterpret_cast<const UNWIND_INFO*>(ImageBase + function->UnwindInfoAddress);
 	}
@@ -65,7 +65,7 @@ namespace RuntimeSupport
 	//src\coreclr\src\unwinder\amd64\unwinder_amd64.cpp
 	//https://docs.microsoft.com/en-us/cpp/build/exception-handling-x64?view=vs-2019
 	//Either 1. complete epilog, 2. unwind prolog, or 3. call handler/unwind directly
-	void VirtualUnwind(DWORD HandlerType, ULONG64 ImageBase, ULONG64 ControlPC, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers)
+	inline void VirtualUnwind(DWORD HandlerType, ULONG64 ImageBase, ULONG64 ControlPC, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers)
 	{
 		const UNWIND_INFO* unwindInfo = GetUnwindInfo(ImageBase, FunctionEntry);
 		AssertEqual(unwindInfo->Version, 1);
@@ -91,17 +91,17 @@ namespace RuntimeSupport
 		UnwindPrologue(ImageBase, ContextRecord->Rip, EstablisherFrame, FunctionEntry, ContextRecord, ContextPointers);
 	}
 
-	ULONG64 MemoryRead64(PULONG64 addr)
+	inline ULONG64 MemoryRead64(PULONG64 addr)
 	{
 		return *(PULONG64)((ULONG_PTR)addr);
 	}
 
-	M128A MemoryRead128(PM128A addr)
+	inline M128A MemoryRead128(PM128A addr)
 	{
 		return *(PM128A)((ULONG_PTR)addr);
 	}
 
-	ULONG UnwindOpSlots(UNWIND_CODE UnwindCode)
+	inline ULONG UnwindOpSlots(UNWIND_CODE UnwindCode)
 	/*++
 
 	Routine Description:
@@ -147,7 +147,7 @@ namespace RuntimeSupport
 	#define UNWIND_CHAIN_LIMIT 32
 
 	//OOPStackUnwinderAMD64::UnwindPrologue
-	void UnwindPrologue(const uintptr_t ImageBase, const uintptr_t ControlPc, const uintptr_t FrameBase, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers)
+	inline void UnwindPrologue(const uintptr_t ImageBase, const uintptr_t ControlPc, const uintptr_t FrameBase, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers)
 	{
 		ULONG ChainCount;
 		PM128A FloatingAddress;

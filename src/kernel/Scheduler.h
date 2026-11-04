@@ -12,7 +12,7 @@ class KProcess;
 //in Scheduler.cpp. Enabled gates preemption from the timer ISR.
 namespace Scheduler
 {
-	KThread& GetThread();
+	KThread& GetCurrentThread();
 	UThread& GetUThread();
 	UProcess& GetUProcess();
 
@@ -22,9 +22,6 @@ namespace Scheduler
 	void SetIdleThread(KThread& thread); //Runs only when no other thread is ready
 	KThread* TakeDeadThread(); //Next terminated thread no longer scheduled, or null
 	void Schedule();
-
-	//Currently running thread
-	KThread& GetCurrentThread();
 
 	void Sleep(const nano_t value);
 	KWaitResult ObjectWait(KSignal& object, const milli_t timeout = TimeoutMax);

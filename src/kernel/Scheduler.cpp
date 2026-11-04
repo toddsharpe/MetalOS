@@ -24,11 +24,10 @@ namespace
 	static_assert(offsetof(CpuContext, Thread) == 8, "x64_SYSTEMCALL asm invalid");
 	static_assert(offsetof(CpuContext, UserStack) == 16, "x64_SYSTEMCALL asm invalid");
 
-	//Per-CPU state. Single context today (uniprocessor); GetThread() already resolves the
-	//*current* CPU via GS, so SMP bring-up allocates one CpuContext per CPU (not ruled out here).
+	//Per-CPU state, which x64_SYSTEMCALL reaches through the kernel GS base. Single context today (uniprocessor).
 	CpuContext m_cpu;
 
-	//Platform
+	//Platform clock, so the scheduler doesn't depend on Hyper-V
 	ReadTsc m_readTsc = nullptr;
 
 	//Threads and current thread. A single shared ready queue (needs a lock under SMP).
@@ -43,17 +42,15 @@ namespace
 //Preemption gate.
 bool Scheduler::Enabled = false;
 
-KThread& Scheduler::GetThread()
+KThread& Scheduler::GetCurrentThread()
 {
-	Assert(_readgsbase_u64() != 0);
-	CpuContext* ctx = (CpuContext*)__readgsqword(offsetof(CpuContext, SelfPointer));
-	Assert(ctx->Thread);
-	return *ctx->Thread;
+	Assert(m_cpu.Thread);
+	return *m_cpu.Thread;
 }
 
 UThread& Scheduler::GetUThread()
 {
-	KThread& current = Scheduler::GetThread();
+	KThread& current = Scheduler::GetCurrentThread();
 	Assert(current.UserThread);
 	UThread& user = *current.UserThread;
 	return user;
@@ -171,13 +168,8 @@ void Scheduler::Schedule()
 	//Mark next thread as running
 	Assert(selected);
 	KThread& next = *selected;
-	next.Sched.ScheduleTime = tsc * 100;
 	Assert(next.Sched.State == KThreadState::Ready);
 	next.Sched.State = KThreadState::Running;
-
-	//Add to total cpu time
-	if (current->Sched.ScheduleTime)
-		current->Sched.TotalCpuTime += (tsc * 100) - current->Sched.ScheduleTime;
 
 	//If both threads are the same short-circuit context switch
 	if (next.Id != current->Id)
@@ -250,13 +242,6 @@ KThread* Scheduler::TakeDeadThread()
 		m_deadThreads = thread->NextDead;
 	ArchRestoreFlags(flags);
 	return thread;
-}
-
-//Currently running thread
-KThread& Scheduler::GetCurrentThread()
-{
-	Assert(m_cpu.Thread);
-	return *m_cpu.Thread;
 }
 
 void Scheduler::Sleep(nano_t value)

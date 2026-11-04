@@ -30,7 +30,7 @@ KThread* KeCreateThread(const KThreadStart start, void* const arg, const char* c
 
 void KeExitThread()
 {
-	KThread& current = Scheduler::GetThread();
+	KThread& current = Scheduler::GetCurrentThread();
 	KeExitThread(current);
 }
 

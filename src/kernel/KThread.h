@@ -26,8 +26,6 @@ public:
 		KWaitResult WaitResult = KWaitResult::None;
 		nano100_t Timeout = 0;
 		KSignal* Signal = nullptr;
-		nano_t ScheduleTime = 0;
-		nano_t TotalCpuTime = 0;
 	};
 
 	KThread(const KThreadStart start, void* const arg, const CString& name);

@@ -2,7 +2,6 @@
 
 #include "kernel/Pdb/MsfStream.h"
 #include "kernel/Pdb/Pdb.h"
-#include "Lib/StaticMap.h"
 #include "Assert.h"
 
 //Public stream is a list of records, concatenated, aligned on 4 bytes 
@@ -13,15 +12,61 @@
 class PdbPublicsStream
 {
 public:
-	PdbPublicsStream() : m_functionLookup()
+	PdbPublicsStream() : m_functions(), m_count()
 	{
 
 	}
 
 	void Load(MsfStream& stream, Arena& arena)
 	{
-		//Load records
-		//This has been found to have S_CONSTANT, S_UDT, S_GDATA32, S_LDATA32, S_LPROCREF, S_PUB32
+		//Count the .text publics first, so the table is sized to hold every one of them
+		m_count = Scan(stream, nullptr, arena);
+		m_functions = static_cast<Function*>(arena.Allocate(m_count * sizeof(Function)));
+		Assert(m_functions);
+
+		stream.Seek(0);
+		Scan(stream, m_functions, arena);
+	}
+
+	bool GetFunction(const uint32_t offset, CString& name)
+	{
+		for (size_t i = 0; i < m_count; i++)
+		{
+			if (m_functions[i].Offset != offset)
+				continue;
+
+			name = m_functions[i].Name;
+			return true;
+		}
+		return false;
+	}
+
+	void Display() const
+	{
+		for (size_t i = 0; i < m_count; i++)
+		{
+			Printf("0x%016x: %s\n", m_functions[i].Offset, m_functions[i].Name.c_str());
+		}
+	}
+
+private:
+	enum Section
+	{
+		Text = 1
+	};
+
+	struct Function
+	{
+		uint32_t Offset;
+		CString Name; //Copied into the arena, since a name can straddle two MSF blocks
+	};
+
+	//Returns the number of .text publics, and stores each one (name copied into the arena) when given a table
+	size_t Scan(MsfStream& stream, Function* const table, Arena& arena)
+	{
+		size_t count = 0;
+
+		//Records seen so far: S_CONSTANT, S_UDT, S_GDATA32, S_LDATA32, S_LPROCREF, S_PROCREF, S_PUB32
 		while (stream.Position() < stream.Size)
 		{
 			RecordHeader header;
@@ -39,8 +84,9 @@ public:
 
 					if (record.Section == Section::Text)
 					{
-						const CString copied = arena.Copy(name);
-						m_functionLookup.Add(record.Offset, copied);
+						if (table)
+							table[count] = { record.Offset, arena.Copy(name) };
+						count++;
 					}
 				}
 				break;
@@ -65,26 +111,9 @@ public:
 
 			stream.SkipAlign<uint32_t>();
 		}
-	}
 
-	bool GetFunction(const uint32_t offset, CString& name)
-	{
-		return m_functionLookup.Get(offset, name);
+		return count;
 	}
-
-	void Display() const
-	{
-		for (const auto& item : m_functionLookup)
-		{
-			Printf("0x%016x: %s\n", item.Key, item.Value.c_str());
-		}
-	}
-
-private:
-	enum Section
-	{
-		Text = 1
-	};
 
 #pragma pack(push, 1)
 	struct RecordHeader
@@ -102,7 +131,7 @@ private:
 	};
 #pragma pack(pop)
 
-	//Containers pointer into loaded PDB image
-	StaticMap<uint32_t, CString, 4*1024> m_functionLookup;
+	Function* m_functions;
+	size_t m_count;
 };
 

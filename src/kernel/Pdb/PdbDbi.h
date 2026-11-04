@@ -130,10 +130,10 @@ public:
 					if (targetOffset >= prev.offset && targetOffset < line.offset)
 					{
 						CString found;
-						if (!m_publics.GetFunction(linesHeader.offCon, found))
+						if (m_publics.GetFunction(linesHeader.offCon, found))
+							lookup.Function.Set(found);
+						else
 							lookup.Function.Set("<not found>");
-						
-						lookup.Function.Set(found);
 						lookup.Line = prev.linenumStart;
 						return true;
 					}

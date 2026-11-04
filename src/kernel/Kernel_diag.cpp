@@ -24,7 +24,7 @@ namespace
 
 	struct LoadedPdb
 	{
-		PdbFile* File;
+		PdbFile* File; //Null when the module has no PDB to load, so its frames print without symbols
 		void* Image; //KeLoadFile copy the parser reads from, freed after the walk
 	};
 }
@@ -58,16 +58,16 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 		LoadedPdb pdb = {};
 		if (!pdbs.Get(module, pdb))
 		{
-			//Get PDB name
-			const char* fullPath = WinPE::GetPdbName(module->ImageBase);
-			Assert(fullPath);
-			const char* pdbName = GetFileName(fullPath);
-			Assert(pdbName);
+			//Get PDB name (null without a CodeView debug entry)
+			const char* const pdbName = GetFileName(WinPE::GetPdbName(module->ImageBase));
 
-			//Load PDB into memory and parse it
-			pdb.Image = KeLoadFile(pdbName);
-			pdb.File = arena.Allocate<PdbFile>();
-			pdb.File->Open(pdb.Image, module->ImageBase, arena);
+			//Load PDB into memory and parse it, if it's on the drive
+			pdb.Image = pdbName ? KeLoadFile(pdbName) : nullptr;
+			if (pdb.Image)
+			{
+				pdb.File = arena.Allocate<PdbFile>();
+				pdb.File->Open(pdb.Image, module->ImageBase, arena);
+			}
 			pdbs.Add(module, pdb);
 		}
 
@@ -76,7 +76,9 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 
 		//Lookup in PDB
 		PdbLookup lookup = {};
-		if (pdb.File->Resolve(rva, lookup))
+		if (!pdb.File)
+			TracePrint(output, "    <no symbols>\n");
+		else if (pdb.File->Resolve(rva, lookup))
 			TracePrint(output, "    %s (%d)\n", lookup.Function.c_str(), lookup.Line);
 		else
 			TracePrint(output, "    <resolve failed>\n");
@@ -85,7 +87,10 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 	}
 
 	for (const auto& entry : pdbs)
-		KeVirtualFree(entry.Value.Image);
+	{
+		if (entry.Value.Image)
+			KeVirtualFree(entry.Value.Image);
+	}
 }
 
 void PrintStack()

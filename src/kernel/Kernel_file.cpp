@@ -45,9 +45,13 @@ bool KeSetFilePosition(KFile& file, const size_t position)
 void* KeLoadFile(const char* const path)
 {
 	KFile file = {};
-	Assert(KeCreateFile(file, path, KFileAccess::Read));
+	if (!KeCreateFile(file, path, KFileAccess::Read) || file.Length == 0)
+		return nullptr;
 
 	void* const address = KeVirtualAlloc(file.Length);
+	if (!address)
+		return nullptr;
+
 	Assert(KeReadFile(file, address, file.Length, nullptr));
 	return address;
 }

@@ -11,6 +11,10 @@ extern LoaderParams BootParams;
 
 namespace
 {
+	//A user process has at most MaxLoadedModules (8) modules and the kernel two, so a trace doesn't fill the PDB map today
+	constexpr size_t MaxTracePdbs = 32;
+	constexpr size_t MaxTraceFrames = 64; //Bounds a corrupt stack that unwinds in a loop
+
 	struct LoadedPdb
 	{
 		PdbFile* File; //Null when the module has no PDB to load, so its frames print without symbols
@@ -56,12 +60,21 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 
 	Arena& arena = m_tempArena;
 	arena.Reset();
-	StaticMap<const KModule*, LoadedPdb, 32> pdbs;
+	StaticMap<const KModule*, LoadedPdb, MaxTracePdbs> pdbs;
 
 	TracePrint(output, "Call Stack\n");
-	StackWalk sw(&ctx);
+
+	//A user stack (and image) is the process's memory, so a smashed stack or bad RSP must end the walk rather than fault the kernel
+	StackWalk sw(&ctx, process.IsGlobal ? nullptr : &process.Space);
+	size_t frames = 0;
 	while (sw.HasNext())
 	{
+		if (frames++ == MaxTraceFrames)
+		{
+			TracePrint(output, "    <stopped after %d frames>\n", MaxTraceFrames);
+			break;
+		}
+
 		//Get module
 		const KModule* module = process.Modules.GetModule(ctx.Rip);
 		if (!module)
@@ -71,8 +84,9 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 			break;
 		}
 
+		//Once the map is full, a module not in it prints without symbols, rather than loading (and leaking) its PDB again every frame
 		LoadedPdb pdb = {};
-		if (!pdbs.Get(module, pdb))
+		if (!pdbs.Get(module, pdb) && pdbs.Count() < MaxTracePdbs)
 		{
 			//Parse the module's PDB, if it has one
 			pdb.Image = LoadPdb(*module);
@@ -96,7 +110,13 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 		else
 			TracePrint(output, "    <resolve failed>\n");
 		TracePrint(output, "        %s IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", module->Name.c_str(), ctx.Rip, module->ImageBase, rva);
-		sw.Next((uintptr_t)module->ImageBase);
+
+		//The stack or the module's unwind data isn't readable (or usable), so there's no caller to go to
+		if (!sw.Next((uintptr_t)module->ImageBase))
+		{
+			TracePrint(output, "    <unwind failed>\n");
+			break;
+		}
 	}
 
 	for (const auto& entry : pdbs)

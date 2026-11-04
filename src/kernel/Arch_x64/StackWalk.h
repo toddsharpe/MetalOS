@@ -11,8 +11,9 @@ class StackWalk
 {
 public:
 	// ImageBase should probably be retired once kernel knows IP->Module lookups
-	StackWalk(PCONTEXT context, PKNONVOLATILE_CONTEXT_POINTERS contextPointers = nullptr) : m_context(context),
-																							m_contextPointers(contextPointers)
+	StackWalk(PCONTEXT context, const AddressSpace* const space = nullptr, PKNONVOLATILE_CONTEXT_POINTERS contextPointers = nullptr) : m_context(context),
+																							m_contextPointers(contextPointers),
+																							m_space(space)
 	{
 		// Assert(context->Rsp);
 		// Assert(context->Rbp);
@@ -24,22 +25,25 @@ public:
 		return m_context->Rip != NULL;
 	}
 	
-	PCONTEXT Next(const uintptr_t imageBase)
+	//False when the walk can't go on: the stack or the image's unwind data isn't readable, or isn't usable
+	bool Next(const uintptr_t imageBase)
 	{
-		const RUNTIME_FUNCTION* functionEntry = RuntimeSupport::LookupFunctionEntry(m_context->Rip, imageBase, nullptr);
+		const RUNTIME_FUNCTION* functionEntry = RuntimeSupport::LookupFunctionEntry(m_context->Rip, imageBase, nullptr, m_space);
 		if (!functionEntry)
 		{
 			// Pop IP off stack
 			Printf("Got from stack\n");
+			if (!RuntimeSupport::IsReadable(m_space, m_context->Rsp, sizeof(DWORD64)))
+				return false;
 			m_context->Rip = *(DWORD64 *)m_context->Rsp;
 			m_context->Rsp += sizeof(DWORD64);
-			return m_context;
+			return true;
 		}
-		RuntimeSupport::VirtualUnwind(UNW_FLAG_NHANDLER, imageBase, m_context->Rip, functionEntry, m_context, m_contextPointers);
-		return m_context;
+		return RuntimeSupport::VirtualUnwind(UNW_FLAG_NHANDLER, imageBase, m_context->Rip, functionEntry, m_context, m_contextPointers, m_space);
 	}
 
 private:
 	PCONTEXT m_context;
 	PKNONVOLATILE_CONTEXT_POINTERS m_contextPointers;
+	const AddressSpace* const m_space; //A user stack and image are user memory, so each read is checked against the process's space; null for a kernel walk
 };

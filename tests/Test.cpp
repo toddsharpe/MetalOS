@@ -22,6 +22,7 @@
 #include "WinPE_test.cpp"
 #include "kernel/Pdb/Pdb_test.cpp"
 #include "user/MetalOS-NetSvr/ArpCache_test.cpp"
+#include "kernel/Arch_x64/StackWalk_test.cpp"
 
 #define Test(name)                     \
 	{                                  \
@@ -51,6 +52,7 @@ int main()
 	Test(WinPE);
 	Test(Pdb);
 	Test(ArpCache);
+	Test(StackWalk);
 
 	return 0;
 }

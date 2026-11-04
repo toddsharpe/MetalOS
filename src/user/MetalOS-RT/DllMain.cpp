@@ -7,7 +7,6 @@
 #include "user/MetalOS-RT/Debug.cpp"
 #include "user/MetalOS-RT/Loader.cpp"
 #include "user/MetalOS-RT/Runtime.cpp"
-#include "user/MetalOS-RT/Errno.cpp"
 
 bool DllMain(HModule handle, DllReason reason)
 {

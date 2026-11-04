@@ -39,7 +39,18 @@
 #define ENOSYS          40
 #define ENOTEMPTY       41
 
-uint32_t* GetErrno();
 #if !defined(errno)
-#define errno *GetErrno()
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+	// MetalOS-CRT: the calling thread's errno
+	int* _errno(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#define errno (*_errno())
 #endif

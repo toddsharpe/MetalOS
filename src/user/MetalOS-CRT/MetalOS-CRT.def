@@ -52,3 +52,6 @@ EXPORTS
 	tolower
 	toupper
 	isspace
+
+	; errno
+	_errno

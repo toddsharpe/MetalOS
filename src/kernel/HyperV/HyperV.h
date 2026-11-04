@@ -8,7 +8,7 @@
 
 namespace HyperV
 {
-	void Initialize()
+	inline void Initialize()
 	{
 		Platform::Initialize();
 		Interrupts::Initialize();

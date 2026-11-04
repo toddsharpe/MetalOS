@@ -31,14 +31,14 @@ namespace Loader
 	};
 
 	//Reads exactly length bytes at offset, failing on a short (truncated) file
-	static bool ReadAt(KFile& file, const size_t offset, void* const buffer, const size_t length)
+	inline bool ReadAt(KFile& file, const size_t offset, void* const buffer, const size_t length)
 	{
 		size_t read = 0;
 		return KeSetFilePosition(file, offset) && KeReadFile(file, buffer, length, &read) && read == length;
 	}
 
 	//Copies the headers and each section's raw data into the alias, bounds-checked against the image
-	static bool LoadSections(KFile& file, void* const alias, const IMAGE_DOS_HEADER& dosHeader, const IMAGE_NT_HEADERS64& peHeader)
+	inline bool LoadSections(KFile& file, void* const alias, const IMAGE_DOS_HEADER& dosHeader, const IMAGE_NT_HEADERS64& peHeader)
 	{
 		const size_t imageSize = peHeader.OptionalHeader.SizeOfImage;
 		const size_t headersSize = peHeader.OptionalHeader.SizeOfHeaders;
@@ -70,7 +70,7 @@ namespace Loader
 	/**
 	 * Loads a PE image into the kernel address space (contiguous) for reading and patching.
 	 */
-	static LoadedImage Load(const CString& path)
+	inline LoadedImage Load(const CString& path)
 	{
 		//A missing, truncated, or non-x64 PE file returns a null UserBase
 		KFile file = {};
@@ -113,7 +113,7 @@ namespace Loader
 
 	//Processes imports in the target image that resolve to the library. Operates entirely through
 	//kernel aliases; the IAT is stamped with the library's user-space export addresses.
-	static bool ResolveImports(const LoadedImage& image, const LoadedImage& library, const CString& libraryName)
+	inline bool ResolveImports(const LoadedImage& image, const LoadedImage& library, const CString& libraryName)
 	{
 		//Headers
 		PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(image.Alias);

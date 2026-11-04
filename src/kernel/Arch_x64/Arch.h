@@ -41,7 +41,7 @@ extern "C"
 	void ArchRestoreFlags(const cpu_flags_t flags);
 }
 
-extern "C" void ArchInitialize()
+extern "C" inline void ArchInitialize()
 {
 	//Load new segments
 	_lgdt(&x64::GDTR);
@@ -77,12 +77,12 @@ extern "C" void ArchInitialize()
 }
 
 //Home area plus the return-address slot of an entry point reached by jmp or sysret rather than call
-size_t ArchStackReserve()
+inline size_t ArchStackReserve()
 {
 	return 40;
 }
 
-void ArchSetPagingRoot(paddr_t root)
+inline void ArchSetPagingRoot(paddr_t root)
 {
 	if (__readcr3() != root)
 	{
@@ -90,28 +90,28 @@ void ArchSetPagingRoot(paddr_t root)
 	}
 }
 
-void ArchSetInterruptStack(void* stack)
+inline void ArchSetInterruptStack(void* stack)
 {
 	x64::TSS64.RSP_0_low = QWordLow(stack);
 	x64::TSS64.RSP_0_high = QWordHigh(stack);
 }
 
-void ArchSetUserCpuContext(void* context)
+inline void ArchSetUserCpuContext(void* context)
 {
 	_writegsbase_u64((uintptr_t)context);
 }
 
-void ArchSetUserGsBase(void* teb)
+inline void ArchSetUserGsBase(void* teb)
 {
 	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_KERNELGS_BASE), (uintptr_t)teb);
 }
 
-void ArchWait()
+inline void ArchWait()
 {
 	__halt();
 }
 
-uint32_t ArchReadPort(uint32_t port, uint8_t width)
+inline uint32_t ArchReadPort(uint32_t port, uint8_t width)
 {
 	switch (width)
 	{
@@ -126,7 +126,7 @@ uint32_t ArchReadPort(uint32_t port, uint8_t width)
 	}
 }
 
-void ArchWritePort(uint32_t port, uint32_t value, uint8_t width)
+inline void ArchWritePort(uint32_t port, uint32_t value, uint8_t width)
 {
 	switch (width)
 	{

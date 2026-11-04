@@ -2,7 +2,7 @@
 
 #include "core_crt/wchar.h"
 
-void GetDirectoryName(const wchar_t* source, wchar_t* destination)
+inline void GetDirectoryName(const wchar_t* source, wchar_t* destination)
 {
 	size_t current = 0;
 	size_t marker = 0;

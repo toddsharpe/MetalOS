@@ -34,7 +34,6 @@ namespace HyperV::Tsc
 		volatile int64_t TscOffset;
 		uint64_t Reserved2[509];
 	} HV_REFERENCE_TSC_PAGE, *PHV_REFERENCE_TSC_PAGE;
-	volatile HYPERV_PAGE_ALIGN HV_REFERENCE_TSC_PAGE TscPage = {0};
 
 	void Initialize();
 

@@ -141,23 +141,33 @@ namespace WinPE
 	#define MAKESIG(a,b,c,d)        ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
 	#define CODEVIEW_RSDS_SIG       MAKESIG('R','S','D','S')	
 
+	//Null for an image linked without a PDB (no debug directory, or no RSDS CodeView entry in it)
 	const char* GetPdbName(const void* const imageBase)
 	{
 		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
-		Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size);
 
 		const IMAGE_DATA_DIRECTORY* directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
 		if ((directory->Size == 0) || (directory->VirtualAddress == 0))
 			return nullptr;
 
+		//The linker also emits feature, POGO and repro entries; CodeView isn't guaranteed to be first
 		const IMAGE_DEBUG_DIRECTORY* debugDirectory = MakePointer<const IMAGE_DEBUG_DIRECTORY*>(imageBase, directory->VirtualAddress);
-		AssertEqual(debugDirectory->Type, IMAGE_DEBUG_TYPE_CODEVIEW);
-		
-		const void* address = MakePointer<const void*>(imageBase, debugDirectory->AddressOfRawData);
-		AssertEqual(*(DWORD*)address, CODEVIEW_RSDS_SIG);
+		const size_t count = directory->Size / sizeof(IMAGE_DEBUG_DIRECTORY);
+		for (size_t i = 0; i < count; i++)
+		{
+			const IMAGE_DEBUG_DIRECTORY& entry = debugDirectory[i];
+			if (entry.Type != IMAGE_DEBUG_TYPE_CODEVIEW || entry.AddressOfRawData == 0)
+				continue;
 
-		const OMFSignatureRSDS* rsds = (const OMFSignatureRSDS*)address;
-		return rsds->name;
+			const void* address = MakePointer<const void*>(imageBase, entry.AddressOfRawData);
+			if (*(DWORD*)address != CODEVIEW_RSDS_SIG)
+				continue;
+
+			const OMFSignatureRSDS* rsds = (const OMFSignatureRSDS*)address;
+			return rsds->name;
+		}
+
+		return nullptr;
 	}
 }
 

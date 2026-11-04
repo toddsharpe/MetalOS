@@ -40,7 +40,10 @@ KdSendPacket(
 	IN PSTRING MessageData,
 	IN OUT PKD_CONTEXT KdContext)
 {
-	return m_dll.KdSendPacket(PacketType, MessageHeader, MessageData, KdContext);
+	m_dll.KdSendPacket(PacketType, MessageHeader, MessageData, KdContext);
+
+	//kdcom gives up on a send no host ever answers, and Kd64 then stops waiting for a reply
+	KdDebuggerNotPresent = !m_dll.KdHostPresent();
 }
 
 void KeBugCheck()

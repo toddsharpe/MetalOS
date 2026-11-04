@@ -51,6 +51,7 @@ void Debugger::Initialize()
 	m_dll.KdInitialize = static_cast<OnKdInitialize>(WinPE::GetProcAddress(kddll->ImageBase, "KdInitialize"));
 	m_dll.KdReceivePacket = static_cast<OnKdReceivePacket>(WinPE::GetProcAddress(kddll->ImageBase, "KdReceivePacket"));
 	m_dll.KdSendPacket = static_cast<OnKdSendPacket>(WinPE::GetProcAddress(kddll->ImageBase, "KdSendPacket"));
+	m_dll.KdHostPresent = static_cast<OnKdHostPresent>(WinPE::GetProcAddress(kddll->ImageBase, "KdHostPresent"));
 
 	Printf("KdInitialize loaded at 0x%016x\n", m_dll.KdInitialize);
 	Printf("KdReceivePacket loaded at 0x%016x\n", m_dll.KdReceivePacket);
@@ -61,8 +62,9 @@ void Debugger::Initialize()
 
 	KeCreateThread(Debugger::ThreadLoop, this, "Debugger::ThreadLoop");
 
+	//No host has answered yet; each send refreshes this from kdcom
 	KdDebuggerEnabled = TRUE;
-	KdDebuggerNotPresent = FALSE;
+	KdDebuggerNotPresent = TRUE;
 }
 
 void Debugger::AddModule(const KModule& library)
@@ -127,6 +129,11 @@ void Debugger::KdpDprintf(const char* format, va_list args)
 bool Debugger::Enabled()
 {
 	return KdDebuggerEnabled;
+}
+
+bool Debugger::HostPresent()
+{
+	return !KdDebuggerNotPresent;
 }
 
 uint32_t Debugger::ThreadLoop()

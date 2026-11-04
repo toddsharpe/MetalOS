@@ -46,11 +46,13 @@ typedef VOID(*OnKdSendPacket)(
 	IN PSTRING MessageData,
 	IN OUT PKD_CONTEXT Context
 	);
+typedef BOOLEAN(*OnKdHostPresent)(VOID);
 
 struct KdDll
 {
 	OnKdInitialize KdInitialize;
 	OnKdReceivePacket KdReceivePacket;
 	OnKdSendPacket KdSendPacket;
+	OnKdHostPresent KdHostPresent;
 };
 

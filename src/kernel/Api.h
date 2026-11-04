@@ -218,7 +218,7 @@ void* KeLoadFile(const char* const path);
 /*
  * Prints.
  */
-void Printf(const char* format, va_list args);
+void VPrintf(const char* format, va_list args); //Not a Printf overload: va_list is char*, so it would capture Printf("%s", buffer)
 void Bugcheck(const char* file, const char* line, const char* format, va_list args);
 void PrintStack();
 void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* const output = nullptr); //Null output prints to the kernel console

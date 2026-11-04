@@ -49,12 +49,18 @@ public:
 
 	void *Allocate(const size_t size)
 	{
-		if (!IsValid())
-		{
-			Assert(false);
+		void *const allocated = TryAllocate(size);
+		Assert(allocated);
+		return allocated;
+	}
+
+	// Like Allocate, but returns nullptr instead of asserting when the heap isn't open or nothing free fits
+	void *TryAllocate(const size_t size)
+	{
+		// A size bigger than the whole heap can't fit, and aligning it could wrap around to a small one
+		if (!IsValid() || size > m_size)
 			return nullptr;
-		}
-		
+
 		const size_t aligned = AlignUp(size);
 
 		for (Block *block = m_head; block != nullptr; block = block->Next)
@@ -83,7 +89,6 @@ public:
 			return Data(block);
 		}
 
-		Assert(false);
 		return nullptr;
 	}
 
@@ -138,11 +143,11 @@ public:
 		}
 	}
 
-	// Grow/shrink an allocation, preserving its contents (allocate-copy-free).
+	// Grow/shrink an allocation, preserving its contents (allocate-copy-free); like realloc, it returns nullptr and keeps ptr when nothing fits.
 	void *Reallocate(const void *const ptr, const size_t size)
 	{
 		if (!ptr)
-			return Allocate(size);
+			return TryAllocate(size);
 		if (size == 0)
 		{
 			Deallocate(ptr);
@@ -152,7 +157,7 @@ public:
 		const Block *const block = reinterpret_cast<const Block *>(static_cast<const uint8_t *>(ptr) - sizeof(Block));
 		const size_t oldSize = block->Size;
 
-		void *const moved = Allocate(size);
+		void *const moved = TryAllocate(size);
 		if (!moved)
 			return nullptr;
 

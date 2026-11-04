@@ -15,6 +15,10 @@ extern "C"
 
 	void free(void* _Block);
 
+	double atof(char const* _String);
+	double strtod(char const* _String, char** _EndPtr);
+	float strtof(char const* _String, char** _EndPtr);
+
 #ifdef __cplusplus
 }
 #endif

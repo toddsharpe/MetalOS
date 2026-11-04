@@ -2,6 +2,7 @@
 
 #include "user/MetalOS.h"
 #include "user/MetalOS-CRT/errno.cpp"
+#include "user/MetalOS-CRT/strtod.cpp"
 #include <stdio.h>
 
 typedef void* FILE;
@@ -74,21 +75,6 @@ namespace
 		stream.Data[stream.Count++] = (char)ch;
 		if (stream.Count == sizeof(stream.Data))
 			StreamFlush(stream);
-	}
-
-	//Value of a digit in any base up to 16, or 16 for a character that isn't one
-	unsigned ScanDigit(const char c)
-	{
-		if (c >= '0' && c <= '9')
-			return c - '0';
-
-		if (c >= 'a' && c <= 'f')
-			return c - 'a' + 10;
-
-		if (c >= 'A' && c <= 'F')
-			return c - 'A' + 10;
-
-		return 16;
 	}
 
 	//Reads an integer of at most width characters (base 0 takes it from the prefix), returning the characters used or 0 if they aren't a number
@@ -449,9 +435,10 @@ extern "C"
 			while (isdigit(*format))
 				width = width * 10 + (*format++ - '0');
 
-			//The l that makes an integer a long makes %c, %s and %[ store wchar_t
+			//The l that makes an integer a long makes %c, %s and %[ store wchar_t, and it or L makes a float a double
 			size_t bytes = sizeof(int);
 			bool wide = false;
+			bool isDouble = false;
 			switch (*format)
 			{
 			case 'h':
@@ -468,12 +455,18 @@ extern "C"
 				format++;
 				bytes = sizeof(long);
 				wide = true;
+				isDouble = true;
 				if (*format == 'l')
 				{
 					format++;
 					bytes = sizeof(long long);
 					wide = false;
 				}
+				break;
+
+			case 'L':
+				format++;
+				isDouble = true;
 				break;
 
 			case 'j':
@@ -559,6 +552,37 @@ extern "C"
 				continue;
 			}
 
+			case 'a':
+			case 'A':
+			case 'e':
+			case 'E':
+			case 'f':
+			case 'F':
+			case 'g':
+			case 'G':
+			{
+				if (*input == '\0')
+					return failed(true);
+
+				//All of what was read has to be the number, so a 1e that stops short is a matching failure
+				StringSource source = { input };
+				const ScannedFloat number = ScanFloat(source, width ? width : (size_t)-1, !isDouble);
+				if (number.Length == 0 || number.Length < number.Read)
+					return failed(false);
+
+				if (!suppress)
+				{
+					if (isDouble)
+						*va_arg(arg, double*) = DoubleFromBits(number.Bits);
+					else
+						*va_arg(arg, float*) = FloatFromBits((uint32_t)number.Bits);
+					assigned++;
+				}
+
+				input += number.Read;
+				continue;
+			}
+
 			case 'p':
 				bytes = sizeof(void*);
 				base = 16;
@@ -581,7 +605,7 @@ extern "C"
 			case 'u':
 				break;
 
-			//Floating point isn't supported, so it fails like an unknown conversion
+			//An unknown conversion stops the scan
 			default:
 				return failed(false);
 			}

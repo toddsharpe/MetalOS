@@ -56,6 +56,9 @@ EXPORTS
 	rand
 	srand
 	atoi
+	atof
+	strtod
+	strtof
 
 	; ctype
 	tolower
@@ -67,3 +70,6 @@ EXPORTS
 
 	; errno
 	_errno
+
+	; floating point, exported as code so an app's reference resolves to the import library
+	_fltused

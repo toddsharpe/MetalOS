@@ -8,6 +8,7 @@
 #include "user/MetalOS-CRT/stdio.cpp"
 #include "user/MetalOS-CRT/stdlib.cpp"
 #include "user/MetalOS-CRT/string.cpp"
+#include "user/MetalOS-CRT/strtod.cpp"
 
 const size_t heapSize = 0x1000000; //16MB
 bool DllMain(HModule handle, DllReason reason)

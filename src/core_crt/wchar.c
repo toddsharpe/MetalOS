@@ -24,13 +24,19 @@ size_t wcslen(const wchar_t *str)
 
 wchar_t *wcscpy(wchar_t *dest, const wchar_t *source)
 {
+	//+1 so the terminating null is copied too
 	size_t length = wcslen(source);
-	memcpy(dest, source, length * sizeof(wchar_t));
+	memcpy(dest, source, (length + 1) * sizeof(wchar_t));
 	return dest;
 }
 
 wchar_t *wcsncpy(wchar_t *dest, const wchar_t *source, size_t num)
 {
-	memcpy(dest, source, num * sizeof(wchar_t));
+	//Copies up to the source's terminator and pads the rest of num with NULs, never reading past the source
+	size_t i = 0;
+	for (; i < num && source[i]; i++)
+		dest[i] = source[i];
+	for (; i < num; i++)
+		dest[i] = L'\0';
 	return dest;
 }

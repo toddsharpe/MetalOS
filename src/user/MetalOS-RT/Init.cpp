@@ -5,7 +5,7 @@
 #include "user/MetalOS-RT/Runtime.h"
 #include "user/MetalOS-RT/Loader.h"
 #include "Lib/StaticVector.h"
-#include "Lib/Arena.h"
+#include "Lib/Math.h"
 #include "WinPE.h"
 #include "Assert.h"
 
@@ -21,33 +21,26 @@ extern "C" __declspec(dllexport) void InitProcess() // Rename: init module?
 	// TODO: TLS
 	WinPE::RunCrtInitializers(peb->ImageBase);
 
-	//Split into argc/v
-	StaticVector<const char*, 16> argv;
-	StaticArena<256> arena;
+	//Split a copy of the command line (the kernel passes at most 127 chars) into argc/argv, ending each argument with a NUL in place of its space
+	char line[128] = {};
+	const size_t length = Min(peb->CommandLine.Length, sizeof(line) - 1);
+	memcpy(line, peb->CommandLine.c_str(), length);
 
-	size_t start = 0;
-	size_t i = 0;
-	while (i < peb->CommandLine.Length)
+	//Each argument takes at least one char and a space, so every one fits, plus the NULL that ends argv
+	StaticVector<char*, sizeof(line) / 2 + 1> argv;
+	for (size_t i = 0; i < length; i++)
 	{
-		if (peb->CommandLine[i] == ' ')
-		{
-			const CString copied = arena.Copy({&peb->CommandLine[start], (i - start)});
-			argv.Add(copied.c_str());
-			i++;
-			start = i;
-		}
-		else
-		{
-			i++;
-		}
+		if (line[i] == ' ')
+			line[i] = '\0';
+		else if (i == 0 || line[i - 1] == '\0')
+			argv.Add(&line[i]);
 	}
-	const CString copied = arena.Copy({&peb->CommandLine[start], (i - start)});
-	argv.Add(copied.c_str());
+	const int argc = (int)argv.Count();
+	argv.Add(nullptr);
 
 	// Call entry
 	ProcessEntry entry = MakePointer<ProcessEntry>(peb->ImageBase, WinPE::GetEntryPoint(peb->ImageBase));
-	char** _argv = const_cast<char**>(argv.begin());
-	const int ret = entry(argv.Count(), _argv);
+	const int ret = entry(argc, argv.begin());
 
 	// Kill process
 	ExitProcess(ret);

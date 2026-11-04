@@ -236,7 +236,8 @@ public:
 
 	void Append(const CString& str)
 	{
-		AssertOp(m_count + str.Length, <, Capacity - 1);
+		//Assert there is room, filling up to Capacity - 1 characters like Append(char) and AppendClip
+		AssertOp(str.Length, <=, Capacity - 1 - m_count);
 
 		memcpy(end(), str.c_str(), str.Length);
 		m_count += str.Length;

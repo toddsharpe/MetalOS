@@ -142,7 +142,6 @@ void KeEndpointRelease(const uint32_t owner);
  */
 enum class AllocType
 {
-	Boot,
 	Kernel,
 	Acpi,
 	Shared,
@@ -253,8 +252,3 @@ void KeInputPost(const Message& message);
  * Interrupts.
  */
 void KeRegisterInterrupt(const Arch::InterruptVector interrupt, const ActionContext& context);
-
-/*
- * ACPI.
- */
-void* GetAcpiTable();

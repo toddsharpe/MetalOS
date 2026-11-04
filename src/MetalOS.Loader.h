@@ -74,9 +74,8 @@ struct LoaderParams
 
 	EFI_GRAPHICS_DEVICE Display;
 
-	//Config tables
-	EFI_CONFIGURATION_TABLE* ConfigTables;
-	size_t ConfigTablesCount;
+	//ACPI 2.0 RSDP (physical), found by the bootloader in the UEFI config tables
+	paddr_t AcpiRsdp;
 
 	//Ramdrive
 	paddr_t RamDriveAddress;

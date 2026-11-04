@@ -65,6 +65,20 @@ static EFI_STATUS PrintCpuDetails()
 	return EFI_SUCCESS;
 }
 
+//The ACPI 2.0 RSDP is the only UEFI config table the kernel uses (zero if absent)
+static paddr_t FindAcpiRsdp()
+{
+	constexpr EFI_GUID guid = ACPI_20_TABLE_GUID;
+	for (size_t i = 0; i < ST->NumberOfTableEntries; i++)
+	{
+		const EFI_CONFIGURATION_TABLE& table = ST->ConfigurationTable[i];
+		if (memcmp(&table.VendorGuid, &guid, sizeof(EFI_GUID)) == 0)
+			return reinterpret_cast<paddr_t>(table.VendorTable);
+	}
+
+	return 0;
+}
+
 static EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir)
 {
 	EFI_STATUS status;
@@ -123,7 +137,7 @@ static EFI_STATUS DisplayLoaderParams(const LoaderParams& params)
 	ReturnIfNotSuccess(Print("  Kernel-Address: 0x%016x, Pages: 0x%x\r\n", params.KernelAddress, x64::SizeToPages(params.KernelImageSize)));
 	ReturnIfNotSuccess(Print("  FreeRanges: 0x%016x, RuntimeRanges: 0x%016x\r\n", params.FreeRanges, params.RuntimeRanges));
 	ReturnIfNotSuccess(Print("  PFN Database-Address: 0x%016x, Count: 0x%x\r\n", params.PageFrameAddr, params.PageFrameCount));
-	ReturnIfNotSuccess(Print("  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", params.ConfigTables, params.ConfigTablesCount));
+	ReturnIfNotSuccess(Print("  AcpiRsdp-Address: 0x%016x\r\n", params.AcpiRsdp));
 	ReturnIfNotSuccess(Print("  RamDrive-Address: 0x%016x, Size: 0x%x\r\n", params.RamDriveAddress, RamDriveSize));
 	ReturnIfNotSuccess(Print("  PDB-Address: 0x%016x, Size: 0x%x\r\n", params.PdbAddress, params.PdbSize));
 
@@ -144,8 +158,7 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 
 	//Boot Params for kernel
 	LoaderParams params = {};
-	params.ConfigTables = ST->ConfigurationTable;
-	params.ConfigTablesCount = ST->NumberOfTableEntries;
+	params.AcpiRsdp = FindAcpiRsdp();
 	params.Runtime = RT;
 
 	EFI_STATUS status;

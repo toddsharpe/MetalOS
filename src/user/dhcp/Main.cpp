@@ -75,7 +75,7 @@ static size_t BuildMessage(uint8_t *const packet, const size_t cap, const uint32
 		.yiaddr = {},
 		.siaddr = {},
 		.giaddr = {},
-		.chaddr = { mac[0], mac[1], mac[2], mac[3], mac[4], mac[5] },
+		.chaddr = { mac[5], mac[4], mac[3], mac[2], mac[1], mac[0] }, // InterfaceInfo::mac is little-endian; chaddr is in wire order
 		.sname  = {},
 		.file   = {},
 		.magic  = Dhcp::MagicCookie,
@@ -211,8 +211,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	const InterfaceInfo &nic = ifaces[0];
-	printf("  if%u mac %02x:%02x:%02x:%02x:%02x:%02x\n", nic.index, nic.mac[0], nic.mac[1], nic.mac[2], nic.mac[3],
-		   nic.mac[4], nic.mac[5]);
+	printf("  if%u mac %02x:%02x:%02x:%02x:%02x:%02x\n", nic.index, nic.mac[5], nic.mac[4], nic.mac[3], nic.mac[2],
+		   nic.mac[1], nic.mac[0]);
 
 	const HSocket sock = SocketCreate(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sock == INVALID_SOCKET)

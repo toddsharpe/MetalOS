@@ -129,11 +129,10 @@ namespace
 			if (available == 0)
 				return status != SyscallResult::Success;
 
-			//ReadFile on a pipe waits for the full count, so never ask for more than is there
+			//The pipe has data, so ReadFile returns at once with up to a buffer's worth
 			char buffer[256];
-			const size_t count = available < sizeof(buffer) ? available : sizeof(buffer);
 			size_t read = 0;
-			ReadFile(childOutput, buffer, count, &read);
+			ReadFile(childOutput, buffer, sizeof(buffer), &read);
 			if (read == 0)
 				return true;
 

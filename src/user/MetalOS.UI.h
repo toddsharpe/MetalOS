@@ -33,11 +33,12 @@ struct MouseButtonState
 	uint8_t RightPressed : 1;
 };
 
+//The kernel reports the HID position (0 to 32767 across the screen); the WM hands apps window coordinates, negative left of or above the window
 struct MouseEvent
 {
 	MouseButtonState Buttons;
-	uint16_t XPosition;
-	uint16_t YPosition;
+	int16_t XPosition;
+	int16_t YPosition;
 };
 
 struct Message

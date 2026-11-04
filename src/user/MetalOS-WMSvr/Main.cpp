@@ -44,6 +44,7 @@ namespace
 	void* g_inputRegion = nullptr;
 	Point2D g_mouse;
 	MouseButtonState g_prevButtons;
+	bool g_wmPress = false; //the left button went down on the start menu, panel or a window button, so the WM keeps the mouse until it comes up
 
 	//Connections + windows
 	Connection g_conns[MaxConns];
@@ -424,11 +425,13 @@ namespace
 					{
 						//Launch the picked app and close the menu.
 						HandleStartMenuClick(mousePos);
+						g_wmPress = true;
 					}
 					else if (mousePos.Y >= PanelTop())
 					{
 						//Clicks on the panel drive the launcher/taskbar, not window focus/drag.
 						HandlePanelClick(mousePos);
+						g_wmPress = true;
 					}
 					else
 					{
@@ -438,10 +441,12 @@ namespace
 						if (hit && hit->ShowTitle && CloseBtn(hit).Contains(mousePos))
 						{
 							CloseWindow(hit);
+							g_wmPress = true;
 						}
 						else if (hit && hit->ShowTitle && MinBtn(hit).Contains(mousePos))
 						{
 							Minimize(hit);
+							g_wmPress = true;
 						}
 						else
 						{
@@ -467,6 +472,21 @@ namespace
 
 				g_mouse = mousePos;
 				g_prevButtons = message.MouseEvent.Buttons;
+
+				//The app doesn't see a press the WM handled, nor the moves and release that follow it
+				if (g_wmPress)
+				{
+					if (!message.MouseEvent.Buttons.LeftPressed)
+						g_wmPress = false;
+					continue;
+				}
+
+				//Apps hit-test their controls against the mouse in window coordinates
+				if (g_focus)
+				{
+					message.MouseEvent.XPosition = (int16_t)(g_mouse.X - g_focus->Rect.X);
+					message.MouseEvent.YPosition = (int16_t)(g_mouse.Y - g_focus->Rect.Y);
+				}
 			}
 
 			//Route input to the focused window's owner

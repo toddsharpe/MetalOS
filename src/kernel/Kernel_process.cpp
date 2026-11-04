@@ -56,7 +56,7 @@ const KModule* KeLoadLibrary(const char* const name)
 	KeAliasInto(m_process, image.Alias, image.UserBase, image.Size);
 	KeVirtualFree(m_process, image.Alias);
 
-	const KModule* created = m_process.Modules.AddModule(moduleName, image.UserBase);
+	const KModule* created = m_process.Modules.AddModule(moduleName, image.UserBase, image.Size);
 	return created;
 }
 
@@ -150,8 +150,8 @@ UProcess* KeCreateProcess(const char* const cmd)
 	//Update process structures
 	created->Initialize(exe.UserBase, CString(cmd));
 
-	Assert(created->AddModule(path, exe.UserBase));
-	Assert(created->AddModule(RuntimeDLL, runtime.UserBase));
+	Assert(created->AddModule(path, exe.UserBase, exe.Size));
+	Assert(created->AddModule(RuntimeDLL, runtime.UserBase, runtime.Size));
 
 	created->IsConsole = WinPE::IsConsole(exe.Alias);
 	const size_t stackSize = WinPE::GetStackSize(exe.Alias);

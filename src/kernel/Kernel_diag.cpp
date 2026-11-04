@@ -22,13 +22,17 @@ namespace
 	};
 
 	//The bootloader maps the kernel's PDB, so kernel frames resolve without the RAM drive, the storage driver or an allocation
-	void* LoadPdb(const KModule& module)
+	void* LoadPdb(const KProcess& process, const KModule& module)
 	{
 		if (module.ImageBase == (void*)KernelBase && BootParams.PdbSize != 0)
 			return (void*)KernelPdb;
 
-		//Get PDB name (null without a CodeView debug entry), then load it if it's on the drive
-		const char* const pdbName = GetFileName(WinPE::GetPdbName(module.ImageBase));
+		//A user image is its process's memory to scribble on or free, so it's only read while all of it is mapped (and, below, within its size)
+		if (!process.IsGlobal && !process.Space.IsValidRange(module.ImageBase, module.ImageSize))
+			return nullptr;
+
+		//Get PDB name (null without a CodeView debug entry, or one that runs outside the image), then load it if it's on the drive
+		const char* const pdbName = GetFileName(WinPE::GetPdbName(module.ImageBase, module.ImageSize));
 		return pdbName ? KeLoadFile(pdbName) : nullptr;
 	}
 }
@@ -89,12 +93,12 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 		if (!pdbs.Get(module, pdb) && pdbs.Count() < MaxTracePdbs)
 		{
 			//Parse the module's PDB, if it has one
-			pdb.Image = LoadPdb(*module);
+			pdb.Image = LoadPdb(process, *module);
 			if (pdb.Image)
 			{
 				pdb.File = arena.Allocate<PdbFile>();
-				if (!pdb.File->Open(pdb.Image, module->ImageBase, arena))
-					pdb.File = nullptr; //From another build of the module, so its names would be wrong
+				if (pdb.File && !pdb.File->Open(pdb.Image, module->ImageBase, module->ImageSize, arena))
+					pdb.File = nullptr; //From another build of the module (its names would be wrong), or the image's headers are bad
 			}
 			pdbs.Add(module, pdb);
 		}

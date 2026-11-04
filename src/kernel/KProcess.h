@@ -21,9 +21,9 @@ public:
 
 	}
 
-	const KModule* AddModule(const CString& name, void* image)
+	const KModule* AddModule(const CString& name, void* image, const size_t imageSize)
 	{
-		KModule* created = KeAlloc<KModule>(AllocType::User, name, image);
+		KModule* created = KeAlloc<KModule>(AllocType::User, name, image, imageSize);
 		Assert(this->Add(created));
 		return created;
 	}
@@ -39,14 +39,12 @@ public:
 		return nullptr;
 	}
 
-	//NOTE: needs modules to be addressable at time of call
 	const KModule* GetModule(const uintptr_t address) const
 	{
 		for (const KModule* module : *this)
 		{
 			const uintptr_t imageBase = (uintptr_t)module->ImageBase;
-			const size_t imageSize = WinPE::GetSizeOfImage(module->ImageBase);
-			const bool contains = ((address >= imageBase) && (address < imageBase + imageSize));
+			const bool contains = ((address >= imageBase) && (address - imageBase < module->ImageSize));
 
 			if (contains)
 				return module;

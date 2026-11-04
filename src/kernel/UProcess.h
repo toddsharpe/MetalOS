@@ -24,7 +24,7 @@ public:
 	UObject* GetObject(const handle_t handle);
 	bool CloseObject(const handle_t handle);
 
-	const KModule* AddModule(const CString& name, void* image);
+	const KModule* AddModule(const CString& name, void* image, const size_t imageSize);
 
 	void Display() const;
 

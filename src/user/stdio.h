@@ -51,6 +51,7 @@ extern "C"
 	int puts ( const char * str );
 	int putchar ( int character );
 	int sscanf ( const char * s, const char * format, ...);
+	int vsscanf(const char* s, const char* format, va_list arg);
 
 #ifdef __cplusplus
 }

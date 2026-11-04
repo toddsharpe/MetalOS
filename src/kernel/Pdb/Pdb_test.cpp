@@ -106,11 +106,14 @@ static void PdbPublics_test(Arena& arena)
 		size += recordSize;
 	}
 
+	uint32_t blocks[BlockCount];
+	for (size_t i = 0; i < BlockCount; i++)
+		blocks[i] = (uint32_t)i;
+
 	MsfStream stream(TestBlockSize, ReadTestBlock, data);
 	stream.Size = (uint32_t)size;
 	stream.BlockCount = (size + TestBlockSize - 1) / TestBlockSize;
-	for (size_t i = 0; i < stream.BlockCount; i++)
-		stream.BlockNumbers.Add((uint32_t)i);
+	stream.SetBlocks(blocks);
 
 	PdbPublicsStream publics;
 	publics.Load(stream, arena);
@@ -201,6 +204,81 @@ static void PdbMatch_test(const void* const pdb, const size_t pdbSize, Arena& ar
 	free(corrupt);
 }
 
+//An MSF file with two 600-block streams (past the 512 a stream once held), out of order on disk, and a directory split across two blocks that aren't adjacent
+static void MsfStreams_test(Arena& arena)
+{
+	static constexpr char Magic[0x1e] = "Microsoft C/C++ MSF 7.00\r\n\x1a\x44\x53";
+	static constexpr uint32_t StreamCount = 2;
+	static constexpr uint32_t StreamBlocks = 600;
+	static constexpr uint32_t BlockMap = 1;
+	static constexpr uint32_t DirectoryBlocks[] = { 2, 4 };
+	static constexpr uint32_t BlockCount = 4 + StreamCount * StreamBlocks;
+	static constexpr uint32_t DirectoryBytes = (1 + StreamCount + StreamCount * StreamBlocks) * sizeof(uint32_t);
+	static_assert(DirectoryBytes > TestBlockSize && DirectoryBytes <= 2 * TestBlockSize, "Directory should take two blocks");
+
+	uint8_t* const image = static_cast<uint8_t*>(calloc(BlockCount, TestBlockSize));
+	Assert(image);
+	uint32_t* const directory = static_cast<uint32_t*>(calloc(2, TestBlockSize));
+	Assert(directory);
+
+	//Every block but the superblock, block map and directory holds data, handed out last to first
+	uint32_t dataBlocks[BlockCount];
+	uint32_t dataCount = 0;
+	for (uint32_t block = 0; block < BlockCount; block++)
+	{
+		if (block != 0 && block != BlockMap && block != DirectoryBlocks[0] && block != DirectoryBlocks[1])
+			dataBlocks[dataCount++] = block;
+	}
+	AssertEqual(dataCount, StreamCount * StreamBlocks);
+
+	//Each data block starts with its stream and index and ends with their complement
+	size_t entry = 0;
+	directory[entry++] = StreamCount;
+	for (uint32_t s = 0; s < StreamCount; s++)
+		directory[entry++] = StreamBlocks * TestBlockSize;
+	for (uint32_t s = 0; s < StreamCount; s++)
+	{
+		for (uint32_t i = 0; i < StreamBlocks; i++)
+		{
+			const uint32_t block = dataBlocks[--dataCount];
+			const uint32_t marker = (s << 16) | i;
+			uint8_t* const data = image + (size_t)block * TestBlockSize;
+			memcpy(data, &marker, sizeof(marker));
+			const uint32_t complement = ~marker;
+			memcpy(data + TestBlockSize - sizeof(complement), &complement, sizeof(complement));
+			directory[entry++] = block;
+		}
+	}
+
+	memcpy(image + (size_t)DirectoryBlocks[0] * TestBlockSize, directory, TestBlockSize);
+	memcpy(image + (size_t)DirectoryBlocks[1] * TestBlockSize, (uint8_t*)directory + TestBlockSize, DirectoryBytes - TestBlockSize);
+	memcpy(image + (size_t)BlockMap * TestBlockSize, DirectoryBlocks, sizeof(DirectoryBlocks));
+
+	//Superblock: magic, BlockSize, FreeBlockMapBlock, NumBlocks, NumDirectoryBytes, Unknown, BlockMapAddr
+	const uint32_t header[] = { TestBlockSize, 0, BlockCount, DirectoryBytes, 0, BlockMap };
+	memcpy(image, Magic, sizeof(Magic));
+	memcpy(image + 0x20, header, sizeof(header));
+
+	MsfFile file(image);
+	file.Initialize(arena);
+	for (uint32_t s = 0; s < StreamCount; s++)
+	{
+		MsfStream& stream = file.GetStream(s);
+		AssertEqual(stream.BlockCount, StreamBlocks);
+		for (uint32_t i = 0; i < StreamBlocks; i++)
+		{
+			const uint32_t marker = (s << 16) | i;
+			stream.Seek(i * TestBlockSize);
+			AssertEqual(stream.Read<uint32_t>(), marker);
+			stream.Seek((i + 1) * TestBlockSize - sizeof(uint32_t));
+			AssertEqual(stream.Read<uint32_t>(), ~marker);
+		}
+	}
+
+	free(directory);
+	free(image);
+}
+
 void Pdb_test()
 {
 	//Symbolize a function in this test executable from its own PDB, the same path the kernel's stack walker takes
@@ -288,6 +366,9 @@ void Pdb_test()
 	PdbPublics_test(arena);
 
 	PdbMatch_test(pdb, pdbSize, arena);
+
+	arena.Reset();
+	MsfStreams_test(arena);
 
 	free(storage);
 	free(pdb);

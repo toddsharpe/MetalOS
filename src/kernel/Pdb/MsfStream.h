@@ -1,11 +1,9 @@
 #pragma once
 
-#include "Lib/StaticVector.h"
 #include "kernel/Pdb/Platform.h"
 #include "Assert.h"
 
-//This doesn't do any caching since PDB is in memory
-//BlockNumbers is saved since blocks could be non-contiguous
+//No caching since the PDB is in memory; block numbers (blocks can be non-contiguous) are read where the PDB keeps them, so a stream of any size needs no table
 class MsfStream
 {
 public:
@@ -13,14 +11,44 @@ public:
 		Size(),
 		IsInvalid(),
 		BlockCount(),
-		BlockNumbers(),
 		Link(),
 		m_blockSize(blockSize),
 		m_read(read),
 		m_context(context),
-		m_position()
+		m_position(),
+		m_blocks(),
+		m_directory(),
+		m_blocksPosition()
 	{
 
+	}
+
+	//The stream's block numbers are an array in memory (the directory's own, in the block map)
+	void SetBlocks(const uint32_t* const blocks)
+	{
+		m_blocks = blocks;
+		m_directory = nullptr;
+	}
+
+	//The stream's block numbers are a run of the directory stream, starting at position (every stream but the directory)
+	void SetBlocks(const MsfStream& directory, const uint32_t position)
+	{
+		m_blocks = nullptr;
+		m_directory = &directory;
+		m_blocksPosition = position;
+	}
+
+	uint32_t GetBlockNumber(const size_t index) const
+	{
+		Assert(index < BlockCount);
+
+		if (m_blocks)
+			return m_blocks[index];
+
+		//Dword aligned, so never split across two directory blocks
+		const uint32_t position = m_blocksPosition + (uint32_t)(index * sizeof(uint32_t));
+		const void* const block = m_directory->m_read(m_directory->m_context, m_directory->GetBlockNumber(position / m_directory->m_blockSize));
+		return *(const uint32_t*)((uintptr_t)block + position % m_directory->m_blockSize);
 	}
 
 	template<typename T>
@@ -34,7 +62,7 @@ public:
 		//Assert T doesn't span pages
 		//Assert(((m_position + sizeof(T) - 1) / PageSize) == blockNumber);
 
-		const void* block = m_read(m_context, BlockNumbers[blockNumber]);
+		const void* block = m_read(m_context, GetBlockNumber(blockNumber));
 		const T value = *(T*)((uintptr_t)block + blockIndex);
 
 		m_position += sizeof(T);
@@ -110,7 +138,7 @@ public:
 		//if (((m_position + sizeof(T) - 1) / m_blockSize) != blockNumber)
 			//return false;
 
-		const void* block = m_read(m_context, BlockNumbers[blockNumber]);
+		const void* block = m_read(m_context, GetBlockNumber(blockNumber));
 		const void* blockPointer = (void*)((uintptr_t)block + blockIndex);
 		const size_t bytes = Min(sizeof(T), m_blockSize - blockIndex);
 		memcpy(value, blockPointer, bytes);
@@ -118,7 +146,7 @@ public:
 		const size_t remaining = sizeof(T) - bytes;
 		if (remaining != 0)
 		{
-			const void* nextBlock = m_read(m_context, BlockNumbers[blockNumber + 1]);
+			const void* nextBlock = m_read(m_context, GetBlockNumber(blockNumber + 1));
 			void* valuePointer = (void*)((uintptr_t)value + bytes);
 			memcpy(valuePointer, nextBlock, remaining);
 		}
@@ -163,15 +191,15 @@ public:
 
 	void Display() const
 	{
-		if (BlockNumbers.Count() == 0)
+		if (BlockCount == 0)
 			Printf("Empty stream\n");
 		else
 		{
-			Printf("Start: 0x%x End:0x%x Size: 0x%x, Pos: 0x%08x\n", BlockNumbers[0], BlockNumbers[BlockNumbers.Count() - 1], Size, Position());
+			Printf("Start: 0x%x End:0x%x Size: 0x%x, Pos: 0x%08x\n", GetBlockNumber(0), GetBlockNumber(BlockCount - 1), Size, Position());
 
-			for (size_t j = 0; j < BlockNumbers.Count(); j++)
+			for (size_t j = 0; j < BlockCount; j++)
 			{
-				Printf("%x,", BlockNumbers[j]);
+				Printf("%x,", GetBlockNumber(j));
 				if (j != 0 && j % 16 == 0)
 					Printf("\n");
 			}
@@ -182,7 +210,6 @@ public:
 	uint32_t Size;
 	bool IsInvalid;
 	size_t BlockCount;
-	StaticVector<uint32_t, 512> BlockNumbers;
 	ListEntry Link;
 
 private:
@@ -191,7 +218,7 @@ private:
 		const size_t blockNumber = m_position / m_blockSize;
 		const size_t blockIndex = m_position % m_blockSize;
 
-		const void* block = m_read(m_context, BlockNumbers[blockNumber]);
+		const void* block = m_read(m_context, GetBlockNumber(blockNumber));
 		return (void*)((uintptr_t)block + blockIndex);
 	}
 
@@ -201,4 +228,9 @@ private:
 
 	//State
 	uint32_t m_position;
+
+	//Where the block numbers are: an array, or a position in the directory stream
+	const uint32_t* m_blocks;
+	const MsfStream* m_directory;
+	uint32_t m_blocksPosition;
 };

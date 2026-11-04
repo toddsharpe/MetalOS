@@ -5,8 +5,6 @@ extern "C"
 {
 #endif
 
-	inline int imax(int a, int b);
-
 	int sprintf(char *const _Buffer, char const *const _Format, ...);
 
 	// Bounded: returns the number of characters stored (excluding the NUL)

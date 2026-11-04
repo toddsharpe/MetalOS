@@ -13,7 +13,6 @@ EXPORTS
 	Bugcheck
 	LoadLibrary
 	FreeLibrary
-	GetErrno
 
 	; 0x100: System
 	GetTickCount

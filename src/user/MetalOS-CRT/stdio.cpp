@@ -1,6 +1,7 @@
 #pragma once
 
 #include "user/MetalOS.h"
+#include "user/MetalOS-CRT/errno.cpp"
 #include <stdio.h>
 
 typedef void* FILE;
@@ -34,7 +35,30 @@ namespace
 		if (length == 0)
 			return true;
 
-		return WriteFile(file, buffer, length, nullptr) == SyscallResult::Success;
+		const SyscallResult result = WriteFile(file, buffer, length, nullptr);
+		if (result != SyscallResult::Success)
+		{
+			errno = ToErrno(result);
+			return false;
+		}
+
+		return true;
+	}
+
+	//A handle that isn't a file (a pipe or the console) can't seek, and RT rejects positions outside the file
+	int SeekErrno(const SyscallResult result)
+	{
+		switch (result)
+		{
+		case SyscallResult::InvalidObject:
+			return ESPIPE;
+
+		case SyscallResult::Failed:
+			return EINVAL;
+
+		default:
+			return ToErrno(result);
+		}
 	}
 
 	void StreamFlush(StreamBuffer& stream)
@@ -68,15 +92,25 @@ extern "C"
 			access = FileAccess::Write;
 			break;
 
-		//"a" lands here too: append needs every write to go to the end, which RT can't ask for yet
+		//Append needs every write to go to the end, which RT can't ask for yet
+		case 'a':
+			errno = ENOSYS;
+			return nullptr;
+
 		default:
+			errno = EINVAL;
 			return nullptr;
 		}
 
 		if (strchr(_Mode, '+'))
 			access = FileAccess::ReadWrite;
 
-		return reinterpret_cast<FILE*>(CreateFile(_FileName, access));
+		//RT doesn't say why an open failed, and a missing file is the usual reason
+		const HFile file = CreateFile(_FileName, access);
+		if (!file)
+			errno = ENOENT;
+
+		return reinterpret_cast<FILE*>(file);
 	}
 
 	size_t fread(void* _Buffer, size_t _ElementSize, size_t _ElementCount, FILE* _Stream)
@@ -84,9 +118,14 @@ extern "C"
 		if (!_ElementSize || !_ElementCount)
 			return 0;
 
+		//A broken pipe still hands back what was read before the writer left, so it reads as end of file
 		size_t bytes = 0;
-		if (ReadFile(reinterpret_cast<HFile>(_Stream), _Buffer, _ElementSize * _ElementCount, &bytes) != SyscallResult::Success)
+		const SyscallResult result = ReadFile(reinterpret_cast<HFile>(_Stream), _Buffer, _ElementSize * _ElementCount, &bytes);
+		if (result != SyscallResult::Success && result != SyscallResult::BrokenPipe)
+		{
+			errno = ToErrno(result);
 			return 0;
+		}
 
 		return bytes / _ElementSize;
 	}
@@ -120,11 +159,16 @@ extern "C"
 			break;
 
 		default:
+			errno = EINVAL;
 			return -1;
 		}
 
-		if (SetFilePointer(reinterpret_cast<HFile>(_Stream), _Offset, move, nullptr) != SyscallResult::Success)
+		const SyscallResult result = SetFilePointer(reinterpret_cast<HFile>(_Stream), _Offset, move, nullptr);
+		if (result != SyscallResult::Success)
+		{
+			errno = SeekErrno(result);
 			return -1;
+		}
 
 		return 0;
 	}
@@ -132,15 +176,26 @@ extern "C"
 	long ftell(FILE* _Stream)
 	{
 		size_t position = 0;
-		if (SetFilePointer(reinterpret_cast<HFile>(_Stream), 0, Seek::Current, &position) != SyscallResult::Success)
+		const SyscallResult result = SetFilePointer(reinterpret_cast<HFile>(_Stream), 0, Seek::Current, &position);
+		if (result != SyscallResult::Success)
+		{
+			errno = SeekErrno(result);
 			return -1;
+		}
 
 		return (long)position;
 	}
 
 	int fclose(FILE* _Stream)
 	{
-		return static_cast<int>(CloseHandle(reinterpret_cast<HFile>(_Stream)));
+		const SyscallResult result = CloseHandle(reinterpret_cast<HFile>(_Stream));
+		if (result != SyscallResult::Success)
+		{
+			errno = ToErrno(result);
+			return EOF;
+		}
+
+		return 0;
 	}
 
 	int vfprintf(FILE* const _Stream, char const* const _Format, va_list _ArgList)
@@ -170,12 +225,26 @@ extern "C"
 
 	int rename(char const* _OldFileName, char const* _NewFileName)
 	{
-		return static_cast<int>(MoveFile(_OldFileName, _NewFileName));
+		const SyscallResult result = MoveFile(_OldFileName, _NewFileName);
+		if (result != SyscallResult::Success)
+		{
+			errno = ToErrno(result);
+			return -1;
+		}
+
+		return 0;
 	}
 
 	int remove(char const* _FileName)
 	{
-		return static_cast<int>(DeleteFile(_FileName));
+		const SyscallResult result = DeleteFile(_FileName);
+		if (result != SyscallResult::Success)
+		{
+			errno = ToErrno(result);
+			return -1;
+		}
+
+		return 0;
 	}
 
 	int printf(char const* const _Format, ...)

@@ -45,14 +45,11 @@ EFI_STATUS Print(const char* format, ...)
 	return EFI_SUCCESS;
 }
 
-void Printf(const char* format, ...)
+void VPrintf(const char* format, va_list args)
 {
-	va_list args;
-	va_start(args, format);
 	char buffer[MaxBuffer / 2] = { 0 };
 	int retval = vsnprintf(buffer, sizeof(buffer), format, args);
 	buffer[retval] = '\0';
-	va_end(args);
 
 	CHAR16 wide[MaxBuffer] = { 0 };
 	mbstowcs(wide, buffer, MaxBuffer);
@@ -65,6 +62,14 @@ void Printf(const char* format, ...)
 	uart.Write(buffer);
 }
 
+void Printf(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	VPrintf(format, args);
+	va_end(args);
+}
+
 void Bugcheck(const char* file, const char* line, const char* format, ...)
 {
 	Printf("Bugcheck\r\n");
@@ -72,7 +77,7 @@ void Bugcheck(const char* file, const char* line, const char* format, ...)
 
 	va_list args;
 	va_start(args, format);
-	Printf(format, args);
+	VPrintf(format, args);
 	Printf("\r\n");
 	va_end(args);
 

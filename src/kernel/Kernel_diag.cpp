@@ -18,7 +18,7 @@ namespace
 		if (output)
 			output->VPrint(format, args);
 		else
-			Printf(format, args);
+			VPrintf(format, args);
 		va_end(args);
 	}
 
@@ -95,7 +95,7 @@ void PrintStack()
 	PrintStack(&context, m_process);
 }
 
-void Printf(const char* format, va_list args)
+void VPrintf(const char* format, va_list args)
 {
 	char buffer[1024];
 	vsnprintf(buffer, sizeof(buffer), format, args); //Truncates long output; always NUL-terminated
@@ -107,7 +107,7 @@ void Printf(const char* format, ...)
 	va_list args;
 	va_start(args, format);
 
-	Printf(format, args);
+	VPrintf(format, args);
 
 	va_end(args);
 }
@@ -177,7 +177,7 @@ void Bugcheck(const char* file, const char* line, const char* format, va_list ar
 		//Bugcheck during bugcheck, print what's available and bail
 		Printf("Double bug check!\n");
 		Printf("\n%s\n%s\n", file, line);
-		Printf(format, args);
+		VPrintf(format, args);
 		Printf("\n");
 
 		while (true)
@@ -189,7 +189,7 @@ void Bugcheck(const char* file, const char* line, const char* format, va_list ar
 	Printf("    %s\n", file);
 	Printf("    %s\n", line);
 
-	Printf(format, args);
+	VPrintf(format, args);
 	Printf("\n");
 
 	Arch::Context context = {};

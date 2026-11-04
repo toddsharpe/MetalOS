@@ -16,6 +16,7 @@
 #include "Lib/SharedRing_test.cpp"
 #include "Lib/StaticHeap_test.cpp"
 #include "Lib/LinkedList_test.cpp"
+#include "Lib/IntrusiveList_test.cpp"
 #include "Lib/TextBuffer_test.cpp"
 #include "WinPE_test.cpp"
 #include "kernel/Pdb/Pdb_test.cpp"
@@ -42,6 +43,7 @@ int main()
 	Test(SharedRing);
 	Test(StaticHeap);
 	Test(LinkedList);
+	Test(IntrusiveList);
 	Test(TextBuffer);
 	Test(WinPE);
 	Test(Pdb);

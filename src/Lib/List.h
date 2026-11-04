@@ -68,6 +68,8 @@ inline ListEntry *ListRemoveHead(ListEntry *listHead)
 
 inline ListEntry *ListRemoveHead(ListHead& head)
 {
+	Assert(head.Count > 0);
+	head.Count--;
 	return ListRemoveHead(&head.Link);
 }
 

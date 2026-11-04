@@ -316,7 +316,9 @@ void Scheduler::KillThread(KThread& thread)
 
 void Scheduler::KillProcess(UProcess& process)
 {
-	const bool isRunning = &process == &GetUProcess();
+	//Kernel threads (e.g. boot, when init.exe fails to start) have no UserThread and are never in the target
+	const UThread* const user = GetCurrentThread().UserThread;
+	const bool isRunning = user && &user->Process == &process;
 
 	for (UThread* const thread : process.Threads)
 	{

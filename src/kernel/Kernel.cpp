@@ -349,7 +349,9 @@ extern "C"
 	{
 		Initialize();
 
-		KeCreateProcess("init.exe from_kernel");
+		//Every other process descends from init, so without it the system can only idle
+		if (!KeCreateProcess("init.exe from_kernel"))
+			Fatal("init.exe failed to start");
 		KeExitThread();
 
 		return 0;

@@ -39,7 +39,7 @@ public:
 
 					if (record.Section == Section::Text)
 					{
-						String copied = arena.Copy(name);
+						const CString copied = arena.Copy(name);
 						m_functionLookup.Add(record.Offset, copied);
 					}
 				}

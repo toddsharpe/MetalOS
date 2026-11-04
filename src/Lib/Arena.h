@@ -74,12 +74,12 @@ public:
 		//TODO(tsharpe): Implement?
 	}
 
-	String Copy(const CString& source)
+	CString Copy(const CString& source)
 	{
 		//Allocate for null terminator
 		void* allocated = Allocate(source.Length + 1);
 		memcpy(allocated, source.c_str(), source.Length);
-		return {reinterpret_cast<char*>(allocated), source.Length};
+		return {reinterpret_cast<const char*>(allocated), source.Length};
 	}
 
 	void Reset()

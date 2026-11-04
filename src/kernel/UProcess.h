@@ -4,7 +4,6 @@
 #include "Lib/Arena.h"
 #include "user/MetalOS.Types.h"
 #include "kernel/UObject.h"
-#include "Lib/List.h"
 #include "Lib/LinkedList.h"
 #include "kernel/Types.h"
 #include "kernel/Objects/KPipe.h"

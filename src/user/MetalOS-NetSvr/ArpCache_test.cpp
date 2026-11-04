@@ -22,8 +22,11 @@ namespace
 
 void ArpCache_test()
 {
-	//Broadcast resolves without a cache slot
+	//0.0.0.0 is never a peer, so it doesn't resolve
 	Net::eth_mac_t mac = {};
+	Assert(!Net::ArpCache::Lookup(Net::empty, mac));
+
+	//Broadcast resolves without a cache slot
 	Assert(Net::ArpCache::Lookup(Net::broadcast, mac));
 	Assert(mac == Net::eth_broadcast);
 
@@ -53,4 +56,27 @@ void ArpCache_test()
 	Assert(IsCached(3, 99));
 	for (uint8_t i = 4; i <= 10; i++)
 		Assert(IsCached(i, i));
+	Assert(!Net::ArpCache::Lookup(Net::empty, mac));
+
+	//The subnet's directed broadcast is a broadcast; hosts, other subnets and /31 or /32 interfaces have none
+	const Net::ipv4_addr_t if_addr = Net::build_ip(192, 168, 0, 10);
+	const Net::ipv4_addr_t subnet_24 = Net::build_ip(255, 255, 255, 0);
+	Assert(Net::is_subnet_broadcast(Net::build_ip(192, 168, 0, 255), if_addr, subnet_24));
+	Assert(!Net::is_subnet_broadcast(Net::build_ip(192, 168, 0, 254), if_addr, subnet_24));
+	Assert(!Net::is_subnet_broadcast(if_addr, if_addr, subnet_24));
+	Assert(!Net::is_subnet_broadcast(Net::build_ip(192, 168, 1, 255), if_addr, subnet_24));
+	Assert(Net::is_subnet_broadcast(Net::build_ip(10, 255, 255, 255), Net::build_ip(10, 0, 0, 2), Net::build_ip(255, 0, 0, 0)));
+	Assert(!Net::is_subnet_broadcast(Net::build_ip(192, 168, 0, 11), if_addr, Net::build_ip(255, 255, 255, 254)));
+	Assert(!Net::is_subnet_broadcast(if_addr, if_addr, Net::subnet_32));
+	Assert(!Net::is_subnet_broadcast(Net::broadcast, Net::empty, Net::subnet_32));
+
+	//A pending request blocks another until it's answered or arp_retry_time passes
+	Net::arp_request_t request = {};
+	Assert(request.try_begin(5000));
+	Assert(!request.try_begin(5000));
+	Assert(!request.try_begin(5000 + Net::arp_retry_time - 1));
+	Assert(request.try_begin(5000 + Net::arp_retry_time));
+	Assert(!request.try_begin(5000 + Net::arp_retry_time + 1));
+	request.end();
+	Assert(request.try_begin(5000 + Net::arp_retry_time + 1));
 }

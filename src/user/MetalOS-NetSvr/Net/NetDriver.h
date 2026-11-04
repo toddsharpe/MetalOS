@@ -17,5 +17,6 @@ namespace Net
 
 		virtual const eth_mac_t& GetMac() const = 0;
 		virtual bool IsLinkUp() const = 0;
+		virtual milli_t GetTicks() const = 0; //Host clock in milliseconds, for protocol timers (ARP retry)
 	};
 }

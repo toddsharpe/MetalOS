@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include "Lib/ByteSwap.h"
+#include "Lib/Time.h"
 
 namespace Net
 {
@@ -176,6 +177,13 @@ namespace Net
 		return (high & 0xF0) == 0xE0;
 	}
 
+	//The directed broadcast of the interface's network (all host bits set); a /31 or /32 has none
+	constexpr bool is_subnet_broadcast(const ipv4_addr_t address, const ipv4_addr_t if_addr, const ipv4_addr_t subnet)
+	{
+		const uint32_t host = ~subnet.addr;
+		return host > 1 && is_network(address, if_addr, subnet) && (address.addr & host) == host;
+	}
+
 	/*
 	 * ARP.
 	 */
@@ -196,6 +204,30 @@ namespace Net
 	};
 
 	static constexpr size_t arp_hdr_size = 28;
+	static constexpr milli_t arp_retry_time = 1000; //An unanswered request (e.g. an unreachable host) may be sent again after this
+
+	//The interface's one outstanding request; it expires, so a peer that never answers doesn't stop ARP for good
+	struct arp_request_t
+	{
+		bool pending;
+		milli_t sent;
+
+		//False while a request sent less than arp_retry_time ago is unanswered
+		bool try_begin(const milli_t now)
+		{
+			if (pending && now - sent < arp_retry_time)
+				return false;
+
+			pending = true;
+			sent = now;
+			return true;
+		}
+
+		void end()
+		{
+			pending = false;
+		}
+	};
 
 	/*
 	 * UDP.

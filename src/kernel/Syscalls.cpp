@@ -698,7 +698,7 @@ SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle)
 	const size_t pipeSize = Arch::PageSize;
 	
 	//Create kernel pipe
-	KPipe* pipe = KeAlloc<KPipe>(AllocType::Shared, pipeSize);
+	KPipe* pipe = KeAlloc<KPipe>(AllocType::Kernel, pipeSize);
 	pipe->Init();
 	pipe->Readers.Increment();
 	pipe->Writers.Increment();

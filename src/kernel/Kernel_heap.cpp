@@ -11,11 +11,9 @@ namespace _HEAP
 	 */
 	static constexpr size_t KernelArenaSize = Arch::PageSize << 9; //2MB Kernel Arena
 	static constexpr size_t AcpiArenaSize = Arch::PageSize << 8; //1MB ACPI Arena
-	static constexpr size_t SharedArenaSize = Arch::PageSize << 10; //4MB Shared Arena
 
 	KERNEL_PAGE_ALIGN static StaticHeap<KernelArenaSize> m_kernelAlloc;
 	KERNEL_PAGE_ALIGN static StaticArena<AcpiArenaSize> m_acpiArena;
-	KERNEL_PAGE_ALIGN static StaticArena<SharedArenaSize> m_sharedArena;
 }
 
 void* KeAlloc(const size_t size, const AllocType type)
@@ -28,9 +26,6 @@ void* KeAlloc(const size_t size, const AllocType type)
 
 		case AllocType::Acpi:
 			return _HEAP::m_acpiArena.Allocate(size);
-
-		case AllocType::Shared:
-			return _HEAP::m_sharedArena.Allocate(size);
 
 		case AllocType::Malloc:
 			return _HEAP::m_kernelAlloc.Allocate(size);
@@ -51,9 +46,6 @@ void KeFree(void* ptr, const AllocType type)
 
 		case AllocType::Acpi:
 			return _HEAP::m_acpiArena.Deallocate(ptr);
-
-		case AllocType::Shared:
-			return _HEAP::m_sharedArena.Deallocate(ptr);
 
 		case AllocType::Malloc:
 			return _HEAP::m_kernelAlloc.Deallocate(ptr);

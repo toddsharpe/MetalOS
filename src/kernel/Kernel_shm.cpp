@@ -21,7 +21,7 @@ KSharedMemory* KeShmCreate(const size_t size)
 
 	//No global registry: regions are reached only through the handles/grants that
 	//reference them, and freed by KeShmUnref when the last reference drops.
-	KSharedMemory* const shm = KeAlloc<KSharedMemory>(AllocType::Shared, physical, pageCount);
+	KSharedMemory* const shm = KeAlloc<KSharedMemory>(AllocType::Kernel, physical, pageCount);
 	Assert(shm);
 	return shm;
 }
@@ -42,7 +42,7 @@ void KeShmUnref(KSharedMemory& shm)
 	if (shm.Refs.IsEmpty())
 	{
 		KePhysicalFree(shm.Physical, shm.PageCount);
-		KeFree(&shm, AllocType::Shared);
+		KeFree(&shm, AllocType::Kernel);
 	}
 }
 

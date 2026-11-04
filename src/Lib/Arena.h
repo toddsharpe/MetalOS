@@ -77,8 +77,11 @@ public:
 
 	CString Copy(const CString& source)
 	{
-		//Allocate for null terminator
+		//Allocate for null terminator; a full arena gives back an empty string rather than a copy to null
 		void* allocated = Allocate(source.Length + 1);
+		if (!allocated)
+			return {};
+
 		memcpy(allocated, source.c_str(), source.Length);
 		return {reinterpret_cast<const char*>(allocated), source.Length};
 	}

@@ -56,4 +56,11 @@ void Arena_test()
 		CString copy = arena.Copy({"source", 6});
 		Assert(copy == "source");
 	}
+
+	//Copy into a full arena comes back empty instead of writing to null
+	{
+		uint8_t small[16];
+		PreallocatedArena full(small);
+		Assert(full.Copy({"0123456789abcdef", 16}).Length == 0);
+	}
 }

@@ -19,14 +19,9 @@ VmBusDriver::VmBusDriver(KDevice& device) :
 
 }
 
-Result VmBusDriver::Initialize()
+//Connects to the host and waits for every channel offer; each offer becomes a child device
+bool VmBusDriver::Initialize()
 {
-	return Result::Success;
-}
-
-Result VmBusDriver::Enumerate()
-{
-
 	//Enable VMBus interrupt
 	HyperV::Interrupts::EnableSintVector(HyperV::VMBUS_MESSAGE_SINT, (uint32_t)Arch::InterruptVector::HypervisorVmBus);
 	KeRegisterInterrupt(Arch::InterruptVector::HypervisorVmBus, { &VmBusDriver::OnInterrupt, this });
@@ -55,7 +50,7 @@ Result VmBusDriver::Enumerate()
 	result = HyperV::Platform::HvPostMessage(connectionId, VmbusMessageType, sizeof(HyperV::vmbus_channel_message_header), &header);
 	Assert(KeWait(m_connectEvent) == KWaitResult::Signaled);
 
-	return Result::Success;
+	return true;
 }
 
 //Sends a GPADL_HEADER with the first PFNs, then GPADL_BODY messages for the rest, and waits for GPADL_CREATED

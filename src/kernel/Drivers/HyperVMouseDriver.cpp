@@ -17,7 +17,7 @@ HyperVMouseDriver::HyperVMouseDriver(KDevice& device) :
 
 }
 
-Result HyperVMouseDriver::Initialize()
+bool HyperVMouseDriver::Initialize()
 {
 	m_device.Class = KDeviceClass::Mouse;
 
@@ -51,12 +51,7 @@ Result HyperVMouseDriver::Initialize()
 	m_channel.SendPacket(&ack, sizeof(struct pipe_prt_msg) - sizeof(unsigned char) + sizeof(struct synthhid_device_info_ack),
 		(uint64_t)&ack, HyperV::VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 
-	return Result::Success;
-}
-
-Result HyperVMouseDriver::Enumerate()
-{
-	return Result::NotImplemented;
+	return true;
 }
 
 void HyperVMouseDriver::OnCallback()

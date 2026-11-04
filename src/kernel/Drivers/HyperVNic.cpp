@@ -19,7 +19,7 @@ HyperVNic::HyperVNic(KDevice& device) :
 {
 }
 
-Result HyperVNic::Initialize()
+bool HyperVNic::Initialize()
 {
 	m_channel.Initialize(&m_device.m_channel);
 	m_device.Class = KDeviceClass::Nic;
@@ -169,12 +169,7 @@ Result HyperVNic::Initialize()
 	//net device (Kernel_net.cpp) finds it there to transmit; received frames go up
 	//via KeNetRxFrame (called from OnCallback) to the netstack RX ring.
 
-	return Result::Success;
-}
-
-Result HyperVNic::Enumerate()
-{
-	return Result::Success;
+	return true;
 }
 
 void HyperVNic::SendNvsp(const nvsp_message& msg, bool requestCompletion)
@@ -326,7 +321,7 @@ void HyperVNic::OnCallback()
 	});
 }
 
-Result HyperVNic::SendFrame(const void* data, size_t length)
+bool HyperVNic::SendFrame(const void* data, size_t length)
 {
 	// Build the RNDIS_PACKET message: [rndis_message_header][rndis_packet][Ethernet frame].
 	const uint32_t rndisLen = (uint32_t)(sizeof(rndis_message_header) + sizeof(rndis_packet) + length);
@@ -348,16 +343,16 @@ Result HyperVNic::SendFrame(const void* data, size_t length)
 	//Own section per in-flight frame so back-to-back sends can't overwrite one the host hasn't read; drop if none free
 	const uint32_t section = AcquireSendSection();
 	if (section == 0)
-		return Result::Failed;
+		return false;
 
 	// Transmit over the data channel through the send-buffer section, the same path as control RNDIS messages
 	if (!SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, buf, rndisLen, true, section))
 	{
 		//Ring full: no completion will come, so the section is still ours
 		ReleaseSendSection(SendSectionTag | section);
-		return Result::Failed;
+		return false;
 	}
-	return Result::Success;
+	return true;
 }
 
 void HyperVNic::GetMac(uint8_t out[6]) const

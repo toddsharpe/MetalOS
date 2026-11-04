@@ -54,7 +54,7 @@ bool KeNetSend(const uint32_t ifIdx, const void* const frame, const size_t lengt
 		return false;
 
 	NicDriver* const nic = KeNetGetInterface(ifIdx);
-	return nic && nic->SendFrame(frame, length) == Result::Success;
+	return nic && nic->SendFrame(frame, length);
 }
 
 size_t KeNetInterfaceCount()

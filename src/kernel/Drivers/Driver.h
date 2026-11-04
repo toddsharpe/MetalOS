@@ -1,13 +1,7 @@
 #pragma once
 
 #include "kernel/Types.h"
-
-enum class Result
-{
-	Success,
-	Failed,
-	NotImplemented
-};
+#include "kernel/Api.h"
 
 class KDevice;
 class Driver
@@ -19,8 +13,7 @@ public:
 
 	}
 
-	virtual Result Initialize() = 0;
-	virtual Result Enumerate() = 0;
+	virtual bool Initialize() = 0; //False if the device couldn't be brought up
 
 protected:
 	KDevice& m_device;
@@ -34,7 +27,7 @@ public:
 
 	}
 
-	virtual Result OpenFile(KFile& file, const char* const path, const KFileAccess access) const = 0;
+	virtual bool OpenFile(KFile& file, const char* const path, const KFileAccess access) const = 0;
 	virtual size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const = 0;
 };
 
@@ -46,7 +39,7 @@ public:
 
 	}
 
-	virtual Result SendFrame(const void* const frame, const size_t length) = 0;
+	virtual bool SendFrame(const void* const frame, const size_t length) = 0;
 	virtual void GetMac(uint8_t out[6]) const = 0;
 };
 
@@ -58,9 +51,7 @@ public:
 
 	}
 
-	virtual Result SetMode(const uint32_t width, const uint32_t height, const uint32_t bpp) = 0;
-	virtual Result GetMode(uint32_t& width, uint32_t& height, uint32_t& bpp) const = 0;
-	virtual Result GetFrameBuffer(void*& outAddress, size_t& outSize) const = 0;
+	virtual KFramebufferInfo GetFramebuffer() const = 0; //Physical descriptor of the current mode, for mapping into a process
 
 	//Present: push the current framebuffer contents to the display (e.g. synthvid DIRT).
 	virtual void Flush() = 0;

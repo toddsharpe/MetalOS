@@ -43,7 +43,7 @@ HyperVKeyboardDriver::HyperVKeyboardDriver(KDevice& device) :
 
 }
 
-Result HyperVKeyboardDriver::Initialize()
+bool HyperVKeyboardDriver::Initialize()
 {
 	m_device.Class = KDeviceClass::Keyboard;
 
@@ -59,12 +59,7 @@ Result HyperVKeyboardDriver::Initialize()
 	KeWait(m_event);
 	Assert(m_response.proto_status & PROTOCOL_ACCEPTED);
 
-	return Result::Success;
-}
-
-Result HyperVKeyboardDriver::Enumerate()
-{
-	return Result::NotImplemented;
+	return true;
 }
 
 void HyperVKeyboardDriver::OnCallback()

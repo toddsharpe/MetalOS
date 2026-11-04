@@ -11,10 +11,10 @@ bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access)
 	Assert(device);
 	StorageDriver* const storage = (StorageDriver*)device->Driver;
 	Assert(storage);
-	const Result result = storage->OpenFile(file, path, access);
+	const bool result = storage->OpenFile(file, path, access);
 	file.Driver = storage;
 
-	return result == Result::Success ? true : false;
+	return result;
 }
 
 bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead)

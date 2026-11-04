@@ -216,13 +216,12 @@ class HyperVNic : public NicDriver
 public:
 	HyperVNic(KDevice& device);
 
-	Result Initialize() override;
-	Result Enumerate() override;
+	bool Initialize() override;
 
 	static void Callback(void* context) { ((HyperVNic*)context)->OnCallback(); }
 
 	// NicDriver interface
-	Result SendFrame(const void* const frame, const size_t length) override;
+	bool SendFrame(const void* const frame, const size_t length) override;
 	void GetMac(uint8_t out[6]) const override;
 
 private:

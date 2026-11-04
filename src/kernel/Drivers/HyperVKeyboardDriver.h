@@ -9,8 +9,7 @@ class HyperVKeyboardDriver : public Driver
 public:
 	HyperVKeyboardDriver(KDevice& device);
 
-	Result Initialize() override;
-	Result Enumerate() override;
+	bool Initialize() override;
 
 	static void Callback(void* context) { ((HyperVKeyboardDriver*)context)->OnCallback(); };
 

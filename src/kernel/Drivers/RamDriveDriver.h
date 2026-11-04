@@ -14,7 +14,7 @@ public:
 
 	}
 
-	Result Initialize() override
+	bool Initialize() override
 	{
 		//Map space
 		const paddr_t address = (paddr_t)m_device.Context;
@@ -34,25 +34,20 @@ public:
 		sprintf(buffer, "Ram Drive - Files: %zu", m_ramDrive->FileCount());
 		m_device.Description = KeCopy(buffer, AllocType::Kernel);
 
-		return Result::Success;
+		return true;
 	}
 
-	Result Enumerate() override
-	{
-		return Result::Success;
-	}
-
-	Result OpenFile(KFile& file, const char* const path, const KFileAccess access) const override
+	bool OpenFile(KFile& file, const char* const path, const KFileAccess access) const override
 	{
 		//Read-only drive
 		if (access != KFileAccess::Read)
-			return Result::Failed;
+			return false;
 
 		void* address;
 		size_t length;
 		const bool result = m_ramDrive->Open(path, address, length);
 		if (!result)
-			return Result::Failed;
+			return false;
 		
 		file = KFile();
 		file.Context = address;
@@ -60,7 +55,7 @@ public:
 		file.Access = access;
 		file.Position = 0;
 
-		return Result::Success;
+		return true;
 	}
 
 	size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const override

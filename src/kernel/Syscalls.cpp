@@ -981,42 +981,19 @@ SyscallResult MapFramebuffer(GraphicsDevice* device)
 	if (!device || !proc.Space.IsValid(device))
 		return SyscallResult::InvalidPointer;
 
-	//Source the framebuffer from the display driver in the device tree (authoritative for the
-	//current, possibly host-negotiated, mode). Fall back to the boot GOP descriptor if there is no
-	//display driver (e.g. its init failed, or a platform without one).
-	paddr_t base;
-	size_t size;
-	uint32_t width, height, pitch;
-
+	//The display driver has the current (possibly host-negotiated) mode; without one (its init failed) use the boot GOP descriptor
 	KDevice* const display = m_deviceTree.GetDeviceByClass(KDeviceClass::Display);
 	DisplayDriver* const driver = display ? static_cast<DisplayDriver*>(display->Driver) : nullptr;
-	void* physBase = nullptr;
-	uint32_t bpp = 0;
-	if (driver &&
-		driver->GetFrameBuffer(physBase, size) == Result::Success &&
-		driver->GetMode(width, height, bpp) == Result::Success)
-	{
-		base = reinterpret_cast<paddr_t>(physBase);
-		pitch = width; //synthvid VRAM is packed (pitch == width)
-	}
-	else
-	{
-		const KFramebufferInfo fb = KeGetFramebuffer();
-		base = fb.Base;
-		size = fb.Size;
-		width = fb.Width;
-		height = fb.Height;
-		pitch = fb.Pitch;
-	}
+	const KFramebufferInfo fb = driver ? driver->GetFramebuffer() : KeGetFramebuffer();
 
-	void* const va = KeVirtualMap(proc, base, size);
+	void* const va = KeVirtualMap(proc, fb.Base, fb.Size);
 	if (!va)
 		return SyscallResult::Failed;
 
 	device->FrameBase = va;
-	device->Width = width;
-	device->Height = height;
-	device->PixelsPerScanLine = pitch;
+	device->Width = fb.Width;
+	device->Height = fb.Height;
+	device->PixelsPerScanLine = fb.Pitch;
 	return SyscallResult::Success;
 }
 

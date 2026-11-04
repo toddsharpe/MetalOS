@@ -20,6 +20,7 @@ public:
 	constexpr KPipe(const size_t size);
 
 	void Init();
+	void Free(); //Undoes Init: unmaps both views and frees the pages behind them
 
 	bool Read(void* const buffer, const size_t length, size_t& bytesRead);
 	bool Write(const void* buffer, const size_t length, size_t& bytesWritten);
@@ -32,6 +33,7 @@ public:
 	size_t Space() const;
 	size_t Capacity() const;
 	bool IsBroken() const;
+	bool IsUnused() const;
 
 	//Writes are queued whole in arrival order, as on Windows: only the writer at the front may write
 	void QueueWriter(ListEntry& writer);
@@ -39,6 +41,7 @@ public:
 
 	KRef Readers;
 	KRef Writers;
+	KRef Waiters; //Threads in a syscall that can block on it, which keep it alive after its last handle closes
 
 private:
 	bool EventSignal(const KPipeOp op, const size_t count, const ListEntry* const writer);

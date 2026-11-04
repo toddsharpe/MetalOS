@@ -5,11 +5,18 @@
 #include <coreclr/win64unwind.h>
 #include "Assert.h"
 #include "WinPE.h"
+#include "kernel/AddressSpace.h"
 
 //https://stackoverflow.com/questions/5705650/stackwalk64-on-windows-get-symbol-name
 namespace RuntimeSupport
 {
-	inline void UnwindPrologue(const uintptr_t ImageBase, const uintptr_t ControlPc, const uintptr_t FrameBase, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers);
+	inline bool UnwindPrologue(const uintptr_t ImageBase, const uintptr_t ControlPc, const uintptr_t FrameBase, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers, const AddressSpace* const Space);
+	
+	//A user walk checks every read against the process's address space; a kernel walk (no space) reads unchecked
+	inline bool IsReadable(const AddressSpace* const space, const uintptr_t address, const size_t length)
+	{
+		return !space || space->IsValidRange(reinterpret_cast<const void*>(address), length);
+	}
 
 	enum x64_NV_REG_NUM
 	{
@@ -31,17 +38,35 @@ namespace RuntimeSupport
 		R15
 	};
 
-	inline const RUNTIME_FUNCTION* LookupFunctionEntry(const uint64_t ControlPC, const uintptr_t ImageBase, const void* HistoryTable)
+	//The image's exception directory (its .pdata), or null when the headers can't be read or aren't a PE's
+	inline const IMAGE_DATA_DIRECTORY* GetExceptionDirectory(const uintptr_t ImageBase, const AddressSpace* const Space)
+	{
+		const IMAGE_DOS_HEADER* dosHeader = reinterpret_cast<const IMAGE_DOS_HEADER*>(ImageBase);
+		if (!IsReadable(Space, ImageBase, sizeof(IMAGE_DOS_HEADER)) || dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+			return nullptr;
+
+		const uintptr_t ntAddress = ImageBase + (uintptr_t)dosHeader->e_lfanew;
+		const IMAGE_NT_HEADERS64* ntHeader = reinterpret_cast<const IMAGE_NT_HEADERS64*>(ntAddress);
+		if (!IsReadable(Space, ntAddress, sizeof(IMAGE_NT_HEADERS64)) || ntHeader->Signature != IMAGE_NT_SIGNATURE)
+			return nullptr;
+
+		return &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
+	}
+
+	inline const RUNTIME_FUNCTION* LookupFunctionEntry(const uint64_t ControlPC, const uintptr_t ImageBase, const void* HistoryTable, const AddressSpace* const Space = nullptr)
 	{
 		const uint64_t RVA = (ControlPC - (uint64_t)ImageBase);
-		
-		const IMAGE_SECTION_HEADER* pdataHeader = WinPE::GetPESection((void*)ImageBase, ".pdata");
-		Assert(pdataHeader);
 
-		const RUNTIME_FUNCTION* current = reinterpret_cast<const RUNTIME_FUNCTION*>((uint64_t)ImageBase + pdataHeader->VirtualAddress);
-		
+		//Searched within its size, rather than up to an entry of zeroes past the end
+		const IMAGE_DATA_DIRECTORY* directory = GetExceptionDirectory(ImageBase, Space);
+		if (!directory || directory->VirtualAddress == 0 || !IsReadable(Space, ImageBase + directory->VirtualAddress, directory->Size))
+			return nullptr;
+
+		const RUNTIME_FUNCTION* current = reinterpret_cast<const RUNTIME_FUNCTION*>((uint64_t)ImageBase + directory->VirtualAddress);
+		const size_t count = directory->Size / sizeof(RUNTIME_FUNCTION);
+
 		//TODO: list is sorted, this can be faster
-		while (current->BeginAddress != 0)
+		for (size_t i = 0; i < count; i++)
 		{
 			if (current->BeginAddress <= RVA && current->EndAddress >= RVA)
 				return current;
@@ -52,23 +77,31 @@ namespace RuntimeSupport
 		return nullptr;
 	}
 
-	inline const UNWIND_INFO* GetUnwindInfo(const uintptr_t address)
+	//Null when the unwind info, its codes (padded to an even count) or the function entry it chains to can't be read
+	inline const UNWIND_INFO* GetUnwindInfo(const uintptr_t ImageBase, const RUNTIME_FUNCTION* function, const AddressSpace* const Space)
 	{
-		return reinterpret_cast<const UNWIND_INFO*>(address);
-	}
+		static constexpr size_t HeaderSize = sizeof(UNWIND_INFO) - sizeof(UNWIND_CODE);
 
-	inline const UNWIND_INFO* GetUnwindInfo(const uintptr_t ImageBase, const RUNTIME_FUNCTION* function)
-	{
-		return reinterpret_cast<const UNWIND_INFO*>(ImageBase + function->UnwindInfoAddress);
+		const uintptr_t address = ImageBase + function->UnwindInfoAddress;
+		if (!IsReadable(Space, address, HeaderSize))
+			return nullptr;
+
+		const UNWIND_INFO* unwindInfo = reinterpret_cast<const UNWIND_INFO*>(address);
+		size_t size = HeaderSize + ((unwindInfo->CountOfUnwindCodes + 1) & ~1) * sizeof(UNWIND_CODE);
+		if ((unwindInfo->Flags & UNW_FLAG_CHAININFO) != 0)
+			size += sizeof(RUNTIME_FUNCTION);
+
+		return IsReadable(Space, address, size) ? unwindInfo : nullptr;
 	}
 
 	//src\coreclr\src\unwinder\amd64\unwinder_amd64.cpp
 	//https://docs.microsoft.com/en-us/cpp/build/exception-handling-x64?view=vs-2019
 	//Either 1. complete epilog, 2. unwind prolog, or 3. call handler/unwind directly
-	inline void VirtualUnwind(DWORD HandlerType, ULONG64 ImageBase, ULONG64 ControlPC, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers)
+	inline bool VirtualUnwind(DWORD HandlerType, ULONG64 ImageBase, ULONG64 ControlPC, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers, const AddressSpace* const Space = nullptr)
 	{
-		const UNWIND_INFO* unwindInfo = GetUnwindInfo(ImageBase, FunctionEntry);
-		AssertEqual(unwindInfo->Version, 1);
+		const UNWIND_INFO* unwindInfo = GetUnwindInfo(ImageBase, FunctionEntry, Space);
+		if (!unwindInfo || unwindInfo->Version != 1)
+			return false;
 		//AssertEqual(unwindInfo->Flags, UNW_FLAG_NHANDLER);
 
 		const uintptr_t PrologOffset = ContextRecord->Rip - (FunctionEntry->BeginAddress + ImageBase);
@@ -81,24 +114,37 @@ namespace RuntimeSupport
 		else 
 		{
 			Printf("Using rbp\n");
-			AssertEqual(unwindInfo->FrameRegister, x64_NV_REG_NUM::Rbp);
+
+			//The walk starts from RIP, RSP and RBP only, so another frame register's value isn't known
+			if (unwindInfo->FrameRegister != x64_NV_REG_NUM::Rbp)
+				return false;
 			EstablisherFrame = (&ContextRecord->Rax)[unwindInfo->FrameRegister];
 			EstablisherFrame -= (uintptr_t)unwindInfo->FrameOffset * 16;
 		}
 
 		//TODO: detect epilog based on bytes in list: https://docs.microsoft.com/en-us/windows/win32/api/winnt/nf-winnt-rtlvirtualunwind
 
-		UnwindPrologue(ImageBase, ContextRecord->Rip, EstablisherFrame, FunctionEntry, ContextRecord, ContextPointers);
+		return UnwindPrologue(ImageBase, ContextRecord->Rip, EstablisherFrame, FunctionEntry, ContextRecord, ContextPointers, Space);
 	}
 
-	inline ULONG64 MemoryRead64(PULONG64 addr)
+	inline bool MemoryRead64(const AddressSpace* const Space, PULONG64 addr, ULONG64& value)
 	{
-		return *(PULONG64)((ULONG_PTR)addr);
+		if (!IsReadable(Space, (uintptr_t)addr, sizeof(ULONG64)))
+			return false;
+
+		value = *(PULONG64)((ULONG_PTR)addr);
+		return true;
 	}
 
-	inline M128A MemoryRead128(PM128A addr)
+	//Copied as two integers, so the kernel doesn't move it through an XMM register
+	inline bool MemoryRead128(const AddressSpace* const Space, PM128A addr, M128A& value)
 	{
-		return *(PM128A)((ULONG_PTR)addr);
+		if (!IsReadable(Space, (uintptr_t)addr, sizeof(M128A)))
+			return false;
+
+		value.Low = addr->Low;
+		value.High = addr->High;
+		return true;
 	}
 
 	inline ULONG UnwindOpSlots(UNWIND_CODE UnwindCode)
@@ -146,8 +192,8 @@ namespace RuntimeSupport
 
 	#define UNWIND_CHAIN_LIMIT 32
 
-	//OOPStackUnwinderAMD64::UnwindPrologue
-	inline void UnwindPrologue(const uintptr_t ImageBase, const uintptr_t ControlPc, const uintptr_t FrameBase, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers)
+	//OOPStackUnwinderAMD64::UnwindPrologue, false (instead of an assert) on a read the space doesn't hold or unwind codes it can't follow
+	inline bool UnwindPrologue(const uintptr_t ImageBase, const uintptr_t ControlPc, const uintptr_t FrameBase, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers, const AddressSpace* const Space)
 	{
 		ULONG ChainCount;
 		PM128A FloatingAddress;
@@ -177,8 +223,9 @@ namespace RuntimeSupport
 			MachineFrame = FALSE;
 			PrologOffset = (ULONG)(ControlPc - (FunctionEntry->BeginAddress + ImageBase));
 
-			UnwindInfo = GetUnwindInfo(ImageBase + FunctionEntry->UnwindInfoAddress);
-			Assert(UnwindInfo);
+			UnwindInfo = GetUnwindInfo(ImageBase, FunctionEntry, Space);
+			if (!UnwindInfo)
+				return false;
 
 			while (Index < UnwindInfo->CountOfUnwindCodes) {
 
@@ -187,8 +234,10 @@ namespace RuntimeSupport
 				// offset, then simulate the effect of the unwind code.
 				//
 
+				//An unknown or spare op, or one whose extra slots run past the codes, is corrupt unwind data
 				UnwindOp = UnwindInfo->UnwindCode[Index].UnwindOp;
-				Assert(UnwindOp <= UWOP_PUSH_MACHFRAME);
+				if (UnwindOp > UWOP_PUSH_MACHFRAME || UnwindOp == UWOP_SPARE_CODE || Index + UnwindOpSlots(UnwindInfo->UnwindCode[Index]) > UnwindInfo->CountOfUnwindCodes)
+					return false;
 
 				OpInfo = UnwindInfo->UnwindCode[Index].OpInfo;
 				if (PrologOffset >= UnwindInfo->UnwindCode[Index].CodeOffset) {
@@ -203,7 +252,8 @@ namespace RuntimeSupport
 
 					case UWOP_PUSH_NONVOL:
 						IntegerAddress = (PULONG64)ContextRecord->Rsp;
-						IntegerRegister[OpInfo] = MemoryRead64(IntegerAddress);
+						if (!MemoryRead64(Space, IntegerAddress, IntegerRegister[OpInfo]))
+							return false;
 
 						if (ARGUMENT_PRESENT(ContextPointers)) {
 							ContextPointers->IntegerContext[OpInfo] = IntegerAddress;
@@ -289,7 +339,8 @@ namespace RuntimeSupport
 						Index += 1;
 						FrameOffset = UnwindInfo->UnwindCode[Index].FrameOffset * 8;
 						IntegerAddress = (PULONG64)(FrameBase + FrameOffset);
-						IntegerRegister[OpInfo] = MemoryRead64(IntegerAddress);
+						if (!MemoryRead64(Space, IntegerAddress, IntegerRegister[OpInfo]))
+							return false;
 
 						if (ARGUMENT_PRESENT(ContextPointers)) {
 							ContextPointers->IntegerContext[OpInfo] = IntegerAddress;
@@ -309,7 +360,8 @@ namespace RuntimeSupport
 						FrameOffset = UnwindInfo->UnwindCode[Index - 1].FrameOffset;
 						FrameOffset += UnwindInfo->UnwindCode[Index].FrameOffset << 16;
 						IntegerAddress = (PULONG64)(FrameBase + FrameOffset);
-						IntegerRegister[OpInfo] = MemoryRead64(IntegerAddress);
+						if (!MemoryRead64(Space, IntegerAddress, IntegerRegister[OpInfo]))
+							return false;
 
 						if (ARGUMENT_PRESENT(ContextPointers)) {
 							ContextPointers->IntegerContext[OpInfo] = IntegerAddress;
@@ -345,7 +397,8 @@ namespace RuntimeSupport
 						Index += 1;
 						FrameOffset = UnwindInfo->UnwindCode[Index].FrameOffset * 16;
 						FloatingAddress = (PM128A)(FrameBase + FrameOffset);
-						FloatingRegister[OpInfo] = MemoryRead128(FloatingAddress);
+						if (!MemoryRead128(Space, FloatingAddress, FloatingRegister[OpInfo]))
+							return false;
 
 						if (ARGUMENT_PRESENT(ContextPointers)) {
 							ContextPointers->FloatingContext[OpInfo] = FloatingAddress;
@@ -365,7 +418,8 @@ namespace RuntimeSupport
 						FrameOffset = UnwindInfo->UnwindCode[Index - 1].FrameOffset;
 						FrameOffset += UnwindInfo->UnwindCode[Index].FrameOffset << 16;
 						FloatingAddress = (PM128A)(FrameBase + FrameOffset);
-						FloatingRegister[OpInfo] = MemoryRead128(FloatingAddress);
+						if (!MemoryRead128(Space, FloatingAddress, FloatingRegister[OpInfo]))
+							return false;
 
 						if (ARGUMENT_PRESENT(ContextPointers)) {
 							ContextPointers->FloatingContext[OpInfo] = FloatingAddress;
@@ -389,8 +443,8 @@ namespace RuntimeSupport
 							StackAddress += 1;
 						}
 
-						ContextRecord->Rip = MemoryRead64(ReturnAddress);
-						ContextRecord->Rsp = MemoryRead64(StackAddress);
+						if (!MemoryRead64(Space, ReturnAddress, ContextRecord->Rip) || !MemoryRead64(Space, StackAddress, ContextRecord->Rsp))
+							return false;
 
 						break;
 
@@ -441,11 +495,12 @@ namespace RuntimeSupport
 			else {
 
 				if (MachineFrame == FALSE) {
-					ContextRecord->Rip = MemoryRead64((PULONG64)ContextRecord->Rsp);
+					if (!MemoryRead64(Space, (PULONG64)ContextRecord->Rsp, ContextRecord->Rip))
+						return false;
 					ContextRecord->Rsp += 8;
 				}
 
-				break;
+				return true;
 			}
 
 			//
@@ -454,7 +509,8 @@ namespace RuntimeSupport
 			//
 
 			ChainCount += 1;
-			Assert(ChainCount <= UNWIND_CHAIN_LIMIT);
+			if (ChainCount > UNWIND_CHAIN_LIMIT)
+				return false;
 
 		} while (TRUE);
 	}

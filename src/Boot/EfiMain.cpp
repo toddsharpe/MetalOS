@@ -15,7 +15,6 @@
 #include "Boot/EfiPrint.cpp"
 
 static constexpr wchar_t Kernel[] = L"moskrnl.exe";
-static constexpr wchar_t KernelPDB[] = L"moskrnl.pdb";
 static constexpr size_t MaxKernelPath = 64;
 
 EFI_SYSTEM_TABLE* ST;
@@ -125,7 +124,6 @@ static EFI_STATUS DisplayLoaderParams(const LoaderParams& params)
 	ReturnIfNotSuccess(Print("  PFN Database-Address: 0x%016x, Count: 0x%x\r\n", params.PageFrameAddr, params.PageFrameCount));
 	ReturnIfNotSuccess(Print("  ConfigTables-Address: 0x%016x, Count: 0x%x\r\n", params.ConfigTables, params.ConfigTablesCount));
 	ReturnIfNotSuccess(Print("  RamDrive-Address: 0x%016x, Size: 0x%x\r\n", params.RamDriveAddress, RamDriveSize));
-	ReturnIfNotSuccess(Print("  PDB-Address: 0x%016x, Size: 0x%x\r\n", params.PdbAddress, params.PdbSize));
 
 	ReturnIfNotSuccess(Print("Graphics:\r\n"));
 	ReturnIfNotSuccess(Print("  FrameBuffer-Base 0x%016x, Size: 0x%08x\r\n", params.Display.FrameBufferBase, params.Display.FrameBufferSize));
@@ -219,20 +217,6 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	LoaderParams* kParams = (LoaderParams*)WinPE::GetProcAddress((const void*)params.KernelAddress, "BootParams");
 	Assert(kParams);
 	Print("  Params: 0x%016x\r\n", kParams);
-
-	//Build path to kernelpdb
-	CHAR16 KernelPdbPath[MaxKernelPath] = {};
-	GetDirectoryName(BootFilePath, KernelPdbPath);
-	wcscpy(KernelPdbPath + wcslen(KernelPdbPath), KernelPDB);
-
-	//Load pdb file
-	EFI_FILE* KernelPdbFile = nullptr;
-	Print("Loading: %ls\r\n", KernelPdbPath);
-	ReturnIfNotSuccess(CurrentDriveRoot->Open(CurrentDriveRoot, &KernelPdbFile, KernelPdbPath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY));
-
-	//Map PDB into memory
-	ReturnIfNotSuccess(EfiLoader::MapFile(KernelPdbFile, EfiLoaderData, params.PdbAddress, params.PdbSize));
-	Print("  Address: 0x%016x Size:0x%x\r\n", params.PdbAddress, params.PdbSize);
 
 	//Initialize graphics
 	ReturnIfNotSuccess(EfiDevice::InitializeGraphics(params.Display));

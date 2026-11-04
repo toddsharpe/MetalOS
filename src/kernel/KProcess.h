@@ -104,8 +104,7 @@ struct KProcess
 public:
 	constexpr KProcess(const KProcessType type) :
 		Modules(),
-		//Kernel dynamic allocations start at KernelAllocStart so the watermark never
-		//collides with the fixed low-memory regions (KernelBase, KdCom, KernelPdb, KernelHeap).
+		//Kernel dynamic allocations start at KernelAllocStart so the watermark never collides with the fixed low-memory regions (KernelBase, KdCom, KernelHeap)
 		Space(get_start(type), get_end(type), get_offset(type)),
 		Tables(),
 		IsGlobal(type == KProcessType::Kernel)

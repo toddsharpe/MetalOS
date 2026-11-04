@@ -12,7 +12,6 @@ static constexpr uintptr_t UserEnd  = 0x0000'7FFF'FFFF'FFFF;
 static constexpr uintptr_t KernelStart            = 0xFFFF'8000'0000'0000;
 static constexpr uintptr_t KernelBase             = 0xFFFF'8000'0100'0000;
 static constexpr uintptr_t KdCom                  = 0xFFFF'8000'0200'0000;
-static constexpr uintptr_t KernelPdb              = 0xFFFF'8000'1000'0000;
 static constexpr uintptr_t KernelHeap             = 0xFFFF'8000'2000'0000;
 static constexpr uintptr_t KernelAllocStart       = 0xFFFF'8001'0000'0000;
 static constexpr uintptr_t KernelGraphicsDevice   = 0xFFFF'8002'0000'0000;

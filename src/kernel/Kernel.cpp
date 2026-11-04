@@ -107,7 +107,6 @@ namespace
 		 */
 		m_process.Tables = KernelPageTables::CreateNew();
 		Assert(KeVirtualMap(m_process, (void*)KernelBase, m_params.KernelAddress, m_params.KernelImageSize));
-		Assert(KeVirtualMap(m_process, (void*)KernelPdb, m_params.PdbAddress, m_params.PdbSize));
 		Assert(KeVirtualMap(m_process, (void*)KernelGraphicsDevice, m_params.Display.FrameBufferBase, m_params.Display.FrameBufferSize));
 		Assert(KeVirtualMap(m_process, (void*)KernelPageFrameDBStart, m_params.PageFrameAddr, m_params.PageFrameCount * sizeof(PageFrame)));
 		Assert(KeVirtualMap(m_process, (void*)KernelPhysicalStart, paddr_t{}, m_params.PageFrameCount << Arch::PageShift));

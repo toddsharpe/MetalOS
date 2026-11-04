@@ -7,26 +7,6 @@
 
 namespace EfiLoader
 {
-	//Allocate file info and leave room for path
-	alignas(EFI_FILE_INFO) static uint8_t infoBuffer[sizeof(EFI_FILE_INFO) + 256] = {};
-
-	EFI_STATUS MapFile(EFI_FILE * file, const EFI_MEMORY_TYPE allocationType, EFI_PHYSICAL_ADDRESS& addressOut, size_t& sizeOut)
-	{
-		//Get file info into a stack buffer (fits EFI_FILE_INFO plus the filename)
-		UINTN infoSize = sizeof(infoBuffer);
-		EFI_FILE_INFO* fileInfo = (EFI_FILE_INFO*)infoBuffer;
-		ReturnIfNotSuccess(file->GetInfo(file, &gEfiFileInfoGuid, &infoSize, (void*)fileInfo));
-		sizeOut = fileInfo->FileSize;
-
-		//Allocate space for file
-		ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, allocationType, x64::SizeToPages(sizeOut), &addressOut));
-
-		//Read file into memory
-		ReturnIfNotSuccess(file->Read(file, &sizeOut, (void*)addressOut));
-
-		return EFI_SUCCESS;
-	}
-
 	//This method should check the memory map file and ensure nobody else has this reservation
 	EFI_STATUS MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& entryPointOut, EFI_PHYSICAL_ADDRESS& physicalImageBaseOut)
 	{

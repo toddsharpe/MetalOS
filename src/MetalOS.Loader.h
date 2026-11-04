@@ -80,10 +80,6 @@ struct LoaderParams
 
 	//Ramdrive
 	paddr_t RamDriveAddress;
-
-	//PDB
-	paddr_t PdbAddress;
-	size_t PdbSize;
 };
 
 //Bootloader constants

@@ -81,7 +81,7 @@ private:
 		//Draw border
 		Graphics::Draw2D::DrawFrameBorder(Frame, BorderColor, 3);
 		Graphics::Draw2D::DrawText(Frame, { 9, 9 }, Title, BorderColor);
-		Graphics::Draw2D::DrawRectangle(Frame, BorderColor, { 0, 20, Frame.Width, 3 });
+		Graphics::Draw2D::DrawRectangle(Frame, BorderColor, { 0, TitleBarHeight - 3, Frame.Width, 3 });
 
 		//Draw children
 		for (const auto& child : Children)

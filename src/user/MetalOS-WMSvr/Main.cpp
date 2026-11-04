@@ -34,7 +34,7 @@ namespace
 		Rectangle Rect;            //position + size on screen
 		char Title[Wm::MaxTitle];  //window title (for the taskbar)
 		bool Minimized;            //hidden from compositing but kept in the taskbar
-		bool ShowTitle;            //draw WM chrome (minimize/close buttons); false = chromeless
+		bool ShowTitle;            //draw WM chrome (minimize/close buttons) and drag by the title bar; false = chromeless and fixed in place
 	};
 
 	//Framebuffer / composition
@@ -45,7 +45,7 @@ namespace
 	void* g_inputRegion = nullptr;
 	Point2D g_mouse;
 	MouseButtonState g_prevButtons;
-	bool g_wmPress = false; //the left button went down on the start menu, panel or a window button, so the WM keeps the mouse until it comes up
+	bool g_wmPress = false; //the left button went down on the start menu, panel, a window button or a title bar, so the WM keeps the mouse until it comes up
 
 	//Connections + windows
 	Connection g_conns[MaxConns];
@@ -455,10 +455,18 @@ namespace
 							Minimize(hit);
 							g_wmPress = true;
 						}
-						else
+						else if (hit && hit->ShowTitle && mousePos.Y < hit->Rect.Y + TitleBarHeight)
 						{
+							//Only the title bar drags a window, and the app sees none of the drag
 							g_focus = hit;
 							g_drag = hit;
+							Raise(hit);
+							g_wmPress = true;
+						}
+						else
+						{
+							//A press in the client area focuses and raises the window, and goes to the app
+							g_focus = hit;
 							if (hit)
 								Raise(hit);
 						}

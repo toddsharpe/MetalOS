@@ -56,3 +56,6 @@ struct Message
 		MouseEvent MouseEvent;
 	};
 };
+
+//Rows at the top of a window with a title (AllocWindow's showTitle): the app draws its title there and the WM drags the window by them
+constexpr int32_t TitleBarHeight = 23;

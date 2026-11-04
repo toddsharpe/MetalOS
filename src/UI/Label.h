@@ -13,8 +13,7 @@ namespace UI
 	{
 	public:
 		Label(const CString& text, const Rectangle& bounds) :
-			Control(),
-			Bounds(bounds),
+			Control(bounds),
 			Text(text)
 		{
 
@@ -26,7 +25,6 @@ namespace UI
 			Draw2D::DrawText(frame, { Bounds.X + 5, Bounds.Y + 5 }, Text, Foreground);
 		}
 
-		Rectangle Bounds;
 		StaticString<512> Text;
 	};
 }

@@ -14,8 +14,7 @@ namespace UI
 	{
 	public:
 		Console(const Rectangle& bounds) :
-			Control(),
-			Bounds(bounds),
+			Control(bounds),
 			Text()
 		{
 			Text.SetColumns(Cells(Bounds.Width));
@@ -37,7 +36,6 @@ namespace UI
 			}
 		}
 
-		Rectangle Bounds;
 		TextBuffer<256, 128> Text;
 
 	private:

@@ -22,6 +22,7 @@ public:
 		m_callback(callback),
 		m_point({rect.X, rect.Y}),
 		m_prevMouseButtons(),
+		m_pressed(),
 		m_handle()
 	{
 	}
@@ -59,14 +60,14 @@ public:
 			break;
 
 		case MessageType::MouseEvent:
-			m_prevMouseButtons = message.MouseEvent.Buttons;
+			OnMouse(message.MouseEvent);
 			break;
 		}
 	}
 
 	Graphics::FrameBuffer Frame;
 	Graphics::Color Background;
-	StaticVector<UI::Control*, 16> Children;
+	StaticVector<UI::Control*, 32> Children;
 	StaticString<32> Title;
 
 private:
@@ -89,9 +90,41 @@ private:
 		}
 	}
 
+	//The child drawn last under a point in window coordinates, since it is the one on top
+	UI::Control* HitTest(const Graphics::Point2D& point) const
+	{
+		for (size_t i = Children.Count(); i > 0; i--)
+		{
+			UI::Control* const child = Children[i - 1];
+			if (child->Bounds.Contains(point))
+				return child;
+		}
+
+		return nullptr;
+	}
+
+	//A click is the left button going down and coming back up over the same child
+	void OnMouse(const MouseEvent& mouse)
+	{
+		const Graphics::Point2D point = { mouse.XPosition, mouse.YPosition };
+		if (mouse.Buttons.LeftPressed && !m_prevMouseButtons.LeftPressed)
+		{
+			m_pressed = HitTest(point);
+		}
+		else if (!mouse.Buttons.LeftPressed && m_prevMouseButtons.LeftPressed)
+		{
+			if (m_pressed && HitTest(point) == m_pressed)
+				m_pressed->OnClick();
+			m_pressed = nullptr;
+		}
+
+		m_prevMouseButtons = mouse.Buttons;
+	}
+
 	MessageCallback m_callback;
 
 	Graphics::Point2D m_point;
 	MouseButtonState m_prevMouseButtons;
+	UI::Control* m_pressed;
 	HWindow m_handle;
 };

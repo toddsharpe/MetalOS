@@ -9,14 +9,20 @@ namespace UI
 	class Control
 	{
 	public:
-		Control() : Foreground(Colors::Red), Background(Colors::White)
+		Control(const Rectangle& bounds) : Foreground(Colors::Red), Background(Colors::White), Bounds(bounds)
 		{
 
 		}
 
 		virtual void Draw(FrameBuffer& frame) = 0;
 
+		//The window got a left click inside Bounds; most controls ignore it
+		virtual void OnClick()
+		{
+		}
+
 		Color Foreground;
 		Color Background;
+		Rectangle Bounds; //in window coordinates
 	};
 }

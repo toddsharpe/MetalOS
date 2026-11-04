@@ -588,6 +588,10 @@ SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize
 				Assert(result == KWaitResult::Signaled);
 			}
 
+			//Another thread can also free the buffer or the count during the wait, so check both again before using either
+			if ((bufferSize && !proc.Space.IsValidRange(buffer, bufferSize)) || (bytesRead && !proc.Space.IsValid(bytesRead)))
+				return SyscallResult::InvalidPointer;
+
 			//Bytes a writer left before closing are still returned; only an empty pipe with no write end left is the end
 			if (pipe.Count() == 0)
 			{

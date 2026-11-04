@@ -14,6 +14,9 @@ HyperVVideoDriver::HyperVVideoDriver(KDevice& device) :
 	m_framebufferGpa(),
 	m_versionResponse(),
 	m_event(false, false),
+	m_waiting(),
+	m_answer(),
+	m_situationContext(),
 	m_channel(VSC_SEND_RING_BUFFER_SIZE, VSC_RECV_RING_BUFFER_SIZE, { &HyperVVideoDriver::Callback, this })
 {
 
@@ -24,6 +27,21 @@ bool HyperVVideoDriver::Initialize()
 	//Open the VMBus channel (rings + GPADL happen here).
 	m_channel.Initialize(*m_device.VmBus, &m_device.m_channel);
 
+	//A failed negotiation closes the channel again rather than leaving it open with our callback registered
+	if (!Negotiate())
+	{
+		m_channel.Close(*m_device.VmBus);
+		return false;
+	}
+
+	//Only a negotiated display is discoverable; on failure MapFramebuffer falls back to the boot GOP
+	m_device.Class = KDeviceClass::Display;
+	return true;
+}
+
+//Agrees a synthvid version, points the host at the VRAM and sets the mode
+bool HyperVVideoDriver::Negotiate()
+{
 	//1) Negotiate the synthvid protocol version, newest first (matches modern hyperv_fb):
 	//3.5 (Win10/Server2016), 3.2 (Win8.1/Server2012R2), 3.0 (Win7/Server2008R2).
 	static constexpr uint32_t kVersions[] = { (5u << 16) | 3u, (2u << 16) | 3u, (0u << 16) | 3u };
@@ -36,8 +54,7 @@ bool HyperVVideoDriver::Initialize()
 		version.hdr.type = synthvid_msg_type::VersionRequest;
 		version.hdr.size = sizeof(version) - sizeof(pipe_msg_hdr);
 		version.body.version = kVersions[i];
-		m_channel.SendPacket(&version, sizeof(version), (uint64_t)&version, HyperV::VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
-		if (KeWait(m_event, 2000) != KWaitResult::Signaled)
+		if (!Request(&version, sizeof(version), synthvid_msg_type::VersionResponse))
 		{
 			Printf("HyperVVideo: no version response for 0x%x (child_relid=%u)\n", kVersions[i], m_device.child_relid);
 			return false;
@@ -74,8 +91,7 @@ bool HyperVVideoDriver::Initialize()
 	vram.body.user_ctx = m_framebufferGpa;
 	vram.body.is_vram_gpa_specified = 1;
 	vram.body.vram_gpa = m_framebufferGpa;
-	m_channel.SendPacket(&vram, sizeof(vram), (uint64_t)&vram, HyperV::VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
-	if (KeWait(m_event, 2000) != KWaitResult::Signaled)
+	if (!Request(&vram, sizeof(vram), synthvid_msg_type::VramLocationAck))
 	{
 		Printf("HyperVVideo: no VRAM_LOCATION ack\n");
 		return false;
@@ -90,10 +106,25 @@ bool HyperVVideoDriver::Initialize()
 	}
 
 	Printf("HyperVVideo: %dx%d, VRAM at 0x%016x (gpa 0x%016x)\n", m_width, m_height, KernelPhysicalStart + m_framebufferGpa, m_framebufferGpa);
-
-	//Only a negotiated display is discoverable; on failure MapFramebuffer falls back to the boot GOP
-	m_device.Class = KDeviceClass::Display;
 	return true;
+}
+
+//Sends a request and waits up to 2s for its answer. Each request re-arms the event, and an answer that comes after its wait ended can't satisfy the next one
+bool HyperVVideoDriver::Request(const void* const message, const size_t size, const synthvid_msg_type answer)
+{
+	cpu_flags_t flags = ArchDisableInterrupts();
+	m_event.Reset();
+	m_answer = answer;
+	m_waiting = true;
+	ArchRestoreFlags(flags);
+
+	const bool answered = m_channel.SendPacket(message, size, (uint64_t)message, HyperV::VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED) &&
+		KeWait(m_event, 2000) == KWaitResult::Signaled;
+
+	flags = ArchDisableInterrupts();
+	m_waiting = false;
+	ArchRestoreFlags(flags);
+	return answered;
 }
 
 //Only 32bpp modes are supported
@@ -136,7 +167,7 @@ bool HyperVVideoDriver::SendSituationUpdate(const uint32_t width, const uint32_t
 	situation.pipe.size = sizeof(situation) - sizeof(pipe_msg_hdr);
 	situation.hdr.type = synthvid_msg_type::SituationUpdate;
 	situation.hdr.size = sizeof(situation) - sizeof(pipe_msg_hdr);
-	situation.body.user_ctx = 0;
+	situation.body.user_ctx = ++m_situationContext; //the ack echoes it, which tells it apart from a late ack for an earlier update
 	situation.body.video_output_count = 1;
 	situation.body.video_output[0].active = 1;
 	situation.body.video_output[0].vram_offset = 0;
@@ -144,8 +175,7 @@ bool HyperVVideoDriver::SendSituationUpdate(const uint32_t width, const uint32_t
 	situation.body.video_output[0].width_pixels = width;
 	situation.body.video_output[0].height_pixels = height;
 	situation.body.video_output[0].pitch_bytes = pitchBytes;
-	m_channel.SendPacket(&situation, sizeof(situation), (uint64_t)&situation, HyperV::VM_PKT_DATA_INBAND, VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
-	return KeWait(m_event, 2000) == KWaitResult::Signaled;
+	return Request(&situation, sizeof(situation), synthvid_msg_type::SituationUpdateAck);
 }
 
 void HyperVVideoDriver::Flush()
@@ -194,28 +224,35 @@ void HyperVVideoDriver::OnCallback()
 
 void HyperVVideoDriver::ProcessMessage(synthvid_msg_hdr* header, const uint32_t size)
 {
+	//Only the answer a request is waiting for counts; notifications (FeatureChange, Pointer*) and answers that came too late are dropped
+	if (!m_waiting || header->type != m_answer)
+		return;
+
 	switch (header->type)
 	{
 		case synthvid_msg_type::VersionResponse:
 		{
 			Assert(size >= sizeof(synthvid_msg_hdr) + sizeof(synthvid_version_response));
 			memcpy(&m_versionResponse, (uint8_t*)header + sizeof(synthvid_msg_hdr), sizeof(synthvid_version_response));
-			m_event.Set();
 		}
 		break;
 
-		case synthvid_msg_type::VramLocationAck:
 		case synthvid_msg_type::SituationUpdateAck:
-			m_event.Set();
-			break;
-
-		//Notifications we don't currently act on.
-		case synthvid_msg_type::FeatureChange:
-		case synthvid_msg_type::PointerPosition:
-		case synthvid_msg_type::PointerShape:
-			break;
+		{
+			//A host that echoes user_ctx names the update it acks; an earlier one's ack is for an update whose wait timed out
+			const uint64_t context = size >= sizeof(synthvid_msg_hdr) + sizeof(synthvid_situation_update_ack) ? ((synthvid_situation_update_ack*)(header + 1))->user_ctx : 0;
+			if (context != 0 && context < m_situationContext)
+			{
+				Printf("HyperVVideo: ignoring a late SITUATION_UPDATE ack (user_ctx %u, waiting for %u)\n", (uint32_t)context, (uint32_t)m_situationContext);
+				return;
+			}
+		}
+		break;
 
 		default:
 			break;
 	}
+
+	m_waiting = false;
+	m_event.Set();
 }

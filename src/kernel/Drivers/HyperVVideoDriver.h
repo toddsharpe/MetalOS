@@ -92,6 +92,11 @@ private:
 		video_output_situation video_output[1];
 	};
 
+	struct synthvid_situation_update_ack
+	{
+		uint64_t user_ctx; //the update's, echoed back
+	};
+
 	struct synthvid_rect
 	{
 		int32_t x1, y1, x2, y2;
@@ -114,6 +119,8 @@ private:
 
 	void OnCallback();
 	void ProcessMessage(synthvid_msg_hdr* header, const uint32_t size);
+	bool Negotiate();
+	bool Request(const void* const message, const size_t size, const synthvid_msg_type answer);
 	bool SetMode(const uint32_t width, const uint32_t height);
 	bool SendSituationUpdate(const uint32_t width, const uint32_t height, const uint32_t pitchBytes);
 
@@ -125,5 +132,8 @@ private:
 
 	synthvid_version_response m_versionResponse;
 	KEvent m_event;
+	volatile bool m_waiting; //a request is waiting for an m_answer message; only that sets m_event
+	volatile synthvid_msg_type m_answer;
+	volatile uint64_t m_situationContext; //user_ctx of the latest SITUATION_UPDATE (1, 2, ...)
 	HyperVChannel m_channel;
 };

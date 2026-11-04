@@ -20,6 +20,9 @@ public:
 	uint32_t CreateGpadl(const uint32_t childRelid, const paddr_t address, const size_t pageCount);
 	HyperV::HV_HYPERCALL_RESULT_VALUE OpenChannel(const HyperV::vmbus_channel_open_channel& message, HyperV::VmBusResponse& response);
 	void SetCallback(uint32_t id, const ActionContext& context);
+	void RemoveCallback(const uint32_t id);
+	bool CloseChannel(const uint32_t childRelid); //The host doesn't answer a close
+	bool TeardownGpadl(const uint32_t childRelid, const uint32_t gpadl, const milli_t timeout); //False if the host didn't release it in time
 
 private:
 	static constexpr HyperV::HV_MESSAGE_TYPE VmbusMessageType = (HyperV::HV_MESSAGE_TYPE)1;
@@ -38,6 +41,8 @@ private:
 
 	void AddRequest(const BusRequest& request);
 	BusRequest TakeRequest(const uint32_t gpadl, const uint32_t child_relid, const uint32_t openid);
+	bool TryTakeRequest(const uint32_t gpadl, const uint32_t child_relid, const uint32_t openid, BusRequest& request);
+	bool PostChannelMessage(const void* const message, const uint32_t size);
 
 	void OnInterrupt();
 

@@ -141,6 +141,62 @@ void VmBusDriver::SetCallback(uint32_t id, const ActionContext& context)
 	m_channelCallbacks.Add(id, context);
 }
 
+//The ISR looks callbacks up, so remove with interrupts off; later events for the channel are reported as unhandled
+void VmBusDriver::RemoveCallback(const uint32_t id)
+{
+	const cpu_flags_t flags = ArchDisableInterrupts();
+	m_channelCallbacks.Remove(id);
+	ArchRestoreFlags(flags);
+}
+
+bool VmBusDriver::CloseChannel(const uint32_t childRelid)
+{
+	HyperV::vmbus_channel_close_channel message;
+	memset(&message, 0, sizeof(HyperV::vmbus_channel_close_channel));
+	message.header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_CLOSECHANNEL;
+	message.child_relid = childRelid;
+	return PostChannelMessage(&message, sizeof(HyperV::vmbus_channel_close_channel));
+}
+
+//Asks the host to let go of a GPADL and waits for GPADL_TORNDOWN; until then the host may still touch its pages
+bool VmBusDriver::TeardownGpadl(const uint32_t childRelid, const uint32_t gpadl, const milli_t timeout)
+{
+	HyperV::vmbus_channel_gpadl_teardown message;
+	memset(&message, 0, sizeof(HyperV::vmbus_channel_gpadl_teardown));
+	message.header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_TEARDOWN;
+	message.child_relid = childRelid;
+	message.gpadl = gpadl;
+
+	//GPADL_CREATED for this handle was taken long ago, so the same key can't catch it
+	KEvent event(false, false);
+	HyperV::VmBusResponse response;
+	AddRequest({ gpadl, 0, 0, &event, &response });
+
+	const bool torndown = PostChannelMessage(&message, sizeof(HyperV::vmbus_channel_gpadl_teardown)) && KeWait(event, timeout) == KWaitResult::Signaled;
+	if (torndown)
+		return true;
+
+	//Drop the request so a late GPADL_TORNDOWN can't signal this stack's event; if it's already gone, the answer just beat us
+	const cpu_flags_t flags = ArchDisableInterrupts();
+	BusRequest request;
+	const bool pending = TryTakeRequest(gpadl, 0, 0, request);
+	ArchRestoreFlags(flags);
+	return !pending;
+}
+
+//Retries while the host's message buffers are full, as GPADL_BODY does
+bool VmBusDriver::PostChannelMessage(const void* const message, const uint32_t size)
+{
+	HyperV::HV_CONNECTION_ID connectionId = { 0 };
+	connectionId.Id = m_msg_conn_id;
+
+	HyperV::HV_HYPERCALL_RESULT_VALUE result;
+	do {
+		result = HyperV::Platform::HvPostMessage(connectionId, VmbusMessageType, size, message);
+	} while (result.Status == HyperV::HV_STATUS_INSUFFICIENT_BUFFERS);
+	return HV_SUCCESS(result.Status);
+}
+
 //The ISR removes answered requests, so add with interrupts off
 void VmBusDriver::AddRequest(const BusRequest& request)
 {
@@ -153,18 +209,24 @@ void VmBusDriver::AddRequest(const BusRequest& request)
 //Called from the ISR: removes the answered request so its stack-owned event and response aren't kept
 VmBusDriver::BusRequest VmBusDriver::TakeRequest(const uint32_t gpadl, const uint32_t child_relid, const uint32_t openid)
 {
+	BusRequest request = {};
+	Assert(TryTakeRequest(gpadl, child_relid, openid, request));
+	return request;
+}
+
+//Interrupts must be off; false if no request matches (e.g. its waiter gave up)
+bool VmBusDriver::TryTakeRequest(const uint32_t gpadl, const uint32_t child_relid, const uint32_t openid, BusRequest& request)
+{
 	for (size_t i = 0; i < m_requests.Count(); i++)
 	{
-		const BusRequest request = m_requests[i];
+		request = m_requests[i];
 		if (request.Gpadl == gpadl && request.child_relid == child_relid && request.openid == openid)
 		{
 			m_requests.RemoveAt(i);
-			return request;
+			return true;
 		}
 	}
-
-	Assert(false);
-	return {};
+	return false;
 }
 
 void VmBusDriver::OnInterrupt()
@@ -275,6 +337,22 @@ void VmBusDriver::OnInterrupt()
 
 				//Save response to caller and signal
 				request.Response->open_result = *result;
+				request.Event->Set();
+			}
+			break;
+
+			case HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_TORNDOWN:
+			{
+				//The waiter times out, so the request may be gone
+				HyperV::vmbus_channel_gpadl_torndown* torndown = (HyperV::vmbus_channel_gpadl_torndown*)message.Payload;
+				BusRequest request = {};
+				if (!TryTakeRequest(torndown->gpadl, 0, 0, request))
+				{
+					Printf("VmBus: late GPADL_TORNDOWN gpadl=%u\n", torndown->gpadl);
+					break;
+				}
+
+				request.Response->gpadl_torndown = *torndown;
 				request.Event->Set();
 			}
 			break;

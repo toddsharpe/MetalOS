@@ -7,6 +7,7 @@ public:
 	HyperVRingBuffer(const uint32_t size, HyperVChannel& channel);
 
 	void Initialize(const paddr_t address);
+	void Unmap(); //Drops the wrap-around view; the physical pages stay with the channel
 
 	bool Write(const CBuffer* buffers, const size_t count); //False if the host hasn't freed enough space
 	void Increment(const uint32_t length);

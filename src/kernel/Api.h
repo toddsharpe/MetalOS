@@ -218,7 +218,7 @@ void* KeLoadFile(const char* const path); //Null if the file is missing or empty
  * Prints.
  */
 void VPrintf(const char* format, va_list args); //Not a Printf overload: va_list is char*, so it would capture Printf("%s", buffer)
-void Bugcheck(const char* file, const char* line, const char* format, va_list args);
+void VBugcheck(const char* file, const char* line, const char* format, va_list args);
 void TracePrint(KPipe* const output, const char* const format, ...); //Kernel console, and output too when it isn't null
 void PrintStack();
 void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* const output = nullptr); //Prints like TracePrint

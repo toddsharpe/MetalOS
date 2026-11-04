@@ -17,7 +17,6 @@
 #include "kernel/Kernel_vmem.cpp"
 #include "kernel/Acpi.cpp"
 #include "kernel/Scheduler.cpp"
-#include "kernel/ConfigTables.cpp"
 #include "kernel/KThread.cpp"
 #include "kernel/UProcess.cpp"
 #include "kernel/LoadingScreen.cpp"
@@ -80,7 +79,6 @@ namespace
 	 * Kernel loader data (internal to Kernel.cpp).
 	 */
 	const LoaderParams& m_params(BootParams);
-	ConfigTables m_configTables;
 	LoadingScreen m_loadingScreen(m_display);
 
 	//System
@@ -94,9 +92,6 @@ namespace
 
 		//Initialize Display
 		m_loadingScreen.Initialize();
-
-		//Initialize components that copy from UEFI space
-		m_configTables.Initialize(BootParams.ConfigTables, BootParams.ConfigTablesCount);
 
 		//Initialize physical
 		KePhysicalInitialize();
@@ -211,11 +206,6 @@ void KeRegisterInterrupt(const Arch::InterruptVector interrupt, const ActionCont
 {
 	Assert(!m_irqs.Contains(interrupt));
 	m_irqs.Add(interrupt, context);
-}
-
-void* GetAcpiTable()
-{
-	return m_configTables.GetAcpiTable();
 }
 
 //This works for static code/data that is part of kernel image

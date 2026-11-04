@@ -38,7 +38,7 @@
 
 //Kernel includes
 #include "kernel/KeDisable.h"
-#include "kernel/ConfigTables.h"
+#include "kernel/Api.h"
 #include "kernel/KThread.h"
 #include "kernel/UThread.h"
 #include "kernel/KProcess.h"

@@ -3,8 +3,11 @@
 #include "uACPI/event.h"
 #include "uACPI/status.h"
 #include "kernel/Api.h"
+#include "MetalOS.Loader.h"
 #include "Assert.h"
 #include "errno.h"
+
+extern LoaderParams BootParams;
 
 //Acpi is single threaded, just stub these out
 typedef int mutex_t;
@@ -72,7 +75,8 @@ int InitializeAcpi(void)
 
 uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rsdp_address)
 {
-	*out_rsdp_address = (uintptr_t)GetAcpiTable();
+	Assert(BootParams.AcpiRsdp);
+	*out_rsdp_address = BootParams.AcpiRsdp;
 	return uacpi_status::UACPI_STATUS_OK;
 }
 

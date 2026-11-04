@@ -32,6 +32,40 @@ namespace
 
 		return ScancodeSet1[scanCode];
 	}
+
+	//The host sends typed text (e.g. VM Connect's "Type clipboard text") as UTF-16 code units; map them to the keys the scan code path produces
+	VirtualKey GetUnicodeKeycode(const uint16_t c)
+	{
+		if (c >= 'a' && c <= 'z')
+			return (VirtualKey)(c - 'a' + 'A');
+		if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == ',' || c == '.')
+			return (VirtualKey)c;
+
+		switch (c)
+		{
+			case ' ':
+				return VK_SPACE;
+
+			case '\r':
+			case '\n':
+				return VK_RETURN;
+
+			case '\b':
+				return VK_BACK;
+
+			case '\t':
+				return VK_TAB;
+
+			case '-':
+				return VK_OEM_MINUS;
+
+			case '/':
+				return VK_OEM_2;
+
+			default:
+				return VK_UNMAPPED;
+		}
+	}
 }
 
 HyperVKeyboardDriver::HyperVKeyboardDriver(KDevice& device) :
@@ -104,8 +138,7 @@ void HyperVKeyboardDriver::ProcessMessage(synth_kbd_msg_hdr* header, const uint3
 			Assert(size >= sizeof(synth_kbd_keystroke));
 			synth_kbd_keystroke key;
 			memcpy(&key, header, sizeof(synth_kbd_keystroke));
-			Assert(!(key.info & IS_UNICODE));
-			VirtualKey keyCode = GetKeycode(key.make_code);
+			const VirtualKey keyCode = (key.info & IS_UNICODE) ? GetUnicodeKeycode(key.make_code) : GetKeycode(key.make_code);
 
 			Message message = {};
 			message.Header.MessageType = MessageType::KeyEvent;

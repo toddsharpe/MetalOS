@@ -247,15 +247,13 @@ const char* strstr(const char* const _String, char const* const _SubString)
 {
 	size_t n = strlen(_SubString);
 
+	//strncmp never reads past either terminator; the last pass, at the haystack's terminator, only matches an empty substring
 	const char* s = _String;
-	while (*_String)
+	do
 	{
-		if (!memcmp(_String, _SubString, n)) {
-			return _String;
-		}
-
-		s++;
-	}
+		if (!strncmp(s, _SubString, n))
+			return s;
+	} while (*s++);
 
 	return 0;
 }

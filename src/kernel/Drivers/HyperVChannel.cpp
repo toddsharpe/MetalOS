@@ -16,12 +16,9 @@ HyperVChannel::HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize
 	
 }
 
-void HyperVChannel::Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_channel* offerChannel, const CBuffer* buffer)
+void HyperVChannel::Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_channel* offerChannel)
 {
 	m_channel = offerChannel;
-	
-	if (buffer != nullptr)
-		Assert(buffer->Size <= HyperV::MAX_USER_DEFINED_BYTES);
 
 	Assert((m_outbound.Size % Arch::PageSize) == 0);
 	Assert((m_inbound.Size % Arch::PageSize) == 0);
@@ -54,8 +51,6 @@ void HyperVChannel::Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_c
 	openChannel.child_relid = m_channel->child_relid;
 	openChannel.ringbuffer_gpadlhandle = m_gpadlHandle;
 	openChannel.downstream_ringbuffer_pageoffset = (uint32_t)sendCount;
-	if (buffer != nullptr)
-		memcpy(openChannel.userdata, buffer->Data, buffer->Size);
 	HyperV::VmBusResponse response;
 	vmbus.OpenChannel(openChannel, response);
 }

@@ -83,8 +83,11 @@ bool HyperVVideoDriver::Initialize()
 
 	//4) Set the display mode, negotiated with the host over synthvid (no UEFI/GOP mode change). Try
 	//1920x1080; if the host rejects it, fall back to the boot GOP mode (already in m_width/m_height).
-	if (!SetMode(1920, 1080))
-		SendSituationUpdate(m_width, m_height, m_pitchBytes);
+	if (!SetMode(1920, 1080) && !SendSituationUpdate(m_width, m_height, m_pitchBytes))
+	{
+		Printf("HyperVVideo: no SITUATION_UPDATE ack for the boot mode %ux%u\n", m_width, m_height);
+		return false;
+	}
 
 	Printf("HyperVVideo: %dx%d, VRAM at 0x%016x (gpa 0x%016x)\n", m_width, m_height, KernelPhysicalStart + m_framebufferGpa, m_framebufferGpa);
 
@@ -118,10 +121,10 @@ bool HyperVVideoDriver::SetMode(const uint32_t width, const uint32_t height)
 	return true;
 }
 
-//Guest-physical base of the VRAM (the caller maps it); size covers the current mode, and the VRAM is packed (pitch == width)
+//Guest-physical base of the VRAM (the caller maps it); size and pitch are the mode the host was told (the GOP pitch after a fallback)
 KFramebufferInfo HyperVVideoDriver::GetFramebuffer() const
 {
-	return { m_framebufferGpa, (size_t)m_height * m_pitchBytes, m_width, m_height, m_width };
+	return { m_framebufferGpa, (size_t)m_height * m_pitchBytes, m_width, m_height, m_pitchBytes / (uint32_t)sizeof(uint32_t) };
 }
 
 //Sends a SITUATION_UPDATE for a single active output and waits for the host's ack. Returns true if

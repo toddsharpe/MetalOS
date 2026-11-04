@@ -26,6 +26,46 @@ void String_test()
 	copy.AppendClip(m);
 	Assert(copy == "123a");
 
+	//AppendClip: exactly fits (Capacity - 1 chars plus the null terminator)
+	StaticString<8> fits;
+	fits.AppendClip("1234567");
+	Assert(fits == "1234567");
+	Assert(fits.c_str()[7] == '\0');
+
+	//AppendClip: one char too long is clipped, not asserted
+	StaticString<8> over;
+	over.AppendClip("12345678");
+	Assert(over == "1234567");
+	Assert(over.c_str()[7] == '\0');
+
+	//AppendClip: a long command line or path keeps the first Capacity - 1 chars
+	char longInput[300] = {};
+	memset(longInput, 'x', sizeof(longInput) - 1);
+	StaticString<128> path;
+	path.AppendClip(longInput);
+	Assert(path.Count() == 127);
+	Assert(strlen(path.c_str()) == 127);
+
+	//AppendClip: appending to a non-empty string clips to the space left
+	StaticString<8> tail;
+	tail.Append("abc");
+	tail.AppendClip("defghij");
+	Assert(tail == "abcdefg");
+
+	//AppendClip: a full string stays as it is
+	tail.AppendClip("z");
+	Assert(tail == "abcdefg");
+
+	//AppendClip: maxLength limits the copy when it is shorter than the space left
+	StaticString<8> limited;
+	limited.AppendClip("abcdef", 3);
+	Assert(limited == "abc");
+
+	//AppendClip: the space left limits the copy when maxLength is longer
+	limited.AppendClip("defghij", 10);
+	Assert(limited == "abcdefg");
+	Assert(limited.Count() == 7);
+
 	//Appending
 	StaticString<64> a;
 	a.Append('A');

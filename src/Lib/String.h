@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cctype>
 #include "Lib/Buffer.h"
+#include "Lib/Math.h"
 
 int constexpr length(const char* str)
 {
@@ -243,10 +244,11 @@ public:
 		*end() = '\0';
 	}
 
+	//Appends as much of c_str (at most maxLength chars, if given) as fits ahead of the null terminator
 	void AppendClip(const char* const c_str, const size_t maxLength = 0)
 	{
-		const CString clip = CString::Clip(c_str, maxLength ? maxLength : Capacity);
-		Assert(m_count + clip.Length < Capacity - 1);
+		const size_t space = Capacity - 1 - m_count;
+		const CString clip = CString::Clip(c_str, maxLength ? Min(maxLength, space) : space);
 
 		memcpy(end(), clip.c_str(), clip.Length);
 		m_count += clip.Length;

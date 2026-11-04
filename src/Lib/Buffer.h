@@ -87,6 +87,6 @@ private:
 inline void Copy(Buffer& to, const CBuffer& from)
 {
 	Assert(to.Capacity >= from.Size);
-	memcpy(to.Data, from.Data, to.Count);
+	memcpy(to.Data, from.Data, from.Size);
 	to.Count = from.Size;
 }

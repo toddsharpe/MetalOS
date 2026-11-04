@@ -670,22 +670,20 @@ SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const S
 	return SyscallResult::Success;
 }
 
+//The only storage is the read-only RAM drive, so nothing can be renamed, deleted or created
 SyscallResult MoveFile(const char* existingFileName, const char* newFileName)
 {
-	Assert(false);
-	return SyscallResult::Failed;
+	return SyscallResult::NotImplemented;
 }
 
 SyscallResult DeleteFile(const char* fileName)
 {
-	Assert(false);
-	return SyscallResult::Failed;
+	return SyscallResult::NotImplemented;
 }
 
 SyscallResult CreateDirectory(const char* path)
 {
-	Assert(false);
-	return SyscallResult::Failed;
+	return SyscallResult::NotImplemented;
 }
 
 SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle)

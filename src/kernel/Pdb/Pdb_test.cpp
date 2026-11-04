@@ -1,6 +1,7 @@
 #include "kernel/Pdb/PdbFile.h"
 #include <cstdio>
 #include <cstdlib>
+#include <intrin.h>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 extern "C" int WinPE_test_export();
@@ -11,6 +12,28 @@ static thread_local int s_tls;
 
 //Data, for an IP outside .text
 static int s_data = 1;
+
+static uintptr_t s_returnAddress;
+
+extern "C" __declspec(noinline) void Pdb_test_callee()
+{
+	s_returnAddress = (uintptr_t)_ReturnAddress();
+}
+
+//The return address is in the line after the call
+extern "C" __declspec(noinline) int Pdb_test_middle_line()
+{
+	Pdb_test_callee();
+	return s_data;
+}
+static constexpr size_t MiddleLine = __LINE__ - 2;
+
+//The epilog, the function's last bytes, is the closing brace's line, the last in its line table
+extern "C" __declspec(noinline) void Pdb_test_last_line()
+{
+	Pdb_test_callee();
+}
+static constexpr size_t LastLine = __LINE__ - 1;
 
 //Reads a whole file into memory, as KeLoadFile does for the kernel's stack walker
 static void* LoadFile(const char* const path, size_t* const fileSize = nullptr)
@@ -199,6 +222,39 @@ void Pdb_test()
 			resolved++;
 	}
 	Assert(resolved != 0);
+
+	//A return address resolves to the line after the call
+	Pdb_test_middle_line();
+	Assert(file.Resolve((uint32_t)(s_returnAddress - (uintptr_t)image), lookup));
+	Assert(lookup.Function == "Pdb_test_middle_line");
+	AssertEqual(lookup.Line, MiddleLine);
+
+	//Any function with line info resolves at its last byte (the ret, in its last line) to the same name as at its first
+	const IMAGE_DATA_DIRECTORY& exceptions = WinPE::GetNtHeaders(image)->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
+	const RUNTIME_FUNCTION* const functions = MakePointer<const RUNTIME_FUNCTION*>(image, exceptions.VirtualAddress);
+	const uint32_t lastLineRva = (uint32_t)((uintptr_t)&Pdb_test_last_line - (uintptr_t)image);
+	size_t checked = 0;
+	bool sawLastLine = false;
+	for (size_t i = 0; i < exceptions.Size / sizeof(RUNTIME_FUNCTION); i++)
+	{
+		PdbLookup first = {};
+		if (!file.Resolve(functions[i].BeginAddress, first))
+			continue;
+
+		PdbLookup last = {};
+		Assert(file.Resolve(functions[i].EndAddress - 1, last));
+		Assert(last.Function == first.Function);
+		checked++;
+
+		if (functions[i].BeginAddress == lastLineRva)
+		{
+			Assert(last.Function == "Pdb_test_last_line");
+			AssertEqual(last.Line, LastLine);
+			sawLastLine = true;
+		}
+	}
+	Assert(checked != 0);
+	Assert(sawLastLine);
 
 	arena.Reset();
 	PdbPublics_test(arena);

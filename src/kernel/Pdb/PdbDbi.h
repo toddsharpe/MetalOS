@@ -88,7 +88,7 @@ public:
 		// * CV_DebugSLinesFileBlockHeader_t - defines number of lines
 		// * CV_Line_t - defines each line entry
 		{
-			//Entries are sorted
+			//A function's lines are one subsection, and a module's subsections aren't sorted by offset (dynamic initializers come last), so each is checked
 			const uint32_t endPosition = startPosition + info.C13ByteSize;
 			while (moduleStream.Position() < endPosition)
 			{
@@ -112,52 +112,53 @@ public:
 
 				//Printf("%04x:%08x-%08x\n", 1, linesHeader.offCon, (linesHeader.offCon + linesHeader.cbCon));
 
-				//Offset wasn't found (list is sorted)
-				if (offset < linesHeader.offCon)
-				{
-					//not found
-					lookup.Function.Set("<not found1>");
-					lookup.Line = 0;
-					return false;
-				}
-
-				//Continue to next entry
-				if (offset >= (linesHeader.offCon + linesHeader.cbCon))
+				//Another function's lines (or another section's): continue to next entry
+				if (linesHeader.segCon != TextSection || offset < (uint32_t)linesHeader.offCon || offset - (uint32_t)linesHeader.offCon >= (uint32_t)linesHeader.cbCon)
 				{
 					moduleStream.Seek(nextSection);
 					continue;
 				}
 
-				//Iterate through blocks
-				CV_DebugSLinesFileBlockHeader_t fileHeader;
-				Assert(moduleStream.Read(&fileHeader));
-
-				//Relative offset in lines section
+				//The IP's line is the one starting closest before it, in any file block (a function's code can come from more than one file)
 				const uint32_t targetOffset = offset - linesHeader.offCon;
-				//Printf("Offset: 0x%016x, offCon: 0x%016x\n", offset, linesHeader.offCon);
-				CV_Line_t prev = {};
-				for (size_t i = 0; i < fileHeader.nLines; i++)
+				bool found = false;
+				CV_Line_t closest = {};
+				while (moduleStream.Position() + sizeof(CV_DebugSLinesFileBlockHeader_t) <= nextSection)
 				{
-					CV_Line_t line;
-					Assert(moduleStream.Read(&line));
+					const uint32_t blockStart = moduleStream.Position();
+					CV_DebugSLinesFileBlockHeader_t fileHeader;
+					Assert(moduleStream.Read(&fileHeader));
 
-					//Lines are comprised of one or more instructions
-					//Check if target offset is between start of line and start of next line
-					if (targetOffset >= prev.offset && targetOffset < line.offset)
+					//Lines (then columns, if the subsection has them) fill the rest of the block
+					const uint32_t blockSize = (uint32_t)fileHeader.cbBlock;
+					if (fileHeader.nLines < 0 || blockSize < sizeof(fileHeader) || blockSize > nextSection - blockStart || (uint64_t)fileHeader.nLines * sizeof(CV_Line_t) > blockSize - sizeof(fileHeader))
+						return false;
+
+					for (size_t i = 0; i < (size_t)fileHeader.nLines; i++)
 					{
-						CString found;
-						if (m_publics.GetFunction(linesHeader.offCon, found))
-							lookup.Function.Set(CString(found.c_str(), Min(found.Length, lookup.Function.Capacity - 2))); //Long template names are clipped, as Set keeps a char spare
-						else
-							lookup.Function.Set("<not found>");
-						lookup.Line = prev.linenumStart;
-						return true;
+						CV_Line_t line;
+						Assert(moduleStream.Read(&line));
+
+						if (line.offset <= targetOffset && (!found || line.offset >= closest.offset))
+						{
+							closest = line;
+							found = true;
+						}
 					}
-					prev = line;
+					moduleStream.Seek(blockStart + blockSize);
 				}
 
-				//In the block's last line or a later file block, which this doesn't resolve: skip to the next subsection
-				moduleStream.Seek(nextSection);
+				//Code ahead of the function's first line, such as a prolog not attributed to a line
+				if (!found)
+					return false;
+
+				CString name;
+				if (m_publics.GetFunction(linesHeader.offCon, name))
+					lookup.Function.Set(CString(name.c_str(), Min(name.Length, lookup.Function.Capacity - 2))); //Long template names are clipped, as Set keeps a char spare
+				else
+					lookup.Function.Set("<not found>");
+				lookup.Line = closest.linenumStart;
+				return true;
 			}
 		}
 

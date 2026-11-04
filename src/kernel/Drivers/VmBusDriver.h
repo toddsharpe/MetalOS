@@ -15,8 +15,7 @@ public:
 
 	VmBusDriver(KDevice& device);
 
-	Result Initialize() override;
-	Result Enumerate() override;
+	bool Initialize() override;
 
 	uint32_t CreateGpadl(const uint32_t childRelid, const paddr_t address, const size_t pageCount);
 	HyperV::HV_HYPERCALL_RESULT_VALUE OpenChannel(const HyperV::vmbus_channel_open_channel& message, HyperV::VmBusResponse& response);

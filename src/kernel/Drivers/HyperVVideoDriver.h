@@ -10,14 +10,10 @@ class HyperVVideoDriver : public DisplayDriver
 public:
 	HyperVVideoDriver(KDevice& device);
 
-	Result Initialize() override;
-	Result Enumerate() override;
+	bool Initialize() override;
 
-	//DisplayDriver: mode is negotiated with the host over synthvid; the framebuffer is the shared
-	//guest-physical VRAM (the GOP MMIO region). Only 32bpp is supported.
-	Result SetMode(const uint32_t width, const uint32_t height, const uint32_t bpp) override;
-	Result GetMode(uint32_t& width, uint32_t& height, uint32_t& bpp) const override;
-	Result GetFrameBuffer(void*& outAddress, size_t& outSize) const override;
+	//DisplayDriver: the shared guest-physical VRAM (the GOP MMIO region) at the 32bpp mode negotiated with the host
+	KFramebufferInfo GetFramebuffer() const override;
 
 	static void Callback(void* context) { ((HyperVVideoDriver*)context)->OnCallback(); }
 
@@ -118,6 +114,7 @@ private:
 
 	void OnCallback();
 	void ProcessMessage(synthvid_msg_hdr* header, const uint32_t size);
+	bool SetMode(const uint32_t width, const uint32_t height);
 	bool SendSituationUpdate(const uint32_t width, const uint32_t height, const uint32_t pitchBytes);
 
 	uint32_t m_width;

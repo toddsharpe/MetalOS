@@ -190,22 +190,9 @@ private:
 			Assert(device.Driver);
 		}
 
-		//If driver was attached, attempt to initialize/enumerate
-		if (device.Driver)
-		{
-			if (device.Driver->Initialize() != Result::Failed)
-			{
-				const Result enumResult = device.Driver->Enumerate();
-				if (enumResult == Result::Failed)
-				{
-					Printf("Driver failed to enumerate: %d\n", (uint32_t)enumResult);
-				}
-			}
-			else
-			{
-				Printf("Initialization failed:\n");
-			}
-		}
+		//If driver was attached, attempt to initialize (a bus adds its child devices here, which Walk then visits)
+		if (device.Driver && !device.Driver->Initialize())
+			Printf("Initialization failed:\n");
 	}
 
 	KDevice* m_root;

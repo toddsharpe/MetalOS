@@ -256,8 +256,8 @@ extern "C"
 		{
 			UProcess& proc = current.UserThread->Process;
 
-			//The report always goes to the kernel console, and to stdout as well when that is a pipe (a Debug stdout is the console)
-			UObject* const obj = proc.GetObject((handle_t)Handles::StdOut);
+			//The report always goes to the kernel console, and to stderr as well when that is a pipe (a Debug stderr is the console)
+			UObject* const obj = proc.GetObject((handle_t)Handles::StdErr);
 			KPipe* const pipe = (obj && obj->Type == UObjectType::Pipe) ? obj->Pipe : nullptr;
 
 			//Write exception

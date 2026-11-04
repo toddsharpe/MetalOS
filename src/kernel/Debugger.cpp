@@ -102,7 +102,7 @@ void Debugger::DebuggerEvent(Arch::InterruptVector vector, Arch::InterruptFrame&
 	ExceptionRecord.ExceptionCode = STATUS_BREAKPOINT;
 	ExceptionRecord.NumberParameters = 3;
 	ExceptionRecord.ExceptionInformation[0] = BREAKPOINT_BREAK;
-	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)&Scheduler::GetThread();
+	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)&Scheduler::GetCurrentThread();
 	ExceptionRecord.ExceptionInformation[2] = 0;
 
 	ConvertToContext(&frame, &ContextRecord);

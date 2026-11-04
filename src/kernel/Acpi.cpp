@@ -189,14 +189,15 @@ uacpi_status uacpi_kernel_io_write32(uacpi_handle, uacpi_size offset, uacpi_u32 
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
+//Plain kernel heap blocks: uACPI frees what it allocates and zeroes what it needs zeroed itself (no UACPI_NATIVE_ALLOC_ZEROED)
 void *uacpi_kernel_alloc(uacpi_size size)
 {
-	return KeAlloc(size, AllocType::Acpi);
+	return KeAlloc(size, AllocType::Kernel);
 }
 
 void uacpi_kernel_free(void *mem)
 {
-	KeFree(mem, AllocType::Acpi);
+	KeFree(mem, AllocType::Kernel);
 }
 
 uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
@@ -216,22 +217,22 @@ void uacpi_kernel_sleep(uacpi_u64 msec)
 
 uacpi_handle uacpi_kernel_create_mutex(void)
 {
-	return KeAlloc(sizeof(mutex_t), AllocType::Acpi);
+	return KeAlloc(sizeof(mutex_t), AllocType::Kernel);
 }
 
 void uacpi_kernel_free_mutex(uacpi_handle ptr)
 {
-	KeFree(ptr, AllocType::Acpi);
+	KeFree(ptr, AllocType::Kernel);
 }
 
 uacpi_handle uacpi_kernel_create_event(void)
 {
-	return KeAlloc(sizeof(event_t), AllocType::Acpi);
+	return KeAlloc(sizeof(event_t), AllocType::Kernel);
 }
 
 void uacpi_kernel_free_event(uacpi_handle ptr)
 {
-	KeFree(ptr, AllocType::Acpi);
+	KeFree(ptr, AllocType::Kernel);
 }
 
 static int id = 1;
@@ -280,12 +281,12 @@ uacpi_status uacpi_kernel_uninstall_interrupt_handler(uacpi_interrupt_handler, u
 
 uacpi_handle uacpi_kernel_create_spinlock(void)
 {
-	return KeAlloc(sizeof(spinlock_t), AllocType::Acpi);
+	return KeAlloc(sizeof(spinlock_t), AllocType::Kernel);
 }
 
 void uacpi_kernel_free_spinlock(uacpi_handle ptr)
 {
-	KeFree(ptr, AllocType::Acpi);
+	KeFree(ptr, AllocType::Kernel);
 }
 
 uacpi_cpu_flags uacpi_kernel_lock_spinlock(uacpi_handle)

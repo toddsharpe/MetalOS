@@ -143,7 +143,6 @@ void KeEndpointRelease(const uint32_t owner);
 enum class AllocType
 {
 	Kernel,
-	Acpi,
 	Malloc,
 	User
 };

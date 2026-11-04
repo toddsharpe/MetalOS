@@ -45,14 +45,9 @@ public:
 		MsfStream* directory = new (allocated) MsfStream(m_header->BlockSize, Read, this);
 		directory->Size = m_header->NumDirectoryBytes;
 
-		//Load directory mapping, a list of block numbers for the directory stream
-		const size_t numDirBlocks = DivRoundUp(m_header->NumDirectoryBytes, m_header->BlockSize);
-		const uint32_t* dirBlockNum = (uint32_t*)GetBlock(m_header->BlockMapAddr);
-		for (size_t i = 0; i < numDirBlocks; i++)
-		{
-			directory->BlockNumbers.Add(*dirBlockNum);
-			dirBlockNum++;
-		}
+		//Directory mapping, a list of block numbers for the directory stream
+		directory->BlockCount = DivRoundUp(m_header->NumDirectoryBytes, m_header->BlockSize);
+		directory->SetBlocks(static_cast<const uint32_t*>(GetBlock(m_header->BlockMapAddr)));
 
 		//Read directory stream contents
 		const uint32_t numStreams = directory->Read<uint32_t>();
@@ -77,18 +72,14 @@ public:
 			}
 		}
 
-		//Load stream blocks
+		//Each stream's block numbers follow the sizes, stream by stream; a stream reads them from the directory as it needs them
 		ListForEach<MsfStream, MsfStream*>(m_streams, [](const ListEntry& entry, MsfStream& item, MsfStream* ctx)
 		{
 			if (item.IsInvalid)
 				return;
 
-			for (size_t i = 0; i < item.BlockCount; i++)
-			{
-				const uint32_t blockNumber = ctx->Read<uint32_t>();
-				AssertNotEqual(blockNumber, 0);
-				item.BlockNumbers.Add(blockNumber);
-			}
+			item.SetBlocks(*ctx, ctx->Position());
+			ctx->Skip<uint32_t>((uint32_t)item.BlockCount);
 		}, directory);
 	}
 

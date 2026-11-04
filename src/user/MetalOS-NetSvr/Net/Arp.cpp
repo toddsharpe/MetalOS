@@ -68,7 +68,7 @@ namespace Net::Arp
 		ArpCache::Update(reply.sender_proto, reply.sender_hw);
 
 		//Resolution done; allow future ARP requests (senders retry once the cache is warm)
-		net_if.ethernet.arp_pending = false;
+		net_if.ethernet.arp.end();
 	}
 	
 	bool Receive(NetIf& net_if, Packet& packet)

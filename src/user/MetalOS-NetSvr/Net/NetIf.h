@@ -12,14 +12,14 @@ namespace Net
 		constexpr eth_data_t() :
 			addr(),
 			filters(),
-			arp_pending()
+			arp()
 		{
 
 		}
 
 		eth_mac_t addr;
 		StaticVector<eth_mac_t, 4> filters; //extra accepted destination MACs (joined multicast groups)
-		bool arp_pending;
+		arp_request_t arp;
 	};
 
 	struct ipv4_mc_route_t

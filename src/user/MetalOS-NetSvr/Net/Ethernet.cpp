@@ -52,23 +52,26 @@ namespace Net::Ethernet
 		if (packet.headroom() < eth_hdr_size)
 			return false;
 
-		//Broadcast IP maps directly to the broadcast MAC (no ARP, e.g. DHCP DISCOVER).
-		const bool is_broadcast = packet.dst.addr == Net::broadcast;
+		//Broadcast IP, limited or this subnet's, maps directly to the broadcast MAC (no ARP, e.g. DHCP DISCOVER).
+		const bool is_broadcast = packet.dst.addr == Net::broadcast || Net::is_subnet_broadcast(packet.dst.addr, net_if.ipv4.addr, net_if.ipv4.subnet_mask);
 
 		//L2 next hop: on-subnet destinations are reached directly; anything else goes via
 		//the default gateway (which must itself be on-subnet).
-		ipv4_addr_t nexthop = packet.dst.addr;
+		ipv4_addr_t nexthop = is_broadcast ? Net::broadcast : packet.dst.addr;
 		if (!is_broadcast && !Net::is_network(packet.dst.addr, net_if.ipv4.addr, net_if.ipv4.subnet_mask))
 			nexthop = net_if.ipv4.gateway;
+
+		//Off-subnet with no gateway set: there is no next hop to ARP for
+		if (nexthop == Net::empty)
+			return false;
 
 		//Unresolved next hop: drop the packet and ARP for it (senders retry once the cache is warm)
 		eth_mac_t dst_mac = {};
 		if (!ArpCache::Lookup(nexthop, dst_mac))
 		{
-			//One arp supported at a time
-			if (net_if.ethernet.arp_pending)
+			//One ARP at a time; an unanswered one expires so a later send asks again
+			if (!net_if.ethernet.arp.try_begin(net_if.driver.GetTicks()))
 				return false;
-			net_if.ethernet.arp_pending = true;
 
 			//Build arp (reserve room for the ethernet + ARP headers)
 			StaticBuffer<Net::buffer_size> buffer;

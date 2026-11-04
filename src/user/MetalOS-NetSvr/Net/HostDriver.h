@@ -36,6 +36,11 @@ public:
 		return true;
 	}
 
+	milli_t GetTicks() const override
+	{
+		return GetTickCount();
+	}
+
 private:
 	InterfaceInfo m_info;
 };

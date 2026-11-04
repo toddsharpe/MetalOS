@@ -85,6 +85,16 @@ public:
 
 	bool IsEmpty() const { return m_header->Tail == m_header->Head; }
 
+	//Records waiting to be dequeued (0 for a corrupt header, which Enqueue and Dequeue reject anyway)
+	uint32_t Count() const
+	{
+		const uint32_t head = m_header->Head;
+		const uint32_t tail = m_header->Tail;
+		if (head >= m_capacity || tail >= m_capacity)
+			return 0;
+		return head >= tail ? head - tail : m_capacity - tail + head;
+	}
+
 private:
 	SharedRingHeader* m_header;
 	uint8_t* m_records;

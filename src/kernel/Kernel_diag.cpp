@@ -80,7 +80,8 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 		}
 
 		//Get module
-		const KModule* module = process.Modules.GetModule(ctx.Rip);
+		const uintptr_t ip = sw.LookupIp();
+		const KModule* module = process.Modules.GetModule(ip);
 		if (!module)
 		{
 			//No module info for the IP, print it and exit
@@ -110,7 +111,7 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 		PdbLookup lookup = {};
 		if (!pdb.File)
 			TracePrint(output, "    <no symbols>\n");
-		else if (pdb.File->Resolve(rva, lookup))
+		else if (pdb.File->Resolve((uint32_t)(ip - (uintptr_t)module->ImageBase), lookup))
 			TracePrint(output, "    %s (%d)\n", lookup.Function.c_str(), lookup.Line);
 		else
 			TracePrint(output, "    <resolve failed>\n");

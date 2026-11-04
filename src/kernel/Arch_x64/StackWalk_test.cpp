@@ -26,12 +26,16 @@ void StackWalk_test()
 
 	//Through main and the CRT's startup, until the walk leaves this image
 	StackWalk walk(&context, &space);
+	AssertEqual(walk.LookupIp(), context.Rip); //The first frame is looked up at its IP, as a fault's is
 	size_t frames = 0;
 	while (context.Rip >= imageBase && context.Rip < imageBase + imageSize)
 	{
 		Assert(walk.Next(imageBase));
 		frames++;
 		Assert(frames < 64);
+
+		//Each caller is looked up inside its call instruction, not at the return address after it
+		AssertEqual(walk.LookupIp(), context.Rip - 1);
 	}
 	Assert(frames >= 2);
 

@@ -22,7 +22,7 @@ HyperVVideoDriver::HyperVVideoDriver(KDevice& device) :
 bool HyperVVideoDriver::Initialize()
 {
 	//Open the VMBus channel (rings + GPADL happen here).
-	m_channel.Initialize(&m_device.m_channel);
+	m_channel.Initialize(*m_device.VmBus, &m_device.m_channel);
 
 	//1) Negotiate the synthvid protocol version, newest first (matches modern hyperv_fb):
 	//3.5 (Win10/Server2016), 3.2 (Win8.1/Server2012R2), 3.0 (Win7/Server2008R2).

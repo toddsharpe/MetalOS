@@ -24,6 +24,7 @@ enum class KDeviceType
 };
 
 class Driver;
+class VmBusDriver;
 class KDevice
 {
 public:
@@ -97,6 +98,7 @@ public:
 			uint32_t child_relid;
 			uint32_t m_msg_conn_id;
 			HyperV::vmbus_channel_offer_channel m_channel;
+			VmBusDriver* VmBus; //The bus that offered the channel, which creates its GPADLs and opens it
 		};
 	};
 };

@@ -16,7 +16,7 @@ class HyperVChannel
 public:
 	HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize, const ActionContext callback);
 
-	void Initialize(HyperV::vmbus_channel_offer_channel* offerChannel, const CBuffer* buffer = nullptr);
+	void Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_channel* offerChannel, const CBuffer* buffer = nullptr);
 	//TODO(tsharpe): Close (vmbus_close_internal)
 
 	bool SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint32_t flags); //False if the outbound ring is full

@@ -21,7 +21,7 @@ HyperVNic::HyperVNic(KDevice& device) :
 
 bool HyperVNic::Initialize()
 {
-	m_channel.Initialize(&m_device.m_channel);
+	m_channel.Initialize(*m_device.VmBus, &m_device.m_channel);
 	m_device.Class = KDeviceClass::Nic;
 
 	// Step 1: negotiate NVSP protocol version
@@ -42,18 +42,13 @@ bool HyperVNic::Initialize()
 	msg.msg.send_ndis_version.ndis_minor_ver = 30;
 	SendNvsp(msg);
 
-	//Get reference to vmbus, which creates the receive and send buffer GPADLs
-	KDevice* bus = KeGetDevice("\\_SB_.VMOD.VMBS");
-	Assert(bus);
-	VmBusDriver* const vmbus = static_cast<VmBusDriver*>(bus->Driver);
-
 	// Step 3: allocate and register receive buffer
 	const paddr_t recvBufAddr = KePhysicalAlloc(NIC_RECV_BUFFER_PAGES);
 	m_recvBuf = (uint8_t*)KeVirtualMap(recvBufAddr, NIC_RECV_BUFFER_PAGES * Arch::PageSize);
 	Assert(m_recvBuf);
 	memset(m_recvBuf, 0, NIC_RECV_BUFFER_PAGES * Arch::PageSize);
 
-	const uint32_t recvBufGpadl = vmbus->CreateGpadl(m_device.child_relid, recvBufAddr, NIC_RECV_BUFFER_PAGES);
+	const uint32_t recvBufGpadl = m_device.VmBus->CreateGpadl(m_device.child_relid, recvBufAddr, NIC_RECV_BUFFER_PAGES);
 
 	msg = {};
 	msg.header.msg_type = NvspMessageType::SendReceiveBuffer;
@@ -71,7 +66,7 @@ bool HyperVNic::Initialize()
 		Assert(m_sendBuf);
 		memset(m_sendBuf, 0, NIC_SEND_BUFFER_PAGES * Arch::PageSize);
 
-		const uint32_t sendBufGpadl = vmbus->CreateGpadl(m_device.child_relid, sendBufAddr, NIC_SEND_BUFFER_PAGES);
+		const uint32_t sendBufGpadl = m_device.VmBus->CreateGpadl(m_device.child_relid, sendBufAddr, NIC_SEND_BUFFER_PAGES);
 
 		msg = {};
 		msg.header.msg_type = NvspMessageType::SendSendBuffer;

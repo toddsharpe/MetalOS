@@ -246,6 +246,7 @@ void VmBusDriver::OnInterrupt()
 				device->child_relid = offer->child_relid;
 				device->m_msg_conn_id = m_msg_conn_id;
 				device->m_channel = *offer;
+				device->VmBus = this;
 			}
 			break;
 

@@ -226,11 +226,6 @@ paddr_t ResolveImageVA(void* const address)
 	return m_params.KernelAddress + rva;
 }
 
-KDevice* KeGetDevice(const char* const path)
-{
-	return m_deviceTree.GetDevice(CString(path));
-}
-
 //Physical framebuffer descriptor from the loader, for mapping into a process.
 KFramebufferInfo KeGetFramebuffer()
 {

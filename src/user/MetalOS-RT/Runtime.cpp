@@ -51,15 +51,3 @@ uint32_t GetCurrentThreadId()
 	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
 	return teb->ThreadId;
 }
-
-uint32_t GetLastError()
-{
-	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
-	return teb->Error;
-}
-
-void SetLastError(uint32_t errorCode)
-{
-	ThreadEnvironmentBlock* teb = Runtime::GetTEB();
-	teb->Error = errorCode;
-}

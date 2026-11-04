@@ -78,8 +78,7 @@ struct ThreadEnvironmentBlock
 	void *Arg;
 	HThread Handle;
 	uint32_t ThreadId;
-	uint32_t Error;
-	int Errno; //Owned by MetalOS-CRT; separate from RT's last error
+	int Errno; //Owned by MetalOS-CRT
 };
 
 enum class DllReason

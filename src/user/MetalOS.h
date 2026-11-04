@@ -45,8 +45,6 @@ extern "C"
 	uintptr_t GetProcAddress(HModule hModule, const char* lpProcName);
 	SyscallResult GetProcessInfo(ProcessInfo* info);
 	uint32_t GetCurrentThreadId();
-	uint32_t GetLastError();
-	void SetLastError(uint32_t errorCode);
 	void DebugBreak();
 	void DebugPrintf(const char* format, ...);
 	void CDebugPrintf(const bool enabled, const char* format, ...);

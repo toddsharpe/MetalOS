@@ -91,4 +91,11 @@ void Arena_test()
 		Assert(!wrap.Reserve(SIZE_MAX - 1));
 		Assert(wrap.Allocate(64));
 	}
+
+	//Copy into a full arena comes back empty instead of writing to null
+	{
+		uint8_t small[16];
+		PreallocatedArena full(small);
+		Assert(full.Copy({"0123456789abcdef", 16}).Length == 0);
+	}
 }

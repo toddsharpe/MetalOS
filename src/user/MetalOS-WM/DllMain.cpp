@@ -14,15 +14,15 @@ namespace
 
 	struct ClientWindow
 	{
-		uint32_t Id;
+		uint16_t Id;
 		void* Surface;
 	};
 
 	void* g_channel = nullptr;
-	uint32_t g_nextWindowId = 0;
+	uint16_t g_nextWindowId = 0; //ids are never reused and at most MaxWindows are made, so they stay small and nonzero
 	StaticVector<ClientWindow, MaxWindows> g_windows;
 
-	ClientWindow* Find(const uint32_t id)
+	ClientWindow* Find(const uint16_t id)
 	{
 		for (ClientWindow& window : g_windows)
 		{
@@ -31,8 +31,6 @@ namespace
 		}
 		return nullptr;
 	}
-
-	uint32_t ToId(const HWindow handle) { return (uint32_t)(uintptr_t)handle; }
 }
 
 extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame, const char* title, bool showTitle)
@@ -54,7 +52,7 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 	if (ShareHandle((Handle)hSurface, &token) != SyscallResult::Success)
 		return SyscallResult::Failed;
 
-	const uint32_t id = ++g_nextWindowId;
+	const uint16_t id = ++g_nextWindowId;
 	const ClientWindow window =
 	{
 		.Id = id,
@@ -84,7 +82,7 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 
 extern "C" void* GetWindowSurface(HWindow handle)
 {
-	ClientWindow* const window = Find(ToId(handle));
+	ClientWindow* const window = Find(WindowId(handle));
 	return window ? window->Surface : nullptr;
 }
 

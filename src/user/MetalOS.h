@@ -144,3 +144,9 @@ extern "C"
 	SyscallResult ShareHandle(Handle handle, uint64_t* token);
 	SyscallResult ClaimHandle(uint64_t token, Handle* handle);
 }
+
+//The id AllocWindow's handle stands for, which the WM puts in Header.Window of every message for that window
+inline uint16_t WindowId(const HWindow window)
+{
+	return (uint16_t)(uintptr_t)window;
+}

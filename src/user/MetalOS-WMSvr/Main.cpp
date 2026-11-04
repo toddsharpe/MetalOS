@@ -28,7 +28,7 @@ namespace
 	struct WmWindow
 	{
 		Connection* Owner;
-		uint32_t WindowId;         //unique within its connection
+		uint16_t WindowId;         //unique within its connection; messages for the window carry it
 		void* Surface;             //mapped shared surface (packed Width*Height pixels); null = free slot
 		HSharedMem SurfaceHandle;  //our handle to the surface; CloseHandle releases it
 		Rectangle Rect;            //position + size on screen
@@ -93,21 +93,22 @@ namespace
 		return nullptr;
 	}
 
-	//Send a message to a connection's WM->app ring; a droppable one (a mouse move or paint, which the next one replaces) only while the app keeps up
-	void Post(Connection* const conn, const Message& message, const bool droppable = false)
+	//Send a message for a window to its owner's WM->app ring, stamped with the window's id; a droppable one (a mouse move or paint, which the next one replaces) only while the app keeps up
+	void Post(const WmWindow* const window, Message message, const bool droppable = false)
 	{
-		SharedRing<Message> ring = Wm::Channel::Replies(conn->Region);
+		SharedRing<Message> ring = Wm::Channel::Replies(window->Owner->Region);
 		if (droppable && ring.Count() >= DroppableBacklog)
 			return;
+		message.Header.Window = window->WindowId;
 		ring.Enqueue(message);
 	}
 
 	//Send a message that carries only its type (e.g. PaintEvent, CloseEvent)
-	void PostEvent(Connection* const conn, const MessageType type, const bool droppable = false)
+	void PostEvent(const WmWindow* const window, const MessageType type, const bool droppable = false)
 	{
 		Message message = {};
 		message.Header.MessageType = type;
-		Post(conn, message, droppable);
+		Post(window, message, droppable);
 	}
 
 	void AcceptConnections()
@@ -219,7 +220,7 @@ namespace
 	//Ask the owning app to close (it exits its message loop), then drop the window.
 	void CloseWindow(WmWindow* const window)
 	{
-		PostEvent(window->Owner, MessageType::CloseEvent);
+		PostEvent(window, MessageType::CloseEvent);
 		DestroyWindow(window);
 	}
 
@@ -496,9 +497,9 @@ namespace
 				}
 			}
 
-			//Route input to the focused window's owner
+			//Route input to the focused window
 			if (g_focus)
-				Post(g_focus->Owner, message, move);
+				Post(g_focus, message, move);
 		}
 	}
 
@@ -547,7 +548,7 @@ namespace
 		for (WmWindow& window : g_windows)
 		{
 			if (window.Surface)
-				PostEvent(window.Owner, MessageType::PaintEvent, true);
+				PostEvent(&window, MessageType::PaintEvent, true);
 		}
 	}
 }

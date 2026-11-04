@@ -1,6 +1,5 @@
 #include "core_crt/stdio.h"
 #include "core_crt/stdarg.h"
-#include "core_crt/wchar.h"
 
 // Internal protypes
 int kvprintf(char const *fmt, void (*func)(int, void *), void *arg, int radix, va_list ap);
@@ -354,7 +353,8 @@ int kvprintf(char const *fmt, void (*func)(int, void *), void *arg, int radix, v
 				if (wp == NULL)
 					wp = L"(null)";
 				if (!dot)
-					n = (int)wcslen(wp);
+					for (n = 0; wp[n]; n++)
+						continue;
 				else
 					for (n = 0; n < dwidth && wp[n]; n++)
 						continue;

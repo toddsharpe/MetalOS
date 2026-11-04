@@ -2,6 +2,7 @@
 
 //Core crt
 #include "core_crt/core_crt.c"
+#include "core_crt/wchar.c"
 
 //Platform
 #include "kernel/HyperV/Interrupts.cpp"

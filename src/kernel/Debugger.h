@@ -19,8 +19,6 @@ public:
 	void AddModule(const KModule& library);
 
 	void DebuggerEvent(Arch::InterruptVector vector, Arch::InterruptFrame& frame);
-	void KdpDprintf(const char* format, ...);
-	void VKdpDprintf(const char* format, va_list args);
 	bool Enabled();
 	bool HostPresent();
 

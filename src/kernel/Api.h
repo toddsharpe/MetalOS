@@ -144,7 +144,6 @@ enum class AllocType
 {
 	Kernel,
 	Acpi,
-	Shared,
 	Malloc,
 	User
 };

@@ -594,23 +594,42 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 	{
 		case UObjectType::Pipe:
 		{
-			//Create read wait
-			KPipeSignal signal(*obj->Pipe, KPipeOp::Write, bufferSize);
-			KPredicate wait(&KPipe::EventSignal, &signal);
+			KPipe& pipe = *obj->Pipe;
+			const uint8_t* const data = static_cast<const uint8_t*>(buffer);
 
-			//Wait for pipe signal
-			KWaitResult result = KeWait(wait);
-			Assert(result == KWaitResult::Signaled);
+			//A write that fits in the pipe goes in whole, a larger one in pieces as the reader drains it
+			const size_t needed = (bufferSize <= pipe.Capacity()) ? bufferSize : 1;
 
-			//The wait also ends when the reader is gone, with possibly no room to write
-			if (obj->Pipe->IsBroken())
-				return SyscallResult::BrokenPipe;
+			//Writes are queued in arrival order and each finishes before the next starts, so writers' bytes never interleave
+			UThread& writer = Scheduler::GetUThread();
+			pipe.QueueWriter(writer.PipeWriteLink);
+			writer.PipeWriteQueue = &pipe;
 
-			//Write
-			size_t bytes = 0;
-			if (!obj->Pipe->Write(buffer, bufferSize, bytes))
-				return SyscallResult::Failed;
-			return SyscallResult::Success;
+			size_t written = 0;
+			while (written < bufferSize)
+			{
+				//Wait for this write's turn and for room
+				KPipeSignal signal(pipe, KPipeOp::Write, needed, &writer.PipeWriteLink);
+				KPredicate wait(&KPipe::EventSignal, &signal);
+				KWaitResult result = KeWait(wait);
+				Assert(result == KWaitResult::Signaled);
+
+				//The wait also ends when the reader is gone, with possibly no room to write
+				if (pipe.IsBroken())
+					break;
+
+				size_t bytes = 0;
+				const size_t piece = Min(bufferSize - written, pipe.Space());
+				Assert(pipe.Write(data + written, piece, bytes));
+				written += bytes;
+			}
+
+			pipe.DequeueWriter(writer.PipeWriteLink);
+			writer.PipeWriteQueue = nullptr;
+
+			if (bytesWritten)
+				*bytesWritten = written;
+			return (written == bufferSize) ? SyscallResult::Success : SyscallResult::BrokenPipe;
 		}
 		break;
 

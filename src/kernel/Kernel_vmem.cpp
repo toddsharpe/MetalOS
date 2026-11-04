@@ -91,7 +91,13 @@ namespace _VMEM
 			const paddr_t paddr = addresses[i];
 			Assert(paddr)
 			const uintptr_t virt = reserved + (i << Arch::PageShift);
-			Assert(process.Tables.MapPages(virt, paddr, 1, attributes));
+			if (!process.Tables.MapPages(virt, paddr, 1, attributes))
+			{
+				//No page for a table: unmap what was mapped, leaving the borrowed pages with the caller
+				Assert(process.Tables.UnmapPages(reserved, i));
+				Assert(process.Space.Free(reserved, count));
+				return nullptr;
+			}
 		}
 
 		return (void*)reserved;

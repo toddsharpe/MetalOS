@@ -19,7 +19,7 @@ public:
 
 	constexpr KPipe(const size_t size);
 
-	void Init();
+	bool Init(); //False when out of memory, with nothing left allocated
 	void Free(); //Undoes Init: unmaps both views and frees the pages behind them
 
 	bool Read(void* const buffer, const size_t length, size_t& bytesRead);
@@ -44,6 +44,8 @@ public:
 	KRef Waiters; //Threads in a syscall that can block on it, which keep it alive after its last handle closes
 
 private:
+	static constexpr size_t MaxPages = 16; //Buffer size limit; Init lists each page twice for the double map
+
 	bool EventSignal(const KPipeOp op, const size_t count, const ListEntry* const writer);
 	bool IsEmpty() const;
 

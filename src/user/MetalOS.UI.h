@@ -5,17 +5,18 @@
 //Input and window message types only; the kernel's input drivers include this, so no UI or drawing code
 typedef uint16_t VirtualKey;
 
-enum class MessageType
+enum class MessageType : uint16_t
 {
 	KeyEvent,
 	MouseEvent,
 	PaintEvent,
-	CloseEvent, //WM asked the window to close; the app should exit
+	CloseEvent, //WM asked the window to close; an app whose last window closes should exit
 };
 
 struct MessageHeader
 {
 	MessageType MessageType;
+	uint16_t Window; //the window the WM sent it for (see WindowId in MetalOS.h); 0 in the kernel's input ring
 };
 
 struct KeyEvent

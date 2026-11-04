@@ -28,7 +28,7 @@ namespace Wm
 	struct Request
 	{
 		Op       Code;
-		uint32_t WindowId;         //client-assigned, unique per connection
+		uint16_t WindowId;         //client-assigned, unique per connection, nonzero; messages for the window carry it in Header.Window
 		Graphics::Rectangle Rect;  //AllocWindow position+size
 		uint64_t SurfaceGrant;     //AllocWindow: capability token for the shared surface (Rect gives its size)
 		char     Title[MaxTitle];  //AllocWindow: window title (null-terminated), for the taskbar

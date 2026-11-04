@@ -38,11 +38,14 @@ public:
 		Assert(Frame.Buffer);
 	}
 
+	//An app with more than one window runs its own loop instead, picking the window by message.Header.Window
 	void Run()
 	{
 		Message message = {};
 		while (GetMessage(&message) == SyscallResult::Success)
 		{
+			if (message.Header.Window != WindowId(m_handle))
+				continue; //for another of the app's windows, which this loop doesn't serve
 			if (message.Header.MessageType == MessageType::CloseEvent)
 				break; //WM asked us to close; exit the message loop so main() can return
 			if (!m_callback(*this, message))
@@ -63,6 +66,11 @@ public:
 			OnMouse(message.MouseEvent);
 			break;
 		}
+	}
+
+	HWindow Handle() const
+	{
+		return m_handle;
 	}
 
 	Graphics::FrameBuffer Frame;

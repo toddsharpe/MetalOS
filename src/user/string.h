@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core_crt/string.h"
+
 #ifdef __cplusplus
 extern "C"
 {

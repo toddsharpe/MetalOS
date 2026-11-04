@@ -2,6 +2,7 @@
 
 #include "user/stdlib.h"
 #include "user/MetalOS.h"
+#include "user/MetalOS-CRT/errno.cpp"
 
 Heap CrtHeap = {};
 
@@ -16,9 +17,12 @@ extern "C"
 	{
 		//A wrapped-around size would hand back a block smaller than asked for
 		if (_Size != 0 && _Count > (size_t)-1 / _Size)
+		{
+			errno = ENOMEM;
 			return nullptr;
+		}
 
-		void* ptr = CrtHeap.Allocate(_Count * _Size);
+		void* ptr = malloc(_Count * _Size);
 		if (ptr)
 			memset(ptr, 0, _Count * _Size);
 		return ptr;
@@ -26,12 +30,25 @@ extern "C"
 
 	void* realloc(void* _Block, size_t _Size)
 	{
-		return CrtHeap.Reallocate(_Block, _Size);
+		//Reallocating a block to nothing frees it, and that nullptr isn't a failure
+		if (_Block && _Size == 0)
+		{
+			CrtHeap.Deallocate(_Block);
+			return nullptr;
+		}
+
+		void* const moved = CrtHeap.Reallocate(_Block, _Size);
+		if (!moved)
+			errno = ENOMEM;
+		return moved;
 	}
 
 	void* malloc(size_t _Size)
 	{
-		return CrtHeap.Allocate(_Size);
+		void* const ptr = CrtHeap.TryAllocate(_Size);
+		if (!ptr)
+			errno = ENOMEM;
+		return ptr;
 	}
 
 	void free(void* _Block)

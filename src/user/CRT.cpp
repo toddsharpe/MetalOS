@@ -10,14 +10,19 @@ int __cdecl _purecall(void)
 	return 0;
 }
 
+//Without exceptions new has no way to fail, so it asserts where malloc returns nullptr
 void* operator new(size_t n)
 {
-	return malloc(n);
+	void* const p = malloc(n);
+	Assert(p);
+	return p;
 }
 
 void* operator new[](size_t n)
 {
-	return malloc(n);
+	void* const p = malloc(n);
+	Assert(p);
+	return p;
 }
 
 void operator delete(void* p, size_t count)

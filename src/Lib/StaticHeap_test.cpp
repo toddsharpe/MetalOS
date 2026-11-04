@@ -187,4 +187,50 @@ void StaticHeap_test()
 		Assert(b != nullptr && b != a);
 		AssertEqual(heap.InUse(), (size_t)48);
 	}
+
+	// TryAllocate returns nullptr when nothing free fits, and the heap stays usable
+	{
+		StaticHeap<256> heap;
+		void *a = heap.TryAllocate(128);
+		Assert(a != nullptr);
+		Assert(heap.TryAllocate(128) == nullptr);
+		AssertEqual(heap.InUse(), (size_t)128);
+
+		heap.Deallocate(a);
+		Assert(heap.TryAllocate(128) == a);
+	}
+
+	// TryAllocate rejects sizes that aligning would wrap around
+	{
+		StaticHeap<256> heap;
+		Assert(heap.TryAllocate((size_t)-1) == nullptr);
+		Assert(heap.TryAllocate((size_t)-1 - Heap::Alignment + 2) == nullptr);
+		AssertEqual(heap.InUse(), (size_t)0);
+	}
+
+	// TryAllocate on a heap that was never opened returns nullptr
+	{
+		Heap heap;
+		Assert(heap.TryAllocate(16) == nullptr);
+	}
+
+	// A Reallocate that doesn't fit returns nullptr and keeps the block and its bytes
+	{
+		StaticHeap<256> heap;
+		uint8_t *a = static_cast<uint8_t *>(heap.Allocate(64));
+		for (uint8_t i = 0; i < 64; i++)
+			a[i] = i;
+
+		Assert(heap.Reallocate(a, 160) == nullptr);
+		AssertEqual(heap.InUse(), (size_t)64);
+		for (uint8_t i = 0; i < 64; i++)
+			AssertEqual(a[i], i);
+	}
+
+	// Reallocate(nullptr, size) that doesn't fit returns nullptr
+	{
+		StaticHeap<256> heap;
+		Assert(heap.Reallocate(nullptr, 240) == nullptr);
+		AssertEqual(heap.InUse(), (size_t)0);
+	}
 }

@@ -7,14 +7,26 @@
 extern KProcess m_process;
 extern DirectUart m_uart;
 extern StaticArena<TempArenaSize> m_tempArena;
+extern LoaderParams BootParams;
 
 namespace
 {
 	struct LoadedPdb
 	{
 		PdbFile* File; //Null when the module has no PDB to load, so its frames print without symbols
-		void* Image; //KeLoadFile copy the parser reads from, freed after the walk
+		void* Image; //What the parser reads: the boot-mapped kernel PDB, or a KeLoadFile copy freed after the walk
 	};
+
+	//The bootloader maps the kernel's PDB, so kernel frames resolve without the RAM drive, the storage driver or an allocation
+	void* LoadPdb(const KModule& module)
+	{
+		if (module.ImageBase == (void*)KernelBase && BootParams.PdbSize != 0)
+			return (void*)KernelPdb;
+
+		//Get PDB name (null without a CodeView debug entry), then load it if it's on the drive
+		const char* const pdbName = GetFileName(WinPE::GetPdbName(module.ImageBase));
+		return pdbName ? KeLoadFile(pdbName) : nullptr;
+	}
 }
 
 void TracePrint(KPipe* const output, const char* const format, ...)
@@ -62,11 +74,8 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 		LoadedPdb pdb = {};
 		if (!pdbs.Get(module, pdb))
 		{
-			//Get PDB name (null without a CodeView debug entry)
-			const char* const pdbName = GetFileName(WinPE::GetPdbName(module->ImageBase));
-
-			//Load PDB into memory and parse it, if it's on the drive
-			pdb.Image = pdbName ? KeLoadFile(pdbName) : nullptr;
+			//Parse the module's PDB, if it has one
+			pdb.Image = LoadPdb(*module);
 			if (pdb.Image)
 			{
 				pdb.File = arena.Allocate<PdbFile>();
@@ -92,7 +101,7 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 
 	for (const auto& entry : pdbs)
 	{
-		if (entry.Value.Image)
+		if (entry.Value.Image && entry.Value.Image != (void*)KernelPdb)
 			KeVirtualFree(entry.Value.Image);
 	}
 }

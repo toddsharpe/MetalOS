@@ -18,6 +18,7 @@
 #include "Lib/LinkedList_test.cpp"
 #include "Lib/IntrusiveList_test.cpp"
 #include "Lib/TextBuffer_test.cpp"
+#include "Lib/Path_test.cpp"
 #include "WinPE_test.cpp"
 #include "kernel/Pdb/Pdb_test.cpp"
 
@@ -45,6 +46,7 @@ int main()
 	Test(LinkedList);
 	Test(IntrusiveList);
 	Test(TextBuffer);
+	Test(Path);
 	Test(WinPE);
 	Test(Pdb);
 

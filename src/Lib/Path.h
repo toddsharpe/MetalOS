@@ -19,8 +19,8 @@ void GetDirectoryName(const wchar_t* source, wchar_t* destination)
 	//Copy to destination
 	wcsncpy(destination, source, marker);
 
-	//Add null
-	destination[marker + 1] = L'\0';
+	//Add null, since wcsncpy doesn't when the source is longer than marker
+	destination[marker] = L'\0';
 }
 
 template<typename T>

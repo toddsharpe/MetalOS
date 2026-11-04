@@ -5,8 +5,6 @@ EXPORTS
 	GetProcAddress
 	GetProcessInfo
 	GetCurrentThreadId
-	GetLastError
-	SetLastError
 	DebugBreak
 	DebugPrintf
 	CDebugPrintf

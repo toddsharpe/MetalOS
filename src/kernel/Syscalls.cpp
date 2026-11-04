@@ -352,9 +352,9 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 			return status;
 	}
 
-	//Copy string locally to automatically crop it at max bytes
+	//Copy string locally to automatically crop it at max bytes, reading only bytes that are mapped
 	StaticString<128> copy = {};
-	copy.AppendClip(commandLine);
+	copy.AppendClip(commandLine, UserStringLength(proc, commandLine, copy.Capacity - 1));
 
 	UProcess* created = KeCreateProcess(copy.c_str());
 	if (!created)
@@ -510,8 +510,9 @@ HFile CreateFile(const char* path, const FileAccess access)
 	if (!uFile)
 		return nullptr;
 
+	//The pointer check covers only the first byte, so bound the copy by what's mapped
 	StaticString<128> copy;
-	copy.AppendClip(path);
+	copy.AppendClip(path, UserStringLength(proc, path, copy.Capacity - 1));
 	copy.ToLower();
 
 	const bool result = KeCreateFile(uFile->File, copy.c_str(), ToAccess(access));

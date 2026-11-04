@@ -1,9 +1,8 @@
 #pragma once
 
-//Include UI libraries
-#include "UI/Button.h"
-#include "UI/Label.h"
+#include "core_crt/stdint.h"
 
+//Input and window message types only; the kernel's input drivers include this, so no UI or drawing code
 typedef uint16_t VirtualKey;
 
 enum class MessageType

@@ -1,6 +1,7 @@
 #include "user/MetalOS.h"
-#include "user/MetalOS.UI.h"
 #include "user/GUI.h"
+#include "UI/Button.h"
+#include "UI/Label.h"
 #include "user/CRT.cpp"
 
 using namespace Graphics;

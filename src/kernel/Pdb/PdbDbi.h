@@ -29,18 +29,26 @@ public:
 
 	}
 
-	void Initialize(const void* const image, Arena& arena)
+	//False for a DBI stream this doesn't read (too short, another version or machine, no symbol records), an image whose first section isn't .text, or a full arena
+	bool Initialize(const void* const image, Arena& arena)
 	{
+		if (m_stream.Size < sizeof(m_header))
+			return false;
 		Assert(m_stream.Read(&m_header));
-		AssertEqual(m_header.VersionSignature, -1);
-		Assert(m_header.VersionHeader == DbiStreamVersion::V70);
-		Assert(m_header.Machine == 0x8664);
+		if (m_header.VersionSignature != -1 || m_header.VersionHeader != DbiStreamVersion::V70 || m_header.Machine != 0x8664)
+			return false;
 
+		//The PDB numbers sections from 1 and lines are only looked up in section 1, which has to be the image's .text
+		if (WinPE::GetNtHeaders(image)->FileHeader.NumberOfSections < TextSection)
+			return false;
 		m_textSection = WinPE::GetPESection(image, TextSection - 1);
-		Assert(strcmp((char*)m_textSection->Name, ".text") == 0);
+		if (memcmp(m_textSection->Name, ".text", sizeof(".text")) != 0)
+			return false;
 
+		if (!m_file.HasStream(m_header.SymRecordStreamIndex))
+			return false;
 		MsfStream stream = m_file.GetStream(m_header.SymRecordStreamIndex);
-		m_publics.Load(stream, arena);
+		return m_publics.Load(stream, arena);
 	}
 
 	uint32_t GetAge() const
@@ -74,6 +82,9 @@ public:
 		m_stream.SkipString();
 		m_stream.SkipString();
 
+		//A module whose stream the directory doesn't have (0xFFFF for none) has no lines to read
+		if (!m_file.HasStream(info.ModuleSymStream))
+			return false;
 		MsfStream& moduleStream = m_file.GetStream(info.ModuleSymStream);
 		if (moduleStream.Read<uint32_t>() != SymbolsSignatureC13)
 			return false;

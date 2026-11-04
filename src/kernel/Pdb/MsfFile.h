@@ -30,18 +30,28 @@ public:
 		
 	}
 
-	void Initialize(Arena& arena)
+	//False for a file that isn't an MSF file this can read (or is cut short), or when the arena can't hold its streams
+	bool Initialize(Arena& arena)
 	{
 		ListInitializeHead(m_streams);
 		
 		//Set header
 		m_header = static_cast<const Header*>(m_image);
 		
-		AssertEqual(memcmp((void*)m_image, &Magic, sizeof(Magic)), 0);
+		if (memcmp((void*)m_image, &Magic, sizeof(Magic)) != 0)
+			return false;
+
+		//Every offset is a block number times the block size, and the directory's block numbers fill at most the one block map block
+		const uint32_t blockSize = m_header->BlockSize;
+		if (blockSize < MinBlockSize || blockSize > MaxBlockSize || (blockSize & (blockSize - 1)) != 0)
+			return false;
+		if (m_header->NumDirectoryBytes < sizeof(uint32_t) || DivRoundUp(m_header->NumDirectoryBytes, blockSize) > blockSize / sizeof(uint32_t))
+			return false;
 
 		//Create directory
 		void* allocated = arena.Allocate(sizeof(MsfStream));
-		Assert(allocated);
+		if (!allocated)
+			return false;
 		MsfStream* directory = new (allocated) MsfStream(m_header->BlockSize, Read, this);
 		directory->Size = m_header->NumDirectoryBytes;
 
@@ -51,14 +61,17 @@ public:
 
 		//Read directory stream contents
 		const uint32_t numStreams = directory->Read<uint32_t>();
-		AssertNotEqual(numStreams, 0);
+		if (numStreams == 0 || ((uint64_t)numStreams + 1) * sizeof(uint32_t) > m_header->NumDirectoryBytes)
+			return false;
 
 		//Load stream sizes
 		//NOTE(tsharpe): PDF observed with stream size of 0xFFFFFFFF. Not sure what it means, skip for now.
+		uint64_t blockNumbers = 0;
 		for (size_t i = 0; i < numStreams; i++)
 		{
 			void* mem = arena.Allocate(sizeof(MsfStream));
-			Assert(mem);
+			if (!mem)
+				return false;
 			MsfStream* stream = new (mem) MsfStream(m_header->BlockSize, Read, this);
 			ListInsertTail(m_streams, stream->Link);
 			
@@ -69,8 +82,13 @@ public:
 			{
 				stream->Size = streamSize;
 				stream->BlockCount = DivRoundUp(streamSize, m_header->BlockSize);
+				blockNumbers += stream->BlockCount;
 			}
 		}
+
+		//The block numbers of every stream must be in the directory too
+		if (((uint64_t)numStreams + 1 + blockNumbers) * sizeof(uint32_t) > m_header->NumDirectoryBytes)
+			return false;
 
 		//Each stream's block numbers follow the sizes, stream by stream; a stream reads them from the directory as it needs them
 		ListForEach<MsfStream, MsfStream*>(m_streams, [](const ListEntry& entry, MsfStream& item, MsfStream* ctx)
@@ -81,6 +99,17 @@ public:
 			item.SetBlocks(*ctx, ctx->Position());
 			ctx->Skip<uint32_t>((uint32_t)item.BlockCount);
 		}, directory);
+		return true;
+	}
+
+	//Whether the directory holds a (valid) stream at index, which GetStream needs, so an index read from the PDB is checked first
+	bool HasStream(const uint32_t index) const
+	{
+		if (index >= m_streams.Count)
+			return false;
+
+		const MsfStream* const stream = ListGet<MsfStream>(m_streams, index);
+		return stream && !stream->IsInvalid;
 	}
 
 	MsfStream& GetStream(const uint32_t index)
@@ -94,8 +123,12 @@ public:
 		return *stream;
 	}
 
+	//A block number past the file's last block (from a corrupt directory, or a read past a stream's end) reads as zeros rather than past the file
 	void* GetBlock(const uint32_t blockNumber) const
 	{
+		if (blockNumber >= m_header->NumBlocks)
+			return (void*)ZeroBlock;
+
 		return (void*)(((uintptr_t)m_header) + (uintptr_t)blockNumber * m_header->BlockSize);
 	}
 
@@ -123,6 +156,9 @@ public:
 
 private:
 	static constexpr char Magic[0x1e] = "Microsoft C/C++ MSF 7.00\r\n\x1a\x44\x53";
+	static constexpr uint32_t MinBlockSize = 0x200;
+	static constexpr uint32_t MaxBlockSize = 0x1000;
+	static constexpr uint8_t ZeroBlock[MaxBlockSize] = {};
 
 	struct Header
 	{

@@ -279,6 +279,108 @@ static void MsfStreams_test(Arena& arena)
 	free(image);
 }
 
+//The MSF superblock's fields after its magic, as PdbOpen_test corrupts them
+struct PdbOpen_testHeader
+{
+	uint32_t BlockSize;
+	uint32_t FreeBlockMapBlock;
+	uint32_t NumBlocks;
+	uint32_t NumDirectoryBytes;
+	uint32_t Unknown;
+	uint32_t BlockMapAddr;
+};
+
+//Open on a corrupted copy of pdb fails instead of asserting; corrupt changes the copy (and may change the image it's opened with)
+template <typename Corrupt>
+static bool PdbOpen_test_open(const void* const pdb, const size_t pdbSize, Arena& arena, Corrupt corrupt)
+{
+	uint8_t* const copy = static_cast<uint8_t*>(malloc(pdbSize));
+	Assert(copy);
+	memcpy(copy, pdb, pdbSize);
+
+	//A copy of this whole image, so its headers can be corrupted too
+	const size_t imageSize = WinPE::GetSizeOfImage(&__ImageBase);
+	uint8_t* const image = static_cast<uint8_t*>(malloc(imageSize));
+	Assert(image);
+	memcpy(image, &__ImageBase, imageSize);
+
+	corrupt(copy, MakePointer<PdbOpen_testHeader*>(copy, 0x20), MakePointer<IMAGE_NT_HEADERS64*>(image, __ImageBase.e_lfanew));
+
+	arena.Reset();
+	PdbFile file;
+	const bool opened = file.Open(copy, image, imageSize, arena);
+	PdbLookup lookup = {};
+	Assert(opened || !file.Resolve((uint32_t)((uintptr_t)&WinPE_test_export - (uintptr_t)&__ImageBase), lookup));
+
+	free(image);
+	free(copy);
+	return opened;
+}
+
+//Every way Open can fail on a bad or too large PDB ends in false, never in an assert
+static void PdbOpen_test(const void* const pdb, uint8_t* const storage, const size_t storageSize)
+{
+	const PdbOpen_testHeader& header = *MakePointer<const PdbOpen_testHeader*>(pdb, 0x20);
+	const size_t pdbSize = (size_t)header.NumBlocks * header.BlockSize;
+	Arena arena(storage, storageSize);
+
+	//Untouched, as a control
+	Assert(PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t*, PdbOpen_testHeader*, IMAGE_NT_HEADERS64*) {}));
+
+	//Not an MSF file
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t* copy, PdbOpen_testHeader*, IMAGE_NT_HEADERS64*) { copy[0] ^= 1; }));
+
+	//A block size of zero (which once divided by zero), and one that isn't a power of two
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t*, PdbOpen_testHeader* msf, IMAGE_NT_HEADERS64*) { msf->BlockSize = 0; }));
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t*, PdbOpen_testHeader* msf, IMAGE_NT_HEADERS64*) { msf->BlockSize = 0x600; }));
+
+	//A directory too small for its stream count, too big for the block map, or (from a bad block map) read from past the file's blocks
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t*, PdbOpen_testHeader* msf, IMAGE_NT_HEADERS64*) { msf->NumDirectoryBytes = 2; }));
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t*, PdbOpen_testHeader* msf, IMAGE_NT_HEADERS64*) { msf->NumDirectoryBytes = msf->BlockSize * msf->BlockSize; }));
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t*, PdbOpen_testHeader* msf, IMAGE_NT_HEADERS64*) { msf->BlockMapAddr = msf->NumBlocks; }));
+
+	//No streams, more streams than the directory holds, and too few for a DBI stream
+	static constexpr auto SetStreamCount = [](uint8_t* copy, const PdbOpen_testHeader* msf, const uint32_t count)
+	{
+		const uint32_t directoryBlock = *MakePointer<const uint32_t*>(copy, (size_t)msf->BlockMapAddr * msf->BlockSize);
+		*MakePointer<uint32_t*>(copy, (size_t)directoryBlock * msf->BlockSize) = count;
+	};
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t* copy, PdbOpen_testHeader* msf, IMAGE_NT_HEADERS64*) { SetStreamCount(copy, msf, 0); }));
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t* copy, PdbOpen_testHeader* msf, IMAGE_NT_HEADERS64*) { SetStreamCount(copy, msf, 0x7FFFFFFF); }));
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t* copy, PdbOpen_testHeader* msf, IMAGE_NT_HEADERS64*) { SetStreamCount(copy, msf, 3); }));
+
+	//A DBI stream of another version (its header's second dword) or machine (at 58)
+	static constexpr auto CorruptDbi = [](uint8_t* copy, const size_t offset)
+	{
+		static uint8_t streams[1 << 20];
+		Arena streamArena(streams, sizeof(streams));
+		MsfFile file(copy);
+		Assert(file.Initialize(streamArena));
+		const uint32_t block = file.GetStream(3).GetBlockNumber(0);
+		static_cast<uint8_t*>(file.GetBlock(block))[offset] ^= 1;
+	};
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t* copy, PdbOpen_testHeader*, IMAGE_NT_HEADERS64*) { CorruptDbi(copy, 4); }));
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t* copy, PdbOpen_testHeader*, IMAGE_NT_HEADERS64*) { CorruptDbi(copy, 58); }));
+
+	//An image whose first section isn't .text, or that has none
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t*, PdbOpen_testHeader*, IMAGE_NT_HEADERS64* nt) { IMAGE_FIRST_SECTION(nt)->Name[1] = 'T'; }));
+	Assert(!PdbOpen_test_open(pdb, pdbSize, arena, [](uint8_t*, PdbOpen_testHeader*, IMAGE_NT_HEADERS64* nt) { nt->FileHeader.NumberOfSections = 0; }));
+
+	//Arenas too small for the PDB, running out at each stage of Open (its streams, the DBI, the publics table, the names), down to one allocation short
+	arena.Reset();
+	Assert(PdbFile().Open(pdb, &__ImageBase, WinPE::GetSizeOfImage(&__ImageBase), arena));
+	const size_t needed = (size_t)(static_cast<uint8_t*>(arena.Allocate(1)) - storage);
+	for (size_t size = 0; size < needed; size = (size < 0x1000) ? size + 0x10 : size + needed / 64)
+	{
+		Arena small(storage, size);
+		Assert(!PdbFile().Open(pdb, &__ImageBase, WinPE::GetSizeOfImage(&__ImageBase), small));
+	}
+	Arena exact(storage, needed);
+	Assert(PdbFile().Open(pdb, &__ImageBase, WinPE::GetSizeOfImage(&__ImageBase), exact));
+	Arena tight(storage, needed - 0x10);
+	Assert(!PdbFile().Open(pdb, &__ImageBase, WinPE::GetSizeOfImage(&__ImageBase), tight));
+}
+
 void Pdb_test()
 {
 	//Symbolize a function in this test executable from its own PDB, the same path the kernel's stack walker takes
@@ -369,6 +471,8 @@ void Pdb_test()
 
 	arena.Reset();
 	MsfStreams_test(arena);
+
+	PdbOpen_test(pdb, storage, ArenaSize);
 
 	free(storage);
 	free(pdb);

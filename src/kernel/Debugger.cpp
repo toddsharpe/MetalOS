@@ -111,21 +111,6 @@ void Debugger::DebuggerEvent(Arch::InterruptVector vector, Arch::InterruptFrame&
 	Printf("Debugger Event: %d\n", handled);
 }
 
-void Debugger::KdpDprintf(const char* format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	
-	VKdpDprintf(format, args);
-
-	va_end(args);
-}
-
-void Debugger::VKdpDprintf(const char* format, va_list args)
-{
-	VaKdpDprintf(format, args);
-}
-
 bool Debugger::Enabled()
 {
 	return KdDebuggerEnabled;

@@ -17,7 +17,7 @@ public:
 	HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize, const ActionContext callback);
 
 	void Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_channel* offerChannel);
-	//TODO(tsharpe): Close (vmbus_close_internal)
+	void Close(VmBusDriver& vmbus); //Undoes Initialize (vmbus_close_internal); the rings are freed only once the host releases their GPADL
 
 	bool SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint32_t flags); //False if the outbound ring is full
 
@@ -53,5 +53,7 @@ private:
 
 	HyperV::vmbus_channel_offer_channel* m_channel;
 	uint32_t m_gpadlHandle;
+	paddr_t m_address; //both rings' physical pages, outbound first
+	size_t m_pageCount;
 };
 

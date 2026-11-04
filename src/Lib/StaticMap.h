@@ -49,6 +49,18 @@ public:
 		return true;
 	}
 
+	//Moves the last entry into the removed one's slot, so order isn't kept
+	bool Remove(const TKey key)
+	{
+		size_t index = 0;
+		if (!Find(key, index))
+			return false;
+
+		m_storage[index] = m_storage[m_count - 1];
+		m_count--;
+		return true;
+	}
+
 	size_t Count() const
 	{
 		return m_count;

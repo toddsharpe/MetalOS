@@ -188,10 +188,17 @@ namespace HyperV
 		uint32_t status;
 	};
 
+	struct vmbus_channel_gpadl_torndown
+	{
+		vmbus_channel_message_header header;
+		uint32_t gpadl;
+	};
+
 	union VmBusResponse
 	{
 		vmbus_channel_open_result open_result;
 		vmbus_channel_gpadl_created gpadl_created;
+		vmbus_channel_gpadl_torndown gpadl_torndown;
 	};
 
 	/* Open Channel parameters */
@@ -263,6 +270,19 @@ namespace HyperV
 		uint32_t msgnumber;
 		uint32_t gpadl;
 		uint64_t pfn[ANYSIZE_ARRAY];
+	};
+
+	struct vmbus_channel_gpadl_teardown
+	{
+		vmbus_channel_message_header header;
+		uint32_t child_relid;
+		uint32_t gpadl;
+	};
+
+	struct vmbus_channel_close_channel
+	{
+		vmbus_channel_message_header header;
+		uint32_t child_relid;
 	};
 
 	enum vmbus_packet_type {

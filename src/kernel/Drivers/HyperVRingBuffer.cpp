@@ -38,6 +38,12 @@ void HyperVRingBuffer::Initialize(const paddr_t address)
 	m_header->feature_bits.value = 1;
 }
 
+void HyperVRingBuffer::Unmap()
+{
+	Assert(KeVirtualFree((const void*)m_header));
+	m_header = nullptr;
+}
+
 bool HyperVRingBuffer::Write(const CBuffer* buffers, const size_t count)
 {
 	//Packet plus the trailing 8-byte previous-indices value

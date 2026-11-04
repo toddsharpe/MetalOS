@@ -11,7 +11,9 @@ HyperVChannel::HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize
 	m_outbound(sendSize, *this),//upstream
 	m_inbound(receiveSize, *this),//downstream
 	m_gpadlHandle(),
-	m_channel()
+	m_channel(),
+	m_address(),
+	m_pageCount()
 {
 	
 }
@@ -30,6 +32,8 @@ void HyperVChannel::Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_c
 
 	//Get physical contiguous region
 	const paddr_t address = KePhysicalAlloc(pageCount);
+	m_address = address;
+	m_pageCount = pageCount;
 
 	//Initialize rings (outbound first)
 	m_outbound.Initialize(address);
@@ -53,6 +57,26 @@ void HyperVChannel::Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_c
 	openChannel.downstream_ringbuffer_pageoffset = (uint32_t)sendCount;
 	HyperV::VmBusResponse response;
 	vmbus.OpenChannel(openChannel, response);
+}
+
+void HyperVChannel::Close(VmBusDriver& vmbus)
+{
+	//Stop the callback first so nothing reads the rings while they go away
+	vmbus.RemoveCallback(m_channel->child_relid);
+	if (!vmbus.CloseChannel(m_channel->child_relid))
+		Printf("HyperVChannel: CLOSECHANNEL for child_relid=%u wasn't posted\n", m_channel->child_relid);
+
+	//The host owns the rings until it tears the GPADL down, so on a timeout they're left allocated for good
+	if (!vmbus.TeardownGpadl(m_channel->child_relid, m_gpadlHandle, 2000))
+	{
+		Printf("HyperVChannel: GPADL %u for child_relid=%u wasn't torn down; leaking its %u pages\n", m_gpadlHandle, m_channel->child_relid, (uint32_t)m_pageCount);
+		return;
+	}
+
+	m_outbound.Unmap();
+	m_inbound.Unmap();
+	KePhysicalFree(m_address, m_pageCount);
+	m_gpadlHandle = 0;
 }
 
 //Format is vmpacket_descriptor followed by buffer, alignment if needed, and then old indexes

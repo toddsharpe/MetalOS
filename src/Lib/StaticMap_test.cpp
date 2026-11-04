@@ -57,4 +57,24 @@ void StaticMap_test()
 		}
 		AssertEqual(i, 3);
 	}
+
+	// Remove drops just that key and frees its slot; a missing key is refused
+	{
+		StaticMap<int, int, 3> m;
+		m.Add(1, 10); m.Add(2, 20); m.Add(3, 30);
+		Assert(m.Remove(1));
+		AssertEqual(m.Count(), 2);
+		int value = 0;
+		Assert(!m.Get(1, value));
+		Assert(m.Get(2, value) && value == 20);
+		Assert(m.Get(3, value) && value == 30);
+		Assert(!m.Remove(1));
+		Assert(m.Add(4, 40));
+		Assert(m.Get(4, value) && value == 40);
+		Assert(m.Remove(4));
+		Assert(m.Remove(3));
+		Assert(m.Remove(2));
+		AssertEqual(m.Count(), 0);
+		Assert(!m.Remove(2));
+	}
 }

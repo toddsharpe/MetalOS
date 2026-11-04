@@ -157,6 +157,7 @@ inline String KeCopy(const CString& source, const AllocType type)
 {
 	char* const buf = reinterpret_cast<char*>(KeAlloc(source.Length + 1, type));
 	memcpy(buf, source.c_str(), source.Length);
+	buf[source.Length] = '\0';
 	return { buf, source.Length };
 }
 

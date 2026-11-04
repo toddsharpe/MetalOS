@@ -176,7 +176,7 @@ void PrintBytes(const void* data, const size_t length)
 	Printf("\n");
 }
 
-void Bugcheck(const char* file, const char* line, const char* format, va_list args)
+void VBugcheck(const char* file, const char* line, const char* format, va_list args)
 {
 	static bool inBugcheck = false;
 	KePauseSystem();
@@ -212,6 +212,6 @@ void Bugcheck(const char* file, const char* line, const char* format, ...)
 {
 	va_list args;
 	va_start(args, format);
-	Bugcheck(file, line, format, args);
+	VBugcheck(file, line, format, args);
 	va_end(args);
 }

@@ -116,12 +116,12 @@ void Debugger::KdpDprintf(const char* format, ...)
 	va_list args;
 	va_start(args, format);
 	
-	KdpDprintf(format, args);
+	VKdpDprintf(format, args);
 
 	va_end(args);
 }
 
-void Debugger::KdpDprintf(const char* format, va_list args)
+void Debugger::VKdpDprintf(const char* format, va_list args)
 {
 	VaKdpDprintf(format, args);
 }

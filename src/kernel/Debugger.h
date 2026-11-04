@@ -20,7 +20,7 @@ public:
 
 	void DebuggerEvent(Arch::InterruptVector vector, Arch::InterruptFrame& frame);
 	void KdpDprintf(const char* format, ...);
-	void KdpDprintf(const char* format, va_list args);
+	void VKdpDprintf(const char* format, va_list args);
 	bool Enabled();
 	bool HostPresent();
 

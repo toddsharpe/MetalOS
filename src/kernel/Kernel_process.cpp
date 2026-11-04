@@ -15,6 +15,7 @@ extern KProcess m_process;
 extern LinkedList<UProcess*> m_processes;
 
 static constexpr CString RuntimeDLL = "MetalOS-RT.dll";
+static constexpr size_t MaxPathLength = decltype(UProcess::Name)::Size - 1; //The path also names the process
 
 //An image installs at its fixed ImageBase, so it must be page-aligned and end inside user space
 static bool FitsUserSpace(const Loader::LoadedImage& image)
@@ -65,14 +66,25 @@ UProcess* KeCreateProcess(const char* const cmd)
 
 	//No room to schedule the main thread: fail before anything is built
 	if (!Scheduler::HasRoom())
+	{
+		Printf("Failed to create process: no room to schedule its main thread\n");
 		return nullptr;
+	}
 
 	//Get path (up to the first space or end of string)
 	size_t i = 0;
 	while (cmd[i] != '\0' && cmd[i] != ' ')
 		i++;
 	if (i == 0)
-		return nullptr; //Empty command line (reachable from the CreateProcess syscall)
+	{
+		Printf("Failed to create process: empty command line\n");
+		return nullptr;
+	}
+	if (i > MaxPathLength)
+	{
+		Printf("Failed to create process: path is %u characters, the limit is %u\n", (uint32_t)i, (uint32_t)MaxPathLength);
+		return nullptr;
+	}
 
 	StaticString<64> path;
 	path.Append(CString(cmd, i));
@@ -88,6 +100,7 @@ UProcess* KeCreateProcess(const char* const cmd)
 	Loader::LoadedImage runtime = Loader::Load(RuntimeDLL);
 	if (!runtime.UserBase)
 	{
+		Printf("Failed to load %s for %s\n", RuntimeDLL.c_str(), path.c_str());
 		KeVirtualFree(m_process, exe.Alias);
 		return nullptr;
 	}
@@ -95,7 +108,11 @@ UProcess* KeCreateProcess(const char* const cmd)
 	//Resolve runtime imports (stamps the exe's IAT with the runtime's user addresses) and the init entry points
 	void* const initProcess = WinPE::GetProcAddress(runtime.Alias, "InitProcess");
 	void* const initThread = WinPE::GetProcAddress(runtime.Alias, "InitThread");
-	if (!Loader::ResolveImports(exe, runtime, RuntimeDLL) || !initProcess || !initThread)
+	if (!initProcess)
+		Printf("%s does not export InitProcess\n", RuntimeDLL.c_str());
+	if (!initThread)
+		Printf("%s does not export InitThread\n", RuntimeDLL.c_str());
+	if (!initProcess || !initThread || !Loader::ResolveImports(exe, runtime, RuntimeDLL))
 	{
 		KeVirtualFree(m_process, exe.Alias);
 		KeVirtualFree(m_process, runtime.Alias);
@@ -152,6 +169,7 @@ UProcess* KeCreateProcess(const char* const cmd)
 	if (!KeCreateUThread(*created, stackSize))
 	{
 		//No memory for the main thread's stack: tear down instead of leaving a running process with no threads
+		Printf("%s: could not create the main thread (no TEB slot or stack memory)\n", path.c_str());
 		KeTerminateProcess(*created, 1);
 		return nullptr;
 	}

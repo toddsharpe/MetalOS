@@ -53,7 +53,6 @@ extern "C"
 	void Bugcheck(const char* file, const char* line, const char* format, ...);
 	HModule LoadLibrary(char* lpLibFileName);
 	bool FreeLibrary(HModule hModule);
-	uint32_t* GetErrno();
 	
 	/*
 	 * MetalOS Window Manager.

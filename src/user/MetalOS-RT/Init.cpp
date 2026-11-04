@@ -31,7 +31,7 @@ extern "C" __declspec(dllexport) void InitProcess() // Rename: init module?
 	{
 		if (peb->CommandLine[i] == ' ')
 		{
-			String copied = arena.Copy({&peb->CommandLine[start], (i - start)});
+			const CString copied = arena.Copy({&peb->CommandLine[start], (i - start)});
 			argv.Add(copied.c_str());
 			i++;
 			start = i;
@@ -41,7 +41,7 @@ extern "C" __declspec(dllexport) void InitProcess() // Rename: init module?
 			i++;
 		}
 	}
-	String copied = arena.Copy({&peb->CommandLine[start], (i - start)});
+	const CString copied = arena.Copy({&peb->CommandLine[start], (i - start)});
 	argv.Add(copied.c_str());
 
 	// Call entry

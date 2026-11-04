@@ -3,7 +3,6 @@
 #include "Assert.h"
 #include "kernel/KThread.h"
 #include "Lib/StaticVector.h"
-#include "Lib/List.h"
 
 namespace
 {

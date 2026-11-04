@@ -47,7 +47,7 @@ void Arena_test()
 	PreallocatedArena prealloc2(buffer, sizeof(storage));
 
 	const CString def = "def";
-	String new_s;
+	CString new_s;
 	new_s = arena.Copy(def);
 	Assert(new_s == "def");
 

@@ -75,6 +75,33 @@ void String_test()
 	a.Append("CD");
 	Assert(a == "ABCD");
 
+	//Append: a string that exactly fits (Capacity - 1 chars plus the null terminator)
+	StaticString<8> exact;
+	exact.Append("1234567");
+	Assert(exact == "1234567");
+	Assert(exact.Count() == 7);
+	Assert(exact.c_str()[7] == '\0');
+
+	//Append: a string that exactly fills the space left after earlier appends
+	StaticString<8> rest;
+	rest.Append('a');
+	rest.Append("bc");
+	rest.Append("defg");
+	Assert(rest == "abcdefg");
+	Assert(rest.Count() == 7);
+	Assert(rest.c_str()[7] == '\0');
+
+	//Append: an empty string still fits in a full one
+	rest.Append("");
+	Assert(rest == "abcdefg");
+
+	//Set: a string that exactly fits
+	StaticString<8> setExact;
+	setExact.Set("abc");
+	setExact.Set("7654321");
+	Assert(setExact == "7654321");
+	Assert(setExact.Count() == 7);
+
 	//Assigning to static string
 	StaticString<32> newS(n1);
 

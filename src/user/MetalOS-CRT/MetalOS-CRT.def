@@ -21,6 +21,7 @@ EXPORTS
 	puts
 	putchar
 	sscanf
+	vsscanf
 
 	; stdlib
 	exit

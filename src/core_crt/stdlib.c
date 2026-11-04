@@ -1,4 +1,5 @@
 #include "core_crt/stdlib.h"
+#include "core_crt/ctype.h"
 #include "core_crt/wchar.h"
 #include <cstring>
 
@@ -23,12 +24,19 @@ int abs(int n)
 
 int atoi(const char *str)
 {
+	//Leading whitespace, an optional sign, then digits up to the first non-digit, as C specifies
+	while (isspace((unsigned char)*str))
+		str++;
+
+	const int negative = (*str == '-');
+	if (*str == '-' || *str == '+')
+		str++;
+
 	int ret = 0;
+	for (; *str >= '0' && *str <= '9'; str++)
+		ret = ret * 10 + (*str - '0');
 
-	for (int i = 0; str[i] != '\0'; i++)
-		ret = ret * 10 + (str[i] - '0');
-
-	return ret;
+	return negative ? -ret : ret;
 }
 
 size_t mbstowcs(wchar_t *_Dest, char const *_Source, size_t _MaxCount)

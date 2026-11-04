@@ -15,6 +15,7 @@
 
 ULONG CurrentPacketId = INITIAL_PACKET_ID | SYNC_PACKET_ID;
 ULONG RemotePacketId = INITIAL_PACKET_ID;
+BOOLEAN KdpHostPresent = FALSE; /* Set once a packet leader arrives from the host */
 
 
 /* PRIVATE FUNCTIONS **********************************************************/
@@ -62,6 +63,14 @@ KdpSendControlPacket(
 
 
 /* PUBLIC FUNCTIONS ***********************************************************/
+
+/* Whether a host has answered, so the kernel can tell a session from an empty line */
+BOOLEAN
+NTAPI
+KdHostPresent(VOID)
+{
+	return KdpHostPresent;
+}
 
 /******************************************************************************
  * \name KdReceivePacket
@@ -388,31 +397,35 @@ KdSendPacket(
 			 */
 			if (Retries == 0)
 			{
-				ULONG MessageId = *(PULONG)MessageHeader->Buffer;
-				switch (PacketType)
+				/* With no host ever heard from, every packet type gives up instead of waiting forever */
+				if (KdpHostPresent)
 				{
-				case PACKET_TYPE_KD_DEBUG_IO:
-				{
-					if (MessageId != DbgKdPrintStringApi) continue;
-					break;
-				}
+					ULONG MessageId = *(PULONG)MessageHeader->Buffer;
+					switch (PacketType)
+					{
+					case PACKET_TYPE_KD_DEBUG_IO:
+					{
+						if (MessageId != DbgKdPrintStringApi) continue;
+						break;
+					}
 
-				case PACKET_TYPE_KD_STATE_CHANGE32:
-				case PACKET_TYPE_KD_STATE_CHANGE64:
-				{
-					if (MessageId != DbgKdLoadSymbolsStateChange) continue;
-					break;
-				}
+					case PACKET_TYPE_KD_STATE_CHANGE32:
+					case PACKET_TYPE_KD_STATE_CHANGE64:
+					{
+						if (MessageId != DbgKdLoadSymbolsStateChange) continue;
+						break;
+					}
 
-				case PACKET_TYPE_KD_FILE_IO:
-				{
-					if (MessageId != DbgKdCreateFileApi) continue;
-					break;
-				}
+					case PACKET_TYPE_KD_FILE_IO:
+					{
+						if (MessageId != DbgKdCreateFileApi) continue;
+						break;
+					}
+					}
 				}
 
 				/* Reset debugger state */
-				//KD_DEBUGGER_NOT_PRESENT = TRUE;
+				KdpHostPresent = FALSE;
 				//SharedUserData->KdDebuggerEnabled &= ~0x00000002;
 				CurrentPacketId = INITIAL_PACKET_ID | SYNC_PACKET_ID;
 				RemotePacketId = INITIAL_PACKET_ID;

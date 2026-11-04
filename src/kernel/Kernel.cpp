@@ -326,11 +326,12 @@ extern "C"
 					Printf("        Null pointer\n");
 			}
 
-			//Attempt to pass to debugger
+			//Attempt to pass to debugger, falling through to the stack trace when no host answers
 			if (m_debugger.Enabled())
 			{
 				m_debugger.DebuggerEvent(vector, frame);
-				return;
+				if (m_debugger.HostPresent())
+					return;
 			}
 			
 			//Build context

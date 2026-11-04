@@ -22,6 +22,7 @@ public:
 	void KdpDprintf(const char* format, ...);
 	void KdpDprintf(const char* format, va_list args);
 	bool Enabled();
+	bool HostPresent();
 
 private:
 	static uint32_t ThreadLoop(void* arg);

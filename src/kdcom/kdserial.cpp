@@ -141,7 +141,7 @@ KdpReceivePacketLeader(
 	} while (Index < 4);
 
 	/* Enable the debugger */
-	//KD_DEBUGGER_NOT_PRESENT = FALSE;
+	KdpHostPresent = TRUE;
 	//SharedUserData->KdDebuggerEnabled |= 0x00000002;
 
 	/* Return the received packet leader */

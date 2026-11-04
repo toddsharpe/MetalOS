@@ -186,6 +186,7 @@ public:
 
 	void Pop()
 	{
+		Assert(m_count > 0);
 		m_count--;
 
 		//Null terminate

@@ -22,6 +22,7 @@ enum class Syscall : uint64_t
 	ExitThread,
 	IsProcessAlive,
 	GetProcesses,
+	RegisterModule, //Only MetalOS-RT's loader calls it, for each DLL it maps
 
 	//0x300: Devices (framebuffer + network interface enumeration).
 	//IPv4 config (Get/SetInterfaceIp, SetGateway) is netstack IPC, not syscalls.

@@ -103,4 +103,22 @@ void WinPE_test()
 	const size_t nameEnd = CodeViewRva + (size_t)(rsds->name - (const char*)rsds) + strlen("late.pdb");
 	Assert(WinPE::GetPdbName(headers, nameEnd) == nullptr);
 	Assert(WinPE::GetPdbName(headers, nameEnd + 1) == late);
+
+	//The kernel sizes a DLL the runtime registers by its headers, and only when the whole image fits in what was mapped for it
+	const size_t imageSize = WinPE::GetSizeOfImage(image);
+	AssertEqual(WinPE::GetMappedImageSize(image, imageSize), imageSize);
+	AssertEqual(WinPE::GetMappedImageSize(image, imageSize + 0x1000), imageSize);
+	AssertEqual(WinPE::GetMappedImageSize(image, imageSize - 1), (size_t)0);
+	Assert(imageSize > sizeof(headers));
+	AssertEqual(WinPE::GetMappedImageSize(headers, sizeof(headers)), (size_t)0);
+	ntCopy->OptionalHeader.SizeOfImage = sizeof(headers);
+	AssertEqual(WinPE::GetMappedImageSize(headers, sizeof(headers)), sizeof(headers));
+	ntCopy->FileHeader.Machine = IMAGE_FILE_MACHINE_I386;
+	AssertEqual(WinPE::GetMappedImageSize(headers, sizeof(headers)), (size_t)0);
+	ntCopy->FileHeader.Machine = IMAGE_FILE_MACHINE_AMD64;
+	ntCopy->OptionalHeader.Magic = IMAGE_NT_OPTIONAL_HDR32_MAGIC;
+	AssertEqual(WinPE::GetMappedImageSize(headers, sizeof(headers)), (size_t)0);
+	ntCopy->OptionalHeader.Magic = IMAGE_NT_OPTIONAL_HDR64_MAGIC;
+	ntCopy->OptionalHeader.SizeOfImage = 0;
+	AssertEqual(WinPE::GetMappedImageSize(headers, sizeof(headers)), (size_t)0);
 }

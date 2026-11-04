@@ -119,6 +119,9 @@ HModule LoadLibrary(char* lpLibFileName)
 
 	CloseHandle(file);
 
+	//Before its imports, initializers and DllMain run, so a fault in any of them traces with its symbols (failing only costs the trace its symbols)
+	RegisterModule(lpLibFileName, moduleBase);
+
 	//Imports
 	Loader::ResolveImports(moduleBase, nullptr);
 
@@ -152,7 +155,7 @@ bool FreeLibrary(HModule hModule)
 	DllMainCall main = (DllMainCall)GetProcAddress(hModule, Loader::DllMainName);
 	main(hModule, DllReason::ProcessDetach);
 
-	//Free region
+	//Free region, which also drops the kernel's record of the module
 	const bool result = VirtualFree(hModule);
 	Assert(result);
 

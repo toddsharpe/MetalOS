@@ -28,6 +28,20 @@ public:
 		return created;
 	}
 
+	//Drops (and frees) the module loaded at image, if there is one
+	void RemoveModule(const void* const image)
+	{
+		for (KModule* module : *this)
+		{
+			if (module->ImageBase != image)
+				continue;
+
+			this->Remove(module);
+			KeFree(module, AllocType::User);
+			return;
+		}
+	}
+
 	const KModule* GetModule(const CString& name) const
 	{
 		for (const KModule* module : *this)

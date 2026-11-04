@@ -135,6 +135,9 @@ namespace
 //Syscalls that the kernel adds params
 SyscallResult DebugPrintStack(const uint64_t rip);
 
+//Syscalls only the runtime makes, so they're not in MetalOS.h
+SyscallResult RegisterModule(const char* name, const void* imageBase);
+
 uint64_t Dispatch(const Arch::SyscallFrame& frame)
 {
 	Syscall call = static_cast<Syscall>(frame.SystemCall);
@@ -187,6 +190,9 @@ uint64_t Dispatch(const Arch::SyscallFrame& frame)
 
 		case Syscall::GetProcesses:
 			return (uint64_t)GetProcesses((ProcessListEntry*)frame.Arg0, (size_t)frame.Arg1, (size_t*)frame.Arg2);
+
+		case Syscall::RegisterModule:
+			return (uint64_t)RegisterModule((const char*)frame.Arg0, (const void*)frame.Arg1);
 
 		//0x400
 		case Syscall::CreateFile:
@@ -449,6 +455,36 @@ SyscallResult GetProcesses(ProcessListEntry* buffer, const size_t maxCount, size
 		return SyscallResult::InvalidPointer;
 
 	*count = KeGetProcessList(buffer, maxCount);
+	return SyscallResult::Success;
+}
+
+//The runtime's loader registers each DLL it maps, so a trace through the DLL finds its module and symbols
+SyscallResult RegisterModule(const char* name, const void* imageBase)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+
+	//No more than the PEB lists, as each one is on the kernel heap until its image is freed
+	if (proc.Modules.Count() >= MaxLoadedModules)
+		return SyscallResult::Failed;
+
+	//The name is copied into the module; one that doesn't fit is rejected, not truncated
+	static constexpr size_t MaxName = decltype(KModule::Name)::Size;
+	const size_t length = UserStringLength(proc, name, MaxName);
+	if (length == 0 || length == MaxName || !proc.Space.IsValidRange(name + length, 1) || name[length] != '\0')
+		return SyscallResult::InvalidArg;
+
+	//The image must be a VirtualAlloc'd reservation of its own, so freeing it (as FreeLibrary does) is what drops the module
+	const uintptr_t base = (uintptr_t)imageBase;
+	const size_t pages = proc.Space.GetCount(base);
+	if (pages == 0 || !proc.Space.OwnsPages(base) || proc.Modules.GetModule(base))
+		return SyscallResult::InvalidArg;
+
+	//Its size is the kernel's own read of the headers, which (with the whole image) must lie in that reservation
+	const size_t imageSize = WinPE::GetMappedImageSize(imageBase, pages << Arch::PageShift);
+	if (imageSize == 0)
+		return SyscallResult::InvalidArg;
+
+	proc.Modules.AddModule(CString(name, length), const_cast<void*>(imageBase), imageSize);
 	return SyscallResult::Success;
 }
 
@@ -906,7 +942,12 @@ bool VirtualFree(const void* address)
 	if (!proc.Space.OwnsPages((uintptr_t)address))
 		return false;
 
-	return KeVirtualFree(proc, address);
+	if (!KeVirtualFree(proc, address))
+		return false;
+
+	//A registered DLL's module goes with its image (FreeLibrary frees it here), so a trace never reads freed memory
+	proc.Modules.RemoveModule(address);
+	return true;
 }
 
 SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** address)

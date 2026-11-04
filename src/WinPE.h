@@ -63,6 +63,17 @@ namespace WinPE
 		return ntHeader;
 	}
 
+	//For an image a process mapped itself in mappedSize bytes: its SizeOfImage, or 0 unless its x64 headers and the whole image lie in those bytes
+	inline size_t GetMappedImageSize(const void* const imageBase, const size_t mappedSize)
+	{
+		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase, mappedSize);
+		if (!ntHeader || ntHeader->FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64 || ntHeader->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+			return 0;
+
+		const size_t imageSize = ntHeader->OptionalHeader.SizeOfImage;
+		return (imageSize <= mappedSize) ? imageSize : 0;
+	}
+
 	inline DWORD GetEntryPoint(const void* const imageBase)
 	{
 		return GetNtHeaders(imageBase)->OptionalHeader.AddressOfEntryPoint;

@@ -30,16 +30,6 @@ inline void ListInitializeHead(ListHead& head)
 	head.Count = 0;
 }
 
-inline bool ListIsEmpty(const ListEntry *listHead)
-{
-	return (listHead->Flink == listHead);
-}
-
-inline bool ListIsEmpty(const ListHead& listHead)
-{
-	return ListIsEmpty(&listHead.Link);
-}
-
 inline void ListRemoveEntry(ListEntry *entry)
 {
 	ListEntry *flink = entry->Flink;
@@ -103,32 +93,10 @@ inline void ListInsertTail(ListHead& head, ListEntry &entry)
 	ListInsertTail(&head.Link, &entry);
 }
 
-
-
-/*
-inline bool ListAny(const ListEntry *head, const ListPredicate pred)
-{
-	ListEntry* current = head->Flink;
-	bool result = false;
-	while (current != head)
-	{
-		result |= pred(current);
-		entry = entry->Flink;
-	}
-	return result;
-}
-*/
-
 template <typename TItem, typename TContext>
 using ListFuncCtx = void(*)(const ListEntry&, TItem&, TContext const);
 template <typename T>
-using ListFunc = void(*)(const ListEntry&, T&);
-template <typename T>
 using ListCFunc = void(*)(const ListEntry&, const T&);
-template <typename TItem, typename TContext>
-using ListPredCtx = bool(*)(const ListEntry&, const TItem&, TContext&);
-template <typename T>
-using ListPred = bool(*)(const ListEntry&, T&);
 
 template <typename TItem, typename TContext>
 inline void ListForEach(const ListHead& head, const ListFuncCtx<TItem, TContext>& func, TContext ctx)
@@ -144,19 +112,6 @@ inline void ListForEach(const ListHead& head, const ListFuncCtx<TItem, TContext>
 }
 
 template <typename T>
-inline void ListForEach(const ListHead &head, const ListFunc<T>& func)
-{
-	if (!head.Count)
-		return;
-	
-	for (ListEntry* link = head.Link.Flink; link != &head.Link; link = link->Flink)
-	{
-		T* item = LIST_CONTAINING_RECORD(link, T, Link);
-		func(*link, *item);
-	}
-}
-
-template <typename T>
 inline void ListForEach(const ListHead &head, const ListCFunc<T>& func)
 {
 	if (!head.Count)
@@ -167,30 +122,6 @@ inline void ListForEach(const ListHead &head, const ListCFunc<T>& func)
 		T* item = LIST_CONTAINING_RECORD(link, T, Link);
 		func(*link, *item);
 	}
-}
-
-template <typename TItem, typename TContext>
-inline TItem* ListFirst(const ListHead& head, const ListPredCtx<TItem, TContext>& pred, TContext& ctx)
-{
-	if (!head.Count)
-		return nullptr;
-	
-	for (ListEntry* link = head.Link.Flink; link != &head.Link; link = link->Flink)
-	{
-		TItem* item = LIST_CONTAINING_RECORD(link, TItem, Link);
-		if (pred(*link, *item, ctx))
-			return item;
-	}
-	return nullptr;
-}
-
-template <typename TItem, typename TContext>
-inline bool ListAny(const ListHead& head, const ListPredCtx<TItem, TContext>& pred, TContext& ctx)
-{
-	if (!head.Count)
-		return false;
-	
-	return ListFirst(head, pred, ctx) != nullptr;
 }
 
 template <typename T>

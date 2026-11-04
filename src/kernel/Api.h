@@ -151,7 +151,7 @@ enum class AllocType
 void* KeAlloc(size_t size, AllocType type);
 void KeFree(void* ptr, AllocType type);
 
-inline String KeCopy(const CString& source, const AllocType type)
+inline CString KeCopy(const CString& source, const AllocType type)
 {
 	char* const buf = reinterpret_cast<char*>(KeAlloc(source.Length + 1, type));
 	memcpy(buf, source.c_str(), source.Length);

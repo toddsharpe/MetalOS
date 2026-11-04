@@ -1,7 +1,7 @@
 #include "kernel/Api.h"
 #include "kernel/Objects/KSpinLock.h"
 #include "Lib/StaticVector.h"
-#include "Lib/StaticQueue.h"
+#include "Lib/CircularBuffer.h"
 #include "Assert.h"
 #include <cstring>
 
@@ -14,7 +14,7 @@ namespace _EP
 		bool Registered; //False while it only holds Posts made before its server registered
 		uint32_t Owner; //Registering process id, or KernelEndpointOwner
 		uint64_t Id;
-		StaticQueue<uint64_t, 32> Pending;
+		CircularBuffer<uint64_t, 32> Pending;
 	};
 
 	KSpinLock m_lock;

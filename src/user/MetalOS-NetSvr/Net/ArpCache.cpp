@@ -1,5 +1,4 @@
 #include "Net/Net.h"
-#include "Lib/StaticArray.h"
 
 namespace
 {
@@ -8,7 +7,7 @@ namespace
 		Net::ipv4_addr_t ip_addr;
 		Net::eth_mac_t eth_addr;
 	};
-	StaticArray<entry_t, 4> cache = {{Net::broadcast, Net::eth_broadcast}};
+	entry_t cache[4] = {{Net::broadcast, Net::eth_broadcast}};
 }
 
 namespace Net::ArpCache

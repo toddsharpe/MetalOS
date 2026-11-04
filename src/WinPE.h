@@ -38,6 +38,31 @@ namespace WinPE
 		return ntHeader;
 	}
 
+	//Whether length bytes at rva lie in an image of imageSize bytes
+	inline bool IsInImage(const size_t imageSize, const size_t rva, const size_t length)
+	{
+		return rva <= imageSize && length <= imageSize - rva;
+	}
+
+	//For an image its process can overwrite: the NT headers, or null unless they, the DOS header and the section table lie in its imageSize bytes and carry their signatures
+	inline const IMAGE_NT_HEADERS64* GetNtHeaders(const void* const imageBase, const size_t imageSize)
+	{
+		const IMAGE_DOS_HEADER* dosHeader = static_cast<const IMAGE_DOS_HEADER*>(imageBase);
+		if (!IsInImage(imageSize, 0, sizeof(IMAGE_DOS_HEADER)) || dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+			return nullptr;
+
+		const LONG ntOffset = dosHeader->e_lfanew;
+		if (ntOffset < 0 || !IsInImage(imageSize, (size_t)ntOffset, sizeof(IMAGE_NT_HEADERS64)))
+			return nullptr;
+
+		const IMAGE_NT_HEADERS64* ntHeader = MakePointer<const IMAGE_NT_HEADERS64*>(imageBase, ntOffset);
+		const size_t sectionsOffset = (uintptr_t)IMAGE_FIRST_SECTION(ntHeader) - (uintptr_t)imageBase;
+		if (ntHeader->Signature != IMAGE_NT_SIGNATURE || !IsInImage(imageSize, sectionsOffset, (size_t)ntHeader->FileHeader.NumberOfSections * sizeof(IMAGE_SECTION_HEADER)))
+			return nullptr;
+
+		return ntHeader;
+	}
+
 	inline DWORD GetEntryPoint(const void* const imageBase)
 	{
 		return GetNtHeaders(imageBase)->OptionalHeader.AddressOfEntryPoint;
@@ -141,38 +166,49 @@ namespace WinPE
 	#define MAKESIG(a,b,c,d)        ((a) | ((b) << 8) | ((c) << 16) | ((d) << 24))
 	#define CODEVIEW_RSDS_SIG       MAKESIG('R','S','D','S')	
 
-	//The RSDS CodeView record naming the image's PDB and its GUID and age; null for an image linked without a PDB (no debug directory, or no RSDS entry in it)
-	inline const OMFSignatureRSDS* GetCodeView(const void* const imageBase)
+	//The RSDS CodeView record naming the image's PDB and its GUID and age; null for an image linked without a PDB (no debug directory, or no RSDS entry in it), or when its headers (section table included), debug directory or record and name don't lie in its imageSize bytes
+	inline const OMFSignatureRSDS* GetCodeView(const void* const imageBase, const size_t imageSize)
 	{
-		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
+		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase, imageSize);
+		if (!ntHeader)
+			return nullptr;
 
-		const IMAGE_DATA_DIRECTORY* directory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
-		if ((directory->Size == 0) || (directory->VirtualAddress == 0))
+		const IMAGE_DATA_DIRECTORY directory = ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
+		if ((directory.Size == 0) || (directory.VirtualAddress == 0) || !IsInImage(imageSize, directory.VirtualAddress, directory.Size))
 			return nullptr;
 
 		//The linker also emits feature, POGO and repro entries; CodeView isn't guaranteed to be first
-		const IMAGE_DEBUG_DIRECTORY* debugDirectory = MakePointer<const IMAGE_DEBUG_DIRECTORY*>(imageBase, directory->VirtualAddress);
-		const size_t count = directory->Size / sizeof(IMAGE_DEBUG_DIRECTORY);
+		const IMAGE_DEBUG_DIRECTORY* debugDirectory = MakePointer<const IMAGE_DEBUG_DIRECTORY*>(imageBase, directory.VirtualAddress);
+		const size_t count = directory.Size / sizeof(IMAGE_DEBUG_DIRECTORY);
 		for (size_t i = 0; i < count; i++)
 		{
 			const IMAGE_DEBUG_DIRECTORY& entry = debugDirectory[i];
-			if (entry.Type != IMAGE_DEBUG_TYPE_CODEVIEW || entry.AddressOfRawData == 0)
+			const DWORD rva = entry.AddressOfRawData;
+			if (entry.Type != IMAGE_DEBUG_TYPE_CODEVIEW || rva == 0 || !IsInImage(imageSize, rva, sizeof(OMFSignatureRSDS)))
 				continue;
 
-			const void* address = MakePointer<const void*>(imageBase, entry.AddressOfRawData);
-			if (*(DWORD*)address != CODEVIEW_RSDS_SIG)
+			const OMFSignatureRSDS* rsds = MakePointer<const OMFSignatureRSDS*>(imageBase, rva);
+			if (*(DWORD*)rsds != CODEVIEW_RSDS_SIG)
 				continue;
 
-			return (const OMFSignatureRSDS*)address;
+			//Its name runs to a NUL before the image ends
+			const size_t nameOffset = rva + (size_t)(rsds->name - (const char*)rsds);
+			size_t length = 0;
+			while (nameOffset + length < imageSize && rsds->name[length] != '\0')
+				length++;
+			if (nameOffset + length == imageSize)
+				continue;
+
+			return rsds;
 		}
 
 		return nullptr;
 	}
 
-	//Null for an image linked without a PDB
-	inline const char* GetPdbName(const void* const imageBase)
+	//Null for an image linked without a PDB, or one whose CodeView record GetCodeView can't trust
+	inline const char* GetPdbName(const void* const imageBase, const size_t imageSize)
 	{
-		const OMFSignatureRSDS* const rsds = GetCodeView(imageBase);
+		const OMFSignatureRSDS* const rsds = GetCodeView(imageBase, imageSize);
 		return rsds ? rsds->name : nullptr;
 	}
 }

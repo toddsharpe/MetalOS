@@ -44,6 +44,7 @@ struct KModule
 {
 	StaticString<64> Name;
 	void* ImageBase;
+	size_t ImageSize; //SizeOfImage as loaded, so finding an IP's module never reads its (process-writable) headers
 };
 
 struct guid_t

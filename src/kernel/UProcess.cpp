@@ -193,7 +193,7 @@ bool UProcess::CloseObject(const handle_t handle)
 	return true;
 }
 
-const KModule* UProcess::AddModule(const CString& name, void* image)
+const KModule* UProcess::AddModule(const CString& name, void* image, const size_t imageSize)
 {
 	//Write the module entry into the process's PEB via the physical window (no direct user access).
 	//m_moduleIndex is tracked kernel-side so we never read PEB->ModuleIndex from user space.
@@ -207,7 +207,7 @@ const KModule* UProcess::AddModule(const CString& name, void* image)
 	m_moduleIndex++;
 	KeWriteProcessMemory(*this, &m_peb->ModuleIndex, &m_moduleIndex, sizeof(m_peb->ModuleIndex));
 
-	KModule* created = KeAlloc<KModule>(AllocType::User, name, image);
+	KModule* created = KeAlloc<KModule>(AllocType::User, name, image, imageSize);
 	Assert(this->Modules.Add(created));
 	return created;
 }

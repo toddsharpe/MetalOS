@@ -115,7 +115,7 @@ static void PdbPublics_test(Arena& arena)
 static void PdbMatch_test(const void* const pdb, const size_t pdbSize, Arena& arena)
 {
 	const void* const image = &__ImageBase;
-	const WinPE::OMFSignatureRSDS* const codeView = WinPE::GetCodeView(image);
+	const WinPE::OMFSignatureRSDS* const codeView = WinPE::GetCodeView(image, WinPE::GetSizeOfImage(image));
 	Assert(codeView);
 
 	//A copy of this image's headers (sections included) with a debug directory of its own, so the CodeView record can be rewritten
@@ -136,31 +136,37 @@ static void PdbMatch_test(const void* const pdb, const size_t pdbSize, Arena& ar
 
 	//The same GUID and age
 	arena.Reset();
-	Assert(PdbFile().Open(pdb, headers, arena));
+	Assert(PdbFile().Open(pdb, headers, sizeof(headers), arena));
 
 	//Another build's GUID
 	rsds->guid.Data4[7] ^= 1;
 	arena.Reset();
-	Assert(!PdbFile().Open(pdb, headers, arena));
+	Assert(!PdbFile().Open(pdb, headers, sizeof(headers), arena));
 	rsds->guid.Data4[7] ^= 1;
 
 	//A later link than the PDB's (relinking keeps the GUID and bumps the age, so this is a stale PDB)
 	rsds->age++;
 	arena.Reset();
-	Assert(!PdbFile().Open(pdb, headers, arena));
+	Assert(!PdbFile().Open(pdb, headers, sizeof(headers), arena));
 	rsds->age--;
 
 	//An earlier link than the PDB's, which the DBI stream's age rules out
 	Assert(rsds->age > 0);
 	rsds->age--;
 	arena.Reset();
-	Assert(!PdbFile().Open(pdb, headers, arena));
+	Assert(!PdbFile().Open(pdb, headers, sizeof(headers), arena));
 	rsds->age++;
+
+	//An image size its headers and CodeView record don't fit in, as for a process that scribbled on its own
+	arena.Reset();
+	Assert(!PdbFile().Open(pdb, headers, CodeViewRva, arena));
+	arena.Reset();
+	Assert(!PdbFile().Open(pdb, headers, __ImageBase.e_lfanew + sizeof(IMAGE_NT_HEADERS64) - 1, arena));
 
 	//No CodeView record
 	debug = {};
 	arena.Reset();
-	Assert(!PdbFile().Open(pdb, headers, arena));
+	Assert(!PdbFile().Open(pdb, headers, sizeof(headers), arena));
 
 	//The PDB side: a copy of it with its GUID corrupted wherever it appears
 	uint8_t* const corrupt = static_cast<uint8_t*>(malloc(pdbSize));
@@ -177,7 +183,7 @@ static void PdbMatch_test(const void* const pdb, const size_t pdbSize, Arena& ar
 	}
 	Assert(corrupted != 0);
 	arena.Reset();
-	Assert(!PdbFile().Open(corrupt, image, arena));
+	Assert(!PdbFile().Open(corrupt, image, WinPE::GetSizeOfImage(image), arena));
 	free(corrupt);
 }
 
@@ -185,7 +191,7 @@ void Pdb_test()
 {
 	//Symbolize a function in this test executable from its own PDB, the same path the kernel's stack walker takes
 	const void* const image = &__ImageBase;
-	const char* const path = WinPE::GetPdbName(image);
+	const char* const path = WinPE::GetPdbName(image, WinPE::GetSizeOfImage(image));
 	Assert(path);
 	size_t pdbSize = 0;
 	void* const pdb = LoadFile(path, &pdbSize);
@@ -200,7 +206,7 @@ void Pdb_test()
 	s_tls++;
 
 	PdbFile file;
-	Assert(file.Open(pdb, image, arena));
+	Assert(file.Open(pdb, image, WinPE::GetSizeOfImage(image), arena));
 
 	const uint32_t rva = (uint32_t)((uintptr_t)&WinPE_test_export - (uintptr_t)image);
 	PdbLookup lookup = {};

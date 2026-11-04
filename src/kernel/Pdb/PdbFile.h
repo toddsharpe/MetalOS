@@ -18,8 +18,8 @@ public:
 		
 	}
 
-	//False when the PDB isn't the image's (a stale PDB from another build would name the wrong functions)
-	bool Open(const void* pdb, const void* const image, Arena& arena)
+	//False when the PDB isn't the image's (a stale PDB from another build would name the wrong functions), or the image's headers don't lie in its imageSize bytes
+	bool Open(const void* pdb, const void* const image, const size_t imageSize, Arena& arena)
 	{
 		m_msfFile = arena.Allocate<MsfFile>(pdb);
 		Assert(m_msfFile);
@@ -27,8 +27,8 @@ public:
 
 		//Load msf file
 
-		//The image's CodeView record names the PDB it was linked with
-		const WinPE::OMFSignatureRSDS* const codeView = WinPE::GetCodeView(image);
+		//The image's CodeView record names the PDB it was linked with; it's only found once the headers, and the section table the DBI reads, check out
+		const WinPE::OMFSignatureRSDS* const codeView = WinPE::GetCodeView(image, imageSize);
 		if (!codeView)
 			return false;
 

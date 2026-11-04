@@ -125,7 +125,7 @@ namespace
 		//Continue initializing system
 		m_irqs.Add(Arch::InterruptVector::Timer0, {&OnTimer0, nullptr});
 		Scheduler::Initialize(m_process, &HyperV::Tsc::ReadTsc);
-		m_process.Modules.AddModule("moskrnl.exe", (void*)KernelBase);
+		m_process.Modules.AddModule("moskrnl.exe", (void*)KernelBase, WinPE::GetSizeOfImage((void*)KernelBase));
 
 		//Initialize Platform (HyperV)
 		HyperV::Initialize();

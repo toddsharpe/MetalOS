@@ -32,7 +32,7 @@ void WinPE_test()
 	Assert(WinPE::GetPESection(image, ".nosuch") == nullptr);
 
 	//The debug directory names this image's PDB (the stack walker finds symbols this way)
-	const char* const pdb = WinPE::GetPdbName(image);
+	const char* const pdb = WinPE::GetPdbName(image, WinPE::GetSizeOfImage(image));
 	Assert(pdb);
 	const size_t length = strlen(pdb);
 	Assert(length >= strlen("Test.pdb"));
@@ -49,7 +49,7 @@ void WinPE_test()
 
 	//No debug directory: no PDB name, rather than an assert (the stack walker then prints frames without symbols)
 	debug = {};
-	Assert(WinPE::GetPdbName(headers) == nullptr);
+	Assert(WinPE::GetPdbName(headers, sizeof(headers)) == nullptr);
 
 	//CodeView found after another entry type
 	IMAGE_DEBUG_DIRECTORY* const entries = MakePointer<IMAGE_DEBUG_DIRECTORY*>(headers, DirectoryRva);
@@ -62,10 +62,45 @@ void WinPE_test()
 	memcpy(rsds->Signature, "RSDS", sizeof(rsds->Signature));
 	memcpy(rsds->name, "late.pdb", sizeof("late.pdb"));
 	debug = { DirectoryRva, (DWORD)(2 * sizeof(IMAGE_DEBUG_DIRECTORY)) };
-	const char* const late = WinPE::GetPdbName(headers);
+	const char* const late = WinPE::GetPdbName(headers, sizeof(headers));
 	Assert(late && strcmp(late, "late.pdb") == 0);
 
 	//Only a non-CodeView entry: no PDB name
 	debug = { DirectoryRva, (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY) };
-	Assert(WinPE::GetPdbName(headers) == nullptr);
+	Assert(WinPE::GetPdbName(headers, sizeof(headers)) == nullptr);
+
+	//A process can scribble on its image's headers, so the size-checked reads turn down any that would read past the image instead of asserting
+	debug = { DirectoryRva, (DWORD)(2 * sizeof(IMAGE_DEBUG_DIRECTORY)) };
+	IMAGE_DOS_HEADER* const dosCopy = reinterpret_cast<IMAGE_DOS_HEADER*>(headers);
+	IMAGE_NT_HEADERS64* const ntCopy = MakePointer<IMAGE_NT_HEADERS64*>(headers, __ImageBase.e_lfanew);
+	Assert(WinPE::GetNtHeaders(headers, sizeof(headers)) == ntCopy);
+	Assert(WinPE::GetNtHeaders(headers, headerSize - 1) == nullptr);
+
+	dosCopy->e_magic ^= 1;
+	Assert(WinPE::GetNtHeaders(headers, sizeof(headers)) == nullptr);
+	dosCopy->e_magic ^= 1;
+
+	dosCopy->e_lfanew = -8;
+	Assert(WinPE::GetNtHeaders(headers, sizeof(headers)) == nullptr);
+	dosCopy->e_lfanew = 0x7FFFFFF0;
+	Assert(WinPE::GetNtHeaders(headers, sizeof(headers)) == nullptr);
+	dosCopy->e_lfanew = __ImageBase.e_lfanew;
+
+	ntCopy->Signature ^= 1;
+	Assert(WinPE::GetNtHeaders(headers, sizeof(headers)) == nullptr);
+	ntCopy->Signature ^= 1;
+
+	//A section table running past the image, which the PDB parser reads next
+	const WORD sections = ntCopy->FileHeader.NumberOfSections;
+	ntCopy->FileHeader.NumberOfSections = 0xFFFF;
+	Assert(WinPE::GetNtHeaders(headers, sizeof(headers)) == nullptr);
+	Assert(WinPE::GetPdbName(headers, sizeof(headers)) == nullptr);
+	ntCopy->FileHeader.NumberOfSections = sections;
+
+	//A debug directory or CodeView record cut off by the image's end, or a name that runs into it
+	Assert(WinPE::GetPdbName(headers, DirectoryRva + sizeof(IMAGE_DEBUG_DIRECTORY)) == nullptr);
+	Assert(WinPE::GetPdbName(headers, CodeViewRva + 8) == nullptr);
+	const size_t nameEnd = CodeViewRva + (size_t)(rsds->name - (const char*)rsds) + strlen("late.pdb");
+	Assert(WinPE::GetPdbName(headers, nameEnd) == nullptr);
+	Assert(WinPE::GetPdbName(headers, nameEnd + 1) == late);
 }

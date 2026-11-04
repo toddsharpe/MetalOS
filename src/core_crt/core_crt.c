@@ -2,4 +2,3 @@
 #include "core_crt/stdio.c"
 #include "core_crt/stdlib.c"
 #include "core_crt/string.c"
-#include "core_crt/wchar.c"

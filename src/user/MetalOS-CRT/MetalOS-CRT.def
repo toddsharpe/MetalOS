@@ -55,8 +55,6 @@ EXPORTS
 	rand
 	srand
 	atoi
-	mbstowcs
-	wcstombs
 
 	; ctype
 	tolower
@@ -65,12 +63,6 @@ EXPORTS
 	isdigit
 	isxdigit
 	isprint
-
-	; wchar
-	wcscmp
-	wcslen
-	wcscpy
-	wcsncpy
 
 	; errno
 	_errno

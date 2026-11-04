@@ -155,7 +155,7 @@ public:
 				CString name;
 				if (m_publics.GetFunction(linesHeader.offCon, name))
 					lookup.Function.Set(CString(name.c_str(), Min(name.Length, lookup.Function.Capacity - 2))); //Long template names are clipped, as Set keeps a char spare
-				else
+				else if (!GetProcedureName(moduleStream, info.SymByteSize, offset, lookup.Function))
 					lookup.Function.Set("<not found>");
 				lookup.Line = closest.linenumStart;
 				return true;
@@ -248,6 +248,31 @@ private:
 		//char ModuleName[];
 		//char ObjFileName[];
 	};
+
+#pragma pack(push, 1)
+	struct SymbolHeader
+	{
+		uint16_t Length; //Of the record after this field
+		SYM_ENUM_e Type;
+	};
+
+	//PROCSYM32, the body of S_GPROC32, S_LPROC32 and their _ID forms
+	struct ProcedureSymbol
+	{
+		uint32_t Parent;
+		uint32_t End; //Module stream offset of its S_END
+		uint32_t Next;
+		uint32_t Length;
+		uint32_t DebugStart;
+		uint32_t DebugEnd;
+		uint32_t TypeIndex;
+		uint32_t Offset;
+		uint16_t Segment;
+		uint8_t Flags;
+		//char Name[];
+	};
+#pragma pack(pop)
+	static_assert(sizeof(ProcedureSymbol) == 35, "Invalid ProcedureSymbol");
 
 	enum class SectionContrSubstreamVersion : uint32_t
 	{
@@ -361,6 +386,55 @@ private:
 			m_stream.SkipAlign<uint32_t>();
 		}
 		
+		return false;
+	}
+
+	//A static or anonymous-namespace function has no public (and an assembly one's lines can start before its public), so it's named by the procedure record holding offset
+	bool GetProcedureName(MsfStream& moduleStream, const uint32_t symbolsSize, const uint32_t offset, StringStorage& name)
+	{
+		const uint32_t symbolsEnd = Min(symbolsSize, moduleStream.Size); //A SymByteSize past the stream's end would read past its blocks
+
+		//Records follow the stream's signature, each one starting where the last one's length ends
+		uint32_t position = sizeof(uint32_t);
+		while (position < symbolsEnd && symbolsEnd - position >= sizeof(SymbolHeader))
+		{
+			moduleStream.Seek(position);
+			SymbolHeader header;
+			Assert(moduleStream.Read(&header));
+
+			//A record too short for its type, or running past the symbols, is corrupt
+			const uint32_t next = position + sizeof(header.Length) + header.Length;
+			if (header.Length < sizeof(header.Type) || next > symbolsEnd)
+				return false;
+
+			const bool isProcedure = header.Type == S_GPROC32 || header.Type == S_LPROC32 || header.Type == S_GPROC32_ID || header.Type == S_LPROC32_ID;
+			if (!isProcedure || header.Length < sizeof(header.Type) + sizeof(ProcedureSymbol))
+			{
+				position = next;
+				continue;
+			}
+
+			ProcedureSymbol procedure;
+			Assert(moduleStream.Read(&procedure));
+			if (procedure.Segment == TextSection && offset - procedure.Offset < procedure.Length)
+			{
+				//The name is NUL-terminated inside the record; one longer than the destination is clipped
+				name.Clear();
+				while (moduleStream.Position() < next)
+				{
+					const char c = moduleStream.Read<char>();
+					if (c == '\0')
+						return true;
+					if (name.Count() < name.Capacity - 1)
+						name.Append(c);
+				}
+				return false;
+			}
+
+			//Its locals, blocks and inlinees come before its S_END, so the walk jumps there (or to the next record, if End is out of place)
+			position = (procedure.End > position && procedure.End < symbolsEnd) ? procedure.End : next;
+		}
+
 		return false;
 	}
 

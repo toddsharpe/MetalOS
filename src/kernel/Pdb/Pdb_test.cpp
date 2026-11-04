@@ -35,6 +35,20 @@ extern "C" __declspec(noinline) void Pdb_test_last_line()
 }
 static constexpr size_t LastLine = __LINE__ - 1;
 
+//Internal linkage gets no public symbol, so these are named from their module's procedure records
+static __declspec(noinline) int Pdb_test_static()
+{
+	return s_data + 1;
+}
+
+namespace
+{
+	__declspec(noinline) int Pdb_test_anonymous()
+	{
+		return s_data + 2;
+	}
+}
+
 //Reads a whole file into memory, as KeLoadFile does for the kernel's stack walker
 static void* LoadFile(const char* const path, size_t* const fileSize = nullptr)
 {
@@ -250,6 +264,7 @@ void Pdb_test()
 		PdbLookup last = {};
 		Assert(file.Resolve(functions[i].EndAddress - 1, last));
 		Assert(last.Function == first.Function);
+		Assert(first.Function != "<not found>");
 		checked++;
 
 		if (functions[i].BeginAddress == lastLineRva)
@@ -261,6 +276,13 @@ void Pdb_test()
 	}
 	Assert(checked != 0);
 	Assert(sawLastLine);
+
+	//A static function and an anonymous-namespace one have lines but no public, so their names come from their procedure records
+	AssertEqual(Pdb_test_static() + Pdb_test_anonymous(), 2 * s_data + 3);
+	Assert(file.Resolve((uint32_t)((uintptr_t)&Pdb_test_static - (uintptr_t)image), lookup));
+	Assert(lookup.Function == "Pdb_test_static");
+	Assert(file.Resolve((uint32_t)((uintptr_t)&Pdb_test_anonymous - (uintptr_t)image), lookup));
+	Assert(lookup.Function == "`anonymous namespace'::Pdb_test_anonymous");
 
 	arena.Reset();
 	PdbPublics_test(arena);

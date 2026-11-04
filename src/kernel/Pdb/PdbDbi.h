@@ -48,13 +48,15 @@ public:
 		const uint32_t offset = rva - m_textSection->VirtualAddress;
 		//Printf("Text VA: 0x%016x, Off: 0x%016x\n", m_textSection->VirtualAddress, offset);
 
+		//No module contributes the IP when it's outside .text (a call into data) or in padding between contributions
 		uint16_t moduleIndex;
-		Assert(GetModuleIndex(TextSection, offset, moduleIndex));
+		if (!GetModuleIndex(TextSection, offset, moduleIndex))
+			return false;
 		//Printf("ModuleIndex: %d\n", moduleIndex);
 
 		ModInfo info;
-		Assert(GetModuleInfo(moduleIndex, info));
-		Assert(info.C11ByteSize == 0);
+		if (!GetModuleInfo(moduleIndex, info))
+			return false;
 		if (info.C13ByteSize == 0)
 		{
 			//TODO(tsharpe): Find the entry somewhere
@@ -68,9 +70,12 @@ public:
 		m_stream.SkipString();
 
 		MsfStream& moduleStream = m_file.GetStream(info.ModuleSymStream);
-		uint32_t header = moduleStream.Read<uint32_t>();
-		Assert(header == 4);//TODO: magic
-		moduleStream.Seek(info.SymByteSize);
+		if (moduleStream.Read<uint32_t>() != SymbolsSignatureC13)
+			return false;
+
+		//Older C11 line info, when a module has any, sits between the symbols and the C13 lines
+		const uint32_t startPosition = info.SymByteSize + info.C11ByteSize;
+		moduleStream.Seek(startPosition);
 
 		//After seeking past the symbols, PDB contains records in order:
 		// * CV_DebugSLinesHeader_t (DEBUG_S_LINES) (or DEBUG_S_FILECHKSMS, not handled here)
@@ -79,15 +84,21 @@ public:
 		// * CV_Line_t - defines each line entry
 		{
 			//Entries are sorted
-			const uint32_t endPosition = info.SymByteSize + info.C13ByteSize;
+			const uint32_t endPosition = startPosition + info.C13ByteSize;
 			while (moduleStream.Position() < endPosition)
 			{
 				CV_DebugSSubsectionHeader_t sectionHeader;
 				Assert(moduleStream.Read(&sectionHeader));
 
+				//Each subsection is left by seeking to the next (4-byte aligned) one, so an unmatched lines block is never read as headers
+				const uint32_t sectionStart = moduleStream.Position();
+				if (sectionHeader.cbLen < 0 || sectionStart > endPosition || (uint32_t)sectionHeader.cbLen > endPosition - sectionStart)
+					return false;
+				const uint32_t nextSection = AlignSize(sectionStart + (uint32_t)sectionHeader.cbLen, sizeof(uint32_t));
+
 				if (sectionHeader.type != DEBUG_S_SUBSECTION_TYPE::DEBUG_S_LINES)
 				{
-					moduleStream.Skip(sectionHeader.cbLen);
+					moduleStream.Seek(nextSection);
 					continue;
 				}
 
@@ -108,7 +119,7 @@ public:
 				//Continue to next entry
 				if (offset >= (linesHeader.offCon + linesHeader.cbCon))
 				{
-					moduleStream.Skip(sectionHeader.cbLen - sizeof(CV_DebugSLinesHeader_t));
+					moduleStream.Seek(nextSection);
 					continue;
 				}
 
@@ -131,7 +142,7 @@ public:
 					{
 						CString found;
 						if (m_publics.GetFunction(linesHeader.offCon, found))
-							lookup.Function.Set(found);
+							lookup.Function.Set(CString(found.c_str(), Min(found.Length, lookup.Function.Capacity - 2))); //Long template names are clipped, as Set keeps a char spare
 						else
 							lookup.Function.Set("<not found>");
 						lookup.Line = prev.linenumStart;
@@ -139,6 +150,9 @@ public:
 					}
 					prev = line;
 				}
+
+				//In the block's last line or a later file block, which this doesn't resolve: skip to the next subsection
+				moduleStream.Seek(nextSection);
 			}
 		}
 
@@ -150,6 +164,7 @@ public:
 private:
 	static const uint32_t TextSection = 1;
 	static const uint32_t Signature = -1;
+	static const uint32_t SymbolsSignatureC13 = 4; //CV_SIGNATURE_C13, the first dword of a module's symbol stream
 
 	enum class DbiStreamVersion : uint32_t
 	{
@@ -293,12 +308,13 @@ private:
 	{
 		//Seek to start of section contribution stream
 		m_stream.Seek(sizeof(DbiStreamHeader) + m_header.ModInfoSize);
-		const uint32_t endPosition = m_stream.Position() + m_header.ModInfoSize + m_header.SectionContributionSize;
+		const uint32_t endPosition = m_stream.Position() + m_header.SectionContributionSize;
 
 		//Reassert this here
 		SectionContrSubstreamVersion version;
 		Assert(m_stream.Read(&version));
-		AssertEqual(version, SectionContrSubstreamVersion::Ver60); //V2 uses SectionContribEntry2
+		if (version != SectionContrSubstreamVersion::Ver60)
+			return false; //V2 uses SectionContribEntry2
 		SectionContribEntry entry;
 
 		while (m_stream.Position() < endPosition)
@@ -315,9 +331,7 @@ private:
 				return true;
 			}
 		}
-		
-		Printf("Section: %d Offset: 0x%08x. start: 0x%08x, end: 0x%08x\n", section, offset, m_stream.Position(), endPosition);
-		Assert(false);
+
 		return false;
 	}
 

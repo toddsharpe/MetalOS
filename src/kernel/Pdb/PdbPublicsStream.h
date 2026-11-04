@@ -17,15 +17,18 @@ public:
 
 	}
 
-	void Load(MsfStream& stream, Arena& arena)
+	//False when the arena can't hold the table and its names (a PDB too large for it)
+	bool Load(MsfStream& stream, Arena& arena)
 	{
 		//Count the .text publics first, so the table is sized to hold every one of them
-		m_count = Scan(stream, nullptr, arena);
-		m_functions = static_cast<Function*>(arena.Allocate(m_count * sizeof(Function)));
-		Assert(m_functions);
+		const size_t count = Scan(stream, nullptr, arena);
+		m_functions = static_cast<Function*>(arena.Allocate(count * sizeof(Function)));
+		if (!m_functions)
+			return false;
 
 		stream.Seek(0);
-		Scan(stream, m_functions, arena);
+		m_count = Scan(stream, m_functions, arena);
+		return m_count == count;
 	}
 
 	bool GetFunction(const uint32_t offset, CString& name)
@@ -61,7 +64,7 @@ private:
 		CString Name; //Copied into the arena, since a name can straddle two MSF blocks
 	};
 
-	//Returns the number of .text publics, and stores each one (name copied into the arena) when given a table
+	//Returns the number of .text publics, and stores each one (name copied into the arena) when given a table, stopping at the first name the arena can't hold
 	size_t Scan(MsfStream& stream, Function* const table, Arena& arena)
 	{
 		size_t count = 0;
@@ -89,7 +92,14 @@ private:
 					if (record.Section == Section::Text)
 					{
 						if (table)
-							table[count] = { record.Offset, arena.Copy(name) };
+						{
+							//Copied by hand, so a full arena fails the load, which Arena::Copy can't report
+							char* const copy = static_cast<char*>(arena.Allocate(name.Count() + 1));
+							if (!copy)
+								return count;
+							memcpy(copy, name.c_str(), name.Count());
+							table[count] = { record.Offset, CString(copy, name.Count()) };
+						}
 						count++;
 					}
 				}

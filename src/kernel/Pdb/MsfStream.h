@@ -40,7 +40,8 @@ public:
 
 	uint32_t GetBlockNumber(const size_t index) const
 	{
-		Assert(index < BlockCount);
+		if (index >= BlockCount)
+			return NoBlock;
 
 		if (m_blocks)
 			return m_blocks[index];
@@ -206,6 +207,8 @@ public:
 			Printf("\n");
 		}
 	}
+
+	static constexpr uint32_t NoBlock = 0xFFFFFFFF; //For a read past the last block: past any file's blocks too, so MsfFile reads it as zeros
 
 	uint32_t Size;
 	bool IsInvalid;

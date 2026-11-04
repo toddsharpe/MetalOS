@@ -18,12 +18,13 @@ public:
 		
 	}
 
-	//False when the PDB isn't the image's (a stale PDB from another build would name the wrong functions), or the image's headers don't lie in its imageSize bytes
+	//False when the PDB isn't the image's (a stale PDB from another build would name the wrong functions), the image's headers don't lie in its imageSize bytes, or the PDB can't be read (not MSF, a header or stream it lacks or doesn't support, too large for the arena); it then resolves nothing
 	bool Open(const void* pdb, const void* const image, const size_t imageSize, Arena& arena)
 	{
+		m_dbi = nullptr;
 		m_msfFile = arena.Allocate<MsfFile>(pdb);
-		Assert(m_msfFile);
-		m_msfFile->Initialize(arena);
+		if (!m_msfFile || !m_msfFile->Initialize(arena))
+			return false;
 
 		//Load msf file
 
@@ -34,26 +35,34 @@ public:
 
 		//Matched as the PDB library does: the same GUID, and an age the PDB stream has reached
 		PdbStreamHeader header;
+		if (!m_msfFile->HasStream(PDB_STREAM_PDB) || m_msfFile->GetStream(PDB_STREAM_PDB).Size < sizeof(header))
+			return false;
 		MsfStream& pdbStream = m_msfFile->GetStream(PDB_STREAM_PDB);
 		Assert(pdbStream.Read(&header));
 		if (memcmp(&header.Guid, &codeView->guid, sizeof(header.Guid)) != 0 || codeView->age > header.Age)
 			return false;
 
 		//DBI stream
+		if (!m_msfFile->HasStream(PDB_STREAM_DBI))
+			return false;
 		MsfStream& dbiStream = m_msfFile->GetStream(PDB_STREAM_DBI);
 
 		//Load DbiStream
-		m_dbi = arena.Allocate<PdbDbi>(dbiStream, *m_msfFile);
-		Assert(m_dbi);
-		m_dbi->Initialize(image, arena);
+		PdbDbi* const dbi = arena.Allocate<PdbDbi>(dbiStream, *m_msfFile);
+		if (!dbi || !dbi->Initialize(image, arena))
+			return false;
 
 		//The DBI stream's age, when it has one, is the image's exactly
-		return m_dbi->GetAge() == 0 || m_dbi->GetAge() == codeView->age;
+		if (dbi->GetAge() != 0 && dbi->GetAge() != codeView->age)
+			return false;
+
+		m_dbi = dbi;
+		return true;
 	}
 	
 	bool Resolve(const uint32_t rva, PdbLookup& lookup)
 	{
-		return m_dbi->ResolveFunction(rva, lookup);
+		return m_dbi && m_dbi->ResolveFunction(rva, lookup);
 	}
 
 private:

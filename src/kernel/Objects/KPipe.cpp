@@ -27,37 +27,53 @@ constexpr KPipe::KPipe(const size_t size) :
 
 }
 
-void KPipe::Init()
+bool KPipe::Init()
 {
 	ListInitializeHead(m_writers);
 	Assert(m_size % Arch::PageSize == 0);
 	const size_t count = Arch::SizeToPages(m_size);
-	
-	//Acquire physical pages
-	StaticVector<paddr_t, 32> addresses;
+	if (count > MaxPages)
+		return false;
+
+	//Acquire physical pages; a process creates pipes, so running out fails the call instead of the kernel
+	StaticVector<paddr_t, MaxPages * 2> addresses;
 	for (size_t i = 0; i < count; i++)
 	{
-		const paddr_t addr = KePhysicalAlloc();
-		addresses.Add(addr);
+		paddr_t addr = 0;
+		if (!KePhysicalTryAlloc(addr))
+		{
+			for (const paddr_t page : addresses)
+				KePhysicalFree(page);
+			return false;
+		}
+		Assert(addresses.Add(addr));
 	}
 
 	//Add them to list twice (double map)
 	for (size_t i = 0; i < count; i++)
 	{
 		const paddr_t addr = addresses[i];
-		addresses.Add(addr);
+		Assert(addresses.Add(addr));
 	}
 
-	//Map into kernel
+	//Map into kernel; the mapping only borrows the pages, so a failed map leaves them to free here
 	void* const base = KeVirtualMap(addresses.begin(), addresses.Count() << Arch::PageShift);
+	if (!base)
+	{
+		for (size_t i = 0; i < count; i++)
+			KePhysicalFree(addresses[i]);
+		return false;
+	}
+
 	m_buffer = reinterpret_cast<uint8_t*>(base);
+	return true;
 }
 
 void KPipe::Free()
 {
 	//The first view holds each page once; read them back before the unmap drops the translations
 	const size_t count = Arch::SizeToPages(m_size);
-	StaticVector<paddr_t, 16> addresses;
+	StaticVector<paddr_t, MaxPages> addresses;
 	for (size_t i = 0; i < count; i++)
 		Assert(addresses.Add(m_process.Tables.ResolvePhysical(&m_buffer[i << Arch::PageShift])));
 

@@ -746,9 +746,15 @@ SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle)
 
 	const size_t pipeSize = Arch::PageSize;
 	
-	//Create kernel pipe
+	//Create kernel pipe; out of memory fails the call with nothing left allocated
 	KPipe* pipe = KeAlloc<KPipe>(AllocType::Kernel, pipeSize);
-	pipe->Init();
+	if (!pipe)
+		return SyscallResult::Failed;
+	if (!pipe->Init())
+	{
+		KeFree(pipe, AllocType::Kernel);
+		return SyscallResult::Failed;
+	}
 	pipe->Readers.Increment();
 	pipe->Writers.Increment();
 

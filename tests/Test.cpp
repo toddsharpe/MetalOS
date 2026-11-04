@@ -21,6 +21,7 @@
 #include "Lib/Path_test.cpp"
 #include "WinPE_test.cpp"
 #include "kernel/Pdb/Pdb_test.cpp"
+#include "user/MetalOS-NetSvr/ArpCache_test.cpp"
 
 #define Test(name)                     \
 	{                                  \
@@ -49,6 +50,7 @@ int main()
 	Test(Path);
 	Test(WinPE);
 	Test(Pdb);
+	Test(ArpCache);
 
 	return 0;
 }

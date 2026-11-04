@@ -35,6 +35,14 @@ public:
 		return m_storage[m_head];
 	}
 
+	//The index-th oldest entry, so a caller can search or update entries in place
+	T& operator[](const size_t index)
+	{
+		Assert(index < m_count);
+
+		return m_storage[(m_head + index) % N];
+	}
+
 	T Dequeue()
 	{
 		Assert(!IsEmpty());

@@ -1,4 +1,5 @@
 #include "Net/Net.h"
+#include "Lib/CircularBuffer.h"
 
 namespace
 {
@@ -7,35 +8,34 @@ namespace
 		Net::ipv4_addr_t ip_addr;
 		Net::eth_mac_t eth_addr;
 	};
-	entry_t cache[4] = {{Net::broadcast, Net::eth_broadcast}};
+	constexpr size_t CacheSize = 8;
+
+	//Broadcast and multicast MACs are computed by Lookup, so every entry is a unicast peer, oldest first
+	CircularBuffer<entry_t, CacheSize> cache;
 }
 
 namespace Net::ArpCache
 {
-	bool Update(const Net::ipv4_addr_t& ip_addr, const Net::eth_mac_t& eth_addr)
+	void Update(const Net::ipv4_addr_t& ip_addr, const Net::eth_mac_t& eth_addr)
 	{
+		//0.0.0.0 is the sender of an ARP probe, not a peer, so it's never cached
+		if (ip_addr == Net::empty)
+			return;
+
 		//Search for existing device
-		for (entry_t& entry : cache)
+		for (size_t i = 0; i < cache.Count(); i++)
 		{
-			if (entry.ip_addr != ip_addr)
+			if (cache[i].ip_addr != ip_addr)
 				continue;
 
-			entry.eth_addr = eth_addr;
-			return true;
-		}
-		
-		//Add into empty slot
-		for (entry_t& entry : cache)
-		{
-			if (entry.ip_addr != Net::empty)
-				continue;
-
-			entry.ip_addr = ip_addr;
-			entry.eth_addr = eth_addr;
-			return true;
+			cache[i].eth_addr = eth_addr;
+			return;
 		}
 
-		return false;
+		//Full: the oldest peer makes room for the new one
+		if (cache.IsFull())
+			cache.Dequeue();
+		Assert(cache.Enqueue({ ip_addr, eth_addr }));
 	}
 
 	bool Lookup(const Net::ipv4_addr_t& ip_addr, Net::eth_mac_t& eth_addr)
@@ -59,11 +59,11 @@ namespace Net::ArpCache
 			return true;
 		}
 		
-		for (const entry_t& entry : cache)
+		for (size_t i = 0; i < cache.Count(); i++)
 		{
-			if (entry.ip_addr == ip_addr)
+			if (cache[i].ip_addr == ip_addr)
 			{
-				eth_addr = entry.eth_addr;
+				eth_addr = cache[i].eth_addr;
 				return true;
 			}
 		}

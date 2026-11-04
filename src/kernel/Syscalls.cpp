@@ -552,10 +552,9 @@ HFile CreateFile(const char* path, const FileAccess access)
 SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize, size_t* bytesRead)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!bufferSize)
-		return SyscallResult::InvalidArg;
 
-	if (!proc.Space.IsValidRange(buffer, bufferSize) || (bytesRead && !proc.Space.IsValid(bytesRead)))
+	//A zero-length read touches no buffer, as on Windows
+	if ((bufferSize && !proc.Space.IsValidRange(buffer, bufferSize)) || (bytesRead && !proc.Space.IsValid(bytesRead)))
 		return SyscallResult::InvalidPointer;
 
 	UObject* obj = proc.GetObject((handle_t)handle);
@@ -580,21 +579,29 @@ SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize
 			KPipe& pipe = *obj->Pipe;
 			PipeHold hold(Scheduler::GetUThread(), pipe);
 
-			//Create read wait
-			KPipeSignal signal(pipe, KPipeOp::Read, bufferSize);
-			KPredicate wait(&KPipe::EventSignal, &signal);
+			//Wait for at least one byte or for every write end to close; readers woken by the same bytes take turns, so one that finds the pipe empty again waits again
+			while (pipe.Count() == 0 && !pipe.Writers.IsEmpty())
+			{
+				KPipeSignal signal(pipe, KPipeOp::Read, 1);
+				KPredicate wait(&KPipe::EventSignal, &signal);
+				KWaitResult result = KeWait(wait);
+				Assert(result == KWaitResult::Signaled);
+			}
 
-			//Wait for pipe signal
-			KWaitResult result = KeWait(wait);
-			Assert(result == KWaitResult::Signaled);
+			//Bytes a writer left before closing are still returned; only an empty pipe with no write end left is the end
+			if (pipe.Count() == 0)
+			{
+				if (bytesRead)
+					*bytesRead = 0;
+				return SyscallResult::BrokenPipe;
+			}
 
-			//Read
+			//Read what's there, up to the buffer; a zero-length read only waits for data
 			size_t bytes = 0;
 			Assert(pipe.Read(buffer, bufferSize, bytes));
 			if (bytesRead)
 				*bytesRead = bytes;
-
-			return pipe.IsBroken() ? SyscallResult::BrokenPipe : SyscallResult::Success;
+			return SyscallResult::Success;
 		}
 		break;
 

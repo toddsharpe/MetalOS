@@ -118,13 +118,23 @@ extern "C"
 		if (!_ElementSize || !_ElementCount)
 			return 0;
 
-		//A broken pipe still hands back what was read before the writer left, so it reads as end of file
+		//A pipe returns what has arrived so far, so keep reading until the count is met or the stream ends
+		const size_t total = _ElementSize * _ElementCount;
 		size_t bytes = 0;
-		const SyscallResult result = ReadFile(reinterpret_cast<HFile>(_Stream), _Buffer, _ElementSize * _ElementCount, &bytes);
-		if (result != SyscallResult::Success && result != SyscallResult::BrokenPipe)
+		while (bytes < total)
 		{
-			errno = ToErrno(result);
-			return 0;
+			size_t read = 0;
+			const SyscallResult result = ReadFile(reinterpret_cast<HFile>(_Stream), static_cast<char*>(_Buffer) + bytes, total - bytes, &read);
+			if (result != SyscallResult::Success && result != SyscallResult::BrokenPipe)
+			{
+				errno = ToErrno(result);
+				break;
+			}
+
+			//BrokenPipe is an empty pipe whose writer has gone, so it reads as end of file
+			bytes += read;
+			if (result == SyscallResult::BrokenPipe || read == 0)
+				break;
 		}
 
 		return bytes / _ElementSize;

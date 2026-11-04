@@ -168,16 +168,14 @@ bool KPipe::IsUnused() const
 
 bool KPipe::EventSignal(const KPipeOp op, const size_t count, const ListEntry* const writer)
 {
-	if (IsBroken())
-		return true;
-
 	switch (op)
 	{
+		//Only the write ends closing ends a read without data; a read end's handle closing under a blocked reader doesn't, as on Windows
 		case KPipeOp::Read:
-			return Count() >= count;
+			return Writers.IsEmpty() || Count() >= count;
 
 		case KPipeOp::Write:
-			return m_writers.Link.Flink == writer && Space() >= count;
+			return IsBroken() || (m_writers.Link.Flink == writer && Space() >= count);
 
 		default:
 			Fatal("Invalid pipe op");

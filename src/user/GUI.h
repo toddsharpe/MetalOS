@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Lib/StaticVector.h"
 #include "Graphics/Types.h"
-#include "UI/Window.h"
+#include "Graphics/Draw2D.h"
+#include "UI/Control.h"
 #include "user/MetalOS.h"
 #include "Assert.h"
 
@@ -9,15 +11,18 @@ class GUI;
 
 typedef bool (*MessageCallback)(GUI &window, Message &message);
 
-class GUI : public UI::Window
+class GUI
 {
 public:
-	GUI(const CString &title, const Graphics::Rectangle &rect, UI::WindowStyle &style, const MessageCallback &callback) : Window(title, style),
-																														  Frame(nullptr, rect.Height, rect.Width),
-																														  m_callback(callback),
-																														  m_point({rect.X, rect.Y}),
-																														  m_prevMouseButtons(),
-																														  m_handle()
+	GUI(const CString &title, const Graphics::Rectangle &rect, const MessageCallback callback) :
+		Frame(nullptr, rect.Height, rect.Width),
+		Background(Graphics::Colors::White),
+		Children(),
+		Title(title),
+		m_callback(callback),
+		m_point({rect.X, rect.Y}),
+		m_prevMouseButtons(),
+		m_handle()
 	{
 	}
 
@@ -50,7 +55,7 @@ public:
 		{
 		case MessageType::PaintEvent:
 			//Draw straight into the WM-provided shared surface; the WM composites it.
-			Draw(Frame);
+			Draw();
 			break;
 
 		case MessageType::MouseEvent:
@@ -60,9 +65,31 @@ public:
 	}
 
 	Graphics::FrameBuffer Frame;
+	Graphics::Color Background;
+	StaticVector<UI::Control*, 16> Children;
+	StaticString<32> Title;
 
 private:
-	const MessageCallback &m_callback;
+	static constexpr Graphics::Color BorderColor = Graphics::Colors::Blue;
+
+	void Draw()
+	{
+		//Clear frame
+		Graphics::Draw2D::FillScreen(Frame, Background);
+
+		//Draw border
+		Graphics::Draw2D::DrawFrameBorder(Frame, BorderColor, 3);
+		Graphics::Draw2D::DrawText(Frame, { 9, 9 }, Title, BorderColor);
+		Graphics::Draw2D::DrawRectangle(Frame, BorderColor, { 0, 20, Frame.Width, 3 });
+
+		//Draw children
+		for (const auto& child : Children)
+		{
+			child->Draw(Frame);
+		}
+	}
+
+	MessageCallback m_callback;
 
 	Graphics::Point2D m_point;
 	MouseButtonState m_prevMouseButtons;

@@ -6,7 +6,7 @@ extern "C" IMAGE_DOS_HEADER __ImageBase;
 extern "C" int WinPE_test_export();
 
 //Reads a whole file into memory, as KeLoadFile does for the kernel's stack walker
-static void* LoadFile(const char* const path)
+static void* LoadFile(const char* const path, size_t* const fileSize = nullptr)
 {
 	FILE* const file = fopen(path, "rb");
 	Assert(file);
@@ -18,6 +18,8 @@ static void* LoadFile(const char* const path)
 	Assert(buffer);
 	Assert(fread(buffer, 1, size, file) == (size_t)size);
 	fclose(file);
+	if (fileSize)
+		*fileSize = (size_t)size;
 	return buffer;
 }
 
@@ -79,13 +81,84 @@ static void PdbPublics_test(Arena& arena)
 	free(data);
 }
 
+//Open takes only the PDB the image was linked with, going by the GUID and age in the image's CodeView record
+static void PdbMatch_test(const void* const pdb, const size_t pdbSize, Arena& arena)
+{
+	const void* const image = &__ImageBase;
+	const WinPE::OMFSignatureRSDS* const codeView = WinPE::GetCodeView(image);
+	Assert(codeView);
+
+	//A copy of this image's headers (sections included) with a debug directory of its own, so the CodeView record can be rewritten
+	static constexpr DWORD DirectoryRva = 0x800;
+	static constexpr DWORD CodeViewRva = 0x900;
+	static uint8_t headers[0x1000];
+	const DWORD headerSize = WinPE::GetNtHeaders(image)->OptionalHeader.SizeOfHeaders;
+	Assert(headerSize <= DirectoryRva);
+	memcpy(headers, image, headerSize);
+	IMAGE_DATA_DIRECTORY& debug = MakePointer<IMAGE_NT_HEADERS64*>(headers, __ImageBase.e_lfanew)->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
+	IMAGE_DEBUG_DIRECTORY* const entry = MakePointer<IMAGE_DEBUG_DIRECTORY*>(headers, DirectoryRva);
+	*entry = {};
+	entry->Type = IMAGE_DEBUG_TYPE_CODEVIEW;
+	entry->AddressOfRawData = CodeViewRva;
+	WinPE::OMFSignatureRSDS* const rsds = MakePointer<WinPE::OMFSignatureRSDS*>(headers, CodeViewRva);
+	memcpy(rsds, codeView, sizeof(*rsds));
+	debug = { DirectoryRva, (DWORD)sizeof(IMAGE_DEBUG_DIRECTORY) };
+
+	//The same GUID and age
+	arena.Reset();
+	Assert(PdbFile().Open(pdb, headers, arena));
+
+	//Another build's GUID
+	rsds->guid.Data4[7] ^= 1;
+	arena.Reset();
+	Assert(!PdbFile().Open(pdb, headers, arena));
+	rsds->guid.Data4[7] ^= 1;
+
+	//A later link than the PDB's (relinking keeps the GUID and bumps the age, so this is a stale PDB)
+	rsds->age++;
+	arena.Reset();
+	Assert(!PdbFile().Open(pdb, headers, arena));
+	rsds->age--;
+
+	//An earlier link than the PDB's, which the DBI stream's age rules out
+	Assert(rsds->age > 0);
+	rsds->age--;
+	arena.Reset();
+	Assert(!PdbFile().Open(pdb, headers, arena));
+	rsds->age++;
+
+	//No CodeView record
+	debug = {};
+	arena.Reset();
+	Assert(!PdbFile().Open(pdb, headers, arena));
+
+	//The PDB side: a copy of it with its GUID corrupted wherever it appears
+	uint8_t* const corrupt = static_cast<uint8_t*>(malloc(pdbSize));
+	Assert(corrupt);
+	memcpy(corrupt, pdb, pdbSize);
+	size_t corrupted = 0;
+	for (size_t i = 0; i + sizeof(codeView->guid) <= pdbSize; i++)
+	{
+		if (memcmp(corrupt + i, &codeView->guid, sizeof(codeView->guid)) != 0)
+			continue;
+
+		corrupt[i] ^= 1;
+		corrupted++;
+	}
+	Assert(corrupted != 0);
+	arena.Reset();
+	Assert(!PdbFile().Open(corrupt, image, arena));
+	free(corrupt);
+}
+
 void Pdb_test()
 {
 	//Symbolize a function in this test executable from its own PDB, the same path the kernel's stack walker takes
 	const void* const image = &__ImageBase;
 	const char* const path = WinPE::GetPdbName(image);
 	Assert(path);
-	void* const pdb = LoadFile(path);
+	size_t pdbSize = 0;
+	void* const pdb = LoadFile(path, &pdbSize);
 
 	static constexpr size_t ArenaSize = 16 << 20;
 	uint8_t* const storage = static_cast<uint8_t*>(malloc(ArenaSize));
@@ -93,7 +166,7 @@ void Pdb_test()
 	Arena arena(storage, ArenaSize);
 
 	PdbFile file;
-	file.Open(pdb, image, arena);
+	Assert(file.Open(pdb, image, arena));
 
 	const uint32_t rva = (uint32_t)((uintptr_t)&WinPE_test_export - (uintptr_t)image);
 	PdbLookup lookup = {};
@@ -103,6 +176,8 @@ void Pdb_test()
 
 	arena.Reset();
 	PdbPublics_test(arena);
+
+	PdbMatch_test(pdb, pdbSize, arena);
 
 	free(storage);
 	free(pdb);

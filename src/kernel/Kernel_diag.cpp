@@ -13,7 +13,7 @@ namespace
 {
 	struct LoadedPdb
 	{
-		PdbFile* File; //Null when the module has no PDB to load, so its frames print without symbols
+		PdbFile* File; //Null when the module has no PDB to load, or one that doesn't match it, so its frames print without symbols
 		void* Image; //What the parser reads: the boot-mapped kernel PDB, or a KeLoadFile copy freed after the walk
 	};
 
@@ -79,7 +79,8 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 			if (pdb.Image)
 			{
 				pdb.File = arena.Allocate<PdbFile>();
-				pdb.File->Open(pdb.Image, module->ImageBase, arena);
+				if (!pdb.File->Open(pdb.Image, module->ImageBase, arena))
+					pdb.File = nullptr; //From another build of the module, so its names would be wrong
 			}
 			pdbs.Add(module, pdb);
 		}

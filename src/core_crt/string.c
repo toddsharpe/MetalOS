@@ -214,13 +214,18 @@ size_t strnlen_s(char const* _String, size_t _MaxCount)
 
 char* strncpy(char* _Destination, char const* _Source, size_t _Count)
 {
-	memcpy(_Destination, _Source, _Count * sizeof(char));
+	//Copies up to the source's terminator and pads the rest of _Count with NULs, never reading past the source
+	size_t i = 0;
+	for (; i < _Count && _Source[i]; i++)
+		_Destination[i] = _Source[i];
+	for (; i < _Count; i++)
+		_Destination[i] = '\0';
 	return _Destination;
 }
 
 char* strcpy(char* _Destination, char const* _Source)
 {
-	//+1 to copy the terminating null; strncpy here is a raw memcpy that does not add it.
+	//+1 so the terminating null is copied too
 	return strncpy(_Destination, _Source, strlen(_Source) + 1);
 }
 

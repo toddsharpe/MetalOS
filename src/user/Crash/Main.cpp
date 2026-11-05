@@ -20,6 +20,12 @@ void DebugBreak()
 	__debugbreak();
 }
 
+//Faults inside MetalOS-CRT.dll (printf reading the string), so the trace goes through a DLL's frames
+void DllFault()
+{
+	printf("%s\n", (const char*)1);
+}
+
 int main(int argc, char** argv)
 {
 	printf("Userspace crash demo.");
@@ -30,7 +36,7 @@ int main(int argc, char** argv)
 	
 	if (argc < 2)
 	{
-		printf("Usage: crash [null, div0, brk]");
+		printf("Usage: crash [null, div0, brk, dll]");
 		return -1;
 	}
 
@@ -45,6 +51,10 @@ int main(int argc, char** argv)
 	else if (strcmp(argv[1], "brk") == 0)
 	{
 		DebugBreak();
+	}
+	else if (strcmp(argv[1], "dll") == 0)
+	{
+		DllFault();
 	}
 	else
 	{

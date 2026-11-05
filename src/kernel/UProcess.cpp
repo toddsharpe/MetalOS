@@ -5,6 +5,7 @@
 #include "kernel/UThread.h"
 #include "kernel/KThread.h"
 #include "kernel/Api.h"
+#include "kernel/PebModules.h"
 #include "new.h"
 
 uint32_t UProcess::LastId = 0;
@@ -193,7 +194,7 @@ bool UProcess::CloseObject(const handle_t handle)
 	return true;
 }
 
-const KModule* UProcess::AddModule(const CString& name, void* image, const size_t imageSize)
+void UProcess::AddModule(const CString& name, void* const image)
 {
 	//Write the module entry into the process's PEB via the physical window (no direct user access).
 	//m_moduleIndex is tracked kernel-side so we never read PEB->ModuleIndex from user space.
@@ -206,10 +207,11 @@ const KModule* UProcess::AddModule(const CString& name, void* image, const size_
 
 	m_moduleIndex++;
 	KeWriteProcessMemory(*this, &m_peb->ModuleIndex, &m_moduleIndex, sizeof(m_peb->ModuleIndex));
+}
 
-	KModule* created = KeAlloc<KModule>(AllocType::User, name, image, imageSize);
-	Assert(this->Modules.Add(created));
-	return created;
+bool UProcess::GetModule(const uintptr_t address, KModule& module) const
+{
+	return GetPebModule(m_peb, Space, address, module);
 }
 
 void UProcess::Display() const

@@ -24,7 +24,8 @@ public:
 	UObject* GetObject(const handle_t handle);
 	bool CloseObject(const handle_t handle);
 
-	const KModule* AddModule(const CString& name, void* image, const size_t imageSize);
+	void AddModule(const CString& name, void* const image); //Lists the module in the PEB, the process's only module list
+	bool GetModule(const uintptr_t address, KModule& module) const; //Reads the PEB as process memory, so only while this process's space is the current one
 
 	void Display() const;
 
@@ -46,7 +47,7 @@ public:
 	ProcessState State;
 
 	uint32_t Refs; //Its own until reaped, plus each process handle; the record is freed at zero (KeReleaseUProcess)
-	bool Reaped; //Memory, page tables and modules freed; only the record remains
+	bool Reaped; //Memory and page tables freed; only the record remains
 
 private:
 	static uint32_t LastId;

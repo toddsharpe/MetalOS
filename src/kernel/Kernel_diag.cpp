@@ -1,6 +1,7 @@
 #include "kernel/Api.h"
 #include "kernel/Arch.h"
 #include "kernel/KProcess.h"
+#include "kernel/UProcess.h"
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
@@ -64,7 +65,7 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 
 	Arena& arena = m_tempArena;
 	arena.Reset();
-	StaticMap<const KModule*, LoadedPdb, MaxTracePdbs> pdbs;
+	StaticMap<uintptr_t, LoadedPdb, MaxTracePdbs> pdbs;
 
 	TracePrint(output, "Call Stack\n");
 
@@ -79,10 +80,11 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 			break;
 		}
 
-		//Get module
+		//Kernel frames resolve through the kernel's own modules; a user process's come from its PEB, read as process memory
 		const uintptr_t ip = sw.LookupIp();
-		const KModule* module = process.Modules.GetModule(ip);
-		if (!module)
+		KModule module;
+		const bool found = process.IsGlobal ? KeGetModule(ip, module) : static_cast<const UProcess&>(process).GetModule(ip, module);
+		if (!found)
 		{
 			//No module info for the IP, print it and exit
 			TracePrint(output, "    IP: 0x%016x\n", ctx.Rip);
@@ -91,34 +93,35 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 
 		//Once the map is full, a module not in it prints without symbols, rather than loading (and leaking) its PDB again every frame
 		LoadedPdb pdb = {};
-		if (!pdbs.Get(module, pdb) && pdbs.Count() < MaxTracePdbs)
+		const uintptr_t imageBase = (uintptr_t)module.ImageBase;
+		if (!pdbs.Get(imageBase, pdb) && pdbs.Count() < MaxTracePdbs)
 		{
 			//Parse the module's PDB, if it has one
-			pdb.Image = LoadPdb(process, *module);
+			pdb.Image = LoadPdb(process, module);
 			if (pdb.Image)
 			{
 				pdb.File = arena.Allocate<PdbFile>();
-				if (pdb.File && !pdb.File->Open(pdb.Image, module->ImageBase, module->ImageSize, arena))
+				if (pdb.File && !pdb.File->Open(pdb.Image, module.ImageBase, module.ImageSize, arena))
 					pdb.File = nullptr; //From another build of the module (its names would be wrong), or the image's headers are bad
 			}
-			pdbs.Add(module, pdb);
+			pdbs.Add(imageBase, pdb);
 		}
 
 		//Calculate RVA
-		const uint32_t rva = (uint32_t)(ctx.Rip - (uintptr_t)module->ImageBase);
+		const uint32_t rva = (uint32_t)(ctx.Rip - imageBase);
 
 		//Lookup in PDB
 		PdbLookup lookup = {};
 		if (!pdb.File)
 			TracePrint(output, "    <no symbols>\n");
-		else if (pdb.File->Resolve((uint32_t)(ip - (uintptr_t)module->ImageBase), lookup))
+		else if (pdb.File->Resolve((uint32_t)(ip - imageBase), lookup))
 			TracePrint(output, "    %s (%d)\n", lookup.Function.c_str(), lookup.Line);
 		else
 			TracePrint(output, "    <resolve failed>\n");
-		TracePrint(output, "        %s IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", module->Name.c_str(), ctx.Rip, module->ImageBase, rva);
+		TracePrint(output, "        %s IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", module.Name.c_str(), ctx.Rip, module.ImageBase, rva);
 
 		//The stack or the module's unwind data isn't readable (or usable), so there's no caller to go to
-		if (!sw.Next((uintptr_t)module->ImageBase))
+		if (!sw.Next(imageBase))
 		{
 			TracePrint(output, "    <unwind failed>\n");
 			break;

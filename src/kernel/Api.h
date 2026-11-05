@@ -173,7 +173,9 @@ T* KeAlloc(AllocType type, Args&&... args)
 /*
  * Modules.
  */
+const KModule* KeAddModule(const CString& name, void* const image, const size_t imageSize); //Null once the kernel's module table is full
 const KModule* KeLoadLibrary(const char* const name);
+bool KeGetModule(const uintptr_t address, KModule& module); //Fills module with the kernel module containing address
 //Resolve a virtual address back to its loaded image (used by stack traces).
 paddr_t ResolveImageVA(void* const address);
 

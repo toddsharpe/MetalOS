@@ -125,7 +125,8 @@ namespace
 		//Continue initializing system
 		m_irqs.Add(Arch::InterruptVector::Timer0, {&OnTimer0, nullptr});
 		Scheduler::Initialize(m_process, &HyperV::Tsc::ReadTsc);
-		m_process.Modules.AddModule("moskrnl.exe", (void*)KernelBase, WinPE::GetSizeOfImage((void*)KernelBase));
+		const KModule* const kernelModule = KeAddModule("moskrnl.exe", (void*)KernelBase, WinPE::GetSizeOfImage((void*)KernelBase));
+		Assert(kernelModule);
 
 		//Initialize Platform (HyperV)
 		HyperV::Initialize();
@@ -159,7 +160,7 @@ namespace
 		}
 
 		m_debugger.Initialize();
-		m_debugger.AddModule(*m_process.Modules.GetModule("moskrnl.exe"));
+		m_debugger.AddModule(*kernelModule);
 
 		//Initialize the kernel->WM input ring. Compositing lives in the usermode
 		//WM process (MetalOS-WMSvr.exe), which maps the framebuffer and drains this ring.

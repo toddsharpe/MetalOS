@@ -15,6 +15,11 @@ extern KProcess m_process;
 extern LinkedList<UProcess*> m_processes;
 
 static constexpr CString RuntimeDLL = "MetalOS-RT.dll";
+
+//The kernel's own modules (moskrnl and kdcom), added at boot and never unloaded; filled in place, as a KModule's name can't be copied
+static constexpr size_t MaxKernelModules = 2;
+static KModule m_modules[MaxKernelModules];
+static size_t m_moduleCount;
 static constexpr size_t MaxPathLength = decltype(UProcess::Name)::Size - 1; //The path also names the process
 
 //An image installs at its fixed ImageBase, so it must be page-aligned and end inside user space
@@ -39,14 +44,49 @@ static bool CanInstall(const Loader::LoadedImage& exe, const Loader::LoadedImage
 	return exeEnd <= runtimeStart || runtimeEnd <= exeStart;
 }
 
+const KModule* KeAddModule(const CString& name, void* const image, const size_t imageSize)
+{
+	if (m_moduleCount == MaxKernelModules)
+		return nullptr;
+
+	KModule& module = m_modules[m_moduleCount++];
+	module.Name.Set(name);
+	module.ImageBase = image;
+	module.ImageSize = imageSize;
+	return &module;
+}
+
+bool KeGetModule(const uintptr_t address, KModule& module)
+{
+	for (size_t i = 0; i < m_moduleCount; i++)
+	{
+		const KModule& candidate = m_modules[i];
+		const uintptr_t base = (uintptr_t)candidate.ImageBase;
+		if (address < base || address - base >= candidate.ImageSize)
+			continue;
+
+		module.Name.Set(CString(candidate.Name.c_str()));
+		module.ImageBase = candidate.ImageBase;
+		module.ImageSize = candidate.ImageSize;
+		return true;
+	}
+
+	return false;
+}
+
 const KModule* KeLoadLibrary(const char* const name)
 {
 	const CString moduleName(name);
 
-	//Check if module exists in process
-	const KModule* search = m_process.Modules.GetModule(moduleName);
-	if (search != nullptr)
-		return search;
+	//Check if module is already loaded
+	for (size_t i = 0; i < m_moduleCount; i++)
+	{
+		if (m_modules[i].Name == moduleName)
+			return &m_modules[i];
+	}
+
+	if (m_moduleCount == MaxKernelModules)
+		return nullptr;
 
 	//If it doesn't exist, load it in the kernel, install it at its ImageBase (a kernel VA for a
 	//kernel module), then drop the temporary load alias.
@@ -56,8 +96,7 @@ const KModule* KeLoadLibrary(const char* const name)
 	KeAliasInto(m_process, image.Alias, image.UserBase, image.Size);
 	KeVirtualFree(m_process, image.Alias);
 
-	const KModule* created = m_process.Modules.AddModule(moduleName, image.UserBase, image.Size);
-	return created;
+	return KeAddModule(moduleName, image.UserBase, image.Size);
 }
 
 UProcess* KeCreateProcess(const char* const cmd)
@@ -150,8 +189,8 @@ UProcess* KeCreateProcess(const char* const cmd)
 	//Update process structures
 	created->Initialize(exe.UserBase, CString(cmd));
 
-	Assert(created->AddModule(path, exe.UserBase, exe.Size));
-	Assert(created->AddModule(RuntimeDLL, runtime.UserBase, runtime.Size));
+	created->AddModule(path, exe.UserBase);
+	created->AddModule(RuntimeDLL, runtime.UserBase);
 
 	created->IsConsole = WinPE::IsConsole(exe.Alias);
 	const size_t stackSize = WinPE::GetStackSize(exe.Alias);
@@ -278,12 +317,6 @@ namespace _REAP
 
 		const cpu_flags_t flags = ArchDisableInterrupts();
 		KeFreePageTables(process);
-		while (!process.Modules.IsEmpty())
-		{
-			KModule* const module = process.Modules.First();
-			process.Modules.Remove(module);
-			KeFree(module, AllocType::User);
-		}
 		process.Reaped = true;
 		KeReleaseUProcess(process);
 		ArchRestoreFlags(flags);

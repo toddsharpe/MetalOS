@@ -23,6 +23,7 @@
 #include "kernel/Pdb/Pdb_test.cpp"
 #include "user/MetalOS-NetSvr/ArpCache_test.cpp"
 #include "kernel/Arch_x64/StackWalk_test.cpp"
+#include "kernel/PebModules_test.cpp"
 #include "user/MetalOS-NetSvr/IPv4_test.cpp"
 
 #define Test(name)                     \
@@ -54,6 +55,7 @@ int main()
 	Test(Pdb);
 	Test(ArpCache);
 	Test(StackWalk);
+	Test(PebModules);
 	Test(IPv4);
 
 	return 0;

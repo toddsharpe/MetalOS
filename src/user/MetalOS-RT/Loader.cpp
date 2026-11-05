@@ -60,7 +60,10 @@ HModule LoadLibrary(char* lpLibFileName)
 		CDebugPrintf(Runtime::IsDebug(), "  Loaded at: 0x%016x\n", module->ImageBase);
 		return (HModule)module->ImageBase;
 	}
-	
+
+	//The PEB lists at most MaxLoadedModules, and a module it doesn't list is invisible to lookups and traces
+	RetNullIfNot(peb->ModuleIndex < MaxLoadedModules);
+
 	//Load it
 	HFile file = CreateFile(lpLibFileName, FileAccess::Read);
 	RetNullIfNot(file);
@@ -119,17 +122,17 @@ HModule LoadLibrary(char* lpLibFileName)
 
 	CloseHandle(file);
 
+	//Listed once it's mapped, so a fault in its imports, initializers or DllMain traces through it, and an import cycle finds it instead of loading it again
+	peb->LoadedModules[peb->ModuleIndex].ImageBase = moduleBase;
+	strncpy(peb->LoadedModules[peb->ModuleIndex].Name, lpLibFileName, MaxModuleName - 1);
+	peb->LoadedModules[peb->ModuleIndex].Name[MaxModuleName - 1] = '\0';
+	peb->ModuleIndex++;
+
 	//Imports
 	Loader::ResolveImports(moduleBase, nullptr);
 
 	//Run static initializers
 	WinPE::RunCrtInitializers(moduleBase);
-
-	//Mark module as in the process
-	peb->LoadedModules[peb->ModuleIndex].ImageBase = moduleBase;
-	strncpy(peb->LoadedModules[peb->ModuleIndex].Name, lpLibFileName, MaxModuleName - 1);
-	peb->LoadedModules[peb->ModuleIndex].Name[MaxModuleName - 1] = '\0';
-	peb->ModuleIndex++;
 
 	//Execute entry point
 	//TODO: thread
@@ -151,6 +154,20 @@ bool FreeLibrary(HModule hModule)
 	//Execute entry point - do not check return value
 	DllMainCall main = (DllMainCall)GetProcAddress(hModule, Loader::DllMainName);
 	main(hModule, DllReason::ProcessDetach);
+
+	//Unlisted before its image is freed, so nothing finds a module that's gone; the later entries move up to keep the list packed
+	ProcessEnvironmentBlock* peb = Runtime::GetPEB();
+	for (size_t i = 0; i < peb->ModuleIndex; i++)
+	{
+		if (peb->LoadedModules[i].ImageBase != hModule)
+			continue;
+
+		for (size_t j = i + 1; j < peb->ModuleIndex; j++)
+			peb->LoadedModules[j - 1] = peb->LoadedModules[j];
+		peb->ModuleIndex--;
+		peb->LoadedModules[peb->ModuleIndex] = {};
+		break;
+	}
 
 	//Free region
 	const bool result = VirtualFree(hModule);

@@ -68,6 +68,21 @@ HModule LoadLibrary(char* lpLibFileName)
 	HFile file = CreateFile(lpLibFileName, FileAccess::Read);
 	RetNullIfNot(file);
 
+	//A load that fails partway leaves nothing behind: every early return closes the file and frees the reservation
+	struct LoadCleanup
+	{
+		HFile File;
+		void* Image;
+
+		~LoadCleanup()
+		{
+			if (Image)
+				VirtualFree(Image);
+			if (File)
+				CloseHandle(File);
+		}
+	} cleanup = { file, nullptr };
+
 	size_t read;
 
 	//Dos header
@@ -94,6 +109,7 @@ HModule LoadLibrary(char* lpLibFileName)
 	void* moduleBase = VirtualAlloc((void*)peHeader.OptionalHeader.ImageBase, peHeader.OptionalHeader.SizeOfImage);
 	//TODO(tsharpe): Implement relocations. Until then assert address is the one in PE header.
 	RetNullIfNot(moduleBase)
+	cleanup.Image = moduleBase;
 	CDebugPrintf(Runtime::IsDebug(), "  Loading at 0x%016x\n", moduleBase);
 
 	//Read in headers
@@ -120,7 +136,10 @@ HModule LoadLibrary(char* lpLibFileName)
 		}
 	}
 
+	//Mapped whole, so the image stays and only the file goes
 	CloseHandle(file);
+	cleanup.File = nullptr;
+	cleanup.Image = nullptr;
 
 	//Listed once it's mapped, so a fault in its imports, initializers or DllMain traces through it, and an import cycle finds it instead of loading it again
 	peb->LoadedModules[peb->ModuleIndex].ImageBase = moduleBase;

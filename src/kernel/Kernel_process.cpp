@@ -253,6 +253,25 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 	Scheduler::KillProcess(process);
 }
 
+void KeExitUThread(UThread& thread, const uint32_t exitCode)
+{
+	//Already exited
+	if (!thread.Thread)
+		return;
+
+	//Another live thread keeps the process running; as on Windows, the last one ending ends the process with its exit code, else nothing would terminate (or reap) it
+	for (const UThread* const other : thread.Process.Threads)
+	{
+		if (other != &thread && other->Thread && other->Thread->Sched.State != KThreadState::Terminated)
+		{
+			KeExitThread(*thread.Thread);
+			return;
+		}
+	}
+
+	KeTerminateProcess(thread.Process, exitCode);
+}
+
 //Reclaims what exited threads and processes leave, from the reaper's own stack under the kernel's page tables
 namespace _REAP
 {

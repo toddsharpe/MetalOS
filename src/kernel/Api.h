@@ -201,6 +201,7 @@ UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThrea
 uint32_t UThreadInit(void* const arg);
 UProcess* KeCreateProcess(const char* const commandLine);
 void KeTerminateProcess(UProcess& process, const uint32_t exitCode);
+void KeExitUThread(UThread& thread, const uint32_t exitCode); //The process's last live thread ending ends the process; doesn't return for the calling thread
 void KeReleaseUThread(UThread& thread);
 void KeReleaseUProcess(UProcess& process);
 void KeSignalReaper();

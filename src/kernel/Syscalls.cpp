@@ -498,27 +498,20 @@ void ExitProcess(const uint32_t exitCode)
 
 SyscallResult TerminateThread(const HThread thread, const uint32_t exitCode)
 {
-	UNUSED(exitCode);
-	
 	UProcess& proc = Scheduler::GetUProcess();
 	UObject* obj = nullptr;
 	const SyscallResult status = GetObject(proc, thread, UObjectType::Thread, obj);
 	if (status != SyscallResult::Success)
 		return status;
 
-	//Already exited
-	if (!obj->Thread->Thread)
-		return SyscallResult::Success;
-
-	KeExitThread(*obj->Thread->Thread);
+	KeExitUThread(*obj->Thread, exitCode);
 	return SyscallResult::Success;
 }
 
 void ExitThread(const uint32_t exitCode)
 {
-	UNUSED(exitCode);
-	
-	KeExitThread();
+	KeExitUThread(Scheduler::GetUThread(), exitCode);
+	Unreachable();
 }
 
 /*

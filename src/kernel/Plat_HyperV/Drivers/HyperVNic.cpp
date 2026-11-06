@@ -1,7 +1,7 @@
 #include "HyperVNic.h"
 #include "kernel/KDevice.h"
-#include "kernel/Drivers/VmBusDriver.h"
-#include "kernel/HyperV/VmBus.h"
+#include "kernel/Plat_HyperV/Drivers/VmBusDriver.h"
+#include "kernel/Plat_HyperV/VmBus.h"
 #include "Assert.h"
 #include "kernel/Api.h"
 #include "user/Protocol_net.h"
@@ -22,7 +22,8 @@ HyperVNic::HyperVNic(KDevice& device) :
 
 bool HyperVNic::Initialize()
 {
-	m_channel.Initialize(*m_device.VmBus, &m_device.m_channel);
+	const VmBusChild& child = VmBusChild::Of(m_device);
+	m_channel.Initialize(*child.Bus, &child.Offer);
 	m_device.Class = KDeviceClass::Nic;
 
 	// Step 1: negotiate NVSP protocol version
@@ -49,7 +50,7 @@ bool HyperVNic::Initialize()
 	Assert(m_recvBuf);
 	memset(m_recvBuf, 0, NIC_RECV_BUFFER_PAGES * Arch::PageSize);
 
-	const uint32_t recvBufGpadl = m_device.VmBus->CreateGpadl(m_device.child_relid, recvBufAddr, NIC_RECV_BUFFER_PAGES);
+	const uint32_t recvBufGpadl = child.Bus->CreateGpadl(child.RelId, recvBufAddr, NIC_RECV_BUFFER_PAGES);
 
 	msg = {};
 	msg.header.msg_type = NvspMessageType::SendReceiveBuffer;
@@ -67,7 +68,7 @@ bool HyperVNic::Initialize()
 		Assert(m_sendBuf);
 		memset(m_sendBuf, 0, NIC_SEND_BUFFER_PAGES * Arch::PageSize);
 
-		const uint32_t sendBufGpadl = m_device.VmBus->CreateGpadl(m_device.child_relid, sendBufAddr, NIC_SEND_BUFFER_PAGES);
+		const uint32_t sendBufGpadl = child.Bus->CreateGpadl(child.RelId, sendBufAddr, NIC_SEND_BUFFER_PAGES);
 
 		msg = {};
 		msg.header.msg_type = NvspMessageType::SendSendBuffer;

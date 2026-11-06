@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kernel/KDevice.h"
+#include "kernel/Drivers/Driver.h"
 #include "Drivers/RamDrive.h"
 #include "Lib/Math.h"
 

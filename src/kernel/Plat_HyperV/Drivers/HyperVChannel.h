@@ -1,8 +1,8 @@
 #pragma once
 
-#include "kernel/Drivers/HyperVRingBuffer.h"
-#include "kernel/Drivers/VmBusDriver.h"
-#include "kernel/HyperV/VmBus.h"
+#include "kernel/Plat_HyperV/Drivers/HyperVRingBuffer.h"
+#include "kernel/Plat_HyperV/Drivers/VmBusDriver.h"
+#include "kernel/Plat_HyperV/VmBus.h"
 
 //Channel allocates one contigious section of memory
 //Builds outbound and inbound ring buffers
@@ -16,7 +16,7 @@ class HyperVChannel
 public:
 	HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize, const ActionContext callback);
 
-	void Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_channel* offerChannel);
+	void Initialize(VmBusDriver& vmbus, const HyperV::vmbus_channel_offer_channel* offerChannel);
 	void Close(VmBusDriver& vmbus); //Undoes Initialize (vmbus_close_internal); the rings are freed only once the host releases their GPADL
 
 	bool SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint32_t flags); //False if the outbound ring is full
@@ -51,7 +51,7 @@ private:
 	HyperVRingBuffer m_inbound;
 	HyperVRingBuffer m_outbound;
 
-	HyperV::vmbus_channel_offer_channel* m_channel;
+	const HyperV::vmbus_channel_offer_channel* m_channel;
 	uint32_t m_gpadlHandle;
 	paddr_t m_address; //both rings' physical pages, outbound first
 	size_t m_pageCount;

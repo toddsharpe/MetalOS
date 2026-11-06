@@ -8,12 +8,8 @@
 #include "Lib/System.h"
 #include "Lib/StaticMap.h"
 #include "kernel/DeviceHids.h"
-#include "kernel/Drivers/VmBusDriver.h"
 #include "kernel/Drivers/RamDriveDriver.h"
-#include "kernel/Drivers/HyperVKeyboardDriver.h"
-#include "kernel/Drivers/HyperVMouseDriver.h"
-#include "kernel/Drivers/HyperVNic.h"
-#include "kernel/Drivers/HyperVVideoDriver.h"
+#include "kernel/Plat.h"
 #include "Lib/StaticVector.h"
 
 class DeviceTree
@@ -152,36 +148,14 @@ private:
 
 	static void AttachDriver(KDevice& device)
 	{
-		const cstr_t hid = Str(device.Hid);
-		if (hid == Str("VMBUS") || hid == Str("MSFT1000"))
-		{
-			device.Driver = KeAlloc<VmBusDriver>(AllocType::Kernel, device);
-			Assert(device.Driver);
-		}
-		else if (hid == Str(RamDriveHid))
+		if (Str(device.Hid) == Str(RamDriveHid))
 		{
 			device.Driver = KeAlloc<RamDriveDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
-		else if (hid == Str("{F912AD6D-2B17-48EA-BD65-F927A61C7684}"))
+		else
 		{
-			device.Driver = KeAlloc<HyperVKeyboardDriver>(AllocType::Kernel, device);
-			Assert(device.Driver);
-		}
-		else if (hid == Str("{CFA8B69E-5B4A-4CC0-B98B-8BA1A1F3F95A}"))
-		{
-			device.Driver = KeAlloc<HyperVMouseDriver>(AllocType::Kernel, device);
-			Assert(device.Driver);
-		}
-		else if (hid == Str("{F8615163-DF3E-46C5-913F-F2D2F965ED0E}"))
-		{
-			device.Driver = KeAlloc<HyperVNic>(AllocType::Kernel, device);
-			Assert(device.Driver);
-		}
-		else if (hid == Str("{DA0A7802-E377-4AAC-8E77-0558EB1073F8}"))
-		{
-			device.Driver = KeAlloc<HyperVVideoDriver>(AllocType::Kernel, device);
-			Assert(device.Driver);
+			device.Driver = PlatCreateDriver(device);
 		}
 
 		//If driver was attached, attempt to initialize (a bus adds its child devices here, which Walk then visits)

@@ -51,7 +51,7 @@
 #include "kernel/Debugger.h"
 
 //Platform
-#include "kernel/HyperV/HyperV.h"
+#include "kernel/Plat.h"
 
 //PDB
 #include "kernel/Pdb/PdbFile.h"

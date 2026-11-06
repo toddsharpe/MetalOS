@@ -3,7 +3,7 @@
 #include "core_crt/stdint.h"
 #include "kernel/Arch.h"
 #include "Assert.h"
-#include "kernel/HyperV/HyperV.h"
+#include "kernel/Plat_HyperV/Types.h"
 
 // Hypervisor Top Level Functional Specification v6.0b.pdf
 

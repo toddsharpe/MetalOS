@@ -1,4 +1,4 @@
-#include "kernel/HyperV/Tsc.h"
+#include "kernel/Plat_HyperV/Tsc.h"
 
 namespace HyperV::Tsc
 {

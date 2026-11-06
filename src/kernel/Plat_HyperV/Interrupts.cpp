@@ -1,5 +1,5 @@
-#include "kernel/HyperV/Interrupts.h"
-#include "kernel/HyperV/Platform.h"
+#include "kernel/Plat_HyperV/Interrupts.h"
+#include "kernel/Plat_HyperV/Platform.h"
 #include "kernel/Api.h"
 
 namespace HyperV::Interrupts

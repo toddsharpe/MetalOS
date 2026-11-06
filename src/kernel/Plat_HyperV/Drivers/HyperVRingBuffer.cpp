@@ -1,5 +1,5 @@
-#include "kernel/Drivers/HyperVRingBuffer.h"
-#include "kernel/Drivers/HyperVChannel.h"
+#include "kernel/Plat_HyperV/Drivers/HyperVRingBuffer.h"
+#include "kernel/Plat_HyperV/Drivers/HyperVChannel.h"
 
 HyperVRingBuffer::HyperVRingBuffer(const uint32_t size, HyperVChannel& channel) :
 	Size(size),

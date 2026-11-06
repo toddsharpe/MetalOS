@@ -30,6 +30,7 @@ namespace NetDevice
 namespace NetIpc
 {
 	static constexpr const char* ControlEndpoint = "net"; //apps Post their channel grant here
+	static constexpr const char* AddressEndpoint = "net.addr"; //interface 0's IPv4 address (in_addr.s_addr), re-registered whenever it's set; the taskbar shows it
 
 	static constexpr uint32_t RequestCapacity = 8;
 	static constexpr uint32_t ReplyCapacity   = 8;

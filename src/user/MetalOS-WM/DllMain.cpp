@@ -16,6 +16,7 @@ namespace
 	{
 		uint16_t Id;
 		void* Surface;
+		HSharedMem SurfaceHandle;
 	};
 
 	void* g_channel = nullptr;
@@ -31,9 +32,45 @@ namespace
 		}
 		return nullptr;
 	}
+
+	//A shared surface for a client area, and a single-use grant the WM redeems to map it too
+	bool CreateSurface(const uint32_t width, const uint32_t height, HSharedMem& handle, void*& address, uint64_t& token)
+	{
+		const size_t surfaceSize = (size_t)width * height * sizeof(Color);
+		if (surfaceSize == 0 || CreateSharedMemory(surfaceSize, &handle, &address) != SyscallResult::Success)
+			return false;
+
+		if (ShareHandle((Handle)handle, &token) != SyscallResult::Success)
+		{
+			CloseHandle((Handle)handle);
+			return false;
+		}
+		return true;
+	}
+
+	//Packs pixel art (up to 8x8) into the request's two bits per cell
+	Wm::IconBits PackIcon(const PixelGlyph* const glyph)
+	{
+		Wm::IconBits icon = {};
+		if (!glyph)
+			return icon;
+
+		for (size_t i = 0; i < 3; i++)
+			icon.Palette[i] = glyph->Palette[i];
+		for (uint32_t y = 0; y < glyph->Height && y < 8; y++)
+		{
+			const char* const row = glyph->Rows[y];
+			for (uint32_t x = 0; x < glyph->Width && x < 8 && row[x] != '\0'; x++)
+			{
+				if (row[x] >= 'a' && row[x] <= 'c')
+					icon.Rows[y] |= (uint16_t)((row[x] - 'a' + 1) << (2 * x));
+			}
+		}
+		return icon;
+	}
 }
 
-extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame, const char* title, bool showTitle)
+extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame, const char* title, WindowStyle style, const PixelGlyph* icon)
 {
 	if (!handle || !frame)
 		return SyscallResult::InvalidPointer;
@@ -41,15 +78,10 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 	if (g_windows.Count() >= MaxWindows)
 		return SyscallResult::Failed;
 
-	const size_t surfaceSize = (size_t)frame->Width * frame->Height * sizeof(Color);
 	HSharedMem hSurface = nullptr;
 	void* surfaceAddr = nullptr;
-	if (CreateSharedMemory(surfaceSize, &hSurface, &surfaceAddr) != SyscallResult::Success)
-		return SyscallResult::Failed;
-
-	//Grant the surface to the WM (single-use token carried in the AllocWindow request).
 	uint64_t token = 0;
-	if (ShareHandle((Handle)hSurface, &token) != SyscallResult::Success)
+	if (!CreateSurface(frame->Width, frame->Height, hSurface, surfaceAddr, token))
 		return SyscallResult::Failed;
 
 	const uint16_t id = ++g_nextWindowId;
@@ -57,6 +89,7 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 	{
 		.Id = id,
 		.Surface = surfaceAddr,
+		.SurfaceHandle = hSurface,
 	};
 	g_windows.Add(window); //capacity checked above, so this succeeds
 
@@ -73,10 +106,39 @@ extern "C" SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle*
 		for (; n < Wm::MaxTitle - 1 && title[n]; n++)
 			request.Title[n] = title[n];
 	request.Title[n] = '\0';
-	request.ShowTitle = showTitle;
+	request.Style = style;
+	request.Icon = PackIcon(icon);
 	Wm::Channel::Requests(g_channel).Enqueue(request);
 
 	*handle = (HWindow)(uintptr_t)id;
+	return SyscallResult::Success;
+}
+
+extern "C" SyscallResult ResizeWindow(HWindow handle, const uint32_t width, const uint32_t height)
+{
+	ClientWindow* const window = Find(WindowId(handle));
+	if (!window)
+		return SyscallResult::InvalidHandle;
+
+	HSharedMem hSurface = nullptr;
+	void* surfaceAddr = nullptr;
+	uint64_t token = 0;
+	if (!CreateSurface(width, height, hSurface, surfaceAddr, token))
+		return SyscallResult::Failed;
+
+	Wm::Request request =
+	{
+		.Code = Wm::Op::ResizeWindow,
+		.WindowId = window->Id,
+		.Rect = { 0, 0, width, height },
+		.SurfaceGrant = token,
+	};
+	Wm::Channel::Requests(g_channel).Enqueue(request);
+
+	//The WM keeps its own mapping of the old surface until it takes the new one, so ours can go now
+	CloseHandle((Handle)window->SurfaceHandle);
+	window->Surface = surfaceAddr;
+	window->SurfaceHandle = hSurface;
 	return SyscallResult::Success;
 }
 

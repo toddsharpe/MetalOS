@@ -3,6 +3,7 @@ EXPORTS
 
 	; Windowing (the user32 analog): IPC client to the WM process
 	AllocWindow
+	ResizeWindow
 	GetMessage
 	PeekMessage
 	GetScreenRect

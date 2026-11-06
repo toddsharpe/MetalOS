@@ -64,7 +64,7 @@ cl user/ping/Main.cpp /Fo"..\build\ping" %CompileFlags% /link %LinkFlags% /SUBSY
 ::
 :: Usermode system services (compositor + network stack)
 ::
-cl user/MetalOS-WMSvr/Main.cpp /Fo"..\build\MetalOS-WMSvr" %CompileFlags% /link %LinkFlags% /SUBSYSTEM:NATIVE %UserLibs% /ENTRY:"main" /OUT:"..\build\MetalOS-WMSvr.exe" /DEBUG /PDB:"..\build\MetalOS-WMSvr.pdb" || exit /b 1
+cl user/MetalOS-WMSvr/Main.cpp /Fo"..\build\MetalOS-WMSvr" %CompileFlags% /O2 /link %LinkFlags% /SUBSYSTEM:NATIVE %UserLibs% /ENTRY:"main" /OUT:"..\build\MetalOS-WMSvr.exe" /DEBUG /PDB:"..\build\MetalOS-WMSvr.pdb" || exit /b 1
 
 :: Build MetalOS-NetSvr.exe (usermode TCP/IP stack; claims the kernel RX ring + NIC MAC).
 :: /Zc:threadSafeInit- drops the _Init_thread_* CRT deps (netstack is single-threaded).
@@ -85,6 +85,6 @@ cl user/Terminal/Main.cpp /Fo"..\build\term" %CompileFlags% /link /SUBSYSTEM:NAT
 
 :: Build Doom.exe
 cl /c /Tc user/Doom/Doom.c /Fo"..\build\doom_generic" -I.\ -IExternal\MetalOS.Doom\doomgeneric -I.\User\Doom /GS- /Gy /Gw /GR- /Z7 %CompileIncludes% /X || exit /b 1
-cl user/Doom/doomgeneric_metalos.cpp %CompileFlags% -IExternal\MetalOS.Doom\doomgeneric /W3 /std:c++14 /Fo"..\build\doom" /link /SUBSYSTEM:NATIVE ..\build\doom_generic.obj %LinkFlags% %GuiLibs% /ENTRY:"main" /OUT:"..\build\doom.exe" /DEBUG /PDB:"..\build\doom.pdb" || exit /b 1
+cl user/Doom/doomgeneric_metalos.cpp %CompileFlags% -IExternal\MetalOS.Doom\doomgeneric /W3 /std:c++17 /Fo"..\build\doom" /link /SUBSYSTEM:NATIVE ..\build\doom_generic.obj %LinkFlags% %GuiLibs% /ENTRY:"main" /OUT:"..\build\doom.exe" /DEBUG /PDB:"..\build\doom.pdb" || exit /b 1
 
 del "..\build\*.obj"

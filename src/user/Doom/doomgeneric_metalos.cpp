@@ -8,6 +8,7 @@
 
 #include "user/MetalOS.h"
 #include "user/MetalOS.UI.h"
+#include "Graphics/Icons.h"
 #include "Assert.h"
 
 #define KEYQUEUE_SIZE 16
@@ -70,12 +71,18 @@ static void addKeyToQueue(int pressed, unsigned char keyCode)
 
 HWindow window;
 
+//Doom draws its 320x200 frame scaled by a whole number into the top of DG_ScreenBuffer, centered across, and leaves the rest black; the window is just that picture
+constexpr uint32_t PictureScale = (DOOMGENERIC_RESX / 320) < (DOOMGENERIC_RESY / 200) ? (DOOMGENERIC_RESX / 320) : (DOOMGENERIC_RESY / 200);
+constexpr uint32_t PictureWidth = 320 * PictureScale;
+constexpr uint32_t PictureHeight = 200 * PictureScale;
+constexpr uint32_t PictureLeft = (DOOMGENERIC_RESX - PictureWidth) / 2;
+static pixel_t* s_Surface;
+
 static void ProcessMessage(const struct Message &message)
 {
 	switch (message.Header.MessageType)
 	{
-		//PaintEvent needs no handling: Doom renders straight into DG_ScreenBuffer,
-		//which points at the window's shared surface, and the WM composites it.
+		//PaintEvent needs no handling: DG_DrawFrame copies each frame into the window's surface, and the WM composites it.
 	case MessageType::KeyEvent:
 		addKeyToQueue(message.KeyEvent.Flags.Pressed, (unsigned char)message.KeyEvent.Key);
 		break;
@@ -88,31 +95,26 @@ extern "C"
 	{
 		printf("DG_Init\n");
 
-		//Create a window at Doom's fixed internal resolution so its shared surface is
-		//exactly DG_BufferSize, then render zero-copy directly into that surface.
-		Rectangle screen = {};
-		GetScreenRect(&screen);
-
+		//A fullscreen window the size of Doom's picture, which the WM scales to fill the screen; Doom keeps drawing into the DG_ScreenBuffer doomgeneric_Create made
 		Rectangle frame = {};
-		frame.Width = DOOMGENERIC_RESX;
-		frame.Height = DOOMGENERIC_RESY;
-		frame.X = screen.Width > frame.Width ? (screen.Width - frame.Width) / 2 : 0;
-		frame.Y = screen.Height > frame.Height ? (screen.Height - frame.Height) / 2 : 0;
+		frame.Width = PictureWidth;
+		frame.Height = PictureHeight;
 
-		AllocWindow(&window, &frame, "Doom", false);
-		DebugPrintf("Doom window: (0x%x,0x%x) 0x%x x 0x%x\n", frame.X, frame.Y, frame.Width, frame.Height);
+		AllocWindow(&window, &frame, "Doom", WindowStyle::Fullscreen, &Icons::Skull);
+		DebugPrintf("Doom window: 0x%x x 0x%x\n", frame.Width, frame.Height);
 
-		//Point Doom's screen buffer at the window surface (replaces the malloc done in
-		//doomgeneric_Create); the WM composites it on its next pass.
-		free(DG_ScreenBuffer);
-		DG_ScreenBuffer = (pixel_t*)GetWindowSurface(window);
-		Assert(DG_ScreenBuffer);
+		s_Surface = (pixel_t*)GetWindowSurface(window);
+		Assert(s_Surface);
 
 		memset(s_KeyQueue, 0, KEYQUEUE_SIZE * sizeof(unsigned short));
 	}
 
 	void DG_DrawFrame()
 	{
+		//Copy the picture out of Doom's buffer; the WM composites it on its next pass
+		for (uint32_t y = 0; y < PictureHeight; y++)
+			memcpy(s_Surface + (size_t)y * PictureWidth, DG_ScreenBuffer + (size_t)y * DOOMGENERIC_RESX + PictureLeft, PictureWidth * sizeof(pixel_t));
+
 		struct Message message;
 		memset(&message, 0, sizeof(struct Message));
 		while (PeekMessage(&message) == SyscallResult::Success)

@@ -1,9 +1,11 @@
 #include "user/MetalOS.h"
 #include "user/GUI.h"
 #include "UI/Button.h"
-#include "UI/Label.h"
+#include "Graphics/Theme.h"
+#include "Graphics/Icons.h"
 #include "user/CRT.cpp"
 #include <stdio.h>
+#include <string.h>
 
 using namespace Graphics;
 using namespace UI;
@@ -14,17 +16,50 @@ namespace
 	constexpr int64_t MaxValue = 999999999;
 	constexpr int64_t MinValue = -99999999;
 
-	Label* g_display;
+	constexpr int32_t Padding = 14;
+	constexpr uint32_t KeyWidth = 72;
+	constexpr uint32_t KeyHeight = 56;
+	constexpr int32_t KeyGap = 8;
+	constexpr uint32_t ReadoutHeight = 92;
+	constexpr uint32_t ClientWidth = 2 * Padding + 4 * KeyWidth + 3 * KeyGap;
+	constexpr uint32_t ClientHeight = 2 * Padding + ReadoutHeight + 12 + 4 * KeyHeight + 3 * KeyGap;
+
 	int64_t g_total;
 	int64_t g_entry;
 	bool g_typing;
 	char g_pending = '=';
+	char g_value[24] = "0";
+	char g_history[40] = "";
+
+	//The number on a dark recessed panel, in big molten digits over unlit ones, with the sum so far on a small line above
+	class Readout : public Control
+	{
+	public:
+		Readout(const Rectangle& bounds) : Control(bounds)
+		{
+		}
+
+		virtual void Draw(FrameBuffer& frame) override
+		{
+			Draw2D::DrawRectangle(frame, Theme::Well, Bounds);
+			Draw2D::DrawOutline(frame, Bounds, Theme::Outline);
+			Draw2D::DrawBevel(frame, { Bounds.X + 1, Bounds.Y + 1, Bounds.Width - 2, Bounds.Height - 2 }, Theme::Rgb(0x000000), Theme::Rgb(0x2C2F34));
+
+			const int32_t right = Bounds.X + (int32_t)Bounds.Width - 10;
+			const size_t historyLength = strlen(g_history);
+			Draw2D::DrawPixelText(frame, { right - (int32_t)Draw2D::PixelTextWidth(historyLength, 1), Bounds.Y + 12 }, CString(g_history, historyLength), Theme::Hint, 1);
+
+			const int32_t digitsY = Bounds.Y + (int32_t)Bounds.Height - 14 - 32;
+			const CString unlit = "888888888";
+			Draw2D::DrawPixelText(frame, { right - (int32_t)Draw2D::PixelTextWidth(unlit.Length, 4), digitsY }, unlit, Theme::Rgb(0x1D100A), 4);
+			const size_t valueLength = strlen(g_value);
+			Draw2D::DrawPixelText(frame, { right - (int32_t)Draw2D::PixelTextWidth(valueLength, 4), digitsY }, CString(g_value, valueLength), Theme::Molten, 4);
+		}
+	};
 
 	void Show(const int64_t value)
 	{
-		char text[24];
-		const int length = snprintf(text, sizeof(text), "%lld", value);
-		g_display->Text.Set(CString(text, (size_t)length));
+		snprintf(g_value, sizeof(g_value), "%lld", value);
 	}
 
 	void Reset()
@@ -33,6 +68,7 @@ namespace
 		g_entry = 0;
 		g_typing = false;
 		g_pending = '=';
+		g_history[0] = '\0';
 	}
 
 	//Folds the typed number into the total with the pending operator, failing on a divide by zero or a result too long to show
@@ -43,32 +79,27 @@ namespace
 		case '+':
 			g_total += g_entry;
 			break;
-
 		case '-':
 			g_total -= g_entry;
 			break;
-
 		case '*':
 			g_total *= g_entry;
 			break;
-
 		case '/':
 			if (g_entry == 0)
 				return false;
 			g_total /= g_entry;
 			break;
-
 		default:
 			g_total = g_entry;
 			break;
 		}
-
 		return g_total >= MinValue && g_total <= MaxValue;
 	}
 
-	void KeyClicked(Button& button)
+	//A key from the keypad or keyboard: a digit, an operator, '=', 'C' (clear) or 'B' (backspace)
+	void Press(const char key)
 	{
-		const char key = button.Text.c_str()[0];
 		if (key >= '0' && key <= '9')
 		{
 			if (!g_typing)
@@ -76,7 +107,6 @@ namespace
 				g_entry = 0;
 				g_typing = true;
 			}
-
 			if (g_entry <= MaxValue / 10)
 				g_entry = g_entry * 10 + (key - '0');
 			Show(g_entry);
@@ -90,27 +120,127 @@ namespace
 			return;
 		}
 
-		//An operator or = finishes the number being typed, and an operator with nothing typed replaces the pending one
-		if (g_typing && !Apply())
+		if (key == 'B')
 		{
-			Reset();
-			g_display->Text.Set(CString("Error"));
+			if (g_typing)
+			{
+				g_entry /= 10;
+				Show(g_entry);
+			}
 			return;
 		}
 
+		//An operator or = finishes the number being typed, and an operator with nothing typed replaces the pending one
+		const int64_t before = g_total;
+		const char pending = g_pending;
+		const int64_t entry = g_entry;
+		const bool typed = g_typing;
+		if (g_typing && !Apply())
+		{
+			Reset();
+			snprintf(g_value, sizeof(g_value), "Error");
+			return;
+		}
 		g_typing = false;
-		g_pending = key;
+
+		if (key == '=')
+		{
+			if (typed && pending != '=')
+				snprintf(g_history, sizeof(g_history), "%lld %c %lld =", before, pending, entry);
+			else
+				g_history[0] = '\0';
+			g_pending = '=';
+		}
+		else
+		{
+			g_pending = key;
+			snprintf(g_history, sizeof(g_history), "%lld %c", g_total, key);
+		}
 		Show(g_total);
+	}
+
+	void KeyClicked(Button& button)
+	{
+		Press(button.Text.c_str()[0]);
+	}
+
+	//The calculator key a keyboard key stands for, or 0
+	char KeyFor(const VirtualKey key)
+	{
+		if (key >= '0' && key <= '9')
+			return (char)key;
+		if (key >= VK_NUMPAD0 && key <= VK_NUMPAD9)
+			return (char)('0' + (key - VK_NUMPAD0));
+
+		switch (key)
+		{
+			case VK_ADD:
+			case VK_OEM_PLUS:
+				return '+';
+
+			case VK_SUBTRACT:
+			case VK_OEM_MINUS:
+				return '-';
+
+			case VK_MULTIPLY:
+				return '*';
+
+			case VK_DIVIDE:
+			case VK_OEM_2:
+				return '/';
+
+			case VK_RETURN:
+			case VK_OEM_1:
+				return '=';
+
+			case VK_ESCAPE:
+				return 'C';
+
+			case VK_BACK:
+				return 'B';
+
+			default:
+				return 0;
+		}
 	}
 
 	constexpr Rectangle Key(const int32_t column, const int32_t row)
 	{
-		return { 5 + 25 * column, 25 + 25 * row, 20, 20 };
+		return { Padding + (int32_t)(KeyWidth + KeyGap) * column, Padding + (int32_t)ReadoutHeight + 12 + (int32_t)(KeyHeight + KeyGap) * row, KeyWidth, KeyHeight };
+	}
+
+	Button keys[] =
+	{
+		{ "7", Key(0, 0) }, { "8", Key(1, 0) }, { "9", Key(2, 0) }, { "/", Key(3, 0), ButtonStyle::Operator },
+		{ "4", Key(0, 1) }, { "5", Key(1, 1) }, { "6", Key(2, 1) }, { "*", Key(3, 1), ButtonStyle::Operator },
+		{ "1", Key(0, 2) }, { "2", Key(1, 2) }, { "3", Key(2, 2) }, { "-", Key(3, 2), ButtonStyle::Operator },
+		{ "C", Key(0, 3), ButtonStyle::Danger }, { "0", Key(1, 3) }, { "=", Key(2, 3), ButtonStyle::Primary }, { "+", Key(3, 3), ButtonStyle::Operator },
+	};
+
+	//A typed key works its keypad button, which shows pressed while the key is held
+	void OnKey(const KeyEvent& event)
+	{
+		const char key = KeyFor(event.Key);
+		if (key == 0)
+			return;
+
+		for (Button& button : keys)
+		{
+			if (button.Text.c_str()[0] == key)
+				button.Pressed = event.Flags.Pressed;
+		}
+		if (event.Flags.Pressed)
+			Press(key);
 	}
 }
 
 bool UICallback(GUI& gui, Message& message)
 {
+	if (message.Header.MessageType == MessageType::KeyEvent)
+	{
+		OnKey(message.KeyEvent);
+		return true;
+	}
 	return false;
 }
 
@@ -118,22 +248,14 @@ int main(int argc, char** argv)
 {
 	ProcessInfo procInfo;
 	GetProcessInfo(&procInfo);
-
 	DebugPrint("Hi From calc!\n");
 
-	size_t pos = 25 + 50 * (procInfo.Id - 1);
-	Rectangle rectangle = { pos, pos, 105, 150 };
+	//Each calculator opens a step down and right of the last
+	const int32_t pos = 25 + 50 * (int32_t)(procInfo.Id - 1);
+	const Rectangle rectangle = { pos, pos + Theme::FrameTop, ClientWidth, ClientHeight };
 
-	GUI gui("Calc", rectangle, UICallback);
+	GUI gui("Calc", rectangle, UICallback, WindowStyle::Framed, &Icons::Calc);
 	gui.Initialize();
-
-	Button keys[] =
-	{
-		{ "7", Key(0, 0) }, { "8", Key(1, 0) }, { "9", Key(2, 0) }, { "/", Key(3, 0) },
-		{ "4", Key(0, 1) }, { "5", Key(1, 1) }, { "6", Key(2, 1) }, { "*", Key(3, 1) },
-		{ "1", Key(0, 2) }, { "2", Key(1, 2) }, { "3", Key(2, 2) }, { "-", Key(3, 2) },
-		{ "C", Key(0, 3) }, { "0", Key(1, 3) }, { "=", Key(2, 3) }, { "+", Key(3, 3) },
-	};
 
 	for (Button& key : keys)
 	{
@@ -141,9 +263,8 @@ int main(int argc, char** argv)
 		gui.Children.Add(&key);
 	}
 
-	Label display("0", { 5, 125, 95, 20 });
-	g_display = &display;
-	gui.Children.Add(&display);
+	Readout readout({ Padding, Padding, ClientWidth - 2 * Padding, ReadoutHeight });
+	gui.Children.Add(&readout);
 
 	gui.Run();
 

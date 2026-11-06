@@ -3,6 +3,7 @@
 #include "Lib/Math.h"
 #include "Graphics/Types.h"
 #include "Graphics/Font.h"
+#include "Graphics/Theme.h"
 
 namespace Graphics
 {
@@ -203,6 +204,171 @@ namespace Graphics
 				}
 			}
 			return pos;
+		}
+
+		//The color num/den of the way from a to b
+		inline Color Blend(const Color a, const Color b, const uint32_t num, const uint32_t den)
+		{
+			if (den == 0)
+				return a;
+
+			return Color(
+				static_cast<uint8_t>((a.Blue * (den - num) + b.Blue * num) / den),
+				static_cast<uint8_t>((a.Green * (den - num) + b.Green * num) / den),
+				static_cast<uint8_t>((a.Red * (den - num) + b.Red * num) / den));
+		}
+
+		//The color darkened to keep/256 of itself
+		inline Color Shade(const Color c, const uint32_t keep)
+		{
+			return Color(static_cast<uint8_t>((c.Blue * keep) >> 8), static_cast<uint8_t>((c.Green * keep) >> 8), static_cast<uint8_t>((c.Red * keep) >> 8));
+		}
+
+		inline void FillGradient(const Graphics::FrameBuffer &frame, const Rectangle &rect, const Color top, const Color bottom)
+		{
+			const uint32_t span = rect.Height > 1 ? rect.Height - 1 : 1;
+			for (uint32_t y = 0; y < rect.Height; y++)
+				DrawRectangle(frame, Blend(top, bottom, y, span), { rect.X, rect.Y + static_cast<int32_t>(y), rect.Width, 1 });
+		}
+
+		//A 1px line just inside each edge of the rectangle
+		inline void DrawOutline(const Graphics::FrameBuffer &frame, const Rectangle &rect, const Color color)
+		{
+			if (rect.Width == 0 || rect.Height == 0)
+				return;
+
+			DrawRectangle(frame, color, { rect.X, rect.Y, rect.Width, 1 });
+			DrawRectangle(frame, color, { rect.X, rect.Y + static_cast<int32_t>(rect.Height) - 1, rect.Width, 1 });
+			DrawRectangle(frame, color, { rect.X, rect.Y, 1, rect.Height });
+			DrawRectangle(frame, color, { rect.X + static_cast<int32_t>(rect.Width) - 1, rect.Y, 1, rect.Height });
+		}
+
+		//Light along the top and left edges, dark along the bottom and right, so the rectangle looks raised (or sunken, swapped)
+		inline void DrawBevel(const Graphics::FrameBuffer &frame, const Rectangle &rect, const Color light, const Color dark)
+		{
+			if (rect.Width == 0 || rect.Height == 0)
+				return;
+
+			DrawRectangle(frame, light, { rect.X, rect.Y, rect.Width, 1 });
+			DrawRectangle(frame, light, { rect.X, rect.Y, 1, rect.Height });
+			DrawRectangle(frame, dark, { rect.X, rect.Y + static_cast<int32_t>(rect.Height) - 1, rect.Width, 1 });
+			DrawRectangle(frame, dark, { rect.X + static_cast<int32_t>(rect.Width) - 1, rect.Y, 1, rect.Height });
+		}
+
+		//Darkens what is already drawn in the rectangle to keep/256 (shadows, dimmed areas)
+		inline void Darken(const Graphics::FrameBuffer &frame, const Rectangle &rect, const uint32_t keep)
+		{
+			ClipRect clip;
+			if (!Clip(frame, rect, clip))
+				return;
+
+			for (size_t y = 0; y < clip.Height; y++)
+			{
+				Color *dst = frame.Buffer + (static_cast<size_t>(clip.Y) + y) * frame.Width + static_cast<size_t>(clip.X);
+				for (size_t x = 0; x < clip.Width; x++)
+					dst[x] = Shade(dst[x], keep);
+			}
+		}
+
+		constexpr uint32_t PixelTextWidth(const size_t length, const uint32_t scale)
+		{
+			return static_cast<uint32_t>(length) * 8 * scale;
+		}
+
+		//The system font at a whole-number scale on an 8*scale advance (the glyphs carry their own spacing); returns where the next character goes
+		inline Point2D DrawPixelText(const Graphics::FrameBuffer &frame, const Point2D position, const CString &text, const Color color, const uint32_t scale)
+		{
+			Point2D pos = position;
+			for (size_t i = 0; i < text.Length; i++)
+			{
+				const uint8_t *map = m_font.GetCharacterMap(text[i]);
+				for (uint32_t row = 0; row < 8; row++)
+				{
+					//Bit n is column n, and each run of set bits is drawn as one rectangle
+					const uint8_t bits = map[row];
+					uint32_t col = 0;
+					while (col < 8)
+					{
+						if ((bits & (1u << col)) == 0)
+						{
+							col++;
+							continue;
+						}
+
+						const uint32_t start = col;
+						while (col < 8 && (bits & (1u << col)) != 0)
+							col++;
+						DrawRectangle(frame, color, { pos.X + static_cast<int32_t>(start * scale), pos.Y + static_cast<int32_t>(row * scale), (col - start) * scale, scale });
+					}
+				}
+				pos.X += static_cast<int32_t>(8 * scale);
+			}
+			return pos;
+		}
+
+		//Pixel art at a whole-number scale, its colors kept at keep/256 (256 draws them as they are)
+		inline void DrawGlyph(const Graphics::FrameBuffer &frame, const Point2D position, const PixelGlyph &glyph, const uint32_t scale, const uint32_t keep = 256)
+		{
+			for (uint32_t y = 0; y < glyph.Height; y++)
+			{
+				const char *row = glyph.Rows[y];
+				for (uint32_t x = 0; x < glyph.Width && row[x] != '\0'; x++)
+				{
+					if (row[x] < 'a' || row[x] > 'c')
+						continue;
+
+					const Color color = Shade(glyph.Palette[row[x] - 'a'], keep);
+					DrawRectangle(frame, color, { position.X + static_cast<int32_t>(x * scale), position.Y + static_cast<int32_t>(y * scale), scale, scale });
+				}
+			}
+		}
+
+		//Like WriteFrame, with every pixel darkened to keep/256
+		inline void WriteFrameDimmed(const Graphics::FrameBuffer &frame, const Rectangle &rect, const void *fromFrame, const uint32_t keep)
+		{
+			ClipRect clip;
+			if (!Clip(frame, rect, clip))
+				return;
+
+			for (size_t y = 0; y < clip.Height; y++)
+			{
+				Color *dst = frame.Buffer + (static_cast<size_t>(clip.Y) + y) * frame.Width + static_cast<size_t>(clip.X);
+				const Color *src = reinterpret_cast<const Color*>(fromFrame) + (clip.OffsetY + y) * rect.Width + clip.OffsetX;
+				for (size_t x = 0; x < clip.Width; x++)
+					dst[x] = Shade(src[x], keep);
+			}
+		}
+
+		//A srcWidth x srcHeight image stretched to fill the rectangle, nearest pixel
+		inline void WriteFrameScaled(const Graphics::FrameBuffer &frame, const Rectangle &rect, const void *fromFrame, const uint32_t srcWidth, const uint32_t srcHeight)
+		{
+			ClipRect clip;
+			if (rect.Width == 0 || rect.Height == 0 || !Clip(frame, rect, clip))
+				return;
+
+			const Color *src = reinterpret_cast<const Color*>(fromFrame);
+			const uint64_t stepX = (static_cast<uint64_t>(srcWidth) << 16) / rect.Width;
+			const uint64_t stepY = (static_cast<uint64_t>(srcHeight) << 16) / rect.Height;
+			for (size_t y = 0; y < clip.Height; y++)
+			{
+				const Color *srcRow = src + static_cast<size_t>(((clip.OffsetY + y) * stepY) >> 16) * srcWidth;
+				Color *dst = frame.Buffer + (static_cast<size_t>(clip.Y) + y) * frame.Width + static_cast<size_t>(clip.X);
+				uint64_t sx = clip.OffsetX * stepX;
+				for (size_t x = 0; x < clip.Width; x++, sx += stepX)
+					dst[x] = srcRow[sx >> 16];
+			}
+		}
+
+		//A raised (or sunken) control: a dark outline around a gradient face with a 1px bevel
+		inline void DrawFace(const Graphics::FrameBuffer &frame, const Rectangle &rect, const Theme::Face &face)
+		{
+			if (rect.Width < 3 || rect.Height < 3)
+				return;
+
+			DrawOutline(frame, rect, Theme::Rgb(0x08090A));
+			const Rectangle inner = { rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2 };
+			FillGradient(frame, inner, face.Top, face.Bottom);
+			DrawBevel(frame, inner, face.Light, face.Dark);
 		}
 	}
 }

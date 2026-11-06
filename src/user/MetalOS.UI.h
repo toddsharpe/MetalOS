@@ -11,6 +11,7 @@ enum class MessageType : uint16_t
 	MouseEvent,
 	PaintEvent,
 	CloseEvent, //WM asked the window to close; an app whose last window closes should exit
+	ResizeEvent, //WM asked the window to change size (maximize or restore); the app calls ResizeWindow with the new size
 };
 
 struct MessageHeader
@@ -48,6 +49,13 @@ struct MouseEvent
 	int16_t YPosition;
 };
 
+//The client size the WM wants the window to take
+struct ResizeEvent
+{
+	uint16_t Width;
+	uint16_t Height;
+};
+
 struct Message
 {
 	MessageHeader Header;
@@ -55,8 +63,25 @@ struct Message
 	{
 		KeyEvent KeyEvent;
 		MouseEvent MouseEvent;
+		ResizeEvent ResizeEvent;
 	};
 };
 
-//Rows at the top of a window with a title (AllocWindow's showTitle): the app draws its title there and the WM drags the window by them
-constexpr int32_t TitleBarHeight = 23;
+//How the WM frames a window (AllocWindow): flags
+enum class WindowStyle : uint32_t
+{
+	Framed = 0, //title bar, border, minimize and close, drawn by the WM around the app's client area
+	Resizable = 1, //also maximize, which sends a ResizeEvent
+	Chromeless = 2, //no frame, fixed in place
+	Fullscreen = 4, //no frame, scaled to fill the screen (over the taskbar) while it has focus
+};
+
+constexpr WindowStyle operator|(const WindowStyle a, const WindowStyle b)
+{
+	return static_cast<WindowStyle>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+constexpr bool HasStyle(const WindowStyle style, const WindowStyle flag)
+{
+	return (static_cast<uint32_t>(style) & static_cast<uint32_t>(flag)) != 0;
+}

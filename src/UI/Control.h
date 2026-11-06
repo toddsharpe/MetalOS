@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Graphics/Types.h"
+#include "Graphics/Theme.h"
 
 namespace UI
 {
@@ -9,7 +10,7 @@ namespace UI
 	class Control
 	{
 	public:
-		Control(const Rectangle& bounds) : Foreground(Colors::Red), Background(Colors::White), Bounds(bounds)
+		Control(const Rectangle& bounds) : Foreground(Theme::Bone), Background(Theme::Iron), Bounds(bounds), Hovered(), Pressed()
 		{
 
 		}
@@ -24,5 +25,7 @@ namespace UI
 		Color Foreground;
 		Color Background;
 		Rectangle Bounds; //in window coordinates
+		bool Hovered; //the mouse is over it
+		bool Pressed; //held down, by the mouse or a key standing in for it
 	};
 }

@@ -14,10 +14,12 @@ public:
 
 	constexpr TextBuffer() :
 		m_lines(),
+		m_attributes(),
 		m_lengths(),
 		m_first(),
 		m_count(1),
-		m_columns(MaxColumns)
+		m_columns(MaxColumns),
+		m_attribute()
 	{
 
 	}
@@ -31,6 +33,12 @@ public:
 	size_t Columns() const
 	{
 		return m_columns;
+	}
+
+	//Tag for the characters written from now on (a color, say), kept per character and read back with Attributes
+	void SetAttribute(const uint8_t attribute)
+	{
+		m_attribute = attribute;
 	}
 
 	void Write(const CString& text)
@@ -99,6 +107,13 @@ public:
 		return m_lengths[Slot(m_count - 1)];
 	}
 
+	//One attribute per character of Line(index)
+	const uint8_t* Attributes(const size_t index) const
+	{
+		Assert(index < m_count);
+		return m_attributes[Slot(index)];
+	}
+
 private:
 	static constexpr size_t TabWidth = 4;
 
@@ -113,6 +128,7 @@ private:
 			NewLine();
 
 		const size_t slot = Slot(m_count - 1);
+		m_attributes[slot][m_lengths[slot]] = m_attribute;
 		m_lines[slot][m_lengths[slot]++] = c;
 	}
 
@@ -127,8 +143,10 @@ private:
 	}
 
 	char m_lines[MaxLines][MaxColumns];
+	uint8_t m_attributes[MaxLines][MaxColumns];
 	size_t m_lengths[MaxLines];
 	size_t m_first; //Slot of the oldest line
 	size_t m_count;
 	size_t m_columns;
+	uint8_t m_attribute;
 };

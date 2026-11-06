@@ -22,6 +22,14 @@ namespace Wm
 	enum class Op : uint32_t
 	{
 		AllocWindow,
+		ResizeWindow, //a new surface for the window, after a ResizeEvent
+	};
+
+	//A window's 8x8 icon as the app sends it: two bits per cell, column n at bit 2n (0 transparent, 1 to 3 a palette color); all zero means the app sent none
+	struct IconBits
+	{
+		uint16_t Rows[8];
+		Graphics::Color Palette[3];
 	};
 
 	//Fixed-size app -> WM request record
@@ -29,10 +37,11 @@ namespace Wm
 	{
 		Op       Code;
 		uint16_t WindowId;         //client-assigned, unique per connection, nonzero; messages for the window carry it in Header.Window
-		Graphics::Rectangle Rect;  //AllocWindow position+size
-		uint64_t SurfaceGrant;     //AllocWindow: capability token for the shared surface (Rect gives its size)
-		char     Title[MaxTitle];  //AllocWindow: window title (null-terminated), for the taskbar
-		bool     ShowTitle;        //AllocWindow: draw WM chrome (title/minimize/close); false = chromeless
+		Graphics::Rectangle Rect;  //client area position and size (ResizeWindow: only the size)
+		uint64_t SurfaceGrant;     //capability token for the shared surface (Rect gives its size)
+		char     Title[MaxTitle];  //AllocWindow: window title (null-terminated), for the title bar and taskbar
+		WindowStyle Style;         //AllocWindow: how the WM frames it
+		IconBits Icon;             //AllocWindow: shown in the title bar, taskbar and window switcher
 	};
 
 	//Duplex channel: request ring (app->WM) + reply ring carrying the async input Message

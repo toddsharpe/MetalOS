@@ -28,18 +28,18 @@ struct DuplexChannel
 	}
 
 	//Ring views over a mapped channel region.
-	static inline SharedRing<TRequest> Requests(void* const region)
+	static SharedRing<TRequest> Requests(void* const region)
 	{
 		return SharedRing<TRequest>(reinterpret_cast<uint8_t*>(region) + RequestRingOffset);
 	}
 
-	static inline SharedRing<TReply> Replies(void* const region)
+	static SharedRing<TReply> Replies(void* const region)
 	{
 		return SharedRing<TReply>(reinterpret_cast<uint8_t*>(region) + ReplyRingOffset());
 	}
 
 	//Called once by the creator (the client) after mapping the region.
-	static inline void Init(void* const region, const uint32_t processId)
+	static void Init(void* const region, const uint32_t processId)
 	{
 		Header* const header = reinterpret_cast<Header*>(region);
 		header->ProcessId = processId;

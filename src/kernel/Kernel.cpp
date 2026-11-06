@@ -16,7 +16,7 @@ DeviceTree m_deviceTree;
 KERNEL_PAGE_ALIGN StaticArena<TempArenaSize> m_tempArena;
 LinkedList<UProcess*> m_processes;
 EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);
-Graphics::FrameBuffer m_display((Graphics::Color*)KernelGraphicsDevice, BootParams.Display.VerticalResolution, BootParams.Display.HorizontalResolution);
+static Graphics::FrameBuffer m_display((Graphics::Color*)KernelGraphicsDevice, BootParams.Display.VerticalResolution, BootParams.Display.HorizontalResolution);
 DirectUart m_uart(DirectUart::ComPort::Com1);
 KProcess m_process(KProcessType::Kernel);
 

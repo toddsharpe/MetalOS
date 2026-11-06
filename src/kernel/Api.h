@@ -181,7 +181,6 @@ struct KThread;
 KThread* KeCreateThread(const KThreadStart start, void* const arg, const char* const name);
 void KeExitThread();
 void KeExitThread(KThread& thread);
-void KThreadInit();
 KWaitResult KeWait(KSignal& obj, const milli_t timeout = TimeoutMax);
 void KeEventUnref(KEvent& event); //Drops a user event's handle or waiter reference; the event is freed at the last
 void KeSleepThread(const nano_t time);
@@ -193,7 +192,6 @@ void KeYield();
 struct ProcessListEntry; //user/MetalOS.Types.h
 
 UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThreadStart entry = nullptr, void* const arg = nullptr);
-uint32_t UThreadInit(void* const arg);
 UProcess* KeCreateProcess(const char* const commandLine);
 void KeTerminateProcess(UProcess& process, const uint32_t exitCode);
 void KeExitUThread(UThread& thread, const uint32_t exitCode); //The process's last live thread ending ends the process; doesn't return for the calling thread
@@ -217,7 +215,6 @@ void KePipeUnref(KPipe& pipe, KRef& ref); //Drops one of the pipe's Readers/Writ
  * Prints.
  */
 void VPrintf(const char* format, va_list args); //Not a Printf overload: va_list is char*, so it would capture Printf("%s", buffer)
-void VBugcheck(const char* file, const char* line, const char* format, va_list args);
 void TracePrint(KPipe* const output, const char* const format, ...); //Kernel console, and output too when it isn't null
 void PrintStack();
 void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* const output = nullptr); //Prints like TracePrint

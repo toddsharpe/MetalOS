@@ -233,7 +233,7 @@ namespace
 	}
 }
 
-bool UICallback(GUI& gui, Message& message)
+static bool UICallback(GUI& gui, Message& message)
 {
 	if (message.Header.MessageType == MessageType::KeyEvent)
 	{

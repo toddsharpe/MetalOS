@@ -17,8 +17,9 @@ namespace x64
 
 	static constexpr uint16_t KernelDpl = 0;
 	static constexpr uint16_t UserDpl = 3;
+	static constexpr size_t IdtCount = 256;
 
-	inline constexpr size_t SizeToPages(const size_t bytes)
+	constexpr size_t SizeToPages(const size_t bytes)
 	{
 		return DivRoundUp(bytes, PageSize);
 	}

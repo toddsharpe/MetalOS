@@ -1,7 +1,7 @@
 #include "user/MetalOS.h"
 #include <stdio.h>
 
-void DivZero()
+static void DivZero()
 {
 	//Div zero
 	int x = 1;
@@ -9,7 +9,7 @@ void DivZero()
 	int z = x / y;
 }
 
-void NullDereference()
+static void NullDereference()
 {
 	void* ptr = nullptr;
 	*(int*)ptr = 1;
@@ -21,7 +21,7 @@ void DebugBreak()
 }
 
 //Faults inside MetalOS-CRT.dll (printf reading the string), so the trace goes through a DLL's frames
-void DllFault()
+static void DllFault()
 {
 	printf("%s\n", (const char*)1);
 }

@@ -155,9 +155,9 @@ namespace
 }
 
 //Syscalls that the kernel adds params
-SyscallResult DebugPrintStack(const uint64_t rip);
+static SyscallResult DebugPrintStack(const uint64_t rip);
 
-uint64_t Dispatch(const Arch::SyscallFrame& frame)
+static uint64_t Dispatch(const Arch::SyscallFrame& frame)
 {
 	Syscall call = static_cast<Syscall>(frame.SystemCall);
 	switch (call)
@@ -1195,7 +1195,7 @@ SyscallResult DebugPrintBytes(const void* s, const size_t length)
 }
 
 //TODO(tsharpe): Untested
-SyscallResult DebugPrintStack(const uint64_t rip)
+static SyscallResult DebugPrintStack(const uint64_t rip)
 {
 	UThread& thread = Scheduler::GetUThread();
 	thread.Process.Display();

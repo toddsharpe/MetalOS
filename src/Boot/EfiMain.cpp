@@ -8,7 +8,7 @@ static constexpr wchar_t KernelPDB[] = L"moskrnl.pdb";
 static constexpr size_t MaxKernelPath = 64;
 
 EFI_SYSTEM_TABLE* ST;
-EFI_RUNTIME_SERVICES* RT;
+static EFI_RUNTIME_SERVICES* RT;
 EFI_BOOT_SERVICES* BS;
 
 //EFI protocol GUIDs (declared extern in Efi.h)

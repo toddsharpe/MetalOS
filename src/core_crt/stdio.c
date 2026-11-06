@@ -5,7 +5,7 @@
 
 // Internal protypes
 int kvprintf(char const *fmt, void (*func)(int, void *), void *arg, int radix, va_list ap);
-char *ksprintn(char *nbuf, uintmax_t num, int base, int *len, int upper);
+static char *ksprintn(char *nbuf, uintmax_t num, int base, int *len, int upper);
 
 // TODO: convert/rewrite these routines, or at lease source them
 
@@ -17,7 +17,7 @@ char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 #define hex2ascii(hex) (hex2ascii_data[hex])
 
-inline int imax(int a, int b)
+static int imax(int a, int b)
 {
 	return (a > b ? a : b);
 }
@@ -93,7 +93,7 @@ int vsnprintf(char *const _Buffer, size_t const _BufferCount, char const *const 
  * written in the buffer (i.e., the first character of the string).
  * The buffer pointed to by `nbuf' must have length >= MAXNBUF.
  */
-char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
+static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
 {
 	char *p, c;
 

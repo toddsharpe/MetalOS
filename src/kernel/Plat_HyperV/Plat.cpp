@@ -9,7 +9,9 @@
 
 void PlatInitialize()
 {
-	HyperV::Initialize();
+	HyperV::Platform::Initialize();
+	HyperV::Interrupts::Initialize();
+	HyperV::Tsc::Initialize();
 }
 
 void PlatStartTimer(const nano_t period, const uint8_t vector)

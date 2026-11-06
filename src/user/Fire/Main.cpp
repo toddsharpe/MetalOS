@@ -6,9 +6,9 @@
 
 using namespace Graphics;
 
-FireScreen* screen;
+static FireScreen* screen;
 
-bool UICallback(GUI& window, Message& message)
+static bool UICallback(GUI& window, Message& message)
 {
 	switch (message.Header.MessageType)
 	{

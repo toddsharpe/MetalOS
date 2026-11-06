@@ -41,7 +41,12 @@ private:
 		PointerShape = 8,
 		FeatureChange = 9,
 		Dirt = 10,
+		ResolutionRequest = 13,
+		ResolutionResponse = 14,
 	};
+
+	static constexpr uint32_t SYNTHVID_VERSION_WIN10 = (5u << 16) | 3u;
+	static constexpr size_t MAX_RESOLUTIONS = 64;
 
 #pragma pack(push, 1)
 	struct pipe_msg_hdr
@@ -109,28 +114,53 @@ private:
 		synthvid_rect dirt[1];
 	};
 
+	struct hvd_screen_info
+	{
+		uint16_t width;
+		uint16_t height;
+	};
+
+	struct synthvid_resolution_request
+	{
+		uint8_t maximum_resolution_count;
+	};
+
+	struct synthvid_resolution_response
+	{
+		uint8_t edid_block[128];
+		uint8_t resolution_count;
+		uint8_t default_resolution_index;
+		uint8_t is_standard;
+		hvd_screen_info supported_resolution[MAX_RESOLUTIONS];
+	};
+
 	//Full wire messages (pipe header + synthvid header + payload), packed so sizeof() is the exact
 	//byte count on the wire.
 	struct VersionRequestMsg { pipe_msg_hdr pipe; synthvid_msg_hdr hdr; synthvid_version_request body; };
 	struct VramLocationMsg { pipe_msg_hdr pipe; synthvid_msg_hdr hdr; synthvid_vram_location body; };
 	struct SituationUpdateMsg { pipe_msg_hdr pipe; synthvid_msg_hdr hdr; synthvid_situation_update body; };
 	struct DirtMsg { pipe_msg_hdr pipe; synthvid_msg_hdr hdr; synthvid_dirt body; };
+	struct ResolutionRequestMsg { pipe_msg_hdr pipe; synthvid_msg_hdr hdr; synthvid_resolution_request body; };
 #pragma pack(pop)
 
 	void OnCallback();
 	void ProcessMessage(synthvid_msg_hdr* header, const uint32_t size);
 	bool Negotiate();
 	bool Request(const void* const message, const size_t size, const synthvid_msg_type answer);
+	bool QueryResolutions();
+	bool SetLargestMode();
 	bool SetMode(const uint32_t width, const uint32_t height);
 	bool SendSituationUpdate(const uint32_t width, const uint32_t height, const uint32_t pitchBytes);
 
 	uint32_t m_width;
 	uint32_t m_height;
 	uint32_t m_pitchBytes;
-	size_t m_barSize; //bytes of the framebuffer BAR (upper bound on a mode's VRAM)
+	size_t m_vramSize; //bytes the host maps at m_framebufferGpa (upper bound on a mode)
 	paddr_t m_framebufferGpa;
 
+	uint32_t m_version;
 	synthvid_version_response m_versionResponse;
+	synthvid_resolution_response m_resolutions;
 	KEvent m_event;
 	volatile bool m_waiting; //a request is waiting for an m_answer message; only that sets m_event
 	volatile synthvid_msg_type m_answer;

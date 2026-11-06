@@ -1,7 +1,6 @@
 #include "kernel/Api.h"
 #include "kernel/KProcess.h"
 #include "kernel/Arch.h"
-#include "x64/x64.h"
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/UObject.h"
 #include "Assert.h"
@@ -12,7 +11,7 @@ extern KProcess m_process;
 KSharedMemory* KeShmCreate(const size_t size)
 {
 	Assert(size);
-	const size_t pageCount = x64::SizeToPages(size);
+	const size_t pageCount = Arch::SizeToPages(size);
 
 	//Acquire contiguous physical pages so the region maps as one range (a process picks the size, so this can fail)
 	paddr_t physical = 0;

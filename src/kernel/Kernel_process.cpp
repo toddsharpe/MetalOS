@@ -28,7 +28,7 @@ static bool FitsUserSpace(const Loader::LoadedImage& image)
 	const uintptr_t start = reinterpret_cast<uintptr_t>(image.UserBase);
 	if ((start & Arch::PageMask) != 0 || start >= UserEnd)
 		return false;
-	return x64::SizeToPages(image.Size) <= ((UserEnd - start) >> Arch::PageShift);
+	return Arch::SizeToPages(image.Size) <= ((UserEnd - start) >> Arch::PageShift);
 }
 
 //Checked before the process exists, so KeAliasInto's fixed-address reserve can't fail
@@ -39,8 +39,8 @@ static bool CanInstall(const Loader::LoadedImage& exe, const Loader::LoadedImage
 
 	const uintptr_t exeStart = reinterpret_cast<uintptr_t>(exe.UserBase);
 	const uintptr_t runtimeStart = reinterpret_cast<uintptr_t>(runtime.UserBase);
-	const uintptr_t exeEnd = exeStart + (x64::SizeToPages(exe.Size) << Arch::PageShift);
-	const uintptr_t runtimeEnd = runtimeStart + (x64::SizeToPages(runtime.Size) << Arch::PageShift);
+	const uintptr_t exeEnd = exeStart + (Arch::SizeToPages(exe.Size) << Arch::PageShift);
+	const uintptr_t runtimeEnd = runtimeStart + (Arch::SizeToPages(runtime.Size) << Arch::PageShift);
 	return exeEnd <= runtimeStart || runtimeEnd <= exeStart;
 }
 

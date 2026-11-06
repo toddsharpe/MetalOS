@@ -68,18 +68,18 @@ bool HyperVRingBuffer::Write(const Span<const cbuffer_t> buffers)
 	//Write new indexes
 	uint64_t indexes = (uint64_t)startIndex;
 	index = this->Copy(index, &indexes, sizeof(uint64_t));
-	__faststorefence();
+	ArchMemoryBarrier();
 
 	//Update write location
 	m_header->write_index = index;
 
-	__faststorefence();
+	ArchMemoryBarrier();
 
 	//Signal
 	if (m_header->interrupt_mask)
 		return true;
 
-	__faststorefence();
+	ArchMemoryBarrier();
 
 	//If ring buffer was empty, signal device
 	if (startIndex == m_header->read_index)
@@ -105,9 +105,9 @@ void* HyperVRingBuffer::Read(const uint32_t length)
 
 bool HyperVRingBuffer::CommitRead()
 {
-	__faststorefence();
+	ArchMemoryBarrier();
 	m_header->read_index = m_iterator;
-	__faststorefence();
+	ArchMemoryBarrier();
 
 	// Host may have written after our last Read() check but before read_index was committed.
 	// If so, the host saw the ring as non-empty and suppressed its SINT.

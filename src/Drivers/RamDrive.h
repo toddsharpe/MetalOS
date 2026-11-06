@@ -8,9 +8,13 @@
 class RamDrive
 {
 public:
+	//The drive's unit: block 0 is the superblock and each file starts on a block
+	static constexpr size_t BlockShift = 12;
+	static constexpr size_t BlockSize = 1 << BlockShift;
+
 	static constexpr size_t EntrySize = 32;
 	static constexpr size_t MAX_NAME = EntrySize - sizeof(uint32_t) - sizeof(size_t);
-	static constexpr size_t MAX_ENTRIES = x64::PageSize / EntrySize;
+	static constexpr size_t MAX_ENTRIES = BlockSize / EntrySize;
 
 	struct Entry
 	{
@@ -39,7 +43,7 @@ public:
 	void Clear()
 	{
 		// Zero out superblock
-		memset((void *)m_address, 0, x64::PageSize);
+		memset((void *)m_address, 0, BlockSize);
 	}
 
 	size_t FileCount()
@@ -68,8 +72,8 @@ public:
 		m_superblock->Entries[index].PageNumber = (uint32_t)m_pageWatermark;
 		m_superblock->Entries[index].Length = size;
 
-		void *address = (void *)(m_address + (m_pageWatermark << x64::PageShift));
-		m_pageWatermark += x64::SizeToPages(size);
+		void *address = (void *)(m_address + (m_pageWatermark << BlockShift));
+		m_pageWatermark += ((size + BlockSize - 1) >> BlockShift);
 		return address;
 	}
 
@@ -81,7 +85,7 @@ public:
 
 		const Entry &entry = m_superblock->Entries[index];
 		length = entry.Length;
-		address = (void *)(m_address + ((uintptr_t)entry.PageNumber << x64::PageShift));
+		address = (void *)(m_address + ((uintptr_t)entry.PageNumber << BlockShift));
 		return true;
 	}
 
@@ -123,7 +127,7 @@ private:
 	{
 		Entry Entries[MAX_ENTRIES];
 	};
-	static_assert(sizeof(Superblock) == x64::PageSize, "Invalid superblock size");
+	static_assert(sizeof(Superblock) == BlockSize, "Invalid superblock size");
 
 	uintptr_t m_address;
 	size_t m_size;

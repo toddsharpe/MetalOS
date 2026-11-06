@@ -66,7 +66,7 @@ void KThread::Display() const
 		Sched.Signal->Display();
 
 	//Display context
-	Printf("  Rbp: 0x%016x Rsp: 0x%016x Rip: 0x%016x\n", m_context.Rbp, m_context.Rsp, m_context.Rip);
+	ArchPrintContext(m_context);
 
 	if (UserThread != nullptr)
 		UserThread->Display();

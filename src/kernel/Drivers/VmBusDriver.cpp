@@ -1,7 +1,7 @@
 #include "kernel/Drivers/VmBusDriver.h"
 #include "kernel/HyperV/VmBus.h"
 #include "Lib/Span.h"
-#include "x64/intrin.h"
+#include "kernel/Arch.h"
 #include "Assert.h"
 
 //Monitor pages handed to the host in CHANNELMSG_INITIATE_CONTACT

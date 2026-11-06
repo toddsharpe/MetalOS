@@ -13,7 +13,7 @@ namespace HyperV::Timer
 
 		//12.4.1 Reference Counter MSR 
 		const nano100_t value100 = value / 100;
-		__writemsr(countReg, value100);
+		ArchWriteMsr(countReg, value100);
 
 		TimerConfigReg config = { };
 		config.Enable = true;
@@ -21,6 +21,6 @@ namespace HyperV::Timer
 		config.Periodic = true;
 		config.ApicVector = irq;
 		config.DirectMode = true;
-		__writemsr(configReg, config.AsUint64);
+		ArchWriteMsr(configReg, config.AsUint64);
 	}
 };

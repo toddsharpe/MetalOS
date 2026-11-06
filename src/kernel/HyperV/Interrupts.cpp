@@ -17,28 +17,28 @@ namespace HyperV::Interrupts
 			const paddr_t address = ResolveImageVA((void *)SynicEvents);
 
 			HV_INTERRUPT_PAGE_REGISTER reg;
-			reg.AsUint64 = __readmsr(static_cast<uint32_t>(MSR::SIEFP));
+			reg.AsUint64 = ArchReadMsr(static_cast<uint32_t>(MSR::SIEFP));
 			reg.Enable = true;
 			reg.BaseAddress = (address >> Arch::PageShift);
-			__writemsr(static_cast<uint32_t>(MSR::SIEFP), reg.AsUint64);
+			ArchWriteMsr(static_cast<uint32_t>(MSR::SIEFP), reg.AsUint64);
 		}
 		{
 			const paddr_t address = ResolveImageVA((void *)SynicMessages);
 
 			HV_INTERRUPT_PAGE_REGISTER reg;
-			reg.AsUint64 = __readmsr(static_cast<uint32_t>(MSR::SIMP));
+			reg.AsUint64 = ArchReadMsr(static_cast<uint32_t>(MSR::SIMP));
 			reg.Enable = true;
 			reg.BaseAddress = (address >> Arch::PageShift);
 
-			__writemsr(static_cast<uint32_t>(MSR::SIMP), reg.AsUint64);
+			ArchWriteMsr(static_cast<uint32_t>(MSR::SIMP), reg.AsUint64);
 		}
 
 		// Enable interrupts
 		{
 			HV_SCONTROL_REGISTER reg;
-			reg.AsUint64 = __readmsr(static_cast<uint32_t>(MSR::SCONTROL));
+			reg.AsUint64 = ArchReadMsr(static_cast<uint32_t>(MSR::SCONTROL));
 			reg.Enabled = true;
-			__writemsr(static_cast<uint32_t>(MSR::SCONTROL), reg.AsUint64);
+			ArchWriteMsr(static_cast<uint32_t>(MSR::SCONTROL), reg.AsUint64);
 		}
 	}
 
@@ -47,11 +47,11 @@ namespace HyperV::Interrupts
 		const uint32_t msr = static_cast<uint32_t>(MSR::SINT0) + sint;
 
 		HV_SINT_REGISTER reg = {0};
-		reg.AsUint64 = __readmsr(msr);
+		reg.AsUint64 = ArchReadMsr(msr);
 		reg.Vector = vector;
 		reg.Masked = false;
 		reg.AutoEOI = false;
-		__writemsr(msr, reg.AsUint64);
+		ArchWriteMsr(msr, reg.AsUint64);
 	}
 
 	void ProcessInterrupts(uint32_t sint, StaticVector<uint32_t, MaxChannelIds>& channelIds, HV_MESSAGE& messageOut)
@@ -93,6 +93,6 @@ namespace HyperV::Interrupts
 
 	void EOI()
 	{
-		__writemsr(static_cast<uint32_t>(MSR::HV_X64_MSR_EOI), 0);
+		ArchWriteMsr(static_cast<uint32_t>(MSR::HV_X64_MSR_EOI), 0);
 	}
 }

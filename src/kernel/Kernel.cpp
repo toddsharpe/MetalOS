@@ -180,9 +180,10 @@ extern "C"
 	{
 		if (vector == Arch::InterruptVector::DoubleFault)
 		{
-			Printf("DOUBLE FAULT RIP=0x%016x RSP=0x%016x\n", frame.RIP, frame.RSP);
+			Printf("DOUBLE FAULT\n");
+			ArchPrintFrame(frame);
 			KePauseSystem();
-			__halt();
+			ArchWait();
 		}
 
 		if (m_irqs.Contains(vector))
@@ -216,21 +217,18 @@ extern "C"
 
 				case Arch::InterruptVector::PageFault:
 				{
-					const uint64_t addr = __readcr2();
+					const uint64_t addr = ArchFaultAddress();
 					TracePrint(pipe, "Exception: Invalid virtual address: 0x%016x. %s\n", addr, addr == 0 ? "Null pointer" : "");
 				}
 				break;
 
 				default:
-					TracePrint(pipe, "Exception: Vector 0x%x, Code: 0x%x\n", (uint32_t)vector, frame.ErrorCode);
+					TracePrint(pipe, "Exception: Vector 0x%x, Code: 0x%x\n", (uint32_t)vector, ArchFrameErrorCode(frame));
 					break;
 			}
 
 			//Print the faulting thread's stack
-			Arch::Context context = {};
-			context.Rip = frame.RIP;
-			context.Rsp = frame.RSP;
-			context.Rbp = frame.RBP;
+			const Arch::Context context = ArchFrameContext(frame);
 			PrintStack(&context, proc, pipe);
 
 			//Kill process
@@ -241,21 +239,14 @@ extern "C"
 		{
 			//Show context
 			Printf("Vector: %d\n", vector);
-			Printf("ISR: 0x%x, Code: %x\n", vector, frame.ErrorCode);
-			Printf("    RIP: 0x%016x\n", frame.RIP);
-			Printf("    RBP: 0x%016x\n", frame.RBP);
-			Printf("    RSP: 0x%016x\n", frame.RSP);
-			Printf("    RAX: 0x%016x\n", frame.RAX);
-			Printf("    RBX: 0x%016x\n", frame.RBX);
-			Printf("    RCX: 0x%016x\n", frame.RCX);
-			Printf("    RDX: 0x%016x\n", frame.RDX);
-			Printf("    CS: 0x%x, SS: 0x%x\n", frame.CS, frame.SS);
+			Printf("ISR: 0x%x, Code: %x\n", vector, ArchFrameErrorCode(frame));
+			ArchPrintFrame(frame);
 
 			switch (vector)
 			{
 			case Arch::InterruptVector::PageFault:
-				Printf("    CR2: 0x%16x\n", __readcr2());
-				if (__readcr2() == 0)
+				Printf("    Fault address: 0x%16x\n", ArchFaultAddress());
+				if (ArchFaultAddress() == 0)
 					Printf("        Null pointer\n");
 			}
 
@@ -267,13 +258,8 @@ extern "C"
 					return;
 			}
 			
-			//Build context
-			Arch::Context context = {};
-			context.Rip = frame.RIP;
-			context.Rsp = frame.RSP;
-			context.Rbp = frame.RBP;
-
 			//Interrupt originated in kernel
+			const Arch::Context context = ArchFrameContext(frame);
 			PrintStack(&context, m_process);
 			Fatal("Unhandled exception");
 		}

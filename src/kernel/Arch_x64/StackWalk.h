@@ -4,6 +4,7 @@
 #include "windows/types.h"
 #include "windows/winnt.h"
 #include "kernel/Arch_x64/RuntimeSupport.h"
+#include "x64/x64.h"
 
 // https://docs.microsoft.com/en-us/cpp/build/exception-handling-x64?view=vs-2019
 // http://www.nynaeve.net/Code/StackWalk64.cpp
@@ -14,11 +15,29 @@ public:
 	StackWalk(PCONTEXT context, const AddressSpace* const space = nullptr, PKNONVOLATILE_CONTEXT_POINTERS contextPointers = nullptr) : m_context(context),
 																							m_contextPointers(contextPointers),
 																							m_space(space),
-																							m_unwound()
+																							m_unwound(),
+																							m_own()
 	{
 		// Assert(context->Rsp);
 		// Assert(context->Rbp);
 		// Assert(context->Rip);
+	}
+
+	//Walks from a kernel context, unwinding a copy of it
+	StackWalk(const x64::Context& context, const AddressSpace* const space) : m_context(&m_own),
+																							m_contextPointers(),
+																							m_space(space),
+																							m_unwound(),
+																							m_own()
+	{
+		m_own.Rip = context.Rip;
+		m_own.Rsp = context.Rsp;
+		m_own.Rbp = context.Rbp;
+	}
+
+	uintptr_t Ip() const
+	{
+		return m_context->Rip;
 	}
 
 	bool HasNext()
@@ -55,4 +74,5 @@ private:
 	PKNONVOLATILE_CONTEXT_POINTERS m_contextPointers;
 	const AddressSpace* const m_space; //A user stack and image are user memory, so each read is checked against the process's space; null for a kernel walk
 	bool m_unwound; //Past the first frame (the faulting or captured IP), so RIP is a return address
+	CONTEXT m_own; //The unwind context when walking from an x64::Context
 };

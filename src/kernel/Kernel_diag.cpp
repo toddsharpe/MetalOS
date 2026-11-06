@@ -56,12 +56,6 @@ void TracePrint(KPipe* const output, const char* const format, ...)
 
 void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* const output)
 {
-	//Convert to unwind context
-	//NOTE(tsharpe): Convert unwind code to work on X64_CONTEXT
-	CONTEXT ctx = {};
-	ctx.Rip = context->Rip;
-	ctx.Rsp = context->Rsp;
-	ctx.Rbp = context->Rbp;
 
 	Arena& arena = m_tempArena;
 	arena.Reset();
@@ -70,7 +64,7 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 	TracePrint(output, "Call Stack\n");
 
 	//A user stack (and image) is the process's memory, so a smashed stack or bad RSP must end the walk rather than fault the kernel
-	StackWalk sw(&ctx, process.IsGlobal ? nullptr : &process.Space);
+	StackWalk sw(*context, process.IsGlobal ? nullptr : &process.Space);
 	size_t frames = 0;
 	while (sw.HasNext())
 	{
@@ -87,7 +81,7 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 		if (!found)
 		{
 			//No module info for the IP, print it and exit
-			TracePrint(output, "    IP: 0x%016x\n", ctx.Rip);
+			TracePrint(output, "    IP: 0x%016x\n", sw.Ip());
 			break;
 		}
 
@@ -108,7 +102,7 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 		}
 
 		//Calculate RVA
-		const uint32_t rva = (uint32_t)(ctx.Rip - imageBase);
+		const uint32_t rva = (uint32_t)(sw.Ip() - imageBase);
 
 		//Lookup in PDB
 		PdbLookup lookup = {};
@@ -118,7 +112,7 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 			TracePrint(output, "    %s (%d)\n", lookup.Function, lookup.Line);
 		else
 			TracePrint(output, "    <resolve failed>\n");
-		TracePrint(output, "        %s IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", module.Name, ctx.Rip, module.ImageBase, rva);
+		TracePrint(output, "        %s IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", module.Name, sw.Ip(), module.ImageBase, rva);
 
 		//The stack or the module's unwind data isn't readable (or usable), so there's no caller to go to
 		if (!sw.Next(imageBase))

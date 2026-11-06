@@ -14,7 +14,7 @@
  * holds a reference so the object survives the share->claim gap even if the granter
  * releases it first. Unclaimed grants keep the object alive until claimed or their granter exits.
  */
-namespace _GRANT
+namespace
 {
 	struct Grant
 	{
@@ -44,20 +44,20 @@ uint64_t KeGrantShare(const UObjectType type, void* const object, const uint32_t
 			break;
 	}
 
-	KSpinLockGuard guard(_GRANT::m_lock);
-	const uint64_t token = _GRANT::m_nextToken++;
-	Assert(_GRANT::m_grants.Add({ token, type, object, granter }));
+	KSpinLockGuard guard(m_lock);
+	const uint64_t token = m_nextToken++;
+	Assert(m_grants.Add({ token, type, object, granter }));
 	return token;
 }
 
 //Drops an exited process's unclaimed grants, releasing the reference each held on its object
 void KeGrantRevoke(const uint32_t granter)
 {
-	KSpinLockGuard guard(_GRANT::m_lock);
+	KSpinLockGuard guard(m_lock);
 	while (true)
 	{
-		const _GRANT::Grant* found = nullptr;
-		for (const _GRANT::Grant& grant : _GRANT::m_grants)
+		const Grant* found = nullptr;
+		for (const Grant& grant : m_grants)
 		{
 			if (grant.Granter == granter)
 			{
@@ -68,8 +68,8 @@ void KeGrantRevoke(const uint32_t granter)
 		if (!found)
 			return;
 
-		const _GRANT::Grant revoked = *found;
-		_GRANT::m_grants.Remove(revoked);
+		const Grant revoked = *found;
+		m_grants.Remove(revoked);
 		switch (revoked.Type)
 		{
 			case UObjectType::SharedMemory:
@@ -84,15 +84,15 @@ void KeGrantRevoke(const uint32_t granter)
 
 bool KeGrantClaim(const uint64_t token, UObjectType& type, void*& object)
 {
-	KSpinLockGuard guard(_GRANT::m_lock);
-	for (const _GRANT::Grant& grant : _GRANT::m_grants)
+	KSpinLockGuard guard(m_lock);
+	for (const Grant& grant : m_grants)
 	{
 		if (grant.Token != token)
 			continue;
 
 		type = grant.Type;
 		object = grant.Object;
-		_GRANT::m_grants.Remove(grant); //single-use
+		m_grants.Remove(grant); //single-use
 		return true;
 	}
 	return false;

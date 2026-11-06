@@ -6,7 +6,7 @@
 #include <cstring>
 
 //Global name-based IPC rendezvous: Register/Lookup publish an opaque value (e.g. a grant token) under a name, Post/Poll queue client values for connection handoff
-namespace _EP
+namespace
 {
 	struct Endpoint
 	{
@@ -53,8 +53,8 @@ namespace _EP
 //The first registrant owns the endpoint until it exits; only it can re-register or poll it
 bool KeEndpointRegister(const char* const name, const uint64_t id, const uint32_t owner)
 {
-	KSpinLockGuard guard(_EP::m_lock);
-	_EP::Endpoint* ep = _EP::FindOrCreate(name);
+	KSpinLockGuard guard(m_lock);
+	Endpoint* ep = FindOrCreate(name);
 	if (!ep || (ep->Registered && ep->Owner != owner))
 		return false;
 	ep->Registered = true;
@@ -65,8 +65,8 @@ bool KeEndpointRegister(const char* const name, const uint64_t id, const uint32_
 
 bool KeEndpointLookup(const char* const name, uint64_t& id)
 {
-	KSpinLockGuard guard(_EP::m_lock);
-	_EP::Endpoint* ep = _EP::Find(name);
+	KSpinLockGuard guard(m_lock);
+	Endpoint* ep = Find(name);
 	if (!ep || !ep->Registered)
 		return false;
 	id = ep->Id;
@@ -75,8 +75,8 @@ bool KeEndpointLookup(const char* const name, uint64_t& id)
 
 bool KeEndpointPost(const char* const name, const uint64_t value)
 {
-	KSpinLockGuard guard(_EP::m_lock);
-	_EP::Endpoint* ep = _EP::FindOrCreate(name);
+	KSpinLockGuard guard(m_lock);
+	Endpoint* ep = FindOrCreate(name);
 	if (!ep)
 		return false;
 	return ep->Pending.Enqueue(value);
@@ -84,8 +84,8 @@ bool KeEndpointPost(const char* const name, const uint64_t value)
 
 bool KeEndpointPoll(const char* const name, const uint32_t owner, uint64_t& value)
 {
-	KSpinLockGuard guard(_EP::m_lock);
-	_EP::Endpoint* ep = _EP::Find(name);
+	KSpinLockGuard guard(m_lock);
+	Endpoint* ep = Find(name);
 	if (!ep || !ep->Registered || ep->Owner != owner || ep->Pending.IsEmpty())
 		return false;
 	value = ep->Pending.Dequeue();
@@ -95,13 +95,13 @@ bool KeEndpointPoll(const char* const name, const uint32_t owner, uint64_t& valu
 //Drops an exited process's endpoints so a restarted server can register them again
 void KeEndpointRelease(const uint32_t owner)
 {
-	KSpinLockGuard guard(_EP::m_lock);
+	KSpinLockGuard guard(m_lock);
 	size_t i = 0;
-	while (i < _EP::m_endpoints.Count())
+	while (i < m_endpoints.Count())
 	{
-		const _EP::Endpoint& ep = _EP::m_endpoints.begin()[i];
+		const Endpoint& ep = m_endpoints.begin()[i];
 		if (ep.Registered && ep.Owner == owner)
-			_EP::m_endpoints.RemoveAt(i);
+			m_endpoints.RemoveAt(i);
 		else
 			i++;
 	}

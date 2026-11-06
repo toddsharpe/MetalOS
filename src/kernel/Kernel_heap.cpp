@@ -4,7 +4,7 @@
 #include "Lib/System.h"
 #include "kernel/Arch.h"
 
-namespace _HEAP
+namespace
 {
 	/*
 	 * Kernel Arenas.
@@ -22,13 +22,13 @@ void* KeAlloc(const size_t size, const AllocType type)
 	{
 		case AllocType::User:
 		case AllocType::Kernel:
-			return _HEAP::m_kernelAlloc.Allocate(size);
+			return m_kernelAlloc.Allocate(size);
 
 		case AllocType::Acpi:
-			return _HEAP::m_acpiArena.Allocate(size);
+			return m_acpiArena.Allocate(size);
 
 		case AllocType::Malloc:
-			return _HEAP::m_kernelAlloc.Allocate(size);
+			return m_kernelAlloc.Allocate(size);
 
 		default:
 			NotImplemented();
@@ -42,13 +42,13 @@ void KeFree(void* ptr, const AllocType type)
 	{
 		case AllocType::User:
 		case AllocType::Kernel:
-			return _HEAP::m_kernelAlloc.Deallocate(ptr);
+			return m_kernelAlloc.Deallocate(ptr);
 
 		case AllocType::Acpi:
-			return _HEAP::m_acpiArena.Deallocate(ptr);
+			return m_acpiArena.Deallocate(ptr);
 
 		case AllocType::Malloc:
-			return _HEAP::m_kernelAlloc.Deallocate(ptr);
+			return m_kernelAlloc.Deallocate(ptr);
 
 		default:
 			NotImplemented();

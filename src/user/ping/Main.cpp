@@ -74,9 +74,9 @@ int main(int argc, char** argv)
 	dst.sin_port = 0;
 	dst.sin_addr = target;
 
-	const uint16_t id = 0x4d53; //'MS'
+	static constexpr uint16_t id = 0x4d53; //'MS'
 	const char* payload = "MetalOS ping";
-	const size_t payloadLen = 12;
+	static constexpr size_t payloadLen = 12;
 
 	//Warm up ARP: the first unicast send resolves asynchronously.
 	{

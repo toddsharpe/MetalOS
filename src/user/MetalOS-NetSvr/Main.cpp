@@ -45,8 +45,8 @@ namespace
 	Net::ipv4_addr_t ToIpv4(const in_addr& addr) { return { ByteSwap<uint32_t>(addr.s_addr) }; }
 	in_addr FromIpv4(const Net::ipv4_addr_t& ip) { in_addr a = {}; a.s_addr = ByteSwap<uint32_t>(ip.addr); return a; }
 
-	constexpr size_t MaxConns = 16;
-	constexpr size_t MaxSocketsPerConn = 32;
+	static constexpr size_t MaxConns = 16;
+	static constexpr size_t MaxSocketsPerConn = 32;
 
 	struct Connection
 	{

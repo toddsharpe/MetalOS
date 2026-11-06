@@ -74,7 +74,7 @@ namespace EfiError
 		Print("  %ls\r\n", file);
 		Print("  %ls\r\n", line);
 
-		constexpr UINTN Stall = 1000 * 1000 * 60;//60 minute stall
+		static constexpr UINTN Stall = 1000 * 1000 * 60;//60 minute stall
 		BS->Stall(Stall);
 		return EFI_ABORTED;
 	}

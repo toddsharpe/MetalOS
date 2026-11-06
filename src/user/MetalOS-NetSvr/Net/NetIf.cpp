@@ -2,7 +2,7 @@
 
 namespace Net
 {
-	static const NetLayer EthernetLayer = { Ethernet::Receive, Ethernet::Send, eth_hdr_size };
+	static constexpr NetLayer EthernetLayer = { Ethernet::Receive, Ethernet::Send, eth_hdr_size };
 
 	const NetLayer& get_l2(const l2_t l2)
 	{
@@ -14,7 +14,7 @@ namespace Net
 #if defined (LINUX)
 			case l2_t::Tun:
 			{
-				static const NetLayer TunEthLayer = { TunEth::Receive, TunEth::Send, tun_hdr_size };
+				static constexpr NetLayer TunEthLayer = { TunEth::Receive, TunEth::Send, tun_hdr_size };
 				return TunEthLayer;
 			}
 #endif

@@ -11,7 +11,7 @@ using namespace UI;
 
 namespace
 {
-	constexpr Rectangle StartRect = { 160, 120, 1120, 620 };
+	static constexpr Rectangle StartRect = { 160, 120, 1120, 620 };
 
 	ConsoleText scrollback;
 	Console console(scrollback, { 0, 0, StartRect.Width, StartRect.Height });

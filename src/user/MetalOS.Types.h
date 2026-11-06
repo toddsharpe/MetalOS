@@ -21,7 +21,7 @@ struct ProcessInfo
 	uint32_t Id;
 };
 
-constexpr size_t MaxProcessName = 32;
+static constexpr size_t MaxProcessName = 32;
 
 //Process lifecycle state, shared with the kernel (UProcess stores this directly).
 enum class ProcessState : uint32_t
@@ -50,14 +50,14 @@ struct ProcessListEntry
 	char Name[MaxProcessName];
 };
 
-constexpr size_t MaxModuleName = 32; //Including NUL; longer names are truncated
+static constexpr size_t MaxModuleName = 32; //Including NUL; longer names are truncated
 struct Module
 {
 	void* ImageBase;
 	char Name[MaxModuleName];
 };
 
-constexpr size_t MaxLoadedModules = 8;
+static constexpr size_t MaxLoadedModules = 8;
 struct ProcessEnvironmentBlock
 {
 	void *ImageBase;

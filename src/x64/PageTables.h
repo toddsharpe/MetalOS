@@ -230,8 +230,8 @@ public:
 		
 		PML4E *const pml4 = static_cast<PML4E *>(T_ops.Resolve(Root));
 
-		const size_t kernelCount = (1 << 8); // high bit gets extended to full 64 bit width with 4 level paging
-		const size_t count = (1 << 9);
+		static constexpr size_t kernelCount = (1 << 8); // high bit gets extended to full 64 bit width with 4 level paging
+		static constexpr size_t count = (1 << 9);
 		for (size_t i4 = kernelCount; i4 < count; i4++)
 		{
 			pml4[i4].Value = 0;
@@ -248,7 +248,7 @@ public:
 		uintptr_t *const currentRoot = (uintptr_t *)T_ops.Resolve(current.Root);
 
 		// Kernel addresses start at high bit set, occupy half of root page
-		constexpr size_t kernelStart = (1 << 8);
+		static constexpr size_t kernelStart = (1 << 8);
 		static_assert(kernelStart * sizeof(uintptr_t) == PageSize / 2, "Invalid region");
 
 		// copy all mappings from current PT's root to this PT's root

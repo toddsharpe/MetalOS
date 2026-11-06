@@ -20,7 +20,7 @@ public:
 		//Map space
 		const paddr_t address = (paddr_t)m_device.Context;
 		Assert(address);
-		constexpr size_t pages = Arch::SizeToPages(RamDriveSize);
+		static constexpr size_t pages = Arch::SizeToPages(RamDriveSize);
 		const void* virtualAddress = KeVirtualMap(address, RamDriveSize);
 
 		//Create underlying driver

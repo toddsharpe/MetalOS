@@ -6,7 +6,7 @@
 
 namespace
 {
-	constexpr size_t MaxKThreads = 128;
+	static constexpr size_t MaxKThreads = 128;
 
 	struct CpuContext
 	{

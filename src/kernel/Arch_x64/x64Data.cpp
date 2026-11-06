@@ -338,11 +338,11 @@ extern "C" void ArchInitialize()
 	_lgdt(&x64::GDTR);
 
 	//Update segment registers
-	constexpr x64::SegmentSelector dataSelector(x64::GdtIndex::KernelData);
-	constexpr x64::SegmentSelector codeSelector(x64::GdtIndex::KernelCode);
+	static constexpr x64::SegmentSelector dataSelector(x64::GdtIndex::KernelData);
+	static constexpr x64::SegmentSelector codeSelector(x64::GdtIndex::KernelCode);
 	UpdateSegments(dataSelector.Value, codeSelector.Value);
 
-	constexpr x64::SegmentSelector tssSelector(x64::GdtIndex::TssEntry);
+	static constexpr x64::SegmentSelector tssSelector(x64::GdtIndex::TssEntry);
 	_ltr(tssSelector.Value);
 
 	//Load interrupt handlers
@@ -352,7 +352,7 @@ extern "C" void ArchInitialize()
 	_sti();
 
 	//Enable syscalls
-	constexpr x64::SegmentSelector userCodeSelector(x64::GdtIndex::User32Code, x64::UserDpl);
+	static constexpr x64::SegmentSelector userCodeSelector(x64::GdtIndex::User32Code, x64::UserDpl);
 	const x64::IA32_STAR_REG starReg = { {0, codeSelector.Value, userCodeSelector.Value } };
 	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_STAR), starReg.AsUint64);
 	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_LSTAR), (uintptr_t)&x64_SYSTEMCALL);

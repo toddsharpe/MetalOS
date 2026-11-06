@@ -13,8 +13,8 @@
 //serialized by a spinlock because more than one driver posts.
 namespace
 {
-	constexpr uint32_t Capacity = 512;
-	constexpr uint32_t MoveLimit = Capacity / 2; //mouse moves stop going in at half full, keeping the rest for keys and clicks
+	static constexpr uint32_t Capacity = 512;
+	static constexpr uint32_t MoveLimit = Capacity / 2; //mouse moves stop going in at half full, keeping the rest for keys and clicks
 
 	KSpinLock m_lock;
 	void* m_region = nullptr;

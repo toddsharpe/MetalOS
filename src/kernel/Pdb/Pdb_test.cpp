@@ -98,8 +98,8 @@ static void PdbPublics_test(Arena& arena)
 
 		uint8_t* const record = data + size;
 		const uint16_t length = (uint16_t)(recordSize - 2);
-		const uint16_t type = S_PUB32;
-		const uint32_t flags = 0;
+		static constexpr uint16_t type = S_PUB32;
+		static constexpr uint32_t flags = 0;
 		const uint32_t offset = (uint32_t)(i * 0x10);
 		const uint16_t section = (i == Count) ? 2 : 1;
 		memcpy(record + 0, &length, sizeof(length));
@@ -260,7 +260,7 @@ static void MsfStreams_test(Arena& arena)
 	memcpy(image + (size_t)BlockMap * TestBlockSize, DirectoryBlocks, sizeof(DirectoryBlocks));
 
 	//Superblock: magic, BlockSize, FreeBlockMapBlock, NumBlocks, NumDirectoryBytes, Unknown, BlockMapAddr
-	const uint32_t header[] = { TestBlockSize, 0, BlockCount, DirectoryBytes, 0, BlockMap };
+	static constexpr uint32_t header[] = { TestBlockSize, 0, BlockCount, DirectoryBytes, 0, BlockMap };
 	memcpy(image, Magic, sizeof(Magic));
 	memcpy(image + 0x20, header, sizeof(header));
 

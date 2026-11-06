@@ -72,10 +72,10 @@ static void addKeyToQueue(int pressed, unsigned char keyCode)
 HWindow window;
 
 //Doom draws its 320x200 frame scaled by a whole number into the top of DG_ScreenBuffer, centered across, and leaves the rest black; the window is just that picture
-constexpr uint32_t PictureScale = (DOOMGENERIC_RESX / 320) < (DOOMGENERIC_RESY / 200) ? (DOOMGENERIC_RESX / 320) : (DOOMGENERIC_RESY / 200);
-constexpr uint32_t PictureWidth = 320 * PictureScale;
-constexpr uint32_t PictureHeight = 200 * PictureScale;
-constexpr uint32_t PictureLeft = (DOOMGENERIC_RESX - PictureWidth) / 2;
+static constexpr uint32_t PictureScale = (DOOMGENERIC_RESX / 320) < (DOOMGENERIC_RESY / 200) ? (DOOMGENERIC_RESX / 320) : (DOOMGENERIC_RESY / 200);
+static constexpr uint32_t PictureWidth = 320 * PictureScale;
+static constexpr uint32_t PictureHeight = 200 * PictureScale;
+static constexpr uint32_t PictureLeft = (DOOMGENERIC_RESX - PictureWidth) / 2;
 static pixel_t* s_Surface;
 
 static void ProcessMessage(const struct Message &message)

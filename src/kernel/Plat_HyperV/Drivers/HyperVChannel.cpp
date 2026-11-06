@@ -94,8 +94,8 @@ bool HyperVChannel::SendPacket(const void* buffer, const size_t length, const ui
 
 	uint64_t aligned_data = 0;
 
-	constexpr size_t headerSize = 1;
-	constexpr size_t fullSize = 3;
+	static constexpr size_t headerSize = 1;
+	static constexpr size_t fullSize = 3;
 
 	const cbuffer_t buffers[] = {
 		Bytes(&desc, sizeof(HyperV::vmpacket_descriptor)),

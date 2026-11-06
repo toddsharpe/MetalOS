@@ -12,16 +12,16 @@ using namespace UI;
 namespace
 {
 	//The display fits 9 characters, which also keeps every product inside an int64_t
-	constexpr int64_t MaxValue = 999999999;
-	constexpr int64_t MinValue = -99999999;
+	static constexpr int64_t MaxValue = 999999999;
+	static constexpr int64_t MinValue = -99999999;
 
-	constexpr int32_t Padding = 14;
-	constexpr uint32_t KeyWidth = 72;
-	constexpr uint32_t KeyHeight = 56;
-	constexpr int32_t KeyGap = 8;
-	constexpr uint32_t ReadoutHeight = 92;
-	constexpr uint32_t ClientWidth = 2 * Padding + 4 * KeyWidth + 3 * KeyGap;
-	constexpr uint32_t ClientHeight = 2 * Padding + ReadoutHeight + 12 + 4 * KeyHeight + 3 * KeyGap;
+	static constexpr int32_t Padding = 14;
+	static constexpr uint32_t KeyWidth = 72;
+	static constexpr uint32_t KeyHeight = 56;
+	static constexpr int32_t KeyGap = 8;
+	static constexpr uint32_t ReadoutHeight = 92;
+	static constexpr uint32_t ClientWidth = 2 * Padding + 4 * KeyWidth + 3 * KeyGap;
+	static constexpr uint32_t ClientHeight = 2 * Padding + ReadoutHeight + 12 + 4 * KeyHeight + 3 * KeyGap;
 
 	int64_t g_total;
 	int64_t g_entry;

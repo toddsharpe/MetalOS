@@ -7,7 +7,7 @@ namespace DeviceHids
 	* ACPI/PNP Device IDs with description strings.
 	* NOTE(tsharpe): Ripped from ACPICA ahids.c
 	*/
-	static const Entry AslDeviceIds[] =
+	static constexpr Entry AslDeviceIds[] =
 	{
 		//ACPICA
 		{"10EC5640",    "Realtek I2S Audio Codec"},

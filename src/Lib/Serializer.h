@@ -22,7 +22,7 @@ public:
 	template <typename T>
 	void Write(const T value)
 	{
-		constexpr size_t size = sizeof(T);
+		static constexpr size_t size = sizeof(T);
 		AssertOp(m_offset, <, m_length - size);
 
 		const T swapped = ByteSwap<T>(value);

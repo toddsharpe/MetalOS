@@ -25,8 +25,8 @@ public:
 	}
 
 private:
-	static const int Locked = 1;
-	static const int Unlocked = 0;
+	static constexpr int Locked = 1;
+	static constexpr int Unlocked = 0;
 
 	volatile int64_t m_value;
 };

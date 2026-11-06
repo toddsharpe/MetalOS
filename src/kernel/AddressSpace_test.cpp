@@ -149,7 +149,7 @@ void AddressSpace_test()
     {
         AddressSpace space(TestStart, TestEnd, AllocationGranularity);
 
-        const size_t pages = (TestEnd - TestStart) >> Arch::PageShift; // whole range; watermark is past Start
+        static constexpr size_t pages = (TestEnd - TestStart) >> Arch::PageShift; // whole range; watermark is past Start
         AssertEqual(space.Reserve(pages), (uintptr_t)0);
         AssertEqual(space.ReservedBytes(), (size_t)0);
     }
@@ -159,7 +159,7 @@ void AddressSpace_test()
         AddressSpace space(TestStart, TestEnd, AllocationGranularity);
 
         const size_t pages = AllocationGranularity >> Arch::PageShift;
-        const uintptr_t last = TestEnd - AllocationGranularity;
+        static constexpr uintptr_t last = TestEnd - AllocationGranularity;
         Assert(space.Reserve((uintptr_t)0x20000, (last - 0x20000) >> Arch::PageShift)); // fill up to the last slot
         AssertEqual(space.Reserve(pages), last);
     }

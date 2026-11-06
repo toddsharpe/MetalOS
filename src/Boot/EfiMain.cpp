@@ -57,7 +57,7 @@ static EFI_STATUS PrintCpuDetails()
 //The ACPI 2.0 RSDP is the only UEFI config table the kernel uses (zero if absent)
 static paddr_t FindAcpiRsdp()
 {
-	constexpr EFI_GUID guid = ACPI_20_TABLE_GUID;
+	static constexpr EFI_GUID guid = ACPI_20_TABLE_GUID;
 	for (size_t i = 0; i < ST->NumberOfTableEntries; i++)
 	{
 		const EFI_CONFIGURATION_TABLE& table = ST->ConfigurationTable[i];
@@ -72,7 +72,7 @@ static EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL
 {
 	EFI_STATUS status;
 
-	const size_t MAX_FILE_INFO_SIZE = 1024;
+	static constexpr size_t MAX_FILE_INFO_SIZE = 1024;
 	uint8_t buffer[MAX_FILE_INFO_SIZE] = { 0 };
 	EFI_FILE_INFO* fileInfo = (EFI_FILE_INFO*)buffer;
 

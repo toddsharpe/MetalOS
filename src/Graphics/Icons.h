@@ -6,7 +6,7 @@
 //8x8 app icons and 5x5 title-bar glyphs, drawn at 2x or 4x so they sit on the same pixel grid as the system font
 namespace Graphics::Icons
 {
-	constexpr PixelGlyph Terminal =
+	static constexpr PixelGlyph Terminal =
 	{
 		8, 8,
 		{
@@ -22,7 +22,7 @@ namespace Graphics::Icons
 		{ Theme::Steel, Theme::Ember, Theme::Bone },
 	};
 
-	constexpr PixelGlyph Calc =
+	static constexpr PixelGlyph Calc =
 	{
 		8, 8,
 		{
@@ -38,7 +38,7 @@ namespace Graphics::Icons
 		{ Theme::Steel, Theme::Ember, Theme::Rgb(0xD9D2C3) },
 	};
 
-	constexpr PixelGlyph Flame =
+	static constexpr PixelGlyph Flame =
 	{
 		8, 8,
 		{
@@ -54,7 +54,7 @@ namespace Graphics::Icons
 		{ Theme::Ember, Theme::Hot, Theme::Hot },
 	};
 
-	constexpr PixelGlyph Skull =
+	static constexpr PixelGlyph Skull =
 	{
 		8, 8,
 		{
@@ -70,7 +70,7 @@ namespace Graphics::Icons
 		{ Theme::Rgb(0xD9D2C3), Theme::Ember, Theme::Ember },
 	};
 
-	constexpr PixelGlyph Window =
+	static constexpr PixelGlyph Window =
 	{
 		8, 8,
 		{
@@ -86,7 +86,7 @@ namespace Graphics::Icons
 		{ Theme::Steel, Theme::Ember, Theme::Ember },
 	};
 
-	constexpr PixelGlyph Network =
+	static constexpr PixelGlyph Network =
 	{
 		8, 8,
 		{
@@ -102,28 +102,28 @@ namespace Graphics::Icons
 		{ Theme::Ember, Theme::Ember, Theme::Ember },
 	};
 
-	constexpr PixelGlyph Minimize =
+	static constexpr PixelGlyph Minimize =
 	{
 		5, 5,
 		{ ".....", ".....", ".....", ".....", "aaaaa" },
 		{ Theme::Bone, Theme::Bone, Theme::Bone },
 	};
 
-	constexpr PixelGlyph Maximize =
+	static constexpr PixelGlyph Maximize =
 	{
 		5, 5,
 		{ "aaaaa", "aaaaa", "a...a", "a...a", "aaaaa" },
 		{ Theme::Bone, Theme::Bone, Theme::Bone },
 	};
 
-	constexpr PixelGlyph Restore =
+	static constexpr PixelGlyph Restore =
 	{
 		5, 5,
 		{ ".aaaa", "....a", "aaaaa", "a..a.", "aaaa." },
 		{ Theme::Bone, Theme::Bone, Theme::Bone },
 	};
 
-	constexpr PixelGlyph Close =
+	static constexpr PixelGlyph Close =
 	{
 		5, 5,
 		{ "a...a", ".a.a.", "..a..", ".a.a.", "a...a" },

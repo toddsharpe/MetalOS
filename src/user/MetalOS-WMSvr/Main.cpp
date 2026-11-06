@@ -16,14 +16,14 @@ using namespace Graphics;
 
 namespace
 {
-	constexpr size_t MaxWindows = 64;
-	constexpr size_t MaxConns = 16;
-	constexpr uint16_t HidMax = 32767; //HID absolute coordinate range (0..INT16_MAX)
-	constexpr uint32_t DroppableBacklog = 32; //mouse moves and paints are skipped while an app has this many messages waiting
-	constexpr uint32_t DimKeep = 184; //unfocused windows keep this much of their brightness (of 256)
-	constexpr milli_t DoubleClickTime = 400;
-	constexpr milli_t NetworkPollTime = 1000;
-	constexpr int32_t TitleGrip = 96; //this much of a title bar always stays on screen, so a window can be grabbed again
+	static constexpr size_t MaxWindows = 64;
+	static constexpr size_t MaxConns = 16;
+	static constexpr uint16_t HidMax = 32767; //HID absolute coordinate range (0..INT16_MAX)
+	static constexpr uint32_t DroppableBacklog = 32; //mouse moves and paints are skipped while an app has this many messages waiting
+	static constexpr uint32_t DimKeep = 184; //unfocused windows keep this much of their brightness (of 256)
+	static constexpr milli_t DoubleClickTime = 400;
+	static constexpr milli_t NetworkPollTime = 1000;
+	static constexpr int32_t TitleGrip = 96; //this much of a title bar always stays on screen, so a window can be grabbed again
 
 	struct Connection
 	{
@@ -562,8 +562,8 @@ namespace
 		const int64_t centerY = (int64_t)height * 112 / 100;
 		const int64_t radiusX = (int64_t)width * 1500 / 1920;
 		const int64_t radiusY = (int64_t)height * 560 / 1080;
-		const Color inner = Theme::Rgb(0xFF6018);
-		const Color outer = Theme::Rgb(0xA0280C);
+		static constexpr Color inner = Theme::Rgb(0xFF6018);
+		static constexpr Color outer = Theme::Rgb(0xA0280C);
 		for (int32_t y = 0; y < height; y++)
 		{
 			const int64_t dy = (y - centerY) * 1000 / radiusY;
@@ -595,7 +595,7 @@ namespace
 		}
 
 		//A wordmark low on the right, pressed into the background: a dark edge above, then letters a shade lighter than what's under them
-		const uint32_t scale = 6;
+		static constexpr uint32_t scale = 6;
 		const cstr_t mark = Str("METALOS");
 		const int32_t markX = width - 72 - (int32_t)Draw2D::PixelTextWidth(mark.Size, scale);
 		const int32_t markY = height - 96 - (int32_t)(8 * scale);
@@ -724,23 +724,23 @@ namespace
 
 	//----- Taskbar: start button, a button per window, network status and the clock -----
 
-	constexpr int32_t BarButtonTop = 5;
-	constexpr int32_t BarButtonHeight = 30;
-	constexpr int32_t StartX = 6;
-	constexpr int32_t StartWidth = 10 + Theme::Glyph + 10 + 7 * Theme::Glyph + 14;
-	constexpr int32_t TaskX = StartX + StartWidth + 12;
-	constexpr int32_t TaskWidth = 232;
-	constexpr int32_t TaskGap = 6;
-	constexpr size_t TaskChars = (TaskWidth - 10 - Theme::Glyph - 10 - 10) / Theme::Glyph;
-	constexpr int32_t ClockWidth = 5 * Theme::Glyph;
+	static constexpr int32_t BarButtonTop = 5;
+	static constexpr int32_t BarButtonHeight = 30;
+	static constexpr int32_t StartX = 6;
+	static constexpr int32_t StartWidth = 10 + Theme::Glyph + 10 + 7 * Theme::Glyph + 14;
+	static constexpr int32_t TaskX = StartX + StartWidth + 12;
+	static constexpr int32_t TaskWidth = 232;
+	static constexpr int32_t TaskGap = 6;
+	static constexpr size_t TaskChars = (TaskWidth - 10 - Theme::Glyph - 10 - 10) / Theme::Glyph;
+	static constexpr int32_t ClockWidth = 5 * Theme::Glyph;
 
-	constexpr Theme::Face StartFace = { Theme::Rgb(0x2C2E33), Theme::Rgb(0x202125), Theme::Rgb(0x4A4E56), Theme::Rgb(0x121316), Theme::Bone };
-	constexpr Theme::Face StartHover = { Theme::Rgb(0x35373D), Theme::Rgb(0x27292D), Theme::Rgb(0x50545C), Theme::Rgb(0x121316), Theme::Bone };
-	constexpr Theme::Face StartOpen = { Theme::Rgb(0x18191C), Theme::Rgb(0x1F2024), Theme::Rgb(0x070708), Theme::Rgb(0x2F3238), Theme::Molten };
-	constexpr Theme::Face TaskActive = { Theme::Rgb(0x35373D), Theme::Rgb(0x27292D), Theme::Rgb(0x4A4E56), Theme::Rgb(0x27292D), Theme::Bone };
-	constexpr Theme::Face TaskHover = { Theme::Rgb(0x212226), Theme::Rgb(0x212226), Theme::Rgb(0x2F3238), Theme::Rgb(0x212226), Theme::Bone };
-	constexpr Theme::Face TaskBehind = { Theme::Rgb(0x16171A), Theme::Rgb(0x16171A), Theme::Rgb(0x070708), Theme::Rgb(0x26282C), Theme::Rgb(0x9B978F) };
-	constexpr Theme::Face TaskMinimized = { Theme::Rgb(0x111214), Theme::Rgb(0x111214), Theme::Rgb(0x070708), Theme::Rgb(0x1D1E21), Theme::Rgb(0x5F5B56) };
+	static constexpr Theme::Face StartFace = { Theme::Rgb(0x2C2E33), Theme::Rgb(0x202125), Theme::Rgb(0x4A4E56), Theme::Rgb(0x121316), Theme::Bone };
+	static constexpr Theme::Face StartHover = { Theme::Rgb(0x35373D), Theme::Rgb(0x27292D), Theme::Rgb(0x50545C), Theme::Rgb(0x121316), Theme::Bone };
+	static constexpr Theme::Face StartOpen = { Theme::Rgb(0x18191C), Theme::Rgb(0x1F2024), Theme::Rgb(0x070708), Theme::Rgb(0x2F3238), Theme::Molten };
+	static constexpr Theme::Face TaskActive = { Theme::Rgb(0x35373D), Theme::Rgb(0x27292D), Theme::Rgb(0x4A4E56), Theme::Rgb(0x27292D), Theme::Bone };
+	static constexpr Theme::Face TaskHover = { Theme::Rgb(0x212226), Theme::Rgb(0x212226), Theme::Rgb(0x2F3238), Theme::Rgb(0x212226), Theme::Bone };
+	static constexpr Theme::Face TaskBehind = { Theme::Rgb(0x16171A), Theme::Rgb(0x16171A), Theme::Rgb(0x070708), Theme::Rgb(0x26282C), Theme::Rgb(0x9B978F) };
+	static constexpr Theme::Face TaskMinimized = { Theme::Rgb(0x111214), Theme::Rgb(0x111214), Theme::Rgb(0x070708), Theme::Rgb(0x1D1E21), Theme::Rgb(0x5F5B56) };
 
 	Rectangle StartButtonRect()
 	{
@@ -905,20 +905,20 @@ namespace
 		const PixelGlyph* Icon;
 	};
 
-	constexpr AppEntry g_apps[] =
+	static constexpr AppEntry g_apps[] =
 	{
 		{ "Terminal", "Command shell", "term.exe", &Icons::Terminal },
 		{ "Calc", "Four-function calculator", "calc.exe", &Icons::Calc },
 		{ "Fire", "The Doom fire effect", "fire.exe", &Icons::Flame },
 		{ "Doom", "Ultimate Doom, full screen", "doom.exe", &Icons::Skull },
 	};
-	constexpr size_t g_appCount = sizeof(g_apps) / sizeof(g_apps[0]);
+	static constexpr size_t g_appCount = sizeof(g_apps) / sizeof(g_apps[0]);
 
-	constexpr int32_t MenuWidth = 380;
-	constexpr int32_t MenuHeader = 72;
-	constexpr int32_t MenuPad = 6;
-	constexpr int32_t MenuItemHeight = 56;
-	constexpr int32_t MenuFooter = 36;
+	static constexpr int32_t MenuWidth = 380;
+	static constexpr int32_t MenuHeader = 72;
+	static constexpr int32_t MenuPad = 6;
+	static constexpr int32_t MenuItemHeight = 56;
+	static constexpr int32_t MenuFooter = 36;
 
 	//The start menu sits just above the taskbar, aligned with the Start button
 	Rectangle StartMenuRect()
@@ -997,11 +997,11 @@ namespace
 
 	//----- Window switcher (Alt+Tab) -----
 
-	constexpr int32_t TileWidth = 240;
-	constexpr int32_t TileGap = 24;
-	constexpr int32_t ThumbHeight = 128;
-	constexpr int32_t TileHeight = 2 + 8 + ThumbHeight + 12 + Theme::Glyph + 8 + 2;
-	constexpr size_t TileChars = (TileWidth - 4 - 16 - Theme::Glyph - 10) / Theme::Glyph;
+	static constexpr int32_t TileWidth = 240;
+	static constexpr int32_t TileGap = 24;
+	static constexpr int32_t ThumbHeight = 128;
+	static constexpr int32_t TileHeight = 2 + 8 + ThumbHeight + 12 + Theme::Glyph + 8 + 2;
+	static constexpr size_t TileChars = (TileWidth - 4 - 16 - Theme::Glyph - 10) / Theme::Glyph;
 
 	//Windows in switch order: the z-order from the top, which is also most recently focused first
 	size_t SwitchList(WmWindow** const list, const size_t max)
@@ -1085,7 +1085,7 @@ namespace
 		Draw2D::Darken(g_back, { 0, 0, g_gfx.Width, g_gfx.Height }, 110);
 
 		const uint32_t panelWidth = (uint32_t)(shown * TileWidth + (shown - 1) * TileGap + 44);
-		const uint32_t panelHeight = 18 + 8 + 18 + TileHeight + 22;
+		static constexpr uint32_t panelHeight = 18 + 8 + 18 + TileHeight + 22;
 		const Rectangle panel = { (ScreenWidth() - (int32_t)panelWidth) / 2, ((int32_t)g_gfx.Height - (int32_t)panelHeight) / 2, panelWidth, panelHeight };
 		DrawShadow(panel);
 		Draw2D::DrawRectangle(g_back, Theme::Rgb(0x141518), panel);
@@ -1453,7 +1453,7 @@ int main(int argc, char** argv)
 	//Claim the kernel->WM input ring (published as a grant token under "input").
 	g_inputRegion = IpcLookupRegion(Wm::InputEndpoint);
 
-	const uint32_t targetFps = 30;
+	static constexpr uint32_t targetFps = 30;
 	while (true)
 	{
 		AcceptConnections();

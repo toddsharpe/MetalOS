@@ -27,12 +27,13 @@ HyperVVideoDriver::HyperVVideoDriver(KDevice& device) :
 bool HyperVVideoDriver::Initialize()
 {
 	//Open the VMBus channel (rings + GPADL happen here).
-	m_channel.Initialize(*m_device.VmBus, &m_device.m_channel);
+	const VmBusChild& child = VmBusChild::Of(m_device);
+	m_channel.Initialize(*child.Bus, &child.Offer);
 
 	//A failed negotiation closes the channel again rather than leaving it open with our callback registered
 	if (!Negotiate())
 	{
-		m_channel.Close(*m_device.VmBus);
+		m_channel.Close(*child.Bus);
 		return false;
 	}
 
@@ -58,7 +59,7 @@ bool HyperVVideoDriver::Negotiate()
 		version.body.version = kVersions[i];
 		if (!Request(&version, sizeof(version), synthvid_msg_type::VersionResponse))
 		{
-			Printf("HyperVVideo: no version response for 0x%x (child_relid=%u)\n", kVersions[i], m_device.child_relid);
+			Printf("HyperVVideo: no version response for 0x%x (child_relid=%u)\n", kVersions[i], VmBusChild::Of(m_device).RelId);
 			return false;
 		}
 		if (m_versionResponse.is_accepted)
@@ -86,7 +87,7 @@ bool HyperVVideoDriver::Negotiate()
 	m_height = fb.Height;
 	m_pitchBytes = fb.Pitch * sizeof(uint32_t); //Pitch is in pixels
 	m_framebufferGpa = fb.Base;
-	const uint16_t megabytes = m_device.m_channel.offer.mmio_megabytes;
+	const uint16_t megabytes = VmBusChild::Of(m_device).Offer.offer.mmio_megabytes;
 	m_vramSize = megabytes ? (size_t)megabytes << 20 : fb.Size; //The host maps its whole VRAM from the GPA, which can run past GOP's 8 MiB
 
 	//3) Point the host at the VRAM (a guest-physical address inside the MMIO framebuffer region).

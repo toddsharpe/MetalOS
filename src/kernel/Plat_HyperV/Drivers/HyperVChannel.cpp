@@ -1,9 +1,9 @@
 #include "HyperVChannel.h"
 #include "kernel/Arch.h"
-#include "kernel/HyperV/Types.h"
-#include "Kernel/HyperV/HyperV.h"
+#include "kernel/Plat_HyperV/Types.h"
+#include "kernel/Plat_HyperV/HyperV.h"
 #include "Lib/Span.h"
-#include "kernel/Drivers/HyperVRingBuffer.h"
+#include "kernel/Plat_HyperV/Drivers/HyperVRingBuffer.h"
 #include "Assert.h"
 
 HyperVChannel::HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize, const ActionContext callback) :
@@ -18,7 +18,7 @@ HyperVChannel::HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize
 	
 }
 
-void HyperVChannel::Initialize(VmBusDriver& vmbus, HyperV::vmbus_channel_offer_channel* offerChannel)
+void HyperVChannel::Initialize(VmBusDriver& vmbus, const HyperV::vmbus_channel_offer_channel* offerChannel)
 {
 	m_channel = offerChannel;
 

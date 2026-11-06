@@ -3,7 +3,7 @@
 #include "Lib/System.h"
 #include "Lib/LinkedList.h"
 #include "uACPI/namespace.h"
-#include "kernel/HyperV/VmBus.h"
+#include "kernel/Plat.h"
 
 enum class KDeviceClass
 {
@@ -20,11 +20,10 @@ enum class KDeviceType
 	Unknown,
 	Acpi,
 	Software,
-	HyperV
+	Platform
 };
 
 class Driver;
-class VmBusDriver;
 class KDevice
 {
 public:
@@ -57,9 +56,8 @@ public:
 
 		switch (Type)
 		{
-			case KDeviceType::HyperV:
-				Printf("     - RelId: %d\n", child_relid);
-				Printf("     - MsgConnId: %d\n", m_msg_conn_id);
+			case KDeviceType::Platform:
+				PlatDisplayDevice(*this);
 				break;
 		}
 
@@ -85,20 +83,10 @@ public:
 			uacpi_namespace_node *AcpiNode;
 		};
 		
-		//Software
+		//Software and Platform
 		struct
 		{
 			void* Context;
-		};
-
-		//HyperV
-		struct
-		{
-			//TODO(tsharpe): Determine which properties to keep of channel
-			uint32_t child_relid;
-			uint32_t m_msg_conn_id;
-			HyperV::vmbus_channel_offer_channel m_channel;
-			VmBusDriver* VmBus; //The bus that offered the channel, which creates its GPADLs and opens it
 		};
 	};
 };

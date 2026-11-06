@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kernel/HyperV/Types.h"
+#include "kernel/Plat_HyperV/Types.h"
 #include "Lib/StaticVector.h"
 
 namespace HyperV::Interrupts

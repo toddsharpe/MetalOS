@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Lib/Time.h"
-#include "HyperV/HyperV.h"
+#include "kernel/Plat_HyperV/Types.h"
 #include "kernel/Arch.h"
 #include "kernel/Api.h"
 #include "Assert.h"

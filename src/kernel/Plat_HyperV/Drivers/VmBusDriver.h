@@ -2,11 +2,24 @@
 
 #include "kernel/Drivers/Driver.h"
 #include "kernel/Objects/KEvent.h"
-#include "kernel/HyperV/Interrupts.h"
-#include "kernel/HyperV/VmBus.h"
-#include "kernel/HyperV/HyperV.h"
+#include "kernel/Plat_HyperV/Interrupts.h"
+#include "kernel/Plat_HyperV/VmBus.h"
+#include "kernel/Plat_HyperV/HyperV.h"
 #include "Lib/StaticVector.h"
 #include "Lib/StaticMap.h"
+
+class VmBusDriver;
+
+//A channel the host offered; its device's Context points here
+struct VmBusChild
+{
+	static const VmBusChild& Of(const KDevice& device) { return *(const VmBusChild*)device.Context; }
+
+	uint32_t RelId;
+	uint32_t ConnectionId;
+	HyperV::vmbus_channel_offer_channel Offer;
+	VmBusDriver* Bus; //Creates the channel's GPADLs and opens it
+};
 
 class VmBusDriver : public Driver
 {
@@ -58,6 +71,9 @@ private:
 
 	//Requests awaiting a host response; each is removed when answered
 	StaticVector<BusRequest, 16> m_requests;
+
+	//Offered channels, which live as long as the bus
+	StaticVector<VmBusChild, 32> m_children;
 };
 
 /*

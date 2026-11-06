@@ -21,13 +21,13 @@ void KeResumeSystem()
 
 milli_t KeGetTicks()
 {
-	const nano100_t tsc = HyperV::Tsc::ReadTsc();
+	const nano100_t tsc = PlatReadTime();
 	return ToMilli(tsc);
 }
 
 nano_t KeGetNanoseconds()
 {
-	const nano100_t tsc = HyperV::Tsc::ReadTsc();
+	const nano100_t tsc = PlatReadTime();
 	return tsc * 100;
 }
 

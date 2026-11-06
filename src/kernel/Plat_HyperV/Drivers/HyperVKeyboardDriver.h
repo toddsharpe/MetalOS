@@ -1,7 +1,7 @@
 #pragma once
 
 #include "kernel/Drivers/Driver.h"
-#include "kernel/Drivers/HyperVChannel.h"
+#include "kernel/Plat_HyperV/Drivers/HyperVChannel.h"
 #include "user/MetalOS.Keys.h"
 
 class HyperVKeyboardDriver : public Driver

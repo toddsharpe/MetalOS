@@ -1,5 +1,5 @@
-#include "kernel/HyperV/Timer.h"
-#include "kernel/HyperV/HyperV.h"
+#include "kernel/Plat_HyperV/Timer.h"
+#include "kernel/Plat_HyperV/HyperV.h"
 #include "Assert.h"
 
 // 12.5 Synthetic Timer MSRs

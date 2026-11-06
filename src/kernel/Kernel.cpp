@@ -76,13 +76,13 @@ namespace
 
 		//Continue initializing system
 		m_irqs.Add(Arch::InterruptVector::Timer0, {&OnTimer0, nullptr});
-		Scheduler::Initialize(m_process, &HyperV::Tsc::ReadTsc);
+		Scheduler::Initialize(m_process, &PlatReadTime);
 		const KModule* const kernelModule = KeAddModule(Str("moskrnl.exe"), (void*)KernelBase, WinPE::GetSizeOfImage((void*)KernelBase));
 		Assert(kernelModule);
 
-		//Initialize Platform (HyperV)
-		HyperV::Initialize();
-		HyperV::Timer::Enable(Second / 128, 0, (uint8_t)Arch::InterruptVector::Timer0);
+		//Initialize platform
+		PlatInitialize();
+		PlatStartTimer(Second / 128, (uint8_t)Arch::InterruptVector::Timer0);
 
 		//Welcome display
 		m_loadingScreen.Printf("MetalOS.Kernel - Base:0x%016x Size: 0x%0X\n", m_params.KernelAddress, m_params.KernelImageSize);
@@ -132,7 +132,7 @@ namespace
 
 	void OnTimer0(void* arg)
 	{
-		HyperV::Interrupts::EOI();
+		PlatEndOfInterrupt();
 		if (Scheduler::Enabled)
 			Scheduler::Schedule();
 	}

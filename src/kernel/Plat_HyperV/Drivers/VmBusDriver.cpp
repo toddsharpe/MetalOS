@@ -1,5 +1,5 @@
-#include "kernel/Drivers/VmBusDriver.h"
-#include "kernel/HyperV/VmBus.h"
+#include "kernel/Plat_HyperV/Drivers/VmBusDriver.h"
+#include "kernel/Plat_HyperV/VmBus.h"
 #include "Lib/Span.h"
 #include "kernel/Arch.h"
 #include "Assert.h"
@@ -14,7 +14,8 @@ VmBusDriver::VmBusDriver(KDevice& device) :
 	m_channelCallbacks(),
 	m_msg_conn_id(),
 	m_nextGpadlHandle(),
-	m_requests()
+	m_requests(),
+	m_children()
 {
 
 }
@@ -278,10 +279,15 @@ void VmBusDriver::OnInterrupt()
 				HyperV::vmbus_channel_offer_channel* offer = (HyperV::vmbus_channel_offer_channel*)message.Payload;
 				Assert(offer->offer.sub_channel_index == 0);
 
+				//Save the channel for its driver
+				const bool added = m_children.Add({ offer->child_relid, m_msg_conn_id, *offer, this });
+				Assert(added);
+
 				//Create child device
 				KDevice* device = KeAlloc<KDevice>(AllocType::Kernel);
 				m_device.Children.Add(device);
-				device->Type = KDeviceType::HyperV;
+				device->Type = KDeviceType::Platform;
+				device->Context = m_children.end() - 1;
 
 				//Populate HID
 				{
@@ -304,12 +310,6 @@ void VmBusDriver::OnInterrupt()
 
 				//Populate path
 				snprintf(device->Path, sizeof(device->Path), "%s\\%s", m_device.Path, device->Hid);
-
-				//Save properties
-				device->child_relid = offer->child_relid;
-				device->m_msg_conn_id = m_msg_conn_id;
-				device->m_channel = *offer;
-				device->VmBus = this;
 			}
 			break;
 

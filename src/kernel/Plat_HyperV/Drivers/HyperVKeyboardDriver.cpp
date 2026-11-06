@@ -82,7 +82,7 @@ bool HyperVKeyboardDriver::Initialize()
 	m_device.Class = KDeviceClass::Keyboard;
 
 	//Initialize channel with the device's offer, not a stack copy: the channel keeps the pointer for SetEvent
-	m_channel.Initialize(*m_device.VmBus, &m_device.m_channel);
+	m_channel.Initialize(*VmBusChild::Of(m_device).Bus, &VmBusChild::Of(m_device).Offer);
 	
 	//Initialize keyboard
 	synth_kbd_protocol_request request = { };

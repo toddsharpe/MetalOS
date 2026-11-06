@@ -3,31 +3,9 @@
 #include <cstdarg>
 #include "Assert.h"
 
-//Tests
-#include "kernel/AddressSpace_test.cpp"
-#include "Lib/Arena_test.cpp"
-#include "Lib/Span_test.cpp"
-#include "Lib/String_test.cpp"
-#include "Lib/CircularBuffer_test.cpp"
-#include "Lib/Bitset_test.cpp"
-#include "Lib/StaticVector_test.cpp"
-#include "Lib/StaticMap_test.cpp"
-#include "Lib/RingBuffer_test.cpp"
-#include "Lib/SharedRing_test.cpp"
-#include "Lib/StaticHeap_test.cpp"
-#include "Lib/LinkedList_test.cpp"
-#include "Lib/IntrusiveList_test.cpp"
-#include "Lib/TextBuffer_test.cpp"
-#include "Lib/Path_test.cpp"
-#include "WinPE_test.cpp"
-#include "kernel/Pdb/Pdb_test.cpp"
-#include "user/MetalOS-NetSvr/ArpCache_test.cpp"
-#include "kernel/Arch_x64/StackWalk_test.cpp"
-#include "kernel/PebModules_test.cpp"
-#include "user/MetalOS-NetSvr/IPv4_test.cpp"
-
 #define Test(name)                     \
 	{                                  \
+		void name##_test();            \
 		printf("Running " #name "\n"); \
 		name##_test();                 \
 	}

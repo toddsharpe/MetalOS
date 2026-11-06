@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{A01A1347-C773-598C-90F9-4F31DA8E59AF}</ProjectGuid>
+    <MetalOSKind>Kernel</MetalOSKind>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\MetalOS.props" />
+  <PropertyGroup>
+    <TargetName>kdcom</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MetalOSRoot)external\reactos;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <BaseAddress>0xFFFF800002000000</BaseAddress>
+      <ModuleDefinitionFile>kdcom.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="*.cpp" />
+  </ItemGroup>
+  <Import Project="..\MetalOS.targets" />
+</Project>

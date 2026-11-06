@@ -1,5 +1,3 @@
-#pragma once
-
 #include "x64/Cpuid.h"
 
 namespace CpuId

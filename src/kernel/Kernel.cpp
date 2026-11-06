@@ -1,53 +1,5 @@
 #include "kernel/Kernel.h"
 
-//Core crt
-#include "core_crt/core_crt.c"
-#include "core_crt/wchar.c"
-
-//Platform
-#include "kernel/HyperV/Interrupts.cpp"
-#include "kernel/HyperV/Timer.cpp"
-#include "kernel/HyperV/Tsc.cpp"
-
-//Architecture
-#include "x64/CpuId.cpp"
-
-//Kernel
-#include "kernel/Kernel_pmem.cpp"
-#include "kernel/Kernel_heap.cpp"
-#include "kernel/Kernel_vmem.cpp"
-#include "kernel/Acpi.cpp"
-#include "kernel/Scheduler.cpp"
-#include "kernel/KThread.cpp"
-#include "kernel/UProcess.cpp"
-#include "kernel/LoadingScreen.cpp"
-#include "kernel/Syscalls.cpp"
-#include "kernel/UObject.cpp"
-#include "kernel/Objects/KPipe.cpp"
-#include "kernel/Debugger.cpp"
-#include "kernel/AddressSpace.cpp"
-
-//Drivers
-#include "kernel/Drivers/VmBusDriver.cpp"
-#include "kernel/Drivers/HyperVChannel.cpp"
-#include "kernel/Drivers/HyperVRingBuffer.cpp"
-#include "kernel/Drivers/HyperVKeyboardDriver.cpp"
-#include "kernel/Drivers/HyperVMouseDriver.cpp"
-#include "kernel/Drivers/HyperVNic.cpp"
-#include "kernel/Drivers/HyperVVideoDriver.cpp"
-
-//Kd64
-#include "kernel/Kd64/cpu.cpp"
-#include "kernel/Kd64/kdapi.cpp"
-#include "kernel/Kd64/kdbreak.cpp"
-#include "kernel/Kd64/kddata.cpp"
-#include "kernel/Kd64/kdlock.cpp"
-#include "kernel/Kd64/kdprint.cpp"
-#include "kernel/Kd64/kdtrap.cpp"
-#include "kernel/Kd64/kdx64.cpp"
-#include "kernel/Kd64/mmdbg.cpp"
-#include "kernel/MetalOSkd.cpp"
-
 //Networking: the TCP/IP stack lives in the usermode netstack process. The kernel keeps
 //only the NIC driver (HyperVNic) and a raw ethernet frame device (Kernel_net.cpp).
 
@@ -192,17 +144,6 @@ namespace
 	}
 }
 
-//API split out by subsystem, included after the kernel globals so any statics in these files initialize after the globals they read
-#include "kernel/Kernel_thread.cpp"
-#include "kernel/Kernel_file.cpp"
-#include "kernel/Kernel_process.cpp"
-#include "kernel/Kernel_system.cpp"
-#include "kernel/Kernel_diag.cpp"
-#include "kernel/Kernel_shm.cpp"
-#include "kernel/Kernel_grant.cpp"
-#include "kernel/Kernel_endpoint.cpp"
-#include "kernel/Kernel_input.cpp"
-#include "kernel/Kernel_net.cpp"
 
 void KeRegisterInterrupt(const Arch::InterruptVector interrupt, const ActionContext& context)
 {

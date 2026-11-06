@@ -65,3 +65,23 @@ private:
 	static constexpr handle_t StartingHandle = 0x10;
 	static handle_t LastHandle;
 };
+
+constexpr UObject::UObject(const UObjectType type) : UObject(type, LastHandle++)
+{
+
+}
+
+constexpr UObject::UObject(const UObjectType type, const handle_t handle) :
+	Handle(handle),
+	Type(type),
+	Thread(),
+	Process(),
+	File(),
+	Pipe(),
+	PipeOp(),
+	Event(),
+	Shm(),
+	ShmAddress()
+{
+
+}

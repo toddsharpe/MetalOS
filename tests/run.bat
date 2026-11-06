@@ -1,10 +1,6 @@
-del "..\build\*.obj"
-mkdir ..\build_tests
-
-set CompileIncludes=-I..\src\ -I..\external\
-
-set CompileFlags=/std:c++20 /GS- /Gy /Gw /GR- /Z7 %CompileIncludes%
-set LinkFlags=/OPT:REF
-
-cl Test.cpp /Fo"..\build_tests\Test" %CompileFlags% /link %LinkFlags% /OUT:"..\build_tests\Test.exe" /DEBUG /PDB:"..\build_tests\Test.pdb" || exit /b 1
-..\build_tests\Test.exe  || exit /b 1
+:: Rebuilds and runs the host unit tests: run.bat [Debug|Release], Debug by default; run from a VS x64 Native Tools prompt
+setlocal
+set Config=%~1
+if "%Config%"=="" set Config=Debug
+msbuild "%~dp0Tests.vcxproj" /t:Rebuild /m /nologo /v:m /p:Configuration=%Config% /p:Platform=x64 || exit /b 1
+"%~dp0..\build_tests\Test.exe" || exit /b 1

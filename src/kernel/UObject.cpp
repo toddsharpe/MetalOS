@@ -1,29 +1,8 @@
-#pragma once
-
 #include "kernel/UObject.h"
 #include "kernel/Types.h"
 
 uintptr_t UObject::LastHandle = UObject::StartingHandle;
 
-constexpr UObject::UObject(const UObjectType type) : UObject(type, LastHandle++)
-{
-
-}
-
-constexpr UObject::UObject(const UObjectType type, const handle_t handle) :
-	Handle(handle),
-	Type(type),
-	Thread(),
-	Process(),
-	File(),
-	Pipe(),
-	PipeOp(),
-	Event(),
-	Shm(),
-	ShmAddress()
-{
-
-}
 
 bool UObject::CanRead() const
 {

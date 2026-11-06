@@ -1,7 +1,6 @@
-#pragma once
-
+#include "user/MetalOS-CRT/CRT.h"
 #include "user/MetalOS.h"
-#include "user/MetalOS-CRT/errno.cpp"
+#include "ToErrno.h"
 #include <stdio.h>
 
 typedef void* FILE;

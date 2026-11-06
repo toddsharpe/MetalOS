@@ -8,10 +8,9 @@ namespace
 		Net::ipv4_addr_t ip_addr;
 		Net::eth_mac_t eth_addr;
 	};
-	constexpr size_t CacheSize = 8;
 
 	//Broadcast and multicast MACs are computed by Lookup, so every entry is a unicast peer, oldest first
-	CircularBuffer<entry_t, CacheSize> cache;
+	CircularBuffer<entry_t, Net::ArpCache::CacheSize> cache;
 }
 
 namespace Net::ArpCache

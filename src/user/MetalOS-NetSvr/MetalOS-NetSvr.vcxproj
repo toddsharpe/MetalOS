@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{39D1D8CA-AC17-52E5-8F50-D9BB90F6AC57}</ProjectGuid>
+    <MetalOSKind>User</MetalOSKind>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\..\MetalOS.props" />
+  <PropertyGroup>
+    <TargetName>MetalOS-NetSvr</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/Zc:threadSafeInit- %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Native</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="*.cpp;Net\*.cpp;$(MetalOSSrc)User\CRT.cpp" Exclude="*_test.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\User\MetalOS-RT\MetalOS-RT.vcxproj">
+      <Project>{27E93691-7F15-5584-B19A-75864E44F7C1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\User\MetalOS-CRT\MetalOS-CRT.vcxproj">
+      <Project>{55C89CFE-86AC-5264-BC5E-3456596ABF96}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="..\..\MetalOS.targets" />
+</Project>

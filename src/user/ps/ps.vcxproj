@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D867741F-718B-5CB1-8CB5-BDE19C4A5C5D}</ProjectGuid>
+    <MetalOSKind>User</MetalOSKind>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\..\MetalOS.props" />
+  <PropertyGroup>
+    <TargetName>ps</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="*.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\User\MetalOS-RT\MetalOS-RT.vcxproj">
+      <Project>{27E93691-7F15-5584-B19A-75864E44F7C1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\User\MetalOS-CRT\MetalOS-CRT.vcxproj">
+      <Project>{55C89CFE-86AC-5264-BC5E-3456596ABF96}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="..\..\MetalOS.targets" />
+</Project>

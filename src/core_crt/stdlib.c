@@ -1,6 +1,9 @@
 #include "core_crt/stdlib.h"
 #include "core_crt/ctype.h"
 
+//An intrinsic under /Oi, implemented here
+#pragma function(abs)
+
 // https://wiki.osdev.org/Random_Number_Generator
 static unsigned long int next = 1;
 

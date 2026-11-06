@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Boot/EfiMemory.h"
 #include "Boot/EfiPrint.h"
 #include "MetalOS.Space.h"

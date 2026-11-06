@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{08F1014D-C108-585C-92C1-FEDFD1E022DB}</ProjectGuid>
+    <MetalOSKind>Host</MetalOSKind>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\src\MetalOS.props" />
+  <PropertyGroup>
+    <TargetName>Test</TargetName>
+    <OutDir>$(MetalOSRoot)build_tests\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory);$(MetalOSSrc)User\MetalOS-NetSvr;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(MSBuildThisFileDirectory)TestPrelude.h</ForcedIncludeFiles>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Test.cpp" />
+    <ClCompile Include="$(MetalOSSrc)kernel\AddressSpace_test.cpp;$(MetalOSSrc)kernel\PebModules_test.cpp;$(MetalOSSrc)kernel\Pdb\Pdb_test.cpp;$(MetalOSSrc)kernel\Arch_x64\StackWalk_test.cpp;$(MetalOSSrc)WinPE_test.cpp" />
+    <ClCompile Include="$(MetalOSSrc)Lib\*_test.cpp" />
+    <ClCompile Include="$(MetalOSSrc)User\MetalOS-NetSvr\*_test.cpp" />
+    <!-- The code under test that isn't header-only -->
+    <ClCompile Include="$(MetalOSSrc)kernel\AddressSpace.cpp">
+      <ObjectFileName>$(IntDir)kernel\</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="$(MetalOSSrc)User\MetalOS-NetSvr\Net\*.cpp" Exclude="$(MetalOSSrc)User\MetalOS-NetSvr\Net\Socket*.cpp">
+      <ObjectFileName>$(IntDir)net\</ObjectFileName>
+    </ClCompile>
+  </ItemGroup>
+  <Import Project="..\src\MetalOS.targets" />
+</Project>

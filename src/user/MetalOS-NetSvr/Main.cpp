@@ -3,12 +3,12 @@
 #include "Lib/Span.h"
 #include "Assert.h"
 #include <stdio.h>
-#include "user/CRT.cpp" //operator new/delete (malloc/free) and _purecall (NetDriver is abstract)
 
 #include "Net/Net.h"
 #include "Net/NetIf.h"
 #include "Net/Packet.h"
 #include "Net/KSocket.h"
+#include "Net/Sockets.h"
 #include "Net/HostDriver.h"
 #include "user/Protocol_net.h"
 #include "user/Ipc.h"
@@ -17,19 +17,6 @@
 //MetalOS-NetSvr.exe -- usermode TCP/IP stack. Claims the kernel RX ring + NIC MAC, runs
 //ARP/IPv4/ICMP/UDP/routing, transmits via NetSend; apps reach it over IPC (Protocol_net.h).
 
-//The TCP/IP stack, compiled here as a unity build (the sources #include each other as
-//"Net/X.h", which resolves relative to this file).
-#include "Net/Checksum.cpp"
-#include "Net/Net.cpp"
-#include "Net/ArpCache.cpp"
-#include "Net/Arp.cpp"
-#include "Net/Ethernet.cpp"
-#include "Net/IPv4.cpp"
-#include "Net/Icmp.cpp"
-#include "Net/Udp.cpp"
-#include "Net/Router.cpp"
-#include "Net/Socket.cpp"
-#include "Net/Sockets.cpp"
 
 namespace
 {

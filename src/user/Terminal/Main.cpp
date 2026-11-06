@@ -5,7 +5,6 @@
 #include "Graphics/Theme.h"
 #include "Graphics/Icons.h"
 #include "Assert.h"
-#include "user/CRT.cpp"
 
 using namespace Graphics;
 using namespace UI;
@@ -14,7 +13,8 @@ namespace
 {
 	constexpr Rectangle StartRect = { 160, 120, 1120, 620 };
 
-	Console console({ 0, 0, StartRect.Width, StartRect.Height });
+	ConsoleText scrollback;
+	Console console(scrollback, { 0, 0, StartRect.Width, StartRect.Height });
 
 	static constexpr char PromptName[] = "metal";
 	static constexpr char PromptMark[] = "> ";

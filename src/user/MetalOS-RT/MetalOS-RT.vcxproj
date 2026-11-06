@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{27E93691-7F15-5584-B19A-75864E44F7C1}</ProjectGuid>
+    <MetalOSKind>User</MetalOSKind>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\..\MetalOS.props" />
+  <PropertyGroup>
+    <TargetName>MetalOS-RT</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <BaseAddress>0x0000000180000000</BaseAddress>
+      <ModuleDefinitionFile>MetalOS-RT.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="*.cpp" />
+    <MASM Include="syscalls.asm" />
+  </ItemGroup>
+  <Import Project="..\..\core_crt\core_crt.props" />
+  <Import Project="..\..\MetalOS.targets" />
+</Project>

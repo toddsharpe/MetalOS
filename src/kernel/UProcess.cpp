@@ -1,5 +1,3 @@
-#pragma once
-
 #include "kernel/UProcess.h"
 #include "kernel/KProcess.h"
 #include "kernel/UThread.h"

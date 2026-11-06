@@ -1,12 +1,9 @@
-//The stack's receive path without sockets; ArpCache_test.cpp already brings in Net/ArpCache.cpp
-#include "Net/Checksum.cpp"
-#include "Net/Net.cpp"
-#include "Net/Arp.cpp"
-#include "Net/Ethernet.cpp"
-#include "Net/IPv4.cpp"
-#include "Net/Icmp.cpp"
-#include "Net/Udp.cpp"
-#include "Net/Router.cpp"
+//The stack's receive path without sockets
+#include "Net/Net.h"
+#include "Net/NetDriver.h"
+#include "Net/NetIf.h"
+#include "Net/Packet.h"
+#include "Lib/Serializer.h"
 
 namespace
 {

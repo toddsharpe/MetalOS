@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Imported last by every .vcxproj, after its sources -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+
+  <!-- Kernel-mode binaries must not touch XMM/YMM/ZMM: interrupts don't save them, so any use clobbers user state -->
+  <Target Name="MetalOSCheckNoSimd" AfterTargets="Link" Condition="'$(MetalOSKind)' == 'Kernel'">
+    <Exec Command="&quot;$(VCToolsInstallDir)bin\HostX64\x64\dumpbin.exe&quot; /nologo /disasm &quot;$(TargetPath)&quot; | findstr /r /c:&quot;[xyz]mm[0-9]&quot; &gt; &quot;$(IntDir)simd.txt&quot;" IgnoreExitCode="true" EchoOff="true">
+      <Output TaskParameter="ExitCode" PropertyName="MetalOSSimdFound" />
+    </Exec>
+    <Error Condition="'$(MetalOSSimdFound)' == '0'" Text="$(TargetFileName) uses SSE/AVX registers, which kernel mode can't (the instructions are in $(IntDir)simd.txt)" />
+  </Target>
+</Project>

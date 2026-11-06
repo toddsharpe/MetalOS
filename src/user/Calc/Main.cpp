@@ -3,7 +3,6 @@
 #include "UI/Button.h"
 #include "Graphics/Theme.h"
 #include "Graphics/Icons.h"
-#include "user/CRT.cpp"
 #include <stdio.h>
 #include <string.h>
 

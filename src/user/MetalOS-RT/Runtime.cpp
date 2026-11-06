@@ -1,5 +1,3 @@
-#pragma once
-
 #include "user/MetalOS-RT/Runtime.h"
 #include "user/MetalOS.h"
 #include "x64/intrin.h"

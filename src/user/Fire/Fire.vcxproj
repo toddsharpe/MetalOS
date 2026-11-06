@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{55A1804B-74AA-5229-B083-90502F802ED6}</ProjectGuid>
+    <MetalOSKind>User</MetalOSKind>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\..\MetalOS.props" />
+  <PropertyGroup>
+    <TargetName>fire</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <SubSystem>Native</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="*.cpp;$(MetalOSSrc)User\CRT.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\User\MetalOS-RT\MetalOS-RT.vcxproj">
+      <Project>{27E93691-7F15-5584-B19A-75864E44F7C1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\User\MetalOS-CRT\MetalOS-CRT.vcxproj">
+      <Project>{55C89CFE-86AC-5264-BC5E-3456596ABF96}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\User\MetalOS-WM\MetalOS-WM.vcxproj">
+      <Project>{1DF83EDA-BBBB-5B62-B167-D9D2E60FCB5A}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="..\..\MetalOS.targets" />
+</Project>

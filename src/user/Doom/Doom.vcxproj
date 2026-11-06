@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{03E298F8-32BC-5C27-A620-E466D8827D4A}</ProjectGuid>
+    <MetalOSKind>User</MetalOSKind>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\..\MetalOS.props" />
+  <PropertyGroup>
+    <TargetName>doom</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MetalOSSrc)External\MetalOS.Doom\doomgeneric;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <WarningLevel>Level3</WarningLevel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Native</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="*.cpp" />
+    <!-- doomgeneric, compiled as C; without _WIN32 (which MSVC always defines) it skips its Windows-only code -->
+    <ClCompile Include="$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\am_map.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\doomdef.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\doomgeneric.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\doomstat.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\dstrings.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\dummy.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\d_event.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\d_items.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\d_iwad.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\d_loop.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\d_main.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\d_mode.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\d_net.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\f_finale.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\f_wipe.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\gusconf.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\g_game.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\hu_lib.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\hu_stuff.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\icon.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\info.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\i_cdmus.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\i_endoom.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\i_input.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\i_joystick.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\i_scale.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\i_sound.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\i_system.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\i_timer.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\i_video.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\memio.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\m_argv.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\m_bbox.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\m_cheat.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\m_config.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\m_controls.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\m_fixed.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\m_menu.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\m_misc.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\m_random.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_ceilng.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_doors.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_enemy.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_floor.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_inter.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_lights.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_map.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_maputl.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_mobj.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_plats.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_pspr.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_saveg.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_setup.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_sight.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_spec.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_switch.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_telept.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_tick.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\p_user.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\r_bsp.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\r_data.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\r_draw.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\r_main.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\r_plane.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\r_segs.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\r_sky.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\r_things.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\sha1.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\sounds.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\statdump.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\st_lib.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\st_stuff.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\s_sound.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\tables.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\v_video.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\wi_stuff.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\w_checksum.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\w_file.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\w_file_stdc.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\w_main.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\w_wad.c;$(MetalOSSrc)External\MetalOS.Doom\doomgeneric\z_zone.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <WarningLevel>Level1</WarningLevel>
+      <LanguageStandard>Default</LanguageStandard>
+      <AdditionalIncludeDirectories>$(MetalOSSrc);$(MetalOSSrc)External\MetalOS.Doom\doomgeneric;$(MetalOSSrc)User\Doom;$(MetalOSRoot)external;$(MetalOSSrc)User;$(MetalOSSrc)std</AdditionalIncludeDirectories>
+      <UndefinePreprocessorDefinitions>_WIN32</UndefinePreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)doomgeneric\</ObjectFileName>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\User\MetalOS-RT\MetalOS-RT.vcxproj">
+      <Project>{27E93691-7F15-5584-B19A-75864E44F7C1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\User\MetalOS-CRT\MetalOS-CRT.vcxproj">
+      <Project>{55C89CFE-86AC-5264-BC5E-3456596ABF96}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\User\MetalOS-WM\MetalOS-WM.vcxproj">
+      <Project>{1DF83EDA-BBBB-5B62-B167-D9D2E60FCB5A}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="..\..\MetalOS.targets" />
+</Project>

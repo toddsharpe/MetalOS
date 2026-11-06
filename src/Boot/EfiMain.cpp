@@ -1,19 +1,7 @@
 //Include main header
 #include "Boot/EfiMain.h"
-
-//Core crt
-#include "core_crt/core_crt.c"
-#include "core_crt/wchar.c"
-
-//Architecture specific
-#include "x64/CpuId.cpp"
-
-//Include sources
-#include "Boot/EfiDevice.cpp"
-#include "Boot/EfiError.cpp"
-#include "Boot/EfiLoader.cpp"
-#include "Boot/EfiMemory.cpp"
-#include "Boot/EfiPrint.cpp"
+#include "Boot/EfiLoader.h"
+#include "WinPE.h"
 
 static constexpr wchar_t Kernel[] = L"moskrnl.exe";
 static constexpr wchar_t KernelPDB[] = L"moskrnl.pdb";

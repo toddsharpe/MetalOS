@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{55C89CFE-86AC-5264-BC5E-3456596ABF96}</ProjectGuid>
+    <MetalOSKind>User</MetalOSKind>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\..\MetalOS.props" />
+  <PropertyGroup>
+    <TargetName>MetalOS-CRT</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <BaseAddress>0x00000001C0000000</BaseAddress>
+      <ModuleDefinitionFile>MetalOS-CRT.def</ModuleDefinitionFile>
+      <AdditionalOptions>/ignore:4210 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="*.cpp" />
+  </ItemGroup>
+  <Import Project="..\..\core_crt\core_crt.props" />
+  <ItemGroup>
+    <ProjectReference Include="..\..\User\MetalOS-RT\MetalOS-RT.vcxproj">
+      <Project>{27E93691-7F15-5584-B19A-75864E44F7C1}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="..\..\MetalOS.targets" />
+</Project>

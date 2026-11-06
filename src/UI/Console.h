@@ -22,13 +22,16 @@ namespace UI
 		Bright,
 	};
 
+	//A console's scrollback; the owner keeps it as a global of its own, so it sits in .bss
+	using ConsoleText = TextBuffer<256, 160>;
+
 	//Terminal-style text area: draws the newest lines of its scrollback that fit (or older ones when scrolled back), so the last one is normally visible
 	class Console : public Control
 	{
 	public:
-		Console(const Rectangle& bounds) :
+		Console(ConsoleText& text, const Rectangle& bounds) :
 			Control(bounds),
-			Text(),
+			Text(text),
 			Scroll(),
 			ShowCursor(true)
 		{
@@ -84,7 +87,7 @@ namespace UI
 			DrawScrollbar(frame, rows, count);
 		}
 
-		TextBuffer<256, 160> Text;
+		ConsoleText& Text;
 		size_t Scroll; //lines back from the newest
 		bool ShowCursor;
 

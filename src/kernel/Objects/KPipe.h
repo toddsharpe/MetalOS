@@ -57,6 +57,20 @@ private:
 	ListHead m_writers;
 };
 
+constexpr KPipe::KPipe(const size_t size) :
+	Readers(),
+	Writers(),
+	Waiters(),
+	m_buffer(),
+	m_count(),
+	m_size(size),
+	m_readIndex(),
+	m_writeIndex(),
+	m_writers()
+{
+
+}
+
 struct KPipeSignal
 {
 	KPipeSignal(KPipe& pipe, const KPipeOp op, const size_t count, const ListEntry* const writer = nullptr) :

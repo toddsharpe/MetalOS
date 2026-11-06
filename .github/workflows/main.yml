@@ -16,21 +16,18 @@ jobs:
       with:
         submodules: true
 
-    # Puts cl.exe, link.exe and ml64.exe (x64) on the path
+    # Puts msbuild, cl.exe, link.exe and ml64.exe (x64) on the path
     - name: Set up MSVC
       uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Build boot
+    # Full rebuilds of MetalOS.sln (boot loader, kernel, user mode and the host tests); Release last, so the disk below is Release
+    - name: Build Debug
       shell: cmd
-      run: scripts\build_boot.bat
+      run: scripts\build.bat Debug
 
-    - name: Build kernel
+    - name: Build Release
       shell: cmd
-      run: scripts\build_kernel.bat
-
-    - name: Build user
-      shell: cmd
-      run: scripts\build_user.bat
+      run: scripts\build.bat Release
 
     # diskpart needs admin, which hosted runners have. DOOM.WAD/DEFAULT.CFG aren't
     # available here, so the image has doom.exe but no game data.

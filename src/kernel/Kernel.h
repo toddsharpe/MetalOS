@@ -69,3 +69,5 @@
  * Kernel parameters.
  */
 static constexpr size_t TempArenaSize = Arch::PageSize << 10; //4MB Temp Arena
+
+int InitializeAcpi(void); //Acpi.cpp: brings up uACPI and loads the namespace

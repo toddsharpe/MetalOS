@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- core_crt, compiled into the kernel, boot loader, MetalOS-RT and MetalOS-CRT; always as C++, as the unity builds did -->
+<!-- It defines memcpy, memset and the other compiler library helpers, which MSVC won't take from a /GL object -->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(MetalOSSrc)core_crt\ctype.c;$(MetalOSSrc)core_crt\stdio.c;$(MetalOSSrc)core_crt\stdlib.c;$(MetalOSSrc)core_crt\string.c">
+      <CompileAs>CompileAsCpp</CompileAs>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <ObjectFileName>$(IntDir)core_crt\</ObjectFileName>
+    </ClCompile>
+  </ItemGroup>
+</Project>

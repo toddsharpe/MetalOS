@@ -1,7 +1,13 @@
 #include "kernel/UObject.h"
 #include "kernel/Types.h"
 
-uintptr_t UObject::LastHandle = UObject::StartingHandle;
+static constexpr handle_t StartingHandle = 0x10;
+static handle_t LastHandle = StartingHandle;
+
+UObject::UObject(const UObjectType type) : UObject(type, LastHandle++)
+{
+
+}
 
 
 bool UObject::CanRead() const

@@ -4,18 +4,17 @@
 #include "kernel/Scheduler.h"
 
 //Kernel globals (defined in Kernel.cpp).
-extern KProcess m_process;
-extern EFI_RUNTIME_SERVICES m_runtime;
+static EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);
 
 void KePauseSystem()
 {
 	ArchDisableInterrupts();
-	Scheduler::Enabled = false;
+	Scheduler::Disable();
 }
 
 void KeResumeSystem()
 {
-	Scheduler::Enabled = true;
+	Scheduler::Enable();
 	ArchEnableInterrupts();
 }
 

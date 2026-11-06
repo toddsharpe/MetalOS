@@ -40,9 +40,6 @@ public:
 private:
 	static constexpr HyperV::HV_MESSAGE_TYPE VmbusMessageType = (HyperV::HV_MESSAGE_TYPE)1;
 
-	static HYPERV_PAGE_ALIGN volatile uint8_t MonitorPage1[Arch::PageSize];
-	static HYPERV_PAGE_ALIGN volatile uint8_t MonitorPage2[Arch::PageSize];
-
 	struct BusRequest
 	{
 		uint32_t Gpadl;

@@ -1076,7 +1076,6 @@ SyscallResult ClaimHandle(const uint64_t token, Handle* handle)
 }
 
 //0x300: map the linear framebuffer into the calling process (used by the usermode WM).
-extern DeviceTree m_deviceTree;
 
 SyscallResult MapFramebuffer(GraphicsDevice* device)
 {

@@ -2,7 +2,18 @@
 #include "user/MetalOS.h"
 #include "ToErrno.h"
 
-Heap CrtHeap = {};
+static constexpr size_t HeapSize = 0x1000000; //16MB
+static Heap CrtHeap = {};
+
+bool CrtOpenHeap()
+{
+	void* const heap = VirtualAlloc(nullptr, HeapSize);
+	if (!heap)
+		return false;
+
+	CrtHeap.Open(heap, HeapSize);
+	return true;
+}
 
 extern "C"
 {

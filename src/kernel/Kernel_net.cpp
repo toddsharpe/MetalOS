@@ -8,7 +8,6 @@
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
-extern DeviceTree m_deviceTree;
 
 namespace
 {

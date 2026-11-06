@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include "Lib/ByteSwap.h"
+#include "Lib/Span.h"
 #include "Lib/Time.h"
 
 namespace Net
@@ -376,6 +377,8 @@ namespace Net
 	}
 
 	bool AddNetIf(NetIf& net_if);
+	Span<NetIf* const> GetNetIfs();
+	bool HasNetIf(NetIf& net_if);
 
 	typedef bool (*handler_tx)(NetIf& interface, Packet& packet);
 

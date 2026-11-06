@@ -11,8 +11,7 @@
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
-extern KProcess m_process;
-extern LinkedList<UProcess*> m_processes;
+static LinkedList<UProcess*> m_processes;
 
 static constexpr char RuntimeDLL[] = "MetalOS-RT.dll";
 

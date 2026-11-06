@@ -6,7 +6,6 @@
 #include "Lib/Math.h"
 #include "Assert.h"
 
-extern LoaderParams BootParams;
 
 //Allocates physical pages from the page frame database
 namespace

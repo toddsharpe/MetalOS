@@ -6,7 +6,6 @@
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
-extern KProcess m_process;
 
 KSharedMemory* KeShmCreate(const size_t size)
 {

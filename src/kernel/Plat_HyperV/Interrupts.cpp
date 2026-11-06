@@ -5,10 +5,10 @@
 namespace HyperV::Interrupts
 {
 	// examine flags, clear using LOCK AND or LOCK CMPXCHG, write EOI, process
-	volatile HYPERV_PAGE_ALIGN HV_SYNIC_EVENT_FLAGS SynicEvents[HV_SYNIC_SINT_COUNT] = { };
+	static volatile HYPERV_PAGE_ALIGN HV_SYNIC_EVENT_FLAGS SynicEvents[HV_SYNIC_SINT_COUNT] = { };
 
 	// examine, copy to another location (work queue), set type to None, write EOI, and then process
-	volatile HYPERV_PAGE_ALIGN HV_MESSAGE SynicMessages[HV_SYNIC_SINT_COUNT] = { HV_MESSAGE_TYPE::HvMessageTypeNone, 0 };
+	static volatile HYPERV_PAGE_ALIGN HV_MESSAGE SynicMessages[HV_SYNIC_SINT_COUNT] = { HV_MESSAGE_TYPE::HvMessageTypeNone, 0 };
 	
 	void Initialize()
 	{

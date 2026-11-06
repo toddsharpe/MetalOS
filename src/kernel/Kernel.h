@@ -65,9 +65,9 @@
 #include "reactos/amd64/ketypes.h"
 #include "kernel/Kd64/kd64.h"
 
-/*
- * Kernel parameters.
- */
-static constexpr size_t TempArenaSize = Arch::PageSize << 10; //4MB Temp Arena
+//Kernel globals (Kernel.cpp)
+extern LoaderParams BootParams;
+extern KProcess m_process;
+extern DeviceTree m_deviceTree;
 
 int InitializeAcpi(void); //Acpi.cpp: brings up uACPI and loads the namespace

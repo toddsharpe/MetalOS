@@ -47,7 +47,6 @@ public:
 	KThread* NextDead; //Link in the scheduler's queue of terminated threads awaiting the reaper
 
 private:
-	static uint32_t LastId;
 	static constexpr size_t StackSize = Arch::PageSize << 8; // 1MB stack
 
 	const KThreadStart m_start;

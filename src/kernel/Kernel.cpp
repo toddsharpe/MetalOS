@@ -8,16 +8,9 @@
  */
 LoaderParams BootParams;
 
-/*
- * Kernel globals with external linkage. The subsystem files (Kernel_*.cpp) included
- * below reference these through matching `extern` declarations.
- */
+//Kernel globals shared with the other kernel files through Kernel.h
 DeviceTree m_deviceTree;
-KERNEL_PAGE_ALIGN StaticArena<TempArenaSize> m_tempArena;
-LinkedList<UProcess*> m_processes;
-EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);
 static Graphics::FrameBuffer m_display((Graphics::Color*)KernelGraphicsDevice, BootParams.Display.VerticalResolution, BootParams.Display.HorizontalResolution);
-DirectUart m_uart(DirectUart::ComPort::Com1);
 KProcess m_process(KProcessType::Kernel);
 
 namespace
@@ -89,14 +82,14 @@ namespace
 		m_loadingScreen.Printf("  PhysicalAddressSize: 0x%016x\n", m_params.PageFrameCount << Arch::PageShift);
 
 		//Test UEFI runtime access
-		EFI_TIME time;
-		m_runtime.GetTime(&time, nullptr);
+		KSystemTime time;
+		KeGetSystemTime(time);
 		m_loadingScreen.Printf("  Date: %02d-%02d-%02d %02d:%02d:%02d\n", time.Month, time.Day, time.Year, time.Hour, time.Minute, time.Second);
 
 		//Initialize scheduler and create idle thread. Allows device enumeration to block for interrupts if needed
 		Scheduler::SetIdleThread(*KeCreateThread(&IdleThread, nullptr, "Idle"));
 		KeCreateThread(&KeReaperThread, nullptr, "Reaper");
-		Scheduler::Enabled = true;
+		Scheduler::Enable();
 
 		//Initialize ACPI/HW
 		InitializeAcpi();
@@ -133,7 +126,7 @@ namespace
 	void OnTimer0(void* arg)
 	{
 		PlatEndOfInterrupt();
-		if (Scheduler::Enabled)
+		if (Scheduler::IsEnabled())
 			Scheduler::Schedule();
 	}
 

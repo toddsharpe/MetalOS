@@ -5,8 +5,8 @@
 #include "Assert.h"
 
 //Monitor pages handed to the host in CHANNELMSG_INITIATE_CONTACT
-volatile uint8_t VmBusDriver::MonitorPage1[Arch::PageSize] = { 0 }; //Parent->child notifications
-volatile uint8_t VmBusDriver::MonitorPage2[Arch::PageSize] = { 0 }; //Child->parent notifications
+static HYPERV_PAGE_ALIGN volatile uint8_t MonitorPage1[Arch::PageSize] = { 0 }; //Parent->child notifications
+static HYPERV_PAGE_ALIGN volatile uint8_t MonitorPage2[Arch::PageSize] = { 0 }; //Child->parent notifications
 
 VmBusDriver::VmBusDriver(KDevice& device) :
 	Driver(device),

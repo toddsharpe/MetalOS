@@ -40,7 +40,22 @@ namespace
 }
 
 //Preemption gate.
-bool Scheduler::Enabled = false;
+static bool Enabled = false;
+
+void Scheduler::Enable()
+{
+	Enabled = true;
+}
+
+void Scheduler::Disable()
+{
+	Enabled = false;
+}
+
+bool Scheduler::IsEnabled()
+{
+	return Enabled;
+}
 
 KThread& Scheduler::GetCurrentThread()
 {

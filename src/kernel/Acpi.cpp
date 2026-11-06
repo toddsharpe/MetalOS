@@ -7,7 +7,6 @@
 #include "Assert.h"
 #include "errno.h"
 
-extern LoaderParams BootParams;
 
 //Acpi is single threaded, just stub these out
 typedef int mutex_t;

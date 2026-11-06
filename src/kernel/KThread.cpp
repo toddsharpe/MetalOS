@@ -2,7 +2,7 @@
 #include "kernel/Api.h"
 #include "kernel/Arch.h"
 
-uint32_t KThread::LastId = 0;
+static uint32_t LastId = 0;
 
 KThread::KThread(const KThreadStart start, void* const arg, const char* const name) :
 

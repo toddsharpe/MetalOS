@@ -20,11 +20,6 @@ namespace
 	}
 }
 
-namespace Net
-{
-	extern StaticVector<Net::NetIf*, 8> m_netIfs;
-}
-
 namespace Net::Router
 {
 	NetIf& Resolve(const Net::endpoint_t& dst)
@@ -43,7 +38,7 @@ namespace Net::Router
 		}
 
 		//Route based on interface subnet/multicast
-		for (NetIf* net_if : m_netIfs)
+		for (NetIf* net_if : GetNetIfs())
 		{
 			if (!ipv4_valid(*net_if))
 				continue;
@@ -58,12 +53,12 @@ namespace Net::Router
 			return *net_if;
 		}
 
-		return *m_netIfs.First();
+		return *GetNetIfs()[0];
 	}
 
 	bool AddRoute(NetIf& net_if, const ipv4_addr_t addr, const ipv4_addr_t subnet_mask)
 	{
-		Assert(m_netIfs.Contains(&net_if));
+		Assert(HasNetIf(net_if));
 		return m_routes.Add({ &net_if, addr, subnet_mask });
 	}
 }

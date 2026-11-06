@@ -5,10 +5,9 @@
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
-extern KProcess m_process;
-extern DirectUart m_uart;
-extern StaticArena<TempArenaSize> m_tempArena;
-extern LoaderParams BootParams;
+static constexpr size_t TempArenaSize = Arch::PageSize << 10; //4MB Temp Arena
+static KERNEL_PAGE_ALIGN StaticArena<TempArenaSize> m_tempArena;
+static DirectUart m_uart(DirectUart::ComPort::Com1);
 
 namespace
 {

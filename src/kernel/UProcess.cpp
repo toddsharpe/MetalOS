@@ -6,7 +6,7 @@
 #include "kernel/PebModules.h"
 #include "new.h"
 
-uint32_t UProcess::LastId = 0;
+static uint32_t LastId = 0;
 
 UProcess::UProcess(const cstr_t name) :
 	KProcess(KProcessType::User),

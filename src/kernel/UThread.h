@@ -9,24 +9,7 @@ class KThread;
 class UThread
 {
 public:
-	UThread(UProcess& process, ThreadEnvironmentBlock& teb) :
-		Process(process),
-		Thread(),
-		Stack(),
-		Name(),
-		Id(++LastId),
-		StackBase(),
-		Refs(1),
-		PipeWriteLink(),
-		PipeWriteQueue(),
-		PipeWait(),
-		EventWait(),
-		m_context(),
-		m_fpu(),
-		m_teb(teb)
-	{
-		ArchInitFpu(m_fpu);
-	}
+	UThread(UProcess& process, ThreadEnvironmentBlock& teb);
 
 	//TODO(tsharpe): Find way to specify this arena in user process space
 	void Initialize(void* const stackPointer, void* const threadStart)
@@ -73,8 +56,6 @@ public:
 	KEvent* EventWait; //Event whose reference this thread holds while it waits on it; the reaper drops it if the thread is killed there
 
 private:
-	static uint32_t LastId;
-
 	//Storage
 	Arch::Context m_context;
 	Arch::fpu_context_t m_fpu;

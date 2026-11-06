@@ -34,7 +34,7 @@ class KSharedMemory;
 class UObject
 {
 public:
-	constexpr UObject(const UObjectType type);
+	UObject(const UObjectType type);
 	constexpr UObject(const UObjectType type, const handle_t handle);
 
 	bool CanRead() const;
@@ -60,16 +60,7 @@ public:
 	//SharedMemory: the region plus this process's mapping of it (or null if unmapped).
 	KSharedMemory* Shm;
 	void* ShmAddress;
-
-private:
-	static constexpr handle_t StartingHandle = 0x10;
-	static handle_t LastHandle;
 };
-
-constexpr UObject::UObject(const UObjectType type) : UObject(type, LastHandle++)
-{
-
-}
 
 constexpr UObject::UObject(const UObjectType type, const handle_t handle) :
 	Handle(handle),

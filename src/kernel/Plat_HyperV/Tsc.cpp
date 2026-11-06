@@ -2,7 +2,7 @@
 
 namespace HyperV::Tsc
 {
-	volatile HYPERV_PAGE_ALIGN HV_REFERENCE_TSC_PAGE TscPage = {0};
+	static volatile HYPERV_PAGE_ALIGN HV_REFERENCE_TSC_PAGE TscPage = {0};
 
 	//12.7.3.3 Reference TSC during Save/Restore and Migration
 	nano100_t ReadTsc()

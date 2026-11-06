@@ -7,7 +7,6 @@
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
-extern KProcess m_process;
 
 static void KThreadInit();
 static uint32_t UThreadInit(void* const arg);

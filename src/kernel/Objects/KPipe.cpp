@@ -5,7 +5,6 @@
 #include "Lib/StaticVector.h"
 
 //Kernel globals (defined in Kernel.cpp).
-extern KProcess m_process;
 
 bool KPipe::EventSignal(void* const arg)
 {

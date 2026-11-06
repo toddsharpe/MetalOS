@@ -5,7 +5,6 @@
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
-extern KProcess m_process;
 
 //Reserves space in a process, acquires physical pages, maps into its page tables
 namespace

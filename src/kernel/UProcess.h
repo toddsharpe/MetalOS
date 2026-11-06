@@ -50,7 +50,6 @@ public:
 	bool Reaped; //Memory and page tables freed; only the record remains
 
 private:
-	static uint32_t LastId;
 
 	static constexpr size_t KernelReserve = Arch::PageSize * 4;
 	static constexpr size_t UThreadStackSize = (Arch::PageSize << 4); //64K

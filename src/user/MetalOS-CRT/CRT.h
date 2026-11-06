@@ -14,4 +14,4 @@
 #include "user/stdlib.h"
 #include "user/string.h"
 
-extern Heap CrtHeap; //The CRT's malloc heap, opened by DllMain on process attach
+bool CrtOpenHeap(); //Backs malloc with a VirtualAlloc'd region; DllMain calls it on process attach

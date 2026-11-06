@@ -3,7 +3,6 @@
 #include "kernel/Drivers/Driver.h"
 #include "Assert.h"
 
-extern DeviceTree m_deviceTree;
 
 bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access)
 {

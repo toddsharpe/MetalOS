@@ -7,7 +7,7 @@
 
 // Minimal DHCP client (DISCOVER, OFFER, REQUEST, ACK) that applies the lease to interface 0; in_addr fields are already network order, so they skip the byte swap.
 
-namespace Dhcp
+namespace
 {
 	static const uint8_t OpRequest = 1;
 	static const uint8_t HTypeEthernet = 1;
@@ -63,14 +63,14 @@ static size_t BuildMessage(uint8_t *const packet, const size_t cap, const uint32
 						   const uint8_t msgType, const in_addr *const requestIp, const in_addr *const serverId)
 {
 	//Construct the header, then serialize each field.
-	const Dhcp::Header hdr = {
-		.op     = Dhcp::OpRequest,
-		.htype  = Dhcp::HTypeEthernet,
-		.hlen   = Dhcp::HLenEthernet,
+	const Header hdr = {
+		.op     = OpRequest,
+		.htype  = HTypeEthernet,
+		.hlen   = HLenEthernet,
 		.hops   = 0,
 		.xid    = xid,
 		.secs   = 0,
-		.flags  = Dhcp::FlagBroadcast,
+		.flags  = FlagBroadcast,
 		.ciaddr = {},
 		.yiaddr = {},
 		.siaddr = {},
@@ -78,7 +78,7 @@ static size_t BuildMessage(uint8_t *const packet, const size_t cap, const uint32
 		.chaddr = { mac[5], mac[4], mac[3], mac[2], mac[1], mac[0] }, // InterfaceInfo::mac is little-endian; chaddr is in wire order
 		.sname  = {},
 		.file   = {},
-		.magic  = Dhcp::MagicCookie,
+		.magic  = MagicCookie,
 	};
 
 	memset(packet, 0, cap);
@@ -101,37 +101,37 @@ static size_t BuildMessage(uint8_t *const packet, const size_t cap, const uint32
 	ser.Write<uint32_t>(hdr.magic);
 
 	// Options (type-length-value) follow the fixed header.
-	ser.Write<uint8_t>(Dhcp::OptMsgType);
+	ser.Write<uint8_t>(OptMsgType);
 	ser.Write<uint8_t>(1);
 	ser.Write<uint8_t>(msgType);
 	if (requestIp)
 	{
-		ser.Write<uint8_t>(Dhcp::OptRequestIp);
+		ser.Write<uint8_t>(OptRequestIp);
 		ser.Write<uint8_t>(4);
 		ser.WriteBytes(&requestIp->s_addr, 4);
 	}
 	if (serverId)
 	{
-		ser.Write<uint8_t>(Dhcp::OptServerId);
+		ser.Write<uint8_t>(OptServerId);
 		ser.Write<uint8_t>(4);
 		ser.WriteBytes(&serverId->s_addr, 4);
 	}
-	ser.Write<uint8_t>(Dhcp::OptParamList);
+	ser.Write<uint8_t>(OptParamList);
 	ser.Write<uint8_t>(3);
-	ser.Write<uint8_t>(Dhcp::OptSubnet);
-	ser.Write<uint8_t>(Dhcp::OptRouter);
-	ser.Write<uint8_t>(Dhcp::OptDns);
-	ser.Write<uint8_t>(Dhcp::OptEnd);
+	ser.Write<uint8_t>(OptSubnet);
+	ser.Write<uint8_t>(OptRouter);
+	ser.Write<uint8_t>(OptDns);
+	ser.Write<uint8_t>(OptEnd);
 
 	const size_t len = ser.Bytes();
-	return len < Dhcp::MinPacket ? Dhcp::MinPacket : len;
+	return len < MinPacket ? MinPacket : len;
 }
 
 // Deserializes the fixed BOOTP header.
-static Dhcp::Header ParseHeader(const uint8_t *const msg, const size_t len)
+static Header ParseHeader(const uint8_t *const msg, const size_t len)
 {
 	Deserializer deser(msg, len);
-	Dhcp::Header h = {};
+	Header h = {};
 	h.op = deser.ReadU8();
 	h.htype = deser.ReadU8();
 	h.hlen = deser.ReadU8();
@@ -150,11 +150,11 @@ static Dhcp::Header ParseHeader(const uint8_t *const msg, const size_t len)
 // or nullptr. Sets *outLen to the value length.
 static const uint8_t *FindOption(const uint8_t *const msg, const size_t len, const uint8_t code, uint8_t *const outLen)
 {
-	size_t i = Dhcp::HdrSize;
+	size_t i = HdrSize;
 	while (i < len)
 	{
 		const uint8_t c = msg[i++];
-		if (c == Dhcp::OptEnd)
+		if (c == OptEnd)
 			break;
 		if (c == 0)
 			continue; // pad
@@ -182,14 +182,14 @@ static bool AwaitReply(const HSocket sock, const uint8_t expectType, const uint3
 	{
 		size_t got = 0;
 		sockaddr_in from = {};
-		if (SocketRecvFrom(sock, msg, cap, &got, &from, 3000) != SyscallResult::Success || got < Dhcp::HdrSize)
+		if (SocketRecvFrom(sock, msg, cap, &got, &from, 3000) != SyscallResult::Success || got < HdrSize)
 			continue;
 
 		if (ParseHeader(msg, got).xid != xid)
 			continue;
 
 		uint8_t tlen = 0;
-		const uint8_t *const type = FindOption(msg, got, Dhcp::OptMsgType, &tlen);
+		const uint8_t *const type = FindOption(msg, got, OptMsgType, &tlen);
 		if (type && tlen == 1 && type[0] == expectType)
 		{
 			*outLen = got;
@@ -223,7 +223,7 @@ int main(int argc, char **argv)
 
 	const sockaddr_in local = {
 		.sin_family = AF_INET,
-		.sin_port   = Htons(Dhcp::ClientPort),
+		.sin_port   = Htons(ClientPort),
 		.sin_addr   = {},
 		.sin_zero   = {},
 	};
@@ -231,7 +231,7 @@ int main(int argc, char **argv)
 
 	const sockaddr_in dst = {
 		.sin_family = AF_INET,
-		.sin_port   = Htons(Dhcp::ServerPort),
+		.sin_port   = Htons(ServerPort),
 		.sin_addr   = { 0xFFFFFFFF }, // 255.255.255.255
 		.sin_zero   = {},
 	};
@@ -242,14 +242,14 @@ int main(int argc, char **argv)
 	size_t replyLen = 0;
 
 	// DISCOVER -> OFFER
-	const size_t discoverLen = BuildMessage(pkt, sizeof(pkt), xid, nic.mac, Dhcp::Discover, nullptr, nullptr);
+	const size_t discoverLen = BuildMessage(pkt, sizeof(pkt), xid, nic.mac, Discover, nullptr, nullptr);
 	if (SocketSendTo(sock, pkt, discoverLen, &dst) != SyscallResult::Success)
 	{
 		printf("  DISCOVER send failed\n");
 		SocketClose(sock);
 		return 1;
 	}
-	if (!AwaitReply(sock, Dhcp::Offer, xid, reply, sizeof(reply), &replyLen))
+	if (!AwaitReply(sock, Offer, xid, reply, sizeof(reply), &replyLen))
 	{
 		printf("  no OFFER received\n");
 		SocketClose(sock);
@@ -261,20 +261,20 @@ int main(int argc, char **argv)
 
 	// REQUEST -> ACK (echo the offered address and server id back)
 	uint8_t srvLen = 0;
-	const uint8_t *const serverIdOpt = FindOption(reply, replyLen, Dhcp::OptServerId, &srvLen);
+	const uint8_t *const serverIdOpt = FindOption(reply, replyLen, OptServerId, &srvLen);
 	in_addr serverId = {};
 	if (srvLen == 4)
 		memcpy(&serverId.s_addr, serverIdOpt, 4);
 
 	const size_t requestLen =
-		BuildMessage(pkt, sizeof(pkt), xid, nic.mac, Dhcp::Request, &leased, srvLen == 4 ? &serverId : nullptr);
+		BuildMessage(pkt, sizeof(pkt), xid, nic.mac, Request, &leased, srvLen == 4 ? &serverId : nullptr);
 	if (SocketSendTo(sock, pkt, requestLen, &dst) != SyscallResult::Success)
 	{
 		printf("  REQUEST send failed\n");
 		SocketClose(sock);
 		return 1;
 	}
-	if (!AwaitReply(sock, Dhcp::Ack, xid, reply, sizeof(reply), &replyLen))
+	if (!AwaitReply(sock, Ack, xid, reply, sizeof(reply), &replyLen))
 	{
 		printf("  no ACK received\n");
 		SocketClose(sock);
@@ -285,7 +285,7 @@ int main(int argc, char **argv)
 	const in_addr addr = ParseHeader(reply, replyLen).yiaddr;
 	in_addr subnet = {};
 	uint8_t snLen = 0;
-	const uint8_t *const sn = FindOption(reply, replyLen, Dhcp::OptSubnet, &snLen);
+	const uint8_t *const sn = FindOption(reply, replyLen, OptSubnet, &snLen);
 	if (sn && snLen == 4)
 		memcpy(&subnet.s_addr, sn, 4);
 	else
@@ -298,7 +298,7 @@ int main(int argc, char **argv)
 
 	// Default gateway (router option 3).
 	uint8_t gwLen = 0;
-	const uint8_t *const gw = FindOption(reply, replyLen, Dhcp::OptRouter, &gwLen);
+	const uint8_t *const gw = FindOption(reply, replyLen, OptRouter, &gwLen);
 	if (gw && gwLen >= 4)
 	{
 		in_addr gwAddr = {};

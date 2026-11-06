@@ -11,7 +11,7 @@
 //via the well-known "input" endpoint and drains it. This is an SPSC ring (kernel
 //is the single logical producer, WM the single consumer) with the producer side
 //serialized by a spinlock because more than one driver posts.
-namespace _INPUT
+namespace
 {
 	constexpr uint32_t Capacity = 512;
 	constexpr uint32_t MoveLimit = Capacity / 2; //mouse moves stop going in at half full, keeping the rest for keys and clicks
@@ -23,23 +23,23 @@ namespace _INPUT
 
 void KeInputInitialize()
 {
-	const size_t size = SharedRing<Message>::RegionSize(_INPUT::Capacity);
-	_INPUT::m_region = KePublishRegion(Wm::InputEndpoint, size, [](void* const region) { SharedRing<Message>::Init(region, _INPUT::Capacity); });
+	const size_t size = SharedRing<Message>::RegionSize(Capacity);
+	m_region = KePublishRegion(Wm::InputEndpoint, size, [](void* const region) { SharedRing<Message>::Init(region, Capacity); });
 }
 
 void KeInputPost(const Message& message)
 {
-	if (!_INPUT::m_region)
+	if (!m_region)
 		return;
 
-	KSpinLockGuard guard(_INPUT::m_lock);
-	SharedRing<Message> ring(_INPUT::m_region, _INPUT::Capacity); //WM can rewrite the header; use our capacity
+	KSpinLockGuard guard(m_lock);
+	SharedRing<Message> ring(m_region, Capacity); //WM can rewrite the header; use our capacity
 
 	//A move only repositions the cursor and the next one carries the new position, so moves give way when the WM falls behind
 	const bool mouse = message.Header.MessageType == MessageType::MouseEvent;
-	if (mouse && message.MouseEvent.Buttons == _INPUT::m_buttons && ring.Count() >= _INPUT::MoveLimit)
+	if (mouse && message.MouseEvent.Buttons == m_buttons && ring.Count() >= MoveLimit)
 		return;
 
 	if (ring.Enqueue(message) && mouse)
-		_INPUT::m_buttons = message.MouseEvent.Buttons;
+		m_buttons = message.MouseEvent.Buttons;
 }

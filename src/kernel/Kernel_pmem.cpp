@@ -9,7 +9,7 @@
 extern LoaderParams BootParams;
 
 //Allocates physical pages from the page frame database
-namespace _PMEM
+namespace
 {
 	//Support 8GB max
 	constexpr size_t MaxPages = Gigabytes(8) / Arch::PageSize;
@@ -160,17 +160,17 @@ namespace _PMEM
 void KePhysicalInitialize()
 {
 	//Zero out memory region
-	memset(_PMEM::m_frames, 0, sizeof(PageFrame) * _PMEM::m_count);
+	memset(m_frames, 0, sizeof(PageFrame) * m_count);
 
 	//Initialize free list
-	_PMEM::m_freeList.Initialize();
+	m_freeList.Initialize();
 
 	//Default everything to reserved with all buddies in use. The bootloader's
 	//FreeRanges then carve out the pages the allocator may hand out.
-	for (size_t i = 0; i < _PMEM::m_count; i++)
-		_PMEM::m_frames[i].State = PageState::Reserved;
-	for (size_t i = 0; i < _PMEM::m_buddyMap.Length; i++)
-		_PMEM::m_buddyMap.Set(i, true);
+	for (size_t i = 0; i < m_count; i++)
+		m_frames[i].State = PageState::Reserved;
+	for (size_t i = 0; i < m_buddyMap.Length; i++)
+		m_buddyMap.Set(i, true);
 
 	//Mark free pages from the bootloader-provided ranges (sentinel-terminated)
 	for (size_t i = 0; i < MaxMemoryRanges; i++)
@@ -184,29 +184,29 @@ void KePhysicalInitialize()
 		for (size_t j = 0; j < range.PageCount; j++)
 		{
 			const size_t pageIdx = startIdx + j;
-			if (pageIdx >= _PMEM::m_count)
+			if (pageIdx >= m_count)
 				break;
 
-			PageFrame& frame = _PMEM::m_frames[pageIdx];
+			PageFrame& frame = m_frames[pageIdx];
 			frame.State = PageState::Free;
-			_PMEM::m_freeList.InsertHead(frame);
+			m_freeList.InsertHead(frame);
 		}
 	}
 
 	//A buddy is available for contiguous allocation only if all of its pages are free
-	const size_t validBuddies = _PMEM::m_count / _PMEM::BuddySize;
+	const size_t validBuddies = m_count / BuddySize;
 	for (size_t b = 0; b < validBuddies; b++)
 	{
 		bool allFree = true;
-		for (size_t k = 0; k < _PMEM::BuddySize; k++)
+		for (size_t k = 0; k < BuddySize; k++)
 		{
-			if (_PMEM::m_frames[b * _PMEM::BuddySize + k].State != PageState::Free)
+			if (m_frames[b * BuddySize + k].State != PageState::Free)
 			{
 				allFree = false;
 				break;
 			}
 		}
-		_PMEM::m_buddyMap.Set(b, !allFree);
+		m_buddyMap.Set(b, !allFree);
 	}
 }
 
@@ -219,7 +219,7 @@ paddr_t KePhysicalAlloc()
 
 bool KePhysicalTryAlloc(paddr_t& address)
 {
-	if (!_PMEM::Alloc(address))
+	if (!Alloc(address))
 		return false;
 
 	//Zero out the page
@@ -236,7 +236,7 @@ paddr_t KePhysicalAlloc(const size_t count)
 
 bool KePhysicalTryAlloc(paddr_t& address, const size_t count)
 {
-	if (!_PMEM::Alloc(address, count))
+	if (!Alloc(address, count))
 		return false;
 
 	//Zero out the page
@@ -250,15 +250,15 @@ bool KePhysicalTryAlloc(paddr_t& address, const size_t count)
 
 void KePhysicalRef(const paddr_t address)
 {
-	_PMEM::Ref(address);
+	Ref(address);
 }
 
 void KePhysicalFree(const paddr_t address)
 {
-	_PMEM::Free(address);
+	Free(address);
 }
 
 void KePhysicalFree(const paddr_t address, const size_t count)
 {
-	_PMEM::Free(address, count);
+	Free(address, count);
 }

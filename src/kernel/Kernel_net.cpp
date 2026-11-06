@@ -10,7 +10,7 @@
 //Kernel globals (defined in Kernel.cpp).
 extern DeviceTree m_deviceTree;
 
-namespace _NETDEV
+namespace
 {
 	KSpinLock m_lock;
 	void* m_rxRegion = nullptr;
@@ -28,16 +28,16 @@ void KeInitNetDevice()
 
 	//The RX ring of raw frames, for netstack to claim
 	const size_t size = SharedRing<Frame>::RegionSize(RxCapacity);
-	_NETDEV::m_rxRegion = KePublishRegion(RxEndpoint, size, [](void* const region) { SharedRing<Frame>::Init(region, RxCapacity); });
+	m_rxRegion = KePublishRegion(RxEndpoint, size, [](void* const region) { SharedRing<Frame>::Init(region, RxCapacity); });
 }
 
 void KeNetRxFrame(NicDriver* const nic, const void* const frame, const size_t length)
 {
-	if (!_NETDEV::m_rxRegion || length == 0 || length > NetDevice::Mtu)
+	if (!m_rxRegion || length == 0 || length > NetDevice::Mtu)
 		return;
 
-	KSpinLockGuard guard(_NETDEV::m_lock);
-	SharedRing<NetDevice::Frame> ring(_NETDEV::m_rxRegion, NetDevice::RxCapacity); //netstack can rewrite the header; use our capacity
+	KSpinLockGuard guard(m_lock);
+	SharedRing<NetDevice::Frame> ring(m_rxRegion, NetDevice::RxCapacity); //netstack can rewrite the header; use our capacity
 
 	const uint32_t ifIdx = 0; //only one NIC for now
 
@@ -59,7 +59,7 @@ bool KeNetSend(const uint32_t ifIdx, const void* const frame, const size_t lengt
 
 size_t KeNetInterfaceCount()
 {
-	return _NETDEV::Nic() ? 1 : 0;
+	return Nic() ? 1 : 0;
 }
 
 NicDriver* KeNetGetInterface(const size_t index)
@@ -69,6 +69,6 @@ NicDriver* KeNetGetInterface(const size_t index)
 		return nullptr;
 
 	//Always returns the only interface
-	NicDriver* const nic = _NETDEV::Nic();
+	NicDriver* const nic = Nic();
 	return nic;
 }

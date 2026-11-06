@@ -271,7 +271,7 @@ void KeExitUThread(UThread& thread, const uint32_t exitCode)
 }
 
 //Reclaims what exited threads and processes leave, from the reaper's own stack under the kernel's page tables
-namespace _REAP
+namespace
 {
 	KEvent m_event(false, false);
 
@@ -353,7 +353,7 @@ namespace _REAP
 
 void KeSignalReaper()
 {
-	_REAP::m_event.Set();
+	m_event.Set();
 }
 
 uint32_t KeReaperThread(void* const arg)
@@ -362,7 +362,7 @@ uint32_t KeReaperThread(void* const arg)
 
 	while (true)
 	{
-		KeWait(_REAP::m_event);
+		KeWait(m_event);
 
 		//Threads first: releasing a process's last thread record is what makes the process reapable
 		while (KThread* const thread = Scheduler::TakeDeadThread())
@@ -371,10 +371,10 @@ uint32_t KeReaperThread(void* const arg)
 			thread->ReleaseStack();
 			if (thread->UserThread)
 			{
-				_REAP::ReleaseUserStack(*thread->UserThread);
-				_REAP::LeavePipeWriteQueue(*thread->UserThread);
-				_REAP::ReleasePipeWait(*thread->UserThread);
-				_REAP::ReleaseEventWait(*thread->UserThread);
+				ReleaseUserStack(*thread->UserThread);
+				LeavePipeWriteQueue(*thread->UserThread);
+				ReleasePipeWait(*thread->UserThread);
+				ReleaseEventWait(*thread->UserThread);
 				KeReleaseUThread(*thread->UserThread);
 			}
 			KeFree(thread, AllocType::Kernel);
@@ -384,12 +384,12 @@ uint32_t KeReaperThread(void* const arg)
 		while (true)
 		{
 			const cpu_flags_t flags = ArchDisableInterrupts();
-			UProcess* const process = _REAP::FindReapable();
+			UProcess* const process = FindReapable();
 			ArchRestoreFlags(flags);
 
 			if (!process)
 				break;
-			_REAP::ReapProcess(*process);
+			ReapProcess(*process);
 		}
 	}
 }

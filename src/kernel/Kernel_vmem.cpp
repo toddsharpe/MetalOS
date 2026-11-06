@@ -10,7 +10,7 @@
 extern KProcess m_process;
 
 //Reserves space in a process, acquires physical pages, maps into its page tables
-namespace _VMEM
+namespace
 {
 	//Unmaps and frees the pages a failed commit had mapped, then drops its reservation
 	void Release(KProcess& process, const uintptr_t reserved, const size_t count, const size_t mapped)
@@ -141,24 +141,24 @@ void* KeVirtualAlloc(const size_t size)
 
 void* KeVirtualAlloc(KProcess& process, const size_t size)
 {
-	return _VMEM::Allocate(process, x64::SizeToPages(size));
+	return Allocate(process, x64::SizeToPages(size));
 }
 
 //Allocate at a fixed virtual address
 void* KeVirtualAlloc(KProcess& process, const void* address, const size_t size)
 {
-	return _VMEM::Allocate(process, address, x64::SizeToPages(size));
+	return Allocate(process, address, x64::SizeToPages(size));
 }
 
 //Free
 bool KeVirtualFree(const void* const address)
 {
-	return _VMEM::Free(m_process, address);
+	return Free(m_process, address);
 }
 
 bool KeVirtualFree(KProcess& process, const void* const address)
 {
-	return _VMEM::Free(process, address);
+	return Free(process, address);
 }
 
 //Map a fixed virtual address to a contiguous physical range
@@ -190,7 +190,7 @@ void* KeVirtualMap(const paddr_t* addresses, const size_t size)
 
 void* KeVirtualMap(KProcess& process, const paddr_t* addresses, const size_t size)
 {
-	return _VMEM::VirtualMap(process, addresses, x64::SizeToPages(size));
+	return VirtualMap(process, addresses, x64::SizeToPages(size));
 }
 
 //Map a contiguous physical range, reserving the virtual range automatically

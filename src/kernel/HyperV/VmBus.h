@@ -261,7 +261,7 @@ namespace HyperV
 		uint32_t gpadl;
 		uint16_t range_buflen;
 		uint16_t rangecount;
-		gpa_range range[];
+		gpa_range range[ANYSIZE_ARRAY];
 	};
 
 	struct vmbus_channel_gpadl_body

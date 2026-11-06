@@ -31,7 +31,7 @@ public:
 		return m_count == count;
 	}
 
-	bool GetFunction(const uint32_t offset, CString& name)
+	bool GetFunction(const uint32_t offset, cstr_t& name)
 	{
 		for (size_t i = 0; i < m_count; i++)
 		{
@@ -48,7 +48,7 @@ public:
 	{
 		for (size_t i = 0; i < m_count; i++)
 		{
-			Printf("0x%016x: %s\n", m_functions[i].Offset, m_functions[i].Name.c_str());
+			Printf("0x%016x: %.*s\n", m_functions[i].Offset, (int)m_functions[i].Name.Size, m_functions[i].Name.Data);
 		}
 	}
 
@@ -61,7 +61,7 @@ private:
 	struct Function
 	{
 		uint32_t Offset;
-		CString Name; //Copied into the arena, since a name can straddle two MSF blocks
+		cstr_t Name; //Copied into the arena, since a name can straddle two MSF blocks
 	};
 
 	//Returns the number of .text publics, and stores each one (name copied into the arena) when given a table, stopping at the first name the arena can't hold
@@ -86,19 +86,20 @@ private:
 					S_PUB32_Record record;
 					Assert(stream.Read(&record));
 
-					StaticString<256> name;
-					Assert(stream.ReadString(name));
+					char name[256];
+					Assert(stream.ReadString({ name, sizeof(name) }));
+					const size_t length = StrLength(name);
 
 					if (record.Section == Section::Text)
 					{
 						if (table)
 						{
 							//Copied by hand, so a full arena fails the load, which Arena::Copy can't report
-							char* const copy = static_cast<char*>(arena.Allocate(name.Count() + 1));
+							char* const copy = static_cast<char*>(arena.Allocate(length + 1));
 							if (!copy)
 								return count;
-							memcpy(copy, name.c_str(), name.Count());
-							table[count] = { record.Offset, CString(copy, name.Count()) };
+							memcpy(copy, name, length);
+							table[count] = { record.Offset, { copy, length } };
 						}
 						count++;
 					}

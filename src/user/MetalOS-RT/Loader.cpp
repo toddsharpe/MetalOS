@@ -201,5 +201,5 @@ uintptr_t GetProcAddress(HModule hModule, const char* lpProcName)
 	if (WinPE::GetNtHeaders(hModule)->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size == 0)
 		return NULL;
 
-	return (uintptr_t)WinPE::GetProcAddress(hModule, CString(lpProcName));
+	return (uintptr_t)WinPE::GetProcAddress(hModule, lpProcName);
 }

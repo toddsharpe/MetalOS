@@ -1,227 +1,50 @@
 #pragma once
 
 #include <cstdint>
-#include <cctype>
-#include "Lib/Buffer.h"
-#include "Lib/Math.h"
+#include <cstring>
+#include "Lib/Span.h"
 
-int constexpr length(const char* str)
+//Strings are stored in char arrays, always null-terminated, and passed around as cstr_t
+
+//Length of a C string, stopping at max chars
+constexpr size_t StrLength(const char* const text, const size_t max = (size_t)-1)
 {
-	return *str ? 1 + length(str + 1) : 0;
+	size_t length = 0;
+	while (length < max && text[length] != '\0')
+		length++;
+	return length;
 }
 
-struct CString
-{
-	static CString Clip(const char *const data, const size_t maxLength)
-	{
-		const size_t len = strnlen_s(data, maxLength);
-		return CString(data, len);
-	}
-
-	constexpr CString() : Length(), m_data()
-	{
-
-	}
-	
-	//When constructing from char array, null terminator is included. Adjust length accordingly
-	template <size_t N>
-	constexpr CString(const char (&data)[N]) : m_data(data), Length(N - 1)
-	{
-		
-	}
-
-	//When length is known, length should not include null terminator
-	constexpr CString(const char *const data, const size_t length) : m_data(data), Length(length)
-	{
-		
-	}
-
-	//Standard C strings that have no known length
-	constexpr explicit CString(const char *const data) : m_data(data), Length(length(data))
-	{
-		
-	}
-
-	bool operator==(const CString& rhs) const
-	{
-		return this->Length == rhs.Length && memcmp(this->m_data, rhs.m_data, this->Length) == 0;
-	}
-
-	explicit operator bool() const
-	{
-		return Length != 0;
-	}
-
-	const char *begin() const
-	{
-		return m_data;
-	}
-
-	const char *end() const
-	{
-		return &m_data[Length];
-	}
-
-	const char* c_str() const
-	{
-		return m_data;
-	}
-
-	const char& operator[](const size_t index) const
-	{
-		Assert(index < Length);
-		return begin()[index];
-	}
-
-	size_t Length;
-
-private:
-	const char* m_data;
-};
-
-struct StringStorage
-{
-protected:
-	template <size_t N>
-	constexpr StringStorage(char (&data)[N]) :
-		Data(data),
-		m_count(0),
-		Capacity(N)
-	{
-		
-	}
-
-public:
-	void ToLower()
-	{
-		for (size_t i = 0; i < m_count; i++)
-		{
-			Data[i] = tolower(Data[i]);
-		}
-	}
-
-	void Pop()
-	{
-		Assert(m_count > 0);
-		m_count--;
-
-		//Null terminate
-		*end() = '\0';
-	}
-
-	char *begin()
-	{
-		return reinterpret_cast<char*>(Data);
-	}
-
-	char *end()
-	{
-		return reinterpret_cast<char*>(&Data[m_count]);
-	}
-
-	const char* c_str() const
-	{
-		return Data;
-	}
-
-	void Append(const char c)
-	{
-		//Assert there is room
-		Assert(m_count < Capacity - 1);
-
-		//Write char
-		*end() = c;
-		m_count++;
-
-		//Null terminate
-		*end() = '\0';
-	}
-
-	void Clear()
-	{
-		m_count = 0;
-		*end() = '\0';
-	}
-
-	void Set(const CString& str)
-	{
-		Clear();
-		Append(str);
-	}
-
-	void Append(const CString& str)
-	{
-		//Assert there is room, filling up to Capacity - 1 characters like Append(char) and AppendClip
-		AssertOp(str.Length, <=, Capacity - 1 - m_count);
-
-		memcpy(end(), str.c_str(), str.Length);
-		m_count += str.Length;
-
-		//Null terminate
-		*end() = '\0';
-	}
-
-	//Appends as much of c_str (at most maxLength chars, if given) as fits ahead of the null terminator
-	void AppendClip(const char* const c_str, const size_t maxLength = 0)
-	{
-		const size_t space = Capacity - 1 - m_count;
-		const CString clip = CString::Clip(c_str, maxLength ? Min(maxLength, space) : space);
-
-		memcpy(end(), clip.c_str(), clip.Length);
-		m_count += clip.Length;
-
-		//Null terminate
-		*end() = '\0';
-	}
-
-	bool operator==(const CString& rhs) const
-	{
-		return CString(*this) == rhs;
-	}
-
-	bool operator!=(const CString& rhs) const
-	{
-		return !(*this == rhs);
-	}
-
-	operator CString() const
-	{
-		return {Data, m_count};
-	}
-
-	size_t Count() const
-	{
-		return m_count;
-	}
-
-	char* const Data;
-	const size_t Capacity;
-
-protected:
-	size_t m_count;
-};
-
+//The text in a char array, up to its terminator or the end of the array
 template <size_t N>
-struct StaticString : public StringStorage
+constexpr cstr_t Str(const char (&text)[N])
 {
-public:
-	constexpr StaticString() :
-		StringStorage(m_storage),
-		m_storage()
-	{
+	return { text, StrLength(text, N) };
+}
 
-	}
+//A null-terminated C string, read at most max chars
+constexpr cstr_t CStr(const char* const text, const size_t max = (size_t)-1)
+{
+	return { text, text ? StrLength(text, max) : 0 };
+}
 
-	constexpr StaticString(const CString& other) : StaticString()
-	{
-		//TODO(tsharpe): Is memcpy in the constructor a good idea?
-		Assert(other.Length < Capacity);
-		memcpy(m_storage, other.c_str(), other.Length);
-		m_count = other.Length;
-	}
+//Copies text into a char array, clipped to fit, and terminates it; returns the length kept
+template <size_t N>
+size_t StrCopy(char (&to)[N], const cstr_t text)
+{
+	const size_t length = text.Size < N - 1 ? text.Size : N - 1;
+	memcpy(to, text.Data, length);
+	to[length] = '\0';
+	return length;
+}
 
-	static constexpr size_t Size = N;
-
-private:
-	char m_storage[N];
-};
+//Appends text to the string in a char array, clipped to fit; returns the new length
+template <size_t N>
+size_t StrAppend(char (&to)[N], const cstr_t text)
+{
+	const size_t used = StrLength(to, N - 1);
+	const size_t length = text.Size < N - 1 - used ? text.Size : N - 1 - used;
+	memcpy(to + used, text.Data, length);
+	to[used + length] = '\0';
+	return used + length;
+}

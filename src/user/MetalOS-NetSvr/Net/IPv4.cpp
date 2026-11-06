@@ -9,8 +9,7 @@ namespace Net::IPv4
 	{
 		//Get buffer
 		const NetLayer& l2 = get_l2(dst_if.l2);
-		StaticBuffer<Net::buffer_size> buffer;
-		Copy(buffer, packet.backing.Ref());
+		uint8_t buffer[Net::buffer_size] = {};
 
 		//Clone packet
 		Net::Packet cloned(buffer);

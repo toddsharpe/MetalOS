@@ -1,6 +1,6 @@
 #include "user/MetalOS.h"
 #include "Lib/SharedRing.h"
-#include "Lib/Buffer.h"
+#include "Lib/Span.h"
 #include "Assert.h"
 #include <stdio.h>
 #include "user/CRT.cpp" //operator new/delete (malloc/free) and _purecall (NetDriver is abstract)
@@ -290,7 +290,7 @@ int main(int argc, char** argv)
 		NetDevice::Frame frame;
 		while (rx.Dequeue(frame))
 		{
-			Net::Packet packet(Buffer(frame.Data, frame.Length), frame.Length);
+			Net::Packet packet({ frame.Data, frame.Length }, frame.Length);
 			Net::get_l2(net_if.l2).Receive(net_if, packet);
 		}
 

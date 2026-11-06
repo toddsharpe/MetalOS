@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Lib/Math.h"
+#include "Lib/Span.h"
 #include "Graphics/Types.h"
 #include "Graphics/Font.h"
 #include "Graphics/Theme.h"
@@ -186,10 +187,10 @@ namespace Graphics
 			}
 		}
 
-		inline Point2D DrawText(Graphics::FrameBuffer &frame, const Point2D position, const CString &string, const Color color)
+		inline Point2D DrawText(Graphics::FrameBuffer &frame, const Point2D position, const cstr_t string, const Color color)
 		{
 			Point2D pos = position;
-			for (size_t i = 0; i < string.Length; i++)
+			for (size_t i = 0; i < string.Size; i++)
 			{
 				const char c = string[i];
 				if (c == '\n')
@@ -276,10 +277,10 @@ namespace Graphics
 		}
 
 		//The system font at a whole-number scale on an 8*scale advance (the glyphs carry their own spacing); returns where the next character goes
-		inline Point2D DrawPixelText(const Graphics::FrameBuffer &frame, const Point2D position, const CString &text, const Color color, const uint32_t scale)
+		inline Point2D DrawPixelText(const Graphics::FrameBuffer &frame, const Point2D position, const cstr_t text, const Color color, const uint32_t scale)
 		{
 			Point2D pos = position;
-			for (size_t i = 0; i < text.Length; i++)
+			for (size_t i = 0; i < text.Size; i++)
 			{
 				const uint8_t *map = m_font.GetCharacterMap(text[i]);
 				for (uint32_t row = 0; row < 8; row++)

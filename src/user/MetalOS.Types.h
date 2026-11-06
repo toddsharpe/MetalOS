@@ -61,7 +61,7 @@ constexpr size_t MaxLoadedModules = 8;
 struct ProcessEnvironmentBlock
 {
 	void *ImageBase;
-	CString CommandLine;
+	cstr_t CommandLine; //Null-terminated, though Size leaves the terminator out
 	HProcess Handle;
 	uint32_t ProcessId;
 	Module LoadedModules[MaxLoadedModules];

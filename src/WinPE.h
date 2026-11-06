@@ -93,7 +93,7 @@ namespace WinPE
 		return GetNtHeaders(imageBase)->OptionalHeader.SizeOfStackReserve;
 	}
 
-	inline const IMAGE_SECTION_HEADER* GetPESection(const void* const imageBase, const CString& name)
+	inline const IMAGE_SECTION_HEADER* GetPESection(const void* const imageBase, const char* const name)
 	{
 		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 
@@ -101,7 +101,7 @@ namespace WinPE
 		const IMAGE_SECTION_HEADER* section = IMAGE_FIRST_SECTION(ntHeader);
 		for (WORD i = 0; i < ntHeader->FileHeader.NumberOfSections; i++)
 		{
-			if (name == CString((char*)&section[i].Name))
+			if (CStr((const char*)section[i].Name, IMAGE_SIZEOF_SHORT_NAME) == CStr(name))
 				return &section[i];
 		}
 
@@ -137,7 +137,7 @@ namespace WinPE
 		return true;
 	}
 
-	inline void* GetProcAddress(const void* const imageBase, const CString& procName)
+	inline void* GetProcAddress(const void* const imageBase, const char* const procName)
 	{
 		const IMAGE_NT_HEADERS64* ntHeader = GetNtHeaders(imageBase);
 		Assert(ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size);
@@ -156,7 +156,7 @@ namespace WinPE
 		for (DWORD i = 0; i < exportDirectory->NumberOfNames; i++)
 		{
 			char* name = MakePointer<char*>(imageBase, pNames[i]);
-			if (procName == CString(name))
+			if (strcmp(name, procName) == 0)
 			{
 				WORD ordinal = pOrdinals[i];
 				search = MakePointer<uintptr_t>(imageBase, pFunctions[ordinal]);

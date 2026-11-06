@@ -1,6 +1,6 @@
 #include "kernel/Drivers/VmBusDriver.h"
 #include "kernel/HyperV/VmBus.h"
-#include "Lib/Buffer.h"
+#include "Lib/Span.h"
 #include "x64/intrin.h"
 #include "Assert.h"
 
@@ -64,13 +64,16 @@ uint32_t VmBusDriver::CreateGpadl(const uint32_t childRelid, const paddr_t addre
 
 	const size_t headerPfns = pageCount < MaxHeaderPfns ? pageCount : MaxHeaderPfns;
 	const size_t headerMsgSize = sizeof(HyperV::vmbus_channel_gpadl_header)
-		+ sizeof(HyperV::gpa_range)
 		+ (headerPfns - ANYSIZE_ARRAY) * sizeof(uint64_t);
 
-	StaticBuffer<256> headerBuf;
-	HyperV::vmbus_channel_gpadl_header* header =
-		(HyperV::vmbus_channel_gpadl_header*)headerBuf.Data;
-	memset(header, 0, headerMsgSize);
+	//The header with its one range, and room for the rest of the range's page numbers
+	struct
+	{
+		HyperV::vmbus_channel_gpadl_header Header;
+		uint64_t MorePfns[MaxHeaderPfns - ANYSIZE_ARRAY];
+	} headerMessage = {};
+	static_assert(sizeof(headerMessage) <= HyperV::HV_MESSAGE_PAYLOAD_BYTE_COUNT, "A GPADL header must fit one message");
+	HyperV::vmbus_channel_gpadl_header* const header = &headerMessage.Header;
 	header->header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_HEADER;
 	header->child_relid = childRelid;
 	header->rangecount = 1;
@@ -97,10 +100,14 @@ uint32_t VmBusDriver::CreateGpadl(const uint32_t childRelid, const paddr_t addre
 		const size_t bodyMsgSize = sizeof(HyperV::vmbus_channel_gpadl_body)
 			+ (batchSize - ANYSIZE_ARRAY) * sizeof(uint64_t);
 
-		StaticBuffer<256> bodyBuf;
-		HyperV::vmbus_channel_gpadl_body* body =
-			(HyperV::vmbus_channel_gpadl_body*)bodyBuf.Data;
-		memset(body, 0, bodyMsgSize);
+		//The body and room for the rest of its page numbers
+		struct
+		{
+			HyperV::vmbus_channel_gpadl_body Body;
+			uint64_t MorePfns[MaxBodyPfns - ANYSIZE_ARRAY];
+		} bodyMessage = {};
+		static_assert(sizeof(bodyMessage) <= HyperV::HV_MESSAGE_PAYLOAD_BYTE_COUNT, "A GPADL body must fit one message");
+		HyperV::vmbus_channel_gpadl_body* const body = &bodyMessage.Body;
 		body->header.msgtype = HyperV::vmbus_channel_message_type::CHANNELMSG_GPADL_BODY;
 		body->msgnumber = bodyNum++;
 		body->gpadl = gpadl;
@@ -279,30 +286,24 @@ void VmBusDriver::OnInterrupt()
 				//Populate HID
 				{
 					const HyperV::guid_t& if_type = offer->offer.if_type;
-					char buffer[64] = {};
-					const size_t length = sprintf(buffer, "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
+					snprintf(device->Hid, sizeof(device->Hid), "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
 						if_type.Data1,
 						if_type.Data2,
 						if_type.Data3,
 						if_type.Data4[0], if_type.Data4[1], if_type.Data4[2], if_type.Data4[3],
 						if_type.Data4[4], if_type.Data4[5], if_type.Data4[6], if_type.Data4[7]);
-					device->Hid = KeCopy({buffer, length}, AllocType::Kernel);
 				}
 
 				//Populate name and description
-				const DeviceHids::Entry* lookup = DeviceHids::Lookup(device->Hid.c_str());
+				const DeviceHids::Entry* lookup = DeviceHids::Lookup(device->Hid);
 				if (lookup)
 				{
-					device->Description = KeCopy(CString(lookup->Description), AllocType::Kernel);
-					device->Name = device->Description;
+					StrCopy(device->Description, CStr(lookup->Description));
+					StrCopy(device->Name, CStr(lookup->Description));
 				}
 
 				//Populate path
-				{
-					char buffer[128] = {};
-					sprintf(buffer, "%s\\%s", m_device.Path.c_str(), device->Hid.c_str());
-					device->Path = KeCopy(buffer, AllocType::Kernel);
-				}
+				snprintf(device->Path, sizeof(device->Path), "%s\\%s", m_device.Path, device->Hid);
 
 				//Save properties
 				device->child_relid = offer->child_relid;

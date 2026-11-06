@@ -132,17 +132,17 @@ namespace UI
 		//One line, as runs of characters that share an attribute
 		void DrawLine(FrameBuffer& frame, const Point2D position, const size_t index)
 		{
-			const CString line = Text.Line(index);
+			const cstr_t line = Text.Line(index);
 			const uint8_t* const attributes = Text.Attributes(index);
 			size_t start = 0;
-			while (start < line.Length)
+			while (start < line.Size)
 			{
 				size_t end = start + 1;
-				while (end < line.Length && attributes[end] == attributes[start])
+				while (end < line.Size && attributes[end] == attributes[start])
 					end++;
 
 				const Point2D at = { position.X + (int32_t)(start * Theme::Glyph), position.Y };
-				Draw2D::DrawPixelText(frame, at, CString(line.c_str() + start, end - start), AttributeColor(attributes[start]), Theme::TextScale);
+				Draw2D::DrawPixelText(frame, at, line.Slice(start, end - start), AttributeColor(attributes[start]), Theme::TextScale);
 				start = end;
 			}
 		}

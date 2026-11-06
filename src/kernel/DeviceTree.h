@@ -55,9 +55,7 @@ public:
 	void AddRootChild(KDevice& device)
 	{
 		//Populate path
-		char buffer[64] = {};
-		sprintf(buffer, "%s%s", m_root->Path.c_str(), device.Hid.c_str());
-		device.Path = KeCopy(buffer, AllocType::Kernel);
+		snprintf(device.Path, sizeof(device.Path), "%s%s", m_root->Path, device.Hid);
 
 		m_root->Children.Add(&device);
 		AttachDriver(device);
@@ -126,14 +124,14 @@ private:
 		context->Nodes.Add(node, device);
 
 		//Populate fields
-		device->Name = KeCopy(info->name.text, AllocType::Kernel);
-		device->Path = KeCopy(CString(path), AllocType::Kernel);
+		StrCopy(device->Name, Str(info->name.text));
+		StrCopy(device->Path, CStr(path));
 		if (info->flags & UACPI_NS_NODE_INFO_HAS_HID)
 		{
-			device->Hid = KeCopy({info->hid.value, info->hid.size - 1}, AllocType::Kernel);
+			StrCopy(device->Hid, CStr(info->hid.value, info->hid.size - 1));
 			const DeviceHids::Entry* lookup = DeviceHids::Lookup(info->hid.value);
 			if (lookup)
-				device->Description = KeCopy(CString(lookup->Description), AllocType::Kernel);
+				StrCopy(device->Description, CStr(lookup->Description));
 		}
 		device->Type = KDeviceType::Acpi;
 		device->AcpiNode = node;
@@ -154,32 +152,33 @@ private:
 
 	static void AttachDriver(KDevice& device)
 	{
-		if (device.Hid == "VMBUS" || device.Hid == "MSFT1000")
+		const cstr_t hid = Str(device.Hid);
+		if (hid == Str("VMBUS") || hid == Str("MSFT1000"))
 		{
 			device.Driver = KeAlloc<VmBusDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
-		else if (device.Hid == RamDriveHid)
+		else if (hid == Str(RamDriveHid))
 		{
 			device.Driver = KeAlloc<RamDriveDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
-		else if (device.Hid == "{F912AD6D-2B17-48EA-BD65-F927A61C7684}")
+		else if (hid == Str("{F912AD6D-2B17-48EA-BD65-F927A61C7684}"))
 		{
 			device.Driver = KeAlloc<HyperVKeyboardDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
-		else if (device.Hid == "{CFA8B69E-5B4A-4CC0-B98B-8BA1A1F3F95A}")
+		else if (hid == Str("{CFA8B69E-5B4A-4CC0-B98B-8BA1A1F3F95A}"))
 		{
 			device.Driver = KeAlloc<HyperVMouseDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
-		else if (device.Hid == "{F8615163-DF3E-46C5-913F-F2D2F965ED0E}")
+		else if (hid == Str("{F8615163-DF3E-46C5-913F-F2D2F965ED0E}"))
 		{
 			device.Driver = KeAlloc<HyperVNic>(AllocType::Kernel, device);
 			Assert(device.Driver);
 		}
-		else if (device.Hid == "{DA0A7802-E377-4AAC-8E77-0558EB1073F8}")
+		else if (hid == Str("{DA0A7802-E377-4AAC-8E77-0558EB1073F8}"))
 		{
 			device.Driver = KeAlloc<HyperVVideoDriver>(AllocType::Kernel, device);
 			Assert(device.Driver);

@@ -125,7 +125,7 @@ namespace
 		//Continue initializing system
 		m_irqs.Add(Arch::InterruptVector::Timer0, {&OnTimer0, nullptr});
 		Scheduler::Initialize(m_process, &HyperV::Tsc::ReadTsc);
-		const KModule* const kernelModule = KeAddModule("moskrnl.exe", (void*)KernelBase, WinPE::GetSizeOfImage((void*)KernelBase));
+		const KModule* const kernelModule = KeAddModule(Str("moskrnl.exe"), (void*)KernelBase, WinPE::GetSizeOfImage((void*)KernelBase));
 		Assert(kernelModule);
 
 		//Initialize Platform (HyperV)
@@ -153,7 +153,7 @@ namespace
 		{
 			KDevice* ramDrive = KeAlloc<KDevice>(AllocType::Kernel);
 			Assert(ramDrive);
-			ramDrive->Hid = KeCopy(RamDriveHid, AllocType::Kernel);
+			StrCopy(ramDrive->Hid, Str(RamDriveHid));
 			ramDrive->Type = KDeviceType::Software;
 			ramDrive->Context = (void*)BootParams.RamDriveAddress;
 			m_deviceTree.AddRootChild(*ramDrive);

@@ -14,7 +14,7 @@ namespace
 	//Allocate and initialize a kernel thread without making it schedulable yet
 	KThread* AllocKThread(const KThreadStart start, void* const arg, const char* const name)
 	{
-		KThread* thread = KeAlloc<KThread>(AllocType::Kernel, start, arg, CString(name));
+		KThread* thread = KeAlloc<KThread>(AllocType::Kernel, start, arg, name);
 		thread->Init(&KThreadInit);
 		thread->Process = &m_process;
 		return thread;

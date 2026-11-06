@@ -73,7 +73,7 @@ public:
 		if (info.C13ByteSize == 0)
 		{
 			//TODO(tsharpe): Find the entry somewhere
-			lookup.Function.Set("<not found1>");
+			StrCopy(lookup.Function, Str("<not found1>"));
 			lookup.Line = 0;
 			return false;
 		}
@@ -163,17 +163,17 @@ public:
 				if (!found)
 					return false;
 
-				CString name;
+				cstr_t name;
 				if (m_publics.GetFunction(linesHeader.offCon, name))
-					lookup.Function.Set(CString(name.c_str(), Min(name.Length, lookup.Function.Capacity - 2))); //Long template names are clipped, as Set keeps a char spare
-				else if (!GetProcedureName(moduleStream, info.SymByteSize, offset, lookup.Function))
-					lookup.Function.Set("<not found>");
+					StrCopy(lookup.Function, name);
+				else if (!GetProcedureName(moduleStream, info.SymByteSize, offset, { lookup.Function, sizeof(lookup.Function) }))
+					StrCopy(lookup.Function, Str("<not found>"));
 				lookup.Line = closest.linenumStart;
 				return true;
 			}
 		}
 
-		lookup.Function.Set("<not found2>");
+		StrCopy(lookup.Function, Str("<not found2>"));
 		lookup.Line = 0;
 		return false;
 	}
@@ -401,7 +401,7 @@ private:
 	}
 
 	//A static or anonymous-namespace function has no public (and an assembly one's lines can start before its public), so it's named by the procedure record holding offset
-	bool GetProcedureName(MsfStream& moduleStream, const uint32_t symbolsSize, const uint32_t offset, StringStorage& name)
+	bool GetProcedureName(MsfStream& moduleStream, const uint32_t symbolsSize, const uint32_t offset, const str_t name)
 	{
 		const uint32_t symbolsEnd = Min(symbolsSize, moduleStream.Size); //A SymByteSize past the stream's end would read past its blocks
 
@@ -430,14 +430,18 @@ private:
 			if (procedure.Segment == TextSection && offset - procedure.Offset < procedure.Length)
 			{
 				//The name is NUL-terminated inside the record; one longer than the destination is clipped
-				name.Clear();
+				size_t count = 0;
+				name[0] = '\0';
 				while (moduleStream.Position() < next)
 				{
 					const char c = moduleStream.Read<char>();
 					if (c == '\0')
 						return true;
-					if (name.Count() < name.Capacity - 1)
-						name.Append(c);
+					if (count < name.Size - 1)
+					{
+						name[count++] = c;
+						name[count] = '\0';
+					}
 				}
 				return false;
 			}

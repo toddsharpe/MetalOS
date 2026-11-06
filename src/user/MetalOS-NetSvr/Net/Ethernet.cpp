@@ -74,7 +74,7 @@ namespace Net::Ethernet
 				return false;
 
 			//Build arp (reserve room for the ethernet + ARP headers)
-			StaticBuffer<Net::buffer_size> buffer;
+			uint8_t buffer[Net::buffer_size] = {};
 			Packet arp(buffer);
 			arp.mask(eth_hdr_size);
 			arp.mask(arp_hdr_size);

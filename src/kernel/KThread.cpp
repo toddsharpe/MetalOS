@@ -4,7 +4,7 @@
 
 uint32_t KThread::LastId = 0;
 
-KThread::KThread(const KThreadStart start, void* const arg, const CString& name) :
+KThread::KThread(const KThreadStart start, void* const arg, const char* const name) :
 
 	ContextPtr(&m_context),
 	UserThread(),
@@ -20,8 +20,9 @@ KThread::KThread(const KThreadStart start, void* const arg, const CString& name)
 	m_stackPointer(),
 
 	m_context(),
-	m_name(name)
+	m_name()
 {
+	StrCopy(m_name, CStr(name));
 
 }
 
@@ -53,7 +54,7 @@ void KThread::Display() const
 {
 	Printf("KThread\n");
 	Printf("     Id: %x\n", Id);
-	Printf("   Name: %s\n", m_name.c_str());
+	Printf("   Name: %s\n", m_name);
 	Printf("  Start: 0x%016x\n", m_start);
 	Printf("    Arg: 0x%016x\n", m_arg);
 	Printf("  State: %d\n", Sched.State);

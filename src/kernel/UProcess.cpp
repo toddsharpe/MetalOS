@@ -10,13 +10,13 @@
 
 uint32_t UProcess::LastId = 0;
 
-UProcess::UProcess(const CString& name) :
+UProcess::UProcess(const cstr_t name) :
 	KProcess(KProcessType::User),
 	Id(++LastId),
 	InitProcess(),
 	InitThread(),
 	IsConsole(),
-	Name(name),
+	Name(),
 	Objects(),
 	Threads(),
 	State(),
@@ -26,13 +26,13 @@ UProcess::UProcess(const CString& name) :
 	m_userArena(),
 	m_moduleIndex()
 {
-
+	StrCopy(Name, name);
 }
 
 /**
  * Sets up the PEB in the process's user space.
  */
-void UProcess::Initialize(void* const image, const CString& cmd)
+void UProcess::Initialize(void* const image, const cstr_t cmd)
 {
 	//Reserve OS-managed user space (PEB + command line); no writes to user memory here.
 	void* const storage = KeVirtualAlloc(*this, KernelReserve);
@@ -41,19 +41,19 @@ void UProcess::Initialize(void* const image, const CString& cmd)
 
 	m_peb = reinterpret_cast<ProcessEnvironmentBlock*>(m_userArena.Reserve(sizeof(ProcessEnvironmentBlock)));
 	Assert(m_peb);
-	char* const cmdLine = reinterpret_cast<char*>(m_userArena.Reserve(cmd.Length + 1));
+	char* const cmdLine = reinterpret_cast<char*>(m_userArena.Reserve(cmd.Size + 1));
 	Assert(cmdLine);
 
 	//Command line bytes (+ null terminator) into the process.
-	KeWriteProcessMemory(*this, cmdLine, cmd.c_str(), cmd.Length);
+	KeWriteProcessMemory(*this, cmdLine, cmd.Data, cmd.Size);
 	const char nul = '\0';
-	KeWriteProcessMemory(*this, cmdLine + cmd.Length, &nul, 1);
+	KeWriteProcessMemory(*this, cmdLine + cmd.Size, &nul, 1);
 
 	//Build the PEB in kernel memory, then copy it into the process. CommandLine points at the
 	//user-space copy above.
 	ProcessEnvironmentBlock peb = {};
 	peb.ImageBase = image;
-	peb.CommandLine = CString(cmdLine, cmd.Length);
+	peb.CommandLine = { cmdLine, cmd.Size };
 	peb.Handle = (HProcess)this;
 	peb.ProcessId = Id;
 	peb.ModuleIndex = 0;
@@ -101,9 +101,7 @@ UThread* UProcess::CreateThread(const size_t stackSize, const UThreadStart userS
 	KeWriteProcessMemory(*this, teb, &tebData, sizeof(tebData));
 
 	//Set name
-	char buffer[128] = {};
-	snprintf(buffer, sizeof(buffer), "%s[%d]", Name.c_str(), thread->Id);
-	thread->Name = KeCopy(CString(buffer), AllocType::User);
+	snprintf(thread->Name, sizeof(thread->Name), "%s[%d]", Name, thread->Id);
 
 	return thread;
 }
@@ -195,15 +193,14 @@ bool UProcess::CloseObject(const handle_t handle)
 	return true;
 }
 
-void UProcess::AddModule(const CString& name, void* const image)
+void UProcess::AddModule(const cstr_t name, void* const image)
 {
 	//Write the module entry into the process's PEB via the physical window (no direct user access).
 	//m_moduleIndex is tracked kernel-side so we never read PEB->ModuleIndex from user space.
 	Assert(m_moduleIndex < MaxLoadedModules);
 	Module entry = {};
 	entry.ImageBase = image;
-	strncpy(entry.Name, name.c_str(), MaxModuleName - 1);
-	entry.Name[MaxModuleName - 1] = '\0';
+	StrCopy(entry.Name, name);
 	KeWriteProcessMemory(*this, &m_peb->LoadedModules[m_moduleIndex], &entry, sizeof(entry));
 
 	m_moduleIndex++;
@@ -221,7 +218,7 @@ void UProcess::Display() const
 
 	Printf("UProcess\n");
 	Printf("     Id: %x\n", Id);
-	Printf("   Name: %s\n", Name.c_str());
+	Printf("   Name: %s\n", Name);
 	Printf("  State: %d\n", State);
 
 	if (false /*Tables.IsActive()*/)
@@ -229,7 +226,7 @@ void UProcess::Display() const
 		Printf("   PEB:\n");
 		Printf("    -    Id: %d\n", m_peb->ProcessId);
 		Printf("    -  Base: 0x%016x\n", m_peb->ImageBase);
-		Printf("    -   Cmd: %s\n", m_peb->CommandLine.c_str());
+		Printf("    -   Cmd: %.*s\n", (int)m_peb->CommandLine.Size, m_peb->CommandLine.Data);
 	}
 
 	//objects

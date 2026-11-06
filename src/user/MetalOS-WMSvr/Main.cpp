@@ -226,13 +226,13 @@ namespace
 		const size_t length = strlen(text);
 		if (length <= maxChars)
 		{
-			Draw2D::DrawPixelText(g_back, position, CString(text, length), color, scale);
+			Draw2D::DrawPixelText(g_back, position, cstr_t(text, length), color, scale);
 			return;
 		}
 
 		const size_t kept = maxChars > 2 ? maxChars - 2 : 0;
-		const Point2D end = Draw2D::DrawPixelText(g_back, position, CString(text, kept), color, scale);
-		Draw2D::DrawPixelText(g_back, end, CString(".."), color, scale);
+		const Point2D end = Draw2D::DrawPixelText(g_back, position, cstr_t(text, kept), color, scale);
+		Draw2D::DrawPixelText(g_back, end, Str(".."), color, scale);
 	}
 
 	void Raise(WmWindow* const window)
@@ -596,12 +596,12 @@ namespace
 
 		//A wordmark low on the right, pressed into the background: a dark edge above, then letters a shade lighter than what's under them
 		const uint32_t scale = 6;
-		const CString mark = "METALOS";
-		const int32_t markX = width - 72 - (int32_t)Draw2D::PixelTextWidth(mark.Length, scale);
+		const cstr_t mark = Str("METALOS");
+		const int32_t markX = width - 72 - (int32_t)Draw2D::PixelTextWidth(mark.Size, scale);
 		const int32_t markY = height - 96 - (int32_t)(8 * scale);
 		for (int32_t pass = 0; pass < 2; pass++)
 		{
-			for (size_t i = 0; i < mark.Length; i++)
+			for (size_t i = 0; i < mark.Size; i++)
 			{
 				const uint8_t* const map = Draw2D::m_font.GetCharacterMap(mark[i]);
 				for (uint32_t row = 0; row < 8; row++)
@@ -833,7 +833,7 @@ namespace
 		Draw2D::DrawFace(g_back, start, startFace);
 		const int32_t textY = start.Y + (BarButtonHeight - Theme::Glyph) / 2;
 		Draw2D::DrawGlyph(g_back, { start.X + 10, textY }, Icons::Flame, Theme::TextScale);
-		Draw2D::DrawPixelText(g_back, { start.X + 10 + Theme::Glyph + 10, textY }, CString("MetalOS"), startFace.Label, Theme::TextScale);
+		Draw2D::DrawPixelText(g_back, { start.X + 10 + Theme::Glyph + 10, textY }, Str("MetalOS"), startFace.Label, Theme::TextScale);
 		Draw2D::DrawRectangle(g_back, Theme::Divider, { start.X + StartWidth + 5, top + 7, 1, 26 });
 
 		ForEachTaskButton([&](const WmWindow& window, const Rectangle& rect)
@@ -847,7 +847,7 @@ namespace
 		const int32_t separator = clockX - 18;
 		const int32_t addressX = separator - 10 - (int32_t)Draw2D::PixelTextWidth(strlen(g_address), Theme::TextScale);
 		Draw2D::DrawGlyph(g_back, { addressX - 10 - Theme::Glyph, textY }, Icons::Network, Theme::TextScale, g_online ? 256 : 90);
-		Draw2D::DrawPixelText(g_back, { addressX, textY }, CString(g_address), g_online ? Theme::Rgb(0xC9C3B6) : Theme::Muted, Theme::TextScale);
+		Draw2D::DrawPixelText(g_back, { addressX, textY }, Str(g_address), g_online ? Theme::Rgb(0xC9C3B6) : Theme::Muted, Theme::TextScale);
 		Draw2D::DrawRectangle(g_back, Theme::Divider, { separator, top + 7, 1, 26 });
 
 		SystemTime time = {};
@@ -857,14 +857,14 @@ namespace
 			static constexpr const char* Months[] = { "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC" };
 			char clock[8];
 			snprintf(clock, sizeof(clock), "%02d:%02d", time.Hour, time.Minute);
-			Draw2D::DrawPixelText(g_back, { clockX, top + 6 }, CString(clock), Theme::Bone, Theme::TextScale);
+			Draw2D::DrawPixelText(g_back, { clockX, top + 6 }, Str(clock), Theme::Bone, Theme::TextScale);
 
 			const uint32_t month = time.Month >= 1 && time.Month <= 12 ? time.Month : 1;
 			const size_t day = WeekDay(time.Year, month, time.Day);
 			char date[16];
 			const int length = snprintf(date, sizeof(date), "%s %02d %s", Days[day], time.Day, Months[month - 1]);
 			const int32_t dateX = ScreenWidth() - 14 - (int32_t)Draw2D::PixelTextWidth((size_t)length, 1);
-			Draw2D::DrawPixelText(g_back, { dateX, top + 26 }, CString(date, (size_t)length), Theme::Steel, 1);
+			Draw2D::DrawPixelText(g_back, { dateX, top + 26 }, cstr_t(date, (size_t)length), Theme::Steel, 1);
 		}
 	}
 
@@ -961,8 +961,8 @@ namespace
 		Draw2D::DrawRectangle(g_back, Theme::Rgb(0x111214), { menu.X + 2, menu.Y + 2, menu.Width - 4, MenuHeader - 4 });
 		Draw2D::DrawRectangle(g_back, Theme::Ember, { menu.X + 2, menu.Y + MenuHeader - 2, menu.Width - 4, 2 });
 		Draw2D::DrawGlyph(g_back, { menu.X + 16, menu.Y + 18 }, Icons::Flame, 4);
-		Draw2D::DrawPixelText(g_back, { menu.X + 67, menu.Y + 27 }, CString("METALOS"), Theme::Rgb(0x000000), 3);
-		Draw2D::DrawPixelText(g_back, { menu.X + 64, menu.Y + 24 }, CString("METALOS"), Theme::EmberText, 3);
+		Draw2D::DrawPixelText(g_back, { menu.X + 67, menu.Y + 27 }, Str("METALOS"), Theme::Rgb(0x000000), 3);
+		Draw2D::DrawPixelText(g_back, { menu.X + 64, menu.Y + 24 }, Str("METALOS"), Theme::EmberText, 3);
 
 		for (size_t i = 0; i < g_appCount; i++)
 		{
@@ -974,16 +974,16 @@ namespace
 				Draw2D::DrawOutline(g_back, item, Theme::SelectionEdge);
 			}
 			Draw2D::DrawGlyph(g_back, { item.X + 14, item.Y + 12 }, *g_apps[i].Icon, 4);
-			Draw2D::DrawPixelText(g_back, { item.X + 60, item.Y + 12 }, CString(g_apps[i].Label), selected ? Theme::Molten : Theme::Bone, Theme::TextScale);
-			Draw2D::DrawPixelText(g_back, { item.X + 60, item.Y + 36 }, CString(g_apps[i].Hint), selected ? Theme::Rgb(0xB4A294) : Theme::Steel, 1);
+			Draw2D::DrawPixelText(g_back, { item.X + 60, item.Y + 12 }, CStr(g_apps[i].Label), selected ? Theme::Molten : Theme::Bone, Theme::TextScale);
+			Draw2D::DrawPixelText(g_back, { item.X + 60, item.Y + 36 }, CStr(g_apps[i].Hint), selected ? Theme::Rgb(0xB4A294) : Theme::Steel, 1);
 		}
 
 		//Footer: the keyboard shortcuts
 		const int32_t footer = menu.Y + (int32_t)menu.Height - MenuFooter;
 		Draw2D::DrawRectangle(g_back, Theme::AccentOff, { menu.X + 2, footer, menu.Width - 4, 1 });
-		Draw2D::DrawPixelText(g_back, { menu.X + 16, footer + 14 }, CString("CTRL+ESC MENU"), Theme::Hint, 1);
-		const CString switchHint = "ALT+TAB SWITCH";
-		Draw2D::DrawPixelText(g_back, { menu.X + (int32_t)menu.Width - 16 - (int32_t)Draw2D::PixelTextWidth(switchHint.Length, 1), footer + 14 }, switchHint, Theme::Hint, 1);
+		Draw2D::DrawPixelText(g_back, { menu.X + 16, footer + 14 }, Str("CTRL+ESC MENU"), Theme::Hint, 1);
+		const cstr_t switchHint = Str("ALT+TAB SWITCH");
+		Draw2D::DrawPixelText(g_back, { menu.X + (int32_t)menu.Width - 16 - (int32_t)Draw2D::PixelTextWidth(switchHint.Size, 1), footer + 14 }, switchHint, Theme::Hint, 1);
 	}
 
 	void OpenStartMenu()
@@ -1092,9 +1092,9 @@ namespace
 		Draw2D::DrawOutline(g_back, panel, Theme::Outline);
 		Draw2D::DrawRectangle(g_back, Theme::Ember, { panel.X, panel.Y, panel.Width, 2 });
 
-		Draw2D::DrawPixelText(g_back, { panel.X + 22, panel.Y + 18 }, CString("SWITCH WINDOW"), Theme::Hint, 1);
-		const CString hint = "HOLD ALT, TAB TO MOVE";
-		Draw2D::DrawPixelText(g_back, { panel.X + (int32_t)panel.Width - 22 - (int32_t)Draw2D::PixelTextWidth(hint.Length, 1), panel.Y + 18 }, hint, Theme::Hint, 1);
+		Draw2D::DrawPixelText(g_back, { panel.X + 22, panel.Y + 18 }, Str("SWITCH WINDOW"), Theme::Hint, 1);
+		const cstr_t hint = Str("HOLD ALT, TAB TO MOVE");
+		Draw2D::DrawPixelText(g_back, { panel.X + (int32_t)panel.Width - 22 - (int32_t)Draw2D::PixelTextWidth(hint.Size, 1), panel.Y + 18 }, hint, Theme::Hint, 1);
 
 		for (size_t i = 0; i < shown; i++)
 		{

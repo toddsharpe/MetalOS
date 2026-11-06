@@ -13,9 +13,9 @@ class UThread;
 class UProcess : public KProcess
 {
 public:
-	UProcess(const CString& name);
+	UProcess(const cstr_t name);
 
-	void Initialize(void* const image, const CString& cmd);
+	void Initialize(void* const image, const cstr_t cmd);
 
 	UThread* CreateThread(const size_t stackSize, const UThreadStart userStart = nullptr, void* const arg = nullptr); //Null when out of TEB space or stack memory
 	UObject* CreateObject(const UObjectType type);
@@ -24,7 +24,7 @@ public:
 	UObject* GetObject(const handle_t handle);
 	bool CloseObject(const handle_t handle);
 
-	void AddModule(const CString& name, void* const image); //Lists the module in the PEB, the process's only module list
+	void AddModule(const cstr_t name, void* const image); //Lists the module in the PEB, the process's only module list
 	bool GetModule(const uintptr_t address, KModule& module) const; //Reads the PEB as process memory, so only while this process's space is the current one
 
 	void Display() const;
@@ -37,7 +37,7 @@ public:
 	bool IsConsole;
 
 	//TODO(tsharpe): Shouldnt be a static string, just string
-	StaticString<32> Name;
+	char Name[MaxProcessName];
 
 	LinkedList<UObject*> Objects;
 	LinkedList<UThread*> Threads;

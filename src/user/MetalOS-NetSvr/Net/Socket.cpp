@@ -1,4 +1,4 @@
-#include "Lib/Buffer.h"
+#include "Lib/Span.h"
 #include "Net/NetIf.h"
 #include "Assert.h"
 #include "Net/Packet.h"
@@ -20,7 +20,7 @@ namespace Net::Socket
 			if (net_if.ipv4.addr == Net::empty && dst.addr != Net::broadcast)
 				return false;
 
-			StaticBuffer<Net::buffer_size> allocated;
+			uint8_t allocated[Net::buffer_size] = {};
 			Packet packet(allocated);
 			packet.mask(get_l2(net_if.l2).HeaderSize);
 			packet.mask(ipv4_hdr_size);

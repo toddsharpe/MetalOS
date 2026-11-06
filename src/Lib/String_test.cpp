@@ -2,144 +2,68 @@
 
 void String_test()
 {
-	//Construct from char array
-	static constexpr CString RuntimeDLL = "MetalOS-RT.dll";
-	
-	//Assign from char array
-	static constexpr char s[] = "abc";
-	static constexpr CString s1(s);
-	Assert(s1 == "abc");
+	//A literal's text leaves out the terminator
+	static constexpr cstr_t RuntimeDLL = Str("MetalOS-RT.dll");
+	static_assert(RuntimeDLL.Size == 14);
 
-	//Assign from char pointer/length
-	static constexpr const char* t = "def";
-	static constexpr CString t1(t, 3);
-	Assert(t1 == "def");
+	//A buffer's text stops at its terminator, not at the end of the array
+	char buffer[128] = {};
+	buffer[0] = 'a';
+	buffer[1] = 'b';
+	Assert(Str(buffer).Size == 2);
+	Assert(Str(buffer) == Str("ab"));
 
-	//Assign from char pointer
-	static constexpr const char* n = "123";
-	static constexpr CString n1(n);
-	Assert(n1 == "123");
+	//An array with no terminator is read to its end
+	const char name[4] = { '_', 'S', 'B', '_' };
+	Assert(Str(name).Size == 4);
+	Assert(Str(name) == Str("_SB_"));
 
-	//Assign from char pointer
-	const char* m = "123a";
-	StaticString<128> copy = {};
-	copy.AppendClip(m);
-	Assert(copy == "123a");
+	//C strings, whole and bounded
+	const char* const text = "123a";
+	Assert(CStr(text) == Str("123a"));
+	Assert(CStr(text, 2) == Str("12"));
+	Assert(CStr(nullptr).Size == 0);
 
-	//AppendClip: exactly fits (Capacity - 1 chars plus the null terminator)
-	StaticString<8> fits;
-	fits.AppendClip("1234567");
-	Assert(fits == "1234567");
-	Assert(fits.c_str()[7] == '\0');
+	//Comparisons
+	Assert(Str("abc") != Str("abd"));
+	Assert(Str("abc") != Str("ab"));
+	Assert(Str("") == cstr_t());
 
-	//AppendClip: one char too long is clipped, not asserted
-	StaticString<8> over;
-	over.AppendClip("12345678");
-	Assert(over == "1234567");
-	Assert(over.c_str()[7] == '\0');
+	//StrCopy: fits exactly (N - 1 chars and the terminator)
+	char fits[8];
+	Assert(StrCopy(fits, Str("1234567")) == 7);
+	Assert(Str(fits) == Str("1234567"));
+	Assert(fits[7] == '\0');
 
-	//AppendClip: a long command line or path keeps the first Capacity - 1 chars
+	//StrCopy: one char too long is clipped
+	char over[8];
+	Assert(StrCopy(over, Str("12345678")) == 7);
+	Assert(Str(over) == Str("1234567"));
+
+	//StrCopy: replaces what was there, with nothing left behind
+	StrCopy(over, Str("hi"));
+	Assert(Str(over) == Str("hi"));
+
+	//StrCopy: a long input keeps the first N - 1 chars
 	char longInput[300] = {};
 	memset(longInput, 'x', sizeof(longInput) - 1);
-	StaticString<128> path;
-	path.AppendClip(longInput);
-	Assert(path.Count() == 127);
-	Assert(strlen(path.c_str()) == 127);
+	char path[128];
+	Assert(StrCopy(path, Str(longInput)) == 127);
+	Assert(strlen(path) == 127);
 
-	//AppendClip: appending to a non-empty string clips to the space left
-	StaticString<8> tail;
-	tail.Append("abc");
-	tail.AppendClip("defghij");
-	Assert(tail == "abcdefg");
+	//StrAppend: fills the space left and clips the rest
+	char tail[8] = {};
+	Assert(StrAppend(tail, Str("abc")) == 3);
+	Assert(StrAppend(tail, Str("defghij")) == 7);
+	Assert(Str(tail) == Str("abcdefg"));
 
-	//AppendClip: a full string stays as it is
-	tail.AppendClip("z");
-	Assert(tail == "abcdefg");
+	//StrAppend: a full string stays as it is
+	Assert(StrAppend(tail, Str("z")) == 7);
+	Assert(Str(tail) == Str("abcdefg"));
 
-	//AppendClip: maxLength limits the copy when it is shorter than the space left
-	StaticString<8> limited;
-	limited.AppendClip("abcdef", 3);
-	Assert(limited == "abc");
-
-	//AppendClip: the space left limits the copy when maxLength is longer
-	limited.AppendClip("defghij", 10);
-	Assert(limited == "abcdefg");
-	Assert(limited.Count() == 7);
-
-	//Appending
-	StaticString<64> a;
-	a.Append('A');
-	Assert(a == "A");
-	a.Append('B');
-	Assert(a == "AB");
-	a.Append("CD");
-	Assert(a == "ABCD");
-
-	//Append: a string that exactly fits (Capacity - 1 chars plus the null terminator)
-	StaticString<8> exact;
-	exact.Append("1234567");
-	Assert(exact == "1234567");
-	Assert(exact.Count() == 7);
-	Assert(exact.c_str()[7] == '\0');
-
-	//Append: a string that exactly fills the space left after earlier appends
-	StaticString<8> rest;
-	rest.Append('a');
-	rest.Append("bc");
-	rest.Append("defg");
-	Assert(rest == "abcdefg");
-	Assert(rest.Count() == 7);
-	Assert(rest.c_str()[7] == '\0');
-
-	//Append: an empty string still fits in a full one
-	rest.Append("");
-	Assert(rest == "abcdefg");
-
-	//Set: a string that exactly fits
-	StaticString<8> setExact;
-	setExact.Set("abc");
-	setExact.Set("7654321");
-	Assert(setExact == "7654321");
-	Assert(setExact.Count() == 7);
-
-	//Assigning to static string
-	StaticString<32> newS(n1);
-
-	//Assignment
-	//TODO(tsharpe): Why doesnt assignment work here?
-	StaticString<32> b;
-	b.Set("test");
-	Assert(b == "test");
-
-	const bool c = b != "test";
-	Assert(!c);
-
-	b.Pop();
-	Assert(b == "tes");
-
-	// Set replaces existing content (not appends)
-	StaticString<32> d;
-	d.Set("initial");
-	Assert(d == "initial");
-	Assert(d.Count() == 7);
-	d.Set("replaced");
-	Assert(d == "replaced");
-	Assert(d.Count() == 8);
-
-	// Set with shorter string — old content must not linger
-	d.Set("hi");
-	Assert(d == "hi");
-	Assert(d.Count() == 2);
-
-	// Set from CString
-	static constexpr CString src("hello");
-	StaticString<32> e;
-	e.Set(src);
-	Assert(e == "hello");
-	Assert(e.Count() == 5);
-
-	// Set after Set — count stays correct
-	e.Set("world!");
-	Assert(e == "world!");
-	Assert(e.Count() == 6);
+	//StrAppend: an empty append changes nothing
+	char rest[8] = {};
+	StrAppend(rest, Str("ab"));
+	StrAppend(rest, Str(""));
+	Assert(Str(rest) == Str("ab"));
 }

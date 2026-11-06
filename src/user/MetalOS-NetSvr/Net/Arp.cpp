@@ -53,7 +53,7 @@ namespace Net::Arp
 			.target_proto = request.sender_proto,
 		};
 
-		StaticBuffer<Net::buffer_size> buffer;
+		uint8_t buffer[Net::buffer_size] = {};
 		Packet packet(buffer);
 		packet.mask(get_l2(net_if.l2).HeaderSize);
 		SendMessage(net_if, packet, reply);

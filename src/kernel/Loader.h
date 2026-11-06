@@ -70,11 +70,11 @@ namespace Loader
 	/**
 	 * Loads a PE image into the kernel address space (contiguous) for reading and patching.
 	 */
-	inline LoadedImage Load(const CString& path)
+	inline LoadedImage Load(const char* const path)
 	{
 		//A missing, truncated, or non-x64 PE file returns a null UserBase
 		KFile file = {};
-		if (!KeCreateFile(file, path.c_str(), KFileAccess::Read))
+		if (!KeCreateFile(file, path, KFileAccess::Read))
 			return { nullptr, nullptr, 0 };
 
 		//Headers go into kernel-local buffers - no process memory needed yet.
@@ -113,7 +113,7 @@ namespace Loader
 
 	//Processes imports in the target image that resolve to the library. Operates entirely through
 	//kernel aliases; the IAT is stamped with the library's user-space export addresses.
-	inline bool ResolveImports(const LoadedImage& image, const LoadedImage& library, const CString& libraryName)
+	inline bool ResolveImports(const LoadedImage& image, const LoadedImage& library, const char* const libraryName)
 	{
 		//Headers
 		PIMAGE_DOS_HEADER dosHeader = static_cast<PIMAGE_DOS_HEADER>(image.Alias);
@@ -129,7 +129,7 @@ namespace Loader
 			while (importDescriptor->Name)
 			{
 				const char* module = MakePointer<char*>(image.Alias, importDescriptor->Name);
-				if (libraryName == CString(module))
+				if (strcmp(module, libraryName) == 0)
 				{
 					PIMAGE_THUNK_DATA pThunkData = MakePointer<PIMAGE_THUNK_DATA>(image.Alias, importDescriptor->FirstThunk);
 					while (pThunkData->u1.AddressOfData)
@@ -138,10 +138,10 @@ namespace Loader
 
 						//Resolve against the library's alias, then store its USER address (the process
 						//will call through this IAT entry).
-						void* const funcAlias = WinPE::GetProcAddress(library.Alias, CString((char*)pImportByName->Name));
+						void* const funcAlias = WinPE::GetProcAddress(library.Alias, (const char*)pImportByName->Name);
 						if (!funcAlias)
 						{
-							Printf("Loader: %s does not export %s\n", libraryName.c_str(), (char*)pImportByName->Name);
+							Printf("Loader: %s does not export %s\n", libraryName, (char*)pImportByName->Name);
 							return false;
 						}
 						pThunkData->u1.Function = (ULONGLONG)library.ToUser(funcAlias);

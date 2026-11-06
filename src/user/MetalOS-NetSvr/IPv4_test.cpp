@@ -59,7 +59,7 @@ namespace
 	template <size_t N>
 	void Ipv4TestReceive(Net::NetIf& net_if, const uint8_t proto, const Net::ipv4_addr_t dst, const uint8_t (&payload)[N])
 	{
-		StaticBuffer<Net::buffer_size> buffer;
+		uint8_t buffer[Net::buffer_size] = {};
 		Net::Packet packet(buffer);
 		packet.mask(Net::eth_hdr_size);
 

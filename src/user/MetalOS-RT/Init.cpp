@@ -13,7 +13,7 @@ typedef int (*ProcessEntry)(int argc, char **argv);
 extern "C" __declspec(dllexport) void InitProcess() // Rename: init module?
 {
 	ProcessEnvironmentBlock *peb = Runtime::GetPEB();
-	DebugPrintf("PEB: ImageBase=0x%016x CommandLine=%s ProcessId=%d\n", (uintptr_t)peb->ImageBase, peb->CommandLine.c_str(), peb->ProcessId);
+	DebugPrintf("PEB: ImageBase=0x%016x CommandLine=%s ProcessId=%d\n", (uintptr_t)peb->ImageBase, peb->CommandLine.Data, peb->ProcessId);
 
 	// Imports. Kernel does RT imports. Due to the PE unions, imports can't be done more than once.
 	Loader::ResolveImports(peb->ImageBase, "MetalOS-RT.dll");
@@ -23,8 +23,8 @@ extern "C" __declspec(dllexport) void InitProcess() // Rename: init module?
 
 	//Split a copy of the command line (the kernel passes at most 127 chars) into argc/argv, ending each argument with a NUL in place of its space
 	char line[128] = {};
-	const size_t length = Min(peb->CommandLine.Length, sizeof(line) - 1);
-	memcpy(line, peb->CommandLine.c_str(), length);
+	const size_t length = Min(peb->CommandLine.Size, sizeof(line) - 1);
+	memcpy(line, peb->CommandLine.Data, length);
 
 	//Each argument takes at least one char and a space, so every one fits, plus the NULL that ends argv
 	StaticVector<char*, sizeof(line) / 2 + 1> argv;

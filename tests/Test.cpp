@@ -6,7 +6,7 @@
 //Tests
 #include "kernel/AddressSpace_test.cpp"
 #include "Lib/Arena_test.cpp"
-#include "Lib/Buffer_test.cpp"
+#include "Lib/Span_test.cpp"
 #include "Lib/String_test.cpp"
 #include "Lib/CircularBuffer_test.cpp"
 #include "Lib/Bitset_test.cpp"
@@ -38,7 +38,7 @@ int main()
 
 	Test(AddressSpace);
 	Test(Arena);
-	Test(Buffer);
+	Test(Span);
 	Test(String);
 	Test(CircularBuffer);
 	Test(Bitset);

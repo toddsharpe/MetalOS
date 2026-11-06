@@ -78,10 +78,10 @@ void Debugger::AddModule(const KModule& library)
 	entry->LoadCount = 1;
 
 	//Allocate name unicode strings
-	size_t length = library.Name.Count();
+	size_t length = StrLength(library.Name);
 	size_t wideLength = (length + 1) * 2;
 	wchar_t* s = (wchar_t*)KeAlloc(sizeof(wchar_t) * wideLength, AllocType::Kernel);
-	mbstowcs(s, library.Name.c_str(), wideLength);
+	mbstowcs(s, library.Name, wideLength);
 	s[length] = '\0';
 
 	entry->FullDllName = { (USHORT)wcslen(s), 0, s };

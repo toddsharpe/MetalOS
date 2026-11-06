@@ -29,7 +29,7 @@ void PebModules_test()
 
 	KModule module;
 	Assert(GetPebModule(peb, space, imageBase + 0x1000, module));
-	Assert(module.Name == "test.exe");
+	Assert(Str(module.Name) == Str("test.exe"));
 	AssertEqual((uintptr_t)module.ImageBase, imageBase);
 	AssertEqual(module.ImageSize, imageSize);
 	Assert(GetPebModule(peb, space, imageBase + imageSize - 1, module));

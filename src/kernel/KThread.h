@@ -28,7 +28,7 @@ public:
 		KSignal* Signal = nullptr;
 	};
 
-	KThread(const KThreadStart start, void* const arg, const CString& name);
+	KThread(const KThreadStart start, void* const arg, const char* const name);
 
 	void Init(void* const entry);
 	void Start();
@@ -57,7 +57,7 @@ private:
 
 	//Storage
 	Arch::Context m_context;
-	StaticString<32> m_name; //TODO(tsharpe): Shouldnt be a static string, just string
+	char m_name[32];
 };
 
 //Assert assembly offsets

@@ -118,11 +118,11 @@ static void PdbPublics_test(Arena& arena)
 	PdbPublicsStream publics;
 	publics.Load(stream, arena);
 
-	CString name;
+	cstr_t name;
 	Assert(publics.GetFunction(0, name));
-	Assert(name == "f0");
+	Assert(name == Str("f0"));
 	Assert(publics.GetFunction((uint32_t)((Count - 1) * 0x10), name));
-	Assert(name == "f4999");
+	Assert(name == Str("f4999"));
 	Assert(!publics.GetFunction((uint32_t)(Count * 0x10), name));
 
 	free(data);
@@ -405,7 +405,7 @@ void Pdb_test()
 	const uint32_t rva = (uint32_t)((uintptr_t)&WinPE_test_export - (uintptr_t)image);
 	PdbLookup lookup = {};
 	Assert(file.Resolve(rva, lookup));
-	Assert(lookup.Function == "WinPE_test_export");
+	Assert(Str(lookup.Function) == Str("WinPE_test_export"));
 	Assert(lookup.Line != 0);
 
 	//An IP in data or the headers (a call through a bad pointer) is in no module's code, so it fails to resolve instead of asserting
@@ -426,7 +426,7 @@ void Pdb_test()
 	//A return address resolves to the line after the call
 	Pdb_test_middle_line();
 	Assert(file.Resolve((uint32_t)(s_returnAddress - (uintptr_t)image), lookup));
-	Assert(lookup.Function == "Pdb_test_middle_line");
+	Assert(Str(lookup.Function) == Str("Pdb_test_middle_line"));
 	AssertEqual(lookup.Line, MiddleLine);
 
 	//Any function with line info resolves at its last byte (the ret, in its last line) to the same name as at its first
@@ -443,13 +443,13 @@ void Pdb_test()
 
 		PdbLookup last = {};
 		Assert(file.Resolve(functions[i].EndAddress - 1, last));
-		Assert(last.Function == first.Function);
-		Assert(first.Function != "<not found>");
+		Assert(Str(last.Function) == Str(first.Function));
+		Assert(Str(first.Function) != Str("<not found>"));
 		checked++;
 
 		if (functions[i].BeginAddress == lastLineRva)
 		{
-			Assert(last.Function == "Pdb_test_last_line");
+			Assert(Str(last.Function) == Str("Pdb_test_last_line"));
 			AssertEqual(last.Line, LastLine);
 			sawLastLine = true;
 		}
@@ -460,9 +460,9 @@ void Pdb_test()
 	//A static function and an anonymous-namespace one have lines but no public, so their names come from their procedure records
 	AssertEqual(Pdb_test_static() + Pdb_test_anonymous(), 2 * s_data + 3);
 	Assert(file.Resolve((uint32_t)((uintptr_t)&Pdb_test_static - (uintptr_t)image), lookup));
-	Assert(lookup.Function == "Pdb_test_static");
+	Assert(Str(lookup.Function) == Str("Pdb_test_static"));
 	Assert(file.Resolve((uint32_t)((uintptr_t)&Pdb_test_anonymous - (uintptr_t)image), lookup));
-	Assert(lookup.Function == "`anonymous namespace'::Pdb_test_anonymous");
+	Assert(Str(lookup.Function) == Str("`anonymous namespace'::Pdb_test_anonymous"));
 
 	arena.Reset();
 	PdbPublics_test(arena);

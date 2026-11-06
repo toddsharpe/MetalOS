@@ -36,7 +36,7 @@ inline bool GetPebModule(const ProcessEnvironmentBlock* const peb, const Address
 		if (length == 0 || length == MaxModuleName)
 			continue;
 
-		module.Name.Set(CString(entry.Name, length));
+		StrCopy(module.Name, CStr(entry.Name, length));
 		module.ImageBase = entry.ImageBase;
 		module.ImageSize = imageSize;
 		return true;

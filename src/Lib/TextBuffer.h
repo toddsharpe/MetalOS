@@ -41,10 +41,10 @@ public:
 		m_attribute = attribute;
 	}
 
-	void Write(const CString& text)
+	void Write(const cstr_t text)
 	{
-		for (size_t i = 0; i < text.Length; i++)
-			Write(text[i]);
+		for (const char c : text)
+			Write(c);
 	}
 
 	void Write(const char c)
@@ -95,11 +95,11 @@ public:
 	}
 
 	//Index 0 is the oldest line kept
-	CString Line(const size_t index) const
+	cstr_t Line(const size_t index) const
 	{
 		Assert(index < m_count);
 		const size_t slot = Slot(index);
-		return CString(m_lines[slot], m_lengths[slot]);
+		return { m_lines[slot], m_lengths[slot] };
 	}
 
 	size_t CurrentLength() const

@@ -115,10 +115,10 @@ void PrintStack(const Arch::Context* context, const KProcess& process, KPipe* co
 		if (!pdb.File)
 			TracePrint(output, "    <no symbols>\n");
 		else if (pdb.File->Resolve((uint32_t)(ip - imageBase), lookup))
-			TracePrint(output, "    %s (%d)\n", lookup.Function.c_str(), lookup.Line);
+			TracePrint(output, "    %s (%d)\n", lookup.Function, lookup.Line);
 		else
 			TracePrint(output, "    <resolve failed>\n");
-		TracePrint(output, "        %s IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", module.Name.c_str(), ctx.Rip, module.ImageBase, rva);
+		TracePrint(output, "        %s IP: 0x%016x Base: 0x%016x, RVA: 0x%08x\n", module.Name, ctx.Rip, module.ImageBase, rva);
 
 		//The stack or the module's unwind data isn't readable (or usable), so there's no caller to go to
 		if (!sw.Next(imageBase))

@@ -50,7 +50,7 @@ public:
 	{
 		Printf("UThread:\n");
 		Printf("     Id: %d\n", Id);
-		Printf("   Name: %s\n", Name.c_str());
+		Printf("   Name: %s\n", Name);
 		Printf("  m_teb: 0x%016x\n", m_teb);
 		Printf("  stack: 0x%016x\n", Stack);
 		Printf("  Context:\n");
@@ -71,7 +71,7 @@ public:
 	UProcess& Process;
 	KThread* Thread; //Null once the thread has exited and the scheduler freed its KThread
 	void* Stack; //Saved from asm on syscalls
-	CString Name;
+	char Name[MaxProcessName + 16]; //The process name and [thread id]
 	const uint32_t Id;
 	void* StackBase; //User stack reservation, freed by the reaper when the thread exits
 	uint32_t Refs; //Its KThread plus each handle; the record is freed at zero (KeReleaseUThread)

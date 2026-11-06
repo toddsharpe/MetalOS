@@ -47,13 +47,13 @@ namespace
 
 			const int32_t right = Bounds.X + (int32_t)Bounds.Width - 10;
 			const size_t historyLength = strlen(g_history);
-			Draw2D::DrawPixelText(frame, { right - (int32_t)Draw2D::PixelTextWidth(historyLength, 1), Bounds.Y + 12 }, CString(g_history, historyLength), Theme::Hint, 1);
+			Draw2D::DrawPixelText(frame, { right - (int32_t)Draw2D::PixelTextWidth(historyLength, 1), Bounds.Y + 12 }, { g_history, historyLength }, Theme::Hint, 1);
 
 			const int32_t digitsY = Bounds.Y + (int32_t)Bounds.Height - 14 - 32;
-			const CString unlit = "888888888";
-			Draw2D::DrawPixelText(frame, { right - (int32_t)Draw2D::PixelTextWidth(unlit.Length, 4), digitsY }, unlit, Theme::Rgb(0x1D100A), 4);
+			const cstr_t unlit = Str("888888888");
+			Draw2D::DrawPixelText(frame, { right - (int32_t)Draw2D::PixelTextWidth(unlit.Size, 4), digitsY }, unlit, Theme::Rgb(0x1D100A), 4);
 			const size_t valueLength = strlen(g_value);
-			Draw2D::DrawPixelText(frame, { right - (int32_t)Draw2D::PixelTextWidth(valueLength, 4), digitsY }, CString(g_value, valueLength), Theme::Molten, 4);
+			Draw2D::DrawPixelText(frame, { right - (int32_t)Draw2D::PixelTextWidth(valueLength, 4), digitsY }, { g_value, valueLength }, Theme::Molten, 4);
 		}
 	};
 
@@ -161,7 +161,7 @@ namespace
 
 	void KeyClicked(Button& button)
 	{
-		Press(button.Text.c_str()[0]);
+		Press(button.Text[0]);
 	}
 
 	//The calculator key a keyboard key stands for, or 0
@@ -211,10 +211,10 @@ namespace
 
 	Button keys[] =
 	{
-		{ "7", Key(0, 0) }, { "8", Key(1, 0) }, { "9", Key(2, 0) }, { "/", Key(3, 0), ButtonStyle::Operator },
-		{ "4", Key(0, 1) }, { "5", Key(1, 1) }, { "6", Key(2, 1) }, { "*", Key(3, 1), ButtonStyle::Operator },
-		{ "1", Key(0, 2) }, { "2", Key(1, 2) }, { "3", Key(2, 2) }, { "-", Key(3, 2), ButtonStyle::Operator },
-		{ "C", Key(0, 3), ButtonStyle::Danger }, { "0", Key(1, 3) }, { "=", Key(2, 3), ButtonStyle::Primary }, { "+", Key(3, 3), ButtonStyle::Operator },
+		{ Str("7"), Key(0, 0) }, { Str("8"), Key(1, 0) }, { Str("9"), Key(2, 0) }, { Str("/"), Key(3, 0), ButtonStyle::Operator },
+		{ Str("4"), Key(0, 1) }, { Str("5"), Key(1, 1) }, { Str("6"), Key(2, 1) }, { Str("*"), Key(3, 1), ButtonStyle::Operator },
+		{ Str("1"), Key(0, 2) }, { Str("2"), Key(1, 2) }, { Str("3"), Key(2, 2) }, { Str("-"), Key(3, 2), ButtonStyle::Operator },
+		{ Str("C"), Key(0, 3), ButtonStyle::Danger }, { Str("0"), Key(1, 3) }, { Str("="), Key(2, 3), ButtonStyle::Primary }, { Str("+"), Key(3, 3), ButtonStyle::Operator },
 	};
 
 	//A typed key works its keypad button, which shows pressed while the key is held
@@ -226,7 +226,7 @@ namespace
 
 		for (Button& button : keys)
 		{
-			if (button.Text.c_str()[0] == key)
+			if (button.Text[0] == key)
 				button.Pressed = event.Flags.Pressed;
 		}
 		if (event.Flags.Pressed)
@@ -254,7 +254,7 @@ int main(int argc, char** argv)
 	const int32_t pos = 25 + 50 * (int32_t)(procInfo.Id - 1);
 	const Rectangle rectangle = { pos, pos + Theme::FrameTop, ClientWidth, ClientHeight };
 
-	GUI gui("Calc", rectangle, UICallback, WindowStyle::Framed, &Icons::Calc);
+	GUI gui(Str("Calc"), rectangle, UICallback, WindowStyle::Framed, &Icons::Calc);
 	gui.Initialize();
 
 	for (Button& key : keys)

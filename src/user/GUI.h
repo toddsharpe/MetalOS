@@ -16,11 +16,11 @@ typedef bool (*MessageCallback)(GUI &window, Message &message);
 class GUI
 {
 public:
-	GUI(const CString &title, const Graphics::Rectangle &rect, const MessageCallback callback, const WindowStyle style = WindowStyle::Framed, const Graphics::PixelGlyph* icon = nullptr) :
+	GUI(const cstr_t title, const Graphics::Rectangle &rect, const MessageCallback callback, const WindowStyle style = WindowStyle::Framed, const Graphics::PixelGlyph* icon = nullptr) :
 		Frame(nullptr, rect.Height, rect.Width),
 		Background(Graphics::Theme::Iron),
 		Children(),
-		Title(title),
+		Title(),
 		m_callback(callback),
 		m_point({rect.X, rect.Y}),
 		m_style(style),
@@ -29,13 +29,14 @@ public:
 		m_pressed(),
 		m_handle()
 	{
+		StrCopy(Title, title);
 	}
 
 	void Initialize()
 	{
 		// Allocate
 		Graphics::Rectangle rect = {m_point.X, m_point.Y, Frame.Width, Frame.Height};
-		AssertSuccess(AllocWindow(&m_handle, &rect, Title.c_str(), m_style, m_icon));
+		AssertSuccess(AllocWindow(&m_handle, &rect, Title, m_style, m_icon));
 
 		// Draw directly into the WM-provided shared surface (zero-copy)
 		Frame.Buffer = (Graphics::Color *)GetWindowSurface(m_handle);
@@ -86,7 +87,7 @@ public:
 	Graphics::FrameBuffer Frame;
 	Graphics::Color Background;
 	StaticVector<UI::Control*, 32> Children;
-	StaticString<32> Title;
+	char Title[32];
 
 private:
 	void Draw()

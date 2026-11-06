@@ -8,6 +8,7 @@
  * Forward declarations.
  */
 class KSignal;
+class KEvent;
 class KDevice;
 class UProcess;
 class KProcess;
@@ -189,6 +190,7 @@ void KeExitThread();
 void KeExitThread(KThread& thread);
 void KThreadInit();
 KWaitResult KeWait(KSignal& obj, const milli_t timeout = TimeoutMax);
+void KeEventUnref(KEvent& event); //Drops a user event's handle or waiter reference; the event is freed at the last
 void KeSleepThread(const nano_t time);
 void KeYield();
 

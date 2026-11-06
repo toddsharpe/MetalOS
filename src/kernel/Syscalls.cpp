@@ -130,6 +130,30 @@ namespace
 	private:
 		UThread& m_thread;
 	};
+
+	//Keeps an event alive while a thread waits on it, as another thread may close the handle meanwhile; the wait goes on, as on Windows
+	class EventHold
+	{
+	public:
+		EventHold(UThread& thread, KEvent& event) :
+			m_thread(thread)
+		{
+			Assert(!thread.EventWait);
+			event.Refs.Increment();
+			thread.EventWait = &event;
+		}
+
+		//Never runs for a thread killed while waiting, so the reaper drops its hold instead
+		~EventHold()
+		{
+			KEvent& event = *m_thread.EventWait;
+			m_thread.EventWait = nullptr;
+			KeEventUnref(event);
+		}
+
+	private:
+		UThread& m_thread;
+	};
 }
 
 //Syscalls that the kernel adds params
@@ -836,8 +860,12 @@ SyscallResult WaitForSingleObject(const Handle handle, const milli_t time, WaitS
 	switch (obj->Type)
 	{
 		case UObjectType::Event:
-			*status = FromWaitResult(KeWait(*obj->Event, time));
-			break;
+		{
+			KEvent& event = *obj->Event;
+			EventHold hold(Scheduler::GetUThread(), event);
+			*status = FromWaitResult(KeWait(event, time));
+		}
+		break;
 
 		default:
 			return SyscallResult::InvalidObject;
@@ -855,6 +883,7 @@ SyscallResult CreateEvent(HEvent* event, const bool manual, const bool initial)
 	//Create Event
 	UObject* created = proc.CreateObject(UObjectType::Event);
 	created->Event = KeAlloc<KEvent>(AllocType::User, manual, initial);
+	created->Event->Refs.Increment(); //The handle's, dropped when it's closed
 
 	*event = (HEvent)created->Handle;
 	return SyscallResult::Success;

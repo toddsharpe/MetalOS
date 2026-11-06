@@ -22,6 +22,7 @@ public:
 		PipeWriteLink(),
 		PipeWriteQueue(),
 		PipeWait(),
+		EventWait(),
 		m_context(),
 		m_fpu(),
 		m_teb(teb)
@@ -77,6 +78,7 @@ public:
 	ListEntry PipeWriteLink; //Place in PipeWriteQueue's writer queue while a WriteFile to a pipe is in progress
 	KPipe* PipeWriteQueue;
 	KPipe* PipeWait; //Pipe whose Waiters this thread holds in a syscall; the reaper drops it if the thread is killed there
+	KEvent* EventWait; //Event whose reference this thread holds while it waits on it; the reaper drops it if the thread is killed there
 
 private:
 	//Storage

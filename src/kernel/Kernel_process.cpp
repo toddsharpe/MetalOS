@@ -307,6 +307,17 @@ namespace _REAP
 		KePipeUnref(pipe, pipe.Waiters);
 	}
 
+	//A thread killed while waiting on an event never finished its wait, so its hold on the event is dropped here
+	void ReleaseEventWait(UThread& thread)
+	{
+		if (!thread.EventWait)
+			return;
+
+		KEvent& event = *thread.EventWait;
+		thread.EventWait = nullptr;
+		KeEventUnref(event);
+	}
+
 	//A terminated process is reapable once its last thread record is gone
 	UProcess* FindReapable()
 	{
@@ -365,6 +376,7 @@ uint32_t KeReaperThread(void* const arg)
 				_REAP::ReleaseUserStack(*thread->UserThread);
 				_REAP::LeavePipeWriteQueue(*thread->UserThread);
 				_REAP::ReleasePipeWait(*thread->UserThread);
+				_REAP::ReleaseEventWait(*thread->UserThread);
 				KeReleaseUThread(*thread->UserThread);
 			}
 			KeFree(thread, AllocType::Kernel);

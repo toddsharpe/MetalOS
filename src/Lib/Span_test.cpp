@@ -17,8 +17,8 @@ void Span_test()
 	Assert(view.Data == data && view.Size == 4);
 
 	//Equality compares contents, not addresses
-	const uint8_t same[4] = { 9, 2, 3, 4 };
-	const uint8_t other[4] = { 9, 2, 3, 5 };
+	static constexpr uint8_t same[4] = { 9, 2, 3, 4 };
+	static constexpr uint8_t other[4] = { 9, 2, 3, 5 };
 	Assert(view == Span<const uint8_t>(same));
 	Assert(view != Span<const uint8_t>(other));
 	Assert(view != view.Slice(0, 3));
@@ -42,7 +42,7 @@ void Span_test()
 	Assert(sum == 18);
 
 	//Bytes of an object
-	const uint32_t value = 0x04030201;
+	static constexpr uint32_t value = 0x04030201;
 	const Span<const uint8_t> bytes = Bytes(&value, sizeof(value));
 	Assert(bytes.Size == 4 && bytes[0] == 1 && bytes[3] == 4);
 }

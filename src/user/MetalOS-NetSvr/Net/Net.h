@@ -163,9 +163,9 @@ namespace Net
 		return { .bytes = {a3, a2, a1, a0} };
 	}
 
-	constexpr ipv4_addr_t empty = build_ip(0, 0, 0, 0);
-	constexpr ipv4_addr_t broadcast = build_ip(0xFF, 0xFF, 0xFF, 0xFF);
-	constexpr ipv4_addr_t subnet_32 = build_ip(0xFF, 0xFF, 0xFF, 0xFF);
+	static constexpr ipv4_addr_t empty = build_ip(0, 0, 0, 0);
+	static constexpr ipv4_addr_t broadcast = build_ip(0xFF, 0xFF, 0xFF, 0xFF);
+	static constexpr ipv4_addr_t subnet_32 = build_ip(0xFF, 0xFF, 0xFF, 0xFF);
 
 	constexpr bool is_network(const ipv4_addr_t ip_1, const ipv4_addr_t ip_2, const ipv4_addr_t subnet)
 	{
@@ -344,7 +344,7 @@ namespace Net
 
 	namespace ArpCache
 	{
-		constexpr size_t CacheSize = 8;
+		static constexpr size_t CacheSize = 8;
 
 		void Update(const ipv4_addr_t& ip_addr, const eth_mac_t& eth_addr);
 		bool Lookup(const ipv4_addr_t& ipAddr, eth_mac_t& eth_addr);
@@ -384,12 +384,12 @@ namespace Net
 
 	struct NetLayer
 	{
-		NetLayer() : Receive(), Send(), HeaderSize()
+		constexpr NetLayer() : Receive(), Send(), HeaderSize()
 		{
 
 		}
 		
-		NetLayer(const handler_tx _rx, const handler_tx _tx, const size_t _header_size = 0) : Receive(_rx), Send(_tx), HeaderSize(_header_size)
+		constexpr NetLayer(const handler_tx _rx, const handler_tx _tx, const size_t _header_size = 0) : Receive(_rx), Send(_tx), HeaderSize(_header_size)
 		{
 
 		}

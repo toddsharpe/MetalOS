@@ -20,7 +20,7 @@ public:
 
 	uint8_t ReadU8()
 	{
-		constexpr size_t size = sizeof(uint8_t);
+		static constexpr size_t size = sizeof(uint8_t);
 		Assert(m_offset <= m_length - size);
 
 		uint8_t ret = m_buffer[m_offset];
@@ -31,7 +31,7 @@ public:
 
 	uint16_t ReadU16()
 	{
-		constexpr size_t size = sizeof(uint16_t);
+		static constexpr size_t size = sizeof(uint16_t);
 		Assert(m_offset <= m_length - size);
 
 		uint16_t temp = {};
@@ -44,7 +44,7 @@ public:
 
 	uint32_t ReadU32()
 	{
-		constexpr size_t size = sizeof(uint32_t);
+		static constexpr size_t size = sizeof(uint32_t);
 		Assert(m_offset <= m_length - size);
 
 		uint32_t temp = {};

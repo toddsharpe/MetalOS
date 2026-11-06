@@ -10,7 +10,7 @@ using namespace Graphics;
 
 namespace
 {
-	constexpr size_t MaxWindows = 8;
+	static constexpr size_t MaxWindows = 8;
 
 	struct ClientWindow
 	{

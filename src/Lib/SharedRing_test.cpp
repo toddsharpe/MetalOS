@@ -13,7 +13,7 @@ void SharedRing_test()
 
 	// Init leaves the ring empty and stamps capacity + record size into the header
 	{
-		constexpr uint32_t cap = 4;
+		static constexpr uint32_t cap = 4;
 		alignas(8) uint8_t region[SharedRing<uint32_t>::RegionSize(cap)] = {};
 		SharedRing<uint32_t>::Init(region, cap);
 
@@ -30,7 +30,7 @@ void SharedRing_test()
 
 	// Basic enqueue/dequeue round trip preserves values in FIFO order
 	{
-		constexpr uint32_t cap = 8;
+		static constexpr uint32_t cap = 8;
 		alignas(8) uint8_t region[SharedRing<uint32_t>::RegionSize(cap)] = {};
 		SharedRing<uint32_t>::Init(region, cap);
 		SharedRing<uint32_t> ring(region);
@@ -50,7 +50,7 @@ void SharedRing_test()
 
 	// One slot is kept empty: capacity N holds N-1 records, then enqueue rejects
 	{
-		constexpr uint32_t cap = 4; // 3 usable
+		static constexpr uint32_t cap = 4; // 3 usable
 		alignas(8) uint8_t region[SharedRing<uint32_t>::RegionSize(cap)] = {};
 		SharedRing<uint32_t>::Init(region, cap);
 		SharedRing<uint32_t> ring(region);
@@ -72,7 +72,7 @@ void SharedRing_test()
 
 	// Wrap-around (near-empty): enqueue-then-dequeue many times so the indices wrap
 	{
-		constexpr uint32_t cap = 4;
+		static constexpr uint32_t cap = 4;
 		alignas(8) uint8_t region[SharedRing<uint32_t>::RegionSize(cap)] = {};
 		SharedRing<uint32_t>::Init(region, cap);
 		SharedRing<uint32_t> ring(region);
@@ -89,7 +89,7 @@ void SharedRing_test()
 
 	// Wrap-around (near-full): keep the ring at max occupancy while the indices wrap
 	{
-		constexpr uint32_t cap = 4; // 3 usable
+		static constexpr uint32_t cap = 4; // 3 usable
 		alignas(8) uint8_t region[SharedRing<uint32_t>::RegionSize(cap)] = {};
 		SharedRing<uint32_t>::Init(region, cap);
 		SharedRing<uint32_t> ring(region);
@@ -113,7 +113,7 @@ void SharedRing_test()
 
 	// Count tracks the records waiting, including across a wrap
 	{
-		constexpr uint32_t cap = 4; // 3 usable
+		static constexpr uint32_t cap = 4; // 3 usable
 		alignas(8) uint8_t region[SharedRing<uint32_t>::RegionSize(cap)] = {};
 		SharedRing<uint32_t>::Init(region, cap);
 		SharedRing<uint32_t> ring(region);
@@ -139,7 +139,7 @@ void SharedRing_test()
 
 	// Separate producer/consumer views over one region (the real cross-process use)
 	{
-		constexpr uint32_t cap = 8;
+		static constexpr uint32_t cap = 8;
 		alignas(8) uint8_t region[SharedRing<uint32_t>::RegionSize(cap)] = {};
 		SharedRing<uint32_t>::Init(region, cap);
 
@@ -165,12 +165,12 @@ void SharedRing_test()
 			uint8_t  C[3];
 		};
 
-		constexpr uint32_t cap = 4;
+		static constexpr uint32_t cap = 4;
 		alignas(8) uint8_t region[SharedRing<Record>::RegionSize(cap)] = {};
 		SharedRing<Record>::Init(region, cap);
 		SharedRing<Record> ring(region);
 
-		const Record in = { 0x11223344, 0x5566, { 7, 8, 9 } };
+		static constexpr Record in = { 0x11223344, 0x5566, { 7, 8, 9 } };
 		Assert(ring.Enqueue(in));
 
 		Record out = {};
@@ -181,9 +181,9 @@ void SharedRing_test()
 
 	// A peer rewriting the header can't push either side outside the region
 	{
-		constexpr uint32_t cap = 4;
-		constexpr size_t size = SharedRing<uint32_t>::RegionSize(cap);
-		constexpr uint8_t guard = 0xCC;
+		static constexpr uint32_t cap = 4;
+		static constexpr size_t size = SharedRing<uint32_t>::RegionSize(cap);
+		static constexpr uint8_t guard = 0xCC;
 		alignas(8) uint8_t region[size + 64];
 		memset(region, guard, sizeof(region));
 		SharedRing<uint32_t>::Init(region, cap);

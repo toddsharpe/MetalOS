@@ -12,8 +12,8 @@ static DirectUart m_uart(DirectUart::ComPort::Com1);
 namespace
 {
 	//A user process has at most MaxLoadedModules (8) modules and the kernel two, so a trace doesn't fill the PDB map today
-	constexpr size_t MaxTracePdbs = 32;
-	constexpr size_t MaxTraceFrames = 64; //Bounds a corrupt stack that unwinds in a loop
+	static constexpr size_t MaxTracePdbs = 32;
+	static constexpr size_t MaxTraceFrames = 64; //Bounds a corrupt stack that unwinds in a loop
 
 	struct LoadedPdb
 	{
@@ -154,7 +154,7 @@ void Printf(const char* format, ...)
 
 void PrintBytes(const void* data, const size_t length)
 {
-	const uint32_t width = 16;
+	static constexpr uint32_t width = 16;
 	const uint8_t* pData = reinterpret_cast<const uint8_t*>(data);
 
 	//Print headers

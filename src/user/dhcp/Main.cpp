@@ -9,31 +9,31 @@
 
 namespace
 {
-	static const uint8_t OpRequest = 1;
-	static const uint8_t HTypeEthernet = 1;
-	static const uint8_t HLenEthernet = 6;
-	static const uint16_t FlagBroadcast = 0x8000; // server broadcasts the reply (we have no IP yet)
-	static const uint32_t MagicCookie = 0x63825363;
-	static const uint16_t ServerPort = 67;
-	static const uint16_t ClientPort = 68;
-	static const size_t HdrSize = 240;	 // fixed BOOTP header; options follow
-	static const size_t MinPacket = 300; // BOOTP minimum; shorter messages get dropped
+	static constexpr uint8_t OpRequest = 1;
+	static constexpr uint8_t HTypeEthernet = 1;
+	static constexpr uint8_t HLenEthernet = 6;
+	static constexpr uint16_t FlagBroadcast = 0x8000; // server broadcasts the reply (we have no IP yet)
+	static constexpr uint32_t MagicCookie = 0x63825363;
+	static constexpr uint16_t ServerPort = 67;
+	static constexpr uint16_t ClientPort = 68;
+	static constexpr size_t HdrSize = 240;	 // fixed BOOTP header; options follow
+	static constexpr size_t MinPacket = 300; // BOOTP minimum; shorter messages get dropped
 
 	// Message types (option 53)
-	static const uint8_t Discover = 1;
-	static const uint8_t Offer = 2;
-	static const uint8_t Request = 3;
-	static const uint8_t Ack = 5;
+	static constexpr uint8_t Discover = 1;
+	static constexpr uint8_t Offer = 2;
+	static constexpr uint8_t Request = 3;
+	static constexpr uint8_t Ack = 5;
 
 	// Option codes
-	static const uint8_t OptSubnet = 1;
-	static const uint8_t OptRouter = 3;
-	static const uint8_t OptDns = 6;
-	static const uint8_t OptRequestIp = 50;
-	static const uint8_t OptMsgType = 53;
-	static const uint8_t OptServerId = 54;
-	static const uint8_t OptParamList = 55;
-	static const uint8_t OptEnd = 255;
+	static constexpr uint8_t OptSubnet = 1;
+	static constexpr uint8_t OptRouter = 3;
+	static constexpr uint8_t OptDns = 6;
+	static constexpr uint8_t OptRequestIp = 50;
+	static constexpr uint8_t OptMsgType = 53;
+	static constexpr uint8_t OptServerId = 54;
+	static constexpr uint8_t OptParamList = 55;
+	static constexpr uint8_t OptEnd = 255;
 
 	// The fixed BOOTP header. Integer fields are host order in memory; the serializer
 	// byte-swaps them to/from network order on the wire.
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
 		.sin_zero   = {},
 	};
 
-	const uint32_t xid = 0x4d4f5331; //'MOS1'
+	static constexpr uint32_t xid = 0x4d4f5331; //'MOS1'
 	uint8_t pkt[576] = {};
 	uint8_t reply[576] = {};
 	size_t replyLen = 0;

@@ -11,7 +11,7 @@
 
 namespace Loader
 {
-	static const char DllMainName[] = "DllMain";
+	static constexpr char DllMainName[] = "DllMain";
 	
 	void ResolveImports(void* const imageBase, const char* const skipModule)
 	{

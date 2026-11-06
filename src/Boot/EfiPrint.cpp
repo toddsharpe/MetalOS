@@ -79,6 +79,6 @@ void Bugcheck(const char* file, const char* line, const char* format, ...)
 	Printf("\r\n");
 	va_end(args);
 
-	constexpr UINTN Stall = 1000 * 1000 * 60;//60 minute stall
+	static constexpr UINTN Stall = 1000 * 1000 * 60;//60 minute stall
 	BS->Stall(Stall);
 }

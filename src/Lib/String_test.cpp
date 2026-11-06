@@ -14,12 +14,12 @@ void String_test()
 	Assert(Str(buffer) == Str("ab"));
 
 	//An array with no terminator is read to its end
-	const char name[4] = { '_', 'S', 'B', '_' };
+	static constexpr char name[4] = { '_', 'S', 'B', '_' };
 	Assert(Str(name).Size == 4);
 	Assert(Str(name) == Str("_SB_"));
 
 	//C strings, whole and bounded
-	const char* const text = "123a";
+	static constexpr const char* text = "123a";
 	Assert(CStr(text) == Str("123a"));
 	Assert(CStr(text, 2) == Str("12"));
 	Assert(CStr(nullptr).Size == 0);

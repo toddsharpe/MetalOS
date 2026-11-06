@@ -12,7 +12,7 @@ namespace Graphics
 	{
 		static constexpr size_t PixelScale = 10;
 		static constexpr size_t FontScale = 1;
-		inline Font m_font;
+		inline constexpr Font m_font;
 
 		inline void SetPixels(Color *_Dst, const Color _Val, const size_t _Size)
 		{

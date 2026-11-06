@@ -11,11 +11,11 @@
 namespace
 {
 	//Support 8GB max
-	constexpr size_t MaxPages = Gigabytes(8) / Arch::PageSize;
-	constexpr size_t BuddySize = 4;
+	static constexpr size_t MaxPages = Gigabytes(8) / Arch::PageSize;
+	static constexpr size_t BuddySize = 4;
 
 	//Never give out page 0
-	constexpr size_t StartBuddy = 1;
+	static constexpr size_t StartBuddy = 1;
 
 	PageFrame* const m_frames = (PageFrame*)KernelPageFrameDBStart;
 	const size_t m_count = Clamp(BootParams.PageFrameCount, size_t{}, MaxPages) / BuddySize * BuddySize;

@@ -46,7 +46,7 @@ namespace
 	}
 
 	//Longer debug output is truncated by Printf's buffer anyway
-	constexpr size_t MaxDebugPrint = 1024;
+	static constexpr size_t MaxDebugPrint = 1024;
 
 	//Length of a NUL-terminated user string, never reading past maxLength or the process's reservations
 	size_t UserStringLength(const UProcess& proc, const char* const s, const size_t maxLength)
@@ -787,7 +787,7 @@ SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle)
 	if (!writeHandle || !proc.Space.IsValid(writeHandle))
 		return SyscallResult::InvalidPointer;
 
-	const size_t pipeSize = Arch::PageSize;
+	static constexpr size_t pipeSize = Arch::PageSize;
 	
 	//Create kernel pipe; out of memory fails the call with nothing left allocated
 	KPipe* pipe = KeAlloc<KPipe>(AllocType::Kernel, pipeSize);

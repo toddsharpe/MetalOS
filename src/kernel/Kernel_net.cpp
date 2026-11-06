@@ -38,7 +38,7 @@ void KeNetRxFrame(NicDriver* const nic, const void* const frame, const size_t le
 	KSpinLockGuard guard(m_lock);
 	SharedRing<NetDevice::Frame> ring(m_rxRegion, NetDevice::RxCapacity); //netstack can rewrite the header; use our capacity
 
-	const uint32_t ifIdx = 0; //only one NIC for now
+	static constexpr uint32_t ifIdx = 0; //only one NIC for now
 
 	NetDevice::Frame record = {};
 	record.IfIdx = ifIdx;

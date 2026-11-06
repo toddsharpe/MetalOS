@@ -3,6 +3,7 @@
 #include "kernel/KThread.h"
 #include "kernel/UThread.h"
 #include "kernel/UProcess.h"
+#include "kernel/Objects/KEvent.h"
 #include "Assert.h"
 
 //Kernel globals (defined in Kernel.cpp).
@@ -37,6 +38,16 @@ void KeExitThread()
 void KeExitThread(KThread& thread)
 {
 	Scheduler::KillThread(thread);
+}
+
+void KeEventUnref(KEvent& event)
+{
+	event.Refs.Decrement();
+	if (!event.Refs.IsEmpty())
+		return;
+
+	//No handle and no waiting thread can reach it any more
+	KeFree(&event, AllocType::User); //Matches CreateEvent's allocation
 }
 
 void KeSleepThread(const nano_t time)

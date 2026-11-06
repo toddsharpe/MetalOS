@@ -147,7 +147,8 @@ bool UProcess::CloseObject(const handle_t handle)
 	switch (object->Type)
 	{
 		case UObjectType::Event:
-			//TODO(tsharpe): Free
+			//Drop the handle's reference, which frees the event once no thread is waiting on it either
+			KeEventUnref(*object->Event);
 			break;
 
 		case UObjectType::Pipe:

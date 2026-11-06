@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #ifndef CONST
 #define CONST               const
 #endif

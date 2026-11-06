@@ -1,5 +1,3 @@
-#pragma once
-
 #include <Efi.h>
 #include "boot/EfiPrint.h"
 

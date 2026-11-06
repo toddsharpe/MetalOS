@@ -13,19 +13,6 @@ bool KPipe::EventSignal(void* const arg)
 	return event->Pipe.EventSignal(event->Op, event->Count, event->Writer);
 }
 
-constexpr KPipe::KPipe(const size_t size) :
-	Readers(),
-	Writers(),
-	Waiters(),
-	m_buffer(),
-	m_count(),
-	m_size(size),
-	m_readIndex(),
-	m_writeIndex(),
-	m_writers()
-{
-
-}
 
 bool KPipe::Init()
 {

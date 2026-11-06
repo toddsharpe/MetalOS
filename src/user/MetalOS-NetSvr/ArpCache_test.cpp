@@ -1,5 +1,4 @@
-//Lives beside Main.cpp so the stack's "Net/X.h" includes resolve as they do in the unity build
-#include "Net/ArpCache.cpp"
+#include "Net/Net.h"
 
 namespace
 {
@@ -31,7 +30,7 @@ void ArpCache_test()
 	Assert(mac == Net::eth_broadcast);
 
 	//All eight slots hold peers
-	static_assert(CacheSize == 8);
+	static_assert(Net::ArpCache::CacheSize == 8);
 	for (uint8_t i = 1; i <= 8; i++)
 		Net::ArpCache::Update(TestIp(i), TestMac(i));
 	for (uint8_t i = 1; i <= 8; i++)

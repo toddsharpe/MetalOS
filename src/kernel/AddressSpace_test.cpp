@@ -1,21 +1,7 @@
-#include <cstdarg>
-#include <cstdio>
-#include <cstdlib>
-
-#include "Lib/System.h"
-#include "Assert.h"
-
-namespace Arch
-{
-	static constexpr size_t PageShift = 12;
-	static constexpr size_t PageSize  = (1 << PageShift);
-	static constexpr size_t PageMask  = PageSize - 1;
-}
 
 static constexpr size_t AllocationGranularity = 0x10000; // 64K
 
 #include "kernel/AddressSpace.h"
-#include "kernel/AddressSpace.cpp"
 
 // Small address range to keep tests simple
 static constexpr uintptr_t TestStart = 0x10000;  // 64K

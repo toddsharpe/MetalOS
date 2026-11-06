@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Boot/EfiPrint.h"
 
 extern EFI_SYSTEM_TABLE * ST;

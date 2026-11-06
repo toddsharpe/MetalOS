@@ -1,5 +1,8 @@
 #include "core_crt/wchar.h"
 
+//Intrinsics under /Oi, implemented here
+#pragma function(wcscmp, wcslen, wcscpy)
+
 int wcscmp(const wchar_t *str1, const wchar_t *str2)
 {
 	while ((*str1) && (*str1 == *str2))

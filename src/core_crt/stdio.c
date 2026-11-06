@@ -1,5 +1,7 @@
 #include "core_crt/stdio.h"
 #include "core_crt/stdarg.h"
+#include "core_crt/ctype.h"
+#include "core_crt/string.h"
 
 // Internal protypes
 int kvprintf(char const *fmt, void (*func)(int, void *), void *arg, int radix, va_list ap);

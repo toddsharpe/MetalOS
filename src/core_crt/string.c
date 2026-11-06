@@ -1,5 +1,8 @@
 #include "core_crt/string.h"
 
+//These are compiler intrinsics under /Oi; this file is their implementation, so they must be real functions here
+#pragma function(memcmp, memcpy, memmove, memset, strcmp, strlen, strcat, strcpy)
+
 int memcmp(void const* _Buf1, void const* _Buf2, size_t _Size)
 {
 	uintptr_t* ptr1_64 = (uintptr_t*)_Buf1;

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "core_crt/stdlib.h"
 #include "core_crt/string.h"
 #include "user/stdlib.h"

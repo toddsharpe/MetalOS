@@ -17,6 +17,8 @@ extern ULONG KdpDbgPrint(const char* Format, ...);
 #define KDDBGPRINT KdpDbgPrint
 #endif
 
+extern BOOLEAN KdpHostPresent; //Set once a packet leader arrives from the host (kddll.cpp)
+
 typedef enum
 {
 	KDP_PACKET_RECEIVED = 0,

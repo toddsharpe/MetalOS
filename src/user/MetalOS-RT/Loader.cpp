@@ -1,5 +1,3 @@
-#pragma once
-
 #include "core_crt/string.h"
 #include "Lib/System.h"
 #include "user/MetalOS-RT/Loader.h"

@@ -1,5 +1,5 @@
-#include "Net/Net.h"
-#include "Net/KSocket.h"
+#include "Net/Sockets.h"
+#include "user/MetalOS.Types.h"
 #include "Net/NetIf.h"
 #include "Net/Packet.h"
 #include "Lib/LinkedList.h"

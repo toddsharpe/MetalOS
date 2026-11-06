@@ -65,21 +65,11 @@ extern "C"
 
 	void _fxsave64(void *);
 	void _fxrstor64(void const *);
+
+	unsigned short __cdecl _byteswap_ushort(unsigned short);
+	unsigned long __cdecl _byteswap_ulong(unsigned long);
+	unsigned __int64 __cdecl _byteswap_uint64(unsigned __int64);
 }
 
-inline unsigned short _byteswap_ushort(unsigned short v)
-{
-	return (unsigned short)((v >> 8) | (v << 8));
-}
-
-inline unsigned long _byteswap_ulong(unsigned long v)
-{
-	return ((v & 0xFF000000UL) >> 24) | ((v & 0x00FF0000UL) >> 8)
-	     | ((v & 0x0000FF00UL) << 8)  | ((v & 0x000000FFUL) << 24);
-}
-
-inline unsigned __int64 _byteswap_uint64(unsigned __int64 v)
-{
-	return ((unsigned __int64)_byteswap_ulong((unsigned long)v) << 32)
-	     | (unsigned __int64)_byteswap_ulong((unsigned long)(v >> 32));
-}
+//Always bswap inline, even without /Oi, since there's no CRT to call
+#pragma intrinsic(_byteswap_ushort, _byteswap_ulong, _byteswap_uint64)

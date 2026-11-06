@@ -1,5 +1,3 @@
-#pragma once
-
 #include "kernel/AddressSpace.h"
 
 bool AddressSpace::IsValidPointer(const void* const address)

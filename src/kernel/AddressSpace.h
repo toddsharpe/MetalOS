@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Lib/LinkedList.h"
+#include <cstdint>
 #include <cstdlib>
 
 //Whether a reservation's mapped pages are its own (released when it is freed) or the caller's

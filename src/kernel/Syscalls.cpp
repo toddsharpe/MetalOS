@@ -1,5 +1,3 @@
-#pragma once
-
 #include "MetalOS.Syscalls.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Arch.h"

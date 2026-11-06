@@ -4,9 +4,6 @@
 #include "Graphics/Icons.h"
 #include "User/Fire/FireScreen.h"
 
-#include "user/Fire/FireScreen.cpp"
-#include "user/CRT.cpp"
-
 using namespace Graphics;
 
 FireScreen* screen;

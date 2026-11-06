@@ -1,5 +1,5 @@
 #include "HyperVChannel.h"
-#include "Arch.h"
+#include "kernel/Arch.h"
 #include "kernel/HyperV/Types.h"
 #include "Kernel/HyperV/HyperV.h"
 #include "Lib/Span.h"

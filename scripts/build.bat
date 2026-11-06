@@ -1,10 +1,5 @@
-:: Runs from src\ regardless of caller's directory (setlocal restores it on exit)
+:: Full rebuild of MetalOS.sln (boot loader, kernel, user mode, host tests) into build\: build.bat [Debug|Release], Debug by default; run from a VS x64 Native Tools prompt
 setlocal
-cd /d "%~dp0..\src"
-
-if not exist "..\build" mkdir "..\build"
-del "..\build\*.obj"
-
-call "%~dp0build_boot.bat" || exit /b 1
-call "%~dp0build_kernel.bat" || exit /b 1
-call "%~dp0build_user.bat" || exit /b 1
+set Config=%~1
+if "%Config%"=="" set Config=Debug
+msbuild "%~dp0..\MetalOS.sln" /t:Rebuild /m /nologo /v:m /p:Configuration=%Config% /p:Platform=x64 || exit /b 1

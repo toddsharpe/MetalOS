@@ -1,5 +1,3 @@
-#pragma once
-
 #include "Boot/EfiLoader.h"
 #include "Lib/String.h"
 #include "Assert.h"

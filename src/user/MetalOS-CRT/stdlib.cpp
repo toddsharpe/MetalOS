@@ -1,8 +1,6 @@
-#pragma once
-
-#include "user/stdlib.h"
+#include "user/MetalOS-CRT/CRT.h"
 #include "user/MetalOS.h"
-#include "user/MetalOS-CRT/errno.cpp"
+#include "ToErrno.h"
 
 Heap CrtHeap = {};
 

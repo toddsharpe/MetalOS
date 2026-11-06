@@ -1,4 +1,5 @@
 #include "core_crt/stdint.h"
+#include "core_crt/stdarg.h"
 
 #ifdef __cplusplus
 extern "C"

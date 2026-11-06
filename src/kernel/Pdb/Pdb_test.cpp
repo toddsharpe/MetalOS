@@ -15,6 +15,9 @@ static int s_data = 1;
 
 static uintptr_t s_returnAddress;
 
+//The checks rely on these keeping their unoptimized shape (a real call, a frame, an epilog), even in Release
+#pragma optimize("", off)
+
 extern "C" __declspec(noinline) void Pdb_test_callee()
 {
 	s_returnAddress = (uintptr_t)_ReturnAddress();
@@ -48,6 +51,8 @@ namespace
 		return s_data + 2;
 	}
 }
+
+#pragma optimize("", on)
 
 //Reads a whole file into memory, as KeLoadFile does for the kernel's stack walker
 static void* LoadFile(const char* const path, size_t* const fileSize = nullptr)

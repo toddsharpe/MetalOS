@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{F2DBB634-C053-5A02-B834-8291C3F50AA3}</ProjectGuid>
+    <MetalOSKind>Kernel</MetalOSKind>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="..\MetalOS.props" />
+  <PropertyGroup>
+    <TargetName>moskrnl</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MetalOSSrc)Acpi;$(MetalOSSrc)External\uACPI\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>UACPI_OVERRIDE_TYPES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ForcedIncludeFiles>$(MetalOSSrc)kernel\Kernel.h</ForcedIncludeFiles>
+    </ClCompile>
+    <Link>
+      <BaseAddress>0xFFFF800001000000</BaseAddress>
+      <EntryPointSymbol>ArchMain</EntryPointSymbol>
+      <ModuleDefinitionFile>Kernel.def</ModuleDefinitionFile>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <AdditionalOptions>/ignore:4210 %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="*.cpp;HyperV\*.cpp;Drivers\*.cpp;Kd64\*.cpp;Objects\*.cpp;$(MetalOSSrc)x64\Cpuid.cpp" Exclude="*_test.cpp" />
+    <ClCompile Include="$(MetalOSSrc)core_crt\wchar.c">
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ObjectFileName>$(IntDir)core_crt\</ObjectFileName>
+    </ClCompile>
+    <!-- uACPI, compiled as C against the standard headers as Acpi.c was, without the forced Kernel.h -->
+    <ClCompile Include="$(MetalOSSrc)External\uACPI\source\default_handlers.c;$(MetalOSSrc)External\uACPI\source\event.c;$(MetalOSSrc)External\uACPI\source\interpreter.c;$(MetalOSSrc)External\uACPI\source\io.c;$(MetalOSSrc)External\uACPI\source\mutex.c;$(MetalOSSrc)External\uACPI\source\namespace.c;$(MetalOSSrc)External\uACPI\source\notify.c;$(MetalOSSrc)External\uACPI\source\opcodes.c;$(MetalOSSrc)External\uACPI\source\opregion.c;$(MetalOSSrc)External\uACPI\source\osi.c;$(MetalOSSrc)External\uACPI\source\registers.c;$(MetalOSSrc)External\uACPI\source\resources.c;$(MetalOSSrc)External\uACPI\source\shareable.c;$(MetalOSSrc)External\uACPI\source\sleep.c;$(MetalOSSrc)External\uACPI\source\stdlib.c;$(MetalOSSrc)External\uACPI\source\tables.c;$(MetalOSSrc)External\uACPI\source\types.c;$(MetalOSSrc)External\uACPI\source\uacpi.c;$(MetalOSSrc)External\uACPI\source\utilities.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
+      <AdditionalIncludeDirectories>$(MetalOSSrc);$(MetalOSSrc)Acpi;$(MetalOSSrc)External\uACPI\source;$(MetalOSSrc)External\uACPI\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions></PreprocessorDefinitions>
+      <ForcedIncludeFiles></ForcedIncludeFiles>
+      <ObjectFileName>$(IntDir)uacpi\</ObjectFileName>
+    </ClCompile>
+    <MASM Include="Arch_x64\Arch.asm" />
+  </ItemGroup>
+  <Import Project="..\core_crt\core_crt.props" />
+  <Import Project="..\MetalOS.targets" />
+</Project>

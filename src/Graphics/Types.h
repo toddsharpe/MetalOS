@@ -10,6 +10,12 @@ namespace Graphics
 		{
 
 		}
+
+		//Black
+		constexpr BGRRPixel() : Blue(), Green(), Red(), Reserved()
+		{
+
+		}
 		
 		uint8_t Blue;
 		uint8_t Green;
@@ -76,5 +82,14 @@ namespace Graphics
 		Color* Buffer;
 		uint32_t Height;
 		uint32_t Width;
+	};
+
+	//Small pixel art: up to 8x8 cells, each row a string where '.' is transparent and 'a', 'b', 'c' pick a palette color
+	struct PixelGlyph
+	{
+		uint8_t Width;
+		uint8_t Height;
+		const char* Rows[8];
+		Color Palette[3];
 	};
 }

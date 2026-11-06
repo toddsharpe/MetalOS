@@ -3,6 +3,7 @@
 #include "Lib/StaticVector.h"
 #include "Graphics/Types.h"
 #include "Graphics/Draw2D.h"
+#include "Graphics/Theme.h"
 #include "UI/Control.h"
 #include "user/MetalOS.h"
 #include "Assert.h"
@@ -11,16 +12,19 @@ class GUI;
 
 typedef bool (*MessageCallback)(GUI &window, Message &message);
 
+//An app window: the WM draws its frame and title, so this draws only the client area and its controls
 class GUI
 {
 public:
-	GUI(const CString &title, const Graphics::Rectangle &rect, const MessageCallback callback) :
+	GUI(const CString &title, const Graphics::Rectangle &rect, const MessageCallback callback, const WindowStyle style = WindowStyle::Framed, const Graphics::PixelGlyph* icon = nullptr) :
 		Frame(nullptr, rect.Height, rect.Width),
-		Background(Graphics::Colors::White),
+		Background(Graphics::Theme::Iron),
 		Children(),
 		Title(title),
 		m_callback(callback),
 		m_point({rect.X, rect.Y}),
+		m_style(style),
+		m_icon(icon),
 		m_prevMouseButtons(),
 		m_pressed(),
 		m_handle()
@@ -31,7 +35,7 @@ public:
 	{
 		// Allocate
 		Graphics::Rectangle rect = {m_point.X, m_point.Y, Frame.Width, Frame.Height};
-		AssertSuccess(AllocWindow(&m_handle, &rect, Title.c_str()));
+		AssertSuccess(AllocWindow(&m_handle, &rect, Title.c_str(), m_style, m_icon));
 
 		// Draw directly into the WM-provided shared surface (zero-copy)
 		Frame.Buffer = (Graphics::Color *)GetWindowSurface(m_handle);
@@ -48,6 +52,11 @@ public:
 				continue; //for another of the app's windows, which this loop doesn't serve
 			if (message.Header.MessageType == MessageType::CloseEvent)
 				break; //WM asked us to close; exit the message loop so main() can return
+
+			//A new size comes first, so the app lays itself out on the new surface
+			if (message.Header.MessageType == MessageType::ResizeEvent)
+				Resize(message.ResizeEvent.Width, message.ResizeEvent.Height);
+
 			if (!m_callback(*this, message))
 				DefaultCallback(message);
 		}
@@ -58,6 +67,7 @@ public:
 		switch (message.Header.MessageType)
 		{
 		case MessageType::PaintEvent:
+		case MessageType::ResizeEvent:
 			//Draw straight into the WM-provided shared surface; the WM composites it.
 			Draw();
 			break;
@@ -79,23 +89,22 @@ public:
 	StaticString<32> Title;
 
 private:
-	static constexpr Graphics::Color BorderColor = Graphics::Colors::Blue;
-
 	void Draw()
 	{
-		//Clear frame
 		Graphics::Draw2D::FillScreen(Frame, Background);
-
-		//Draw border
-		Graphics::Draw2D::DrawFrameBorder(Frame, BorderColor, 3);
-		Graphics::Draw2D::DrawText(Frame, { 9, 9 }, Title, BorderColor);
-		Graphics::Draw2D::DrawRectangle(Frame, BorderColor, { 0, TitleBarHeight - 3, Frame.Width, 3 });
-
-		//Draw children
 		for (const auto& child : Children)
 		{
 			child->Draw(Frame);
 		}
+	}
+
+	//Answers the WM's ResizeEvent with a surface of that size and draws from then on into it
+	void Resize(const uint32_t width, const uint32_t height)
+	{
+		if (width == 0 || height == 0 || ResizeWindow(m_handle, width, height) != SyscallResult::Success)
+			return;
+
+		Frame = Graphics::FrameBuffer((Graphics::Color *)GetWindowSurface(m_handle), height, width);
 	}
 
 	//The child drawn last under a point in window coordinates, since it is the one on top
@@ -111,18 +120,28 @@ private:
 		return nullptr;
 	}
 
-	//A click is the left button going down and coming back up over the same child
+	//A click is the left button going down and coming back up over the same child; the child under the mouse shows as hovered
 	void OnMouse(const MouseEvent& mouse)
 	{
 		const Graphics::Point2D point = { mouse.XPosition, mouse.YPosition };
+		UI::Control* const under = HitTest(point);
+		for (const auto& child : Children)
+			child->Hovered = (child == under);
+
 		if (mouse.Buttons.LeftPressed && !m_prevMouseButtons.LeftPressed)
 		{
-			m_pressed = HitTest(point);
+			m_pressed = under;
+			if (m_pressed)
+				m_pressed->Pressed = true;
 		}
 		else if (!mouse.Buttons.LeftPressed && m_prevMouseButtons.LeftPressed)
 		{
-			if (m_pressed && HitTest(point) == m_pressed)
-				m_pressed->OnClick();
+			if (m_pressed)
+			{
+				m_pressed->Pressed = false;
+				if (under == m_pressed)
+					m_pressed->OnClick();
+			}
 			m_pressed = nullptr;
 		}
 
@@ -132,6 +151,8 @@ private:
 	MessageCallback m_callback;
 
 	Graphics::Point2D m_point;
+	WindowStyle m_style;
+	const Graphics::PixelGlyph* m_icon;
 	MouseButtonState m_prevMouseButtons;
 	UI::Control* m_pressed;
 	HWindow m_handle;

@@ -175,6 +175,7 @@ namespace
 			if (req.Socket != 0) { reply.Result = SyscallResult::InvalidArg; return; }
 			g_netif->ipv4.addr = ToIpv4(req.Ip);
 			g_netif->ipv4.subnet_mask = ToIpv4(req.Subnet);
+			RegisterEndpoint(NetIpc::AddressEndpoint, req.Ip.s_addr);
 			reply.Result = SyscallResult::Success;
 			return;
 		}

@@ -4,6 +4,7 @@
 #include "UI/Control.h"
 #include "Graphics/Types.h"
 #include "Graphics/Draw2D.h"
+#include "Graphics/Theme.h"
 
 namespace UI
 {
@@ -12,19 +13,20 @@ namespace UI
 	class Label : public Control
 	{
 	public:
-		Label(const CString& text, const Rectangle& bounds) :
+		Label(const CString& text, const Rectangle& bounds, const uint32_t scale = Theme::TextScale) :
 			Control(bounds),
-			Text(text)
+			Text(text),
+			Scale(scale)
 		{
-
 		}
 
 		virtual void Draw(FrameBuffer& frame) override
 		{
 			Draw2D::DrawRectangle(frame, Background, Bounds);
-			Draw2D::DrawText(frame, { Bounds.X + 5, Bounds.Y + 5 }, Text, Foreground);
+			Draw2D::DrawPixelText(frame, { Bounds.X + 5, Bounds.Y + 5 }, Text, Foreground, Scale);
 		}
 
 		StaticString<512> Text;
+		uint32_t Scale;
 	};
 }

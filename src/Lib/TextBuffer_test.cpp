@@ -84,4 +84,15 @@ void TextBuffer_test()
 		AssertEqual(text.LineCount(), (size_t)1);
 		Assert(text.Line(0) == "");
 	}
+
+	//Each character keeps the attribute it was written with, also across a wrap
+	{
+		TextBuffer<4, 4> text;
+		text.Write("ab");
+		text.SetAttribute(3);
+		text.Write("cde");
+		AssertEqual(text.Attributes(0)[1], (uint8_t)0);
+		AssertEqual(text.Attributes(0)[2], (uint8_t)3);
+		AssertEqual(text.Attributes(1)[0], (uint8_t)3);
+	}
 }

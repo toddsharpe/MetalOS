@@ -55,7 +55,8 @@ extern "C"
 	/*
 	 * MetalOS Window Manager.
 	 */
-	SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame, const char* title, bool showTitle = true);
+	SyscallResult AllocWindow(HWindow* handle, const Graphics::Rectangle* frame, const char* title, WindowStyle style = WindowStyle::Framed, const Graphics::PixelGlyph* icon = nullptr);
+	SyscallResult ResizeWindow(HWindow handle, const uint32_t width, const uint32_t height);
 	SyscallResult GetMessage(Message* message);
 	SyscallResult PeekMessage(Message* message);
 	SyscallResult GetScreenRect(Graphics::Rectangle* rect);

@@ -1,5 +1,7 @@
 #include "user/MetalOS.h"
 #include "user/GUI.h"
+#include "Graphics/Theme.h"
+#include "Graphics/Icons.h"
 #include "User/Fire/FireScreen.h"
 
 #include "user/Fire/FireScreen.cpp"
@@ -32,17 +34,21 @@ bool UICallback(GUI& window, Message& message)
 
 int main(int argc, char** argv)
 {
+	//A quarter of the work area, framed, near the bottom-right corner
+	Rectangle area;
+	GetScreenRect(&area);
+	const uint32_t outerWidth = area.Width / 2;
+	const uint32_t outerHeight = area.Height / 2;
 	Rectangle frame;
-	GetScreenRect(&frame);
-	frame.Width /= 2;
-	frame.Height /= 2;
-	frame.X = frame.Width;
-	frame.Y = frame.Height;
+	frame.Width = outerWidth - 2 * Theme::FrameEdge;
+	frame.Height = outerHeight - Theme::FrameTop - Theme::FrameEdge;
+	frame.X = (int32_t)(area.Width - outerWidth) - 24 + Theme::FrameEdge;
+	frame.Y = (int32_t)(area.Height - outerHeight) - 24 + Theme::FrameTop;
 
 	screen = new FireScreen(frame.Height, frame.Width);
 	screen->Initialize();
 
-	GUI gui("Fire", frame, UICallback);
+	GUI gui("Fire", frame, UICallback, WindowStyle::Framed, &Icons::Flame);
 	gui.Initialize();
 
 	gui.Run();

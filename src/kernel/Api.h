@@ -80,7 +80,7 @@ void KeFreePageTables(KProcess& process);
 bool KeIsValid(const void* address);
 
 //Kernel page tables.
-static constexpr PageTablesOps PtOps =
+static constexpr Arch::PageTablesOps PtOps =
 {
 	.Resolve = [](const paddr_t address) -> void*
 	{
@@ -91,7 +91,7 @@ static constexpr PageTablesOps PtOps =
 		return KePhysicalTryAlloc(address);
 	}
 };
-using KernelPageTables = PageTabes<PtOps>;
+using KernelPageTables = Arch::PageTables<PtOps>;
 
 /*
  * Framebuffer. The loader hands the kernel a linear framebuffer; KeGetFramebuffer

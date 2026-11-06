@@ -1,7 +1,6 @@
 #pragma once
 
-#include "kernel/Arch_x64/Arch.h"
-#include "x64/intrin.h"
+#include "kernel/Arch.h"
 
 class KSpinLock
 {

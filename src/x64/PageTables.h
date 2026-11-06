@@ -260,6 +260,45 @@ public:
 		return Root != 0;
 	}
 
+	//Frees the user half's tables and the root with free(page); the kernel half is shared, copied from the kernel's root
+	template <typename F>
+	void FreeUserTables(F free)
+	{
+		using namespace x64;
+		static constexpr uint64_t AddressMask = 0x000F'FFFF'FFFF'F000;
+		static constexpr size_t UserEntries = 1 << 8;
+		static constexpr size_t Entries = 1 << 9;
+
+		PML4E* const pml4 = static_cast<PML4E*>(T_ops.Resolve(Root));
+		for (size_t i4 = 0; i4 < UserEntries; i4++)
+		{
+			if (!pml4[i4].Present)
+				continue;
+
+			const paddr_t pdptAddr = pml4[i4].Value & AddressMask;
+			PDPTE_DIR* const pdpt = static_cast<PDPTE_DIR*>(T_ops.Resolve(pdptAddr));
+			for (size_t i3 = 0; i3 < Entries; i3++)
+			{
+				if (!pdpt[i3].Present || pdpt[i3].PageSize)
+					continue;
+
+				const paddr_t pdAddr = pdpt[i3].Value & AddressMask;
+				PDE_DIR* const pd = static_cast<PDE_DIR*>(T_ops.Resolve(pdAddr));
+				for (size_t i2 = 0; i2 < Entries; i2++)
+				{
+					if (pd[i2].Present && !pd[i2].PageSize)
+						free(pd[i2].Value & AddressMask);
+				}
+				free(pdAddr);
+			}
+			free(pdptAddr);
+			pml4[i4].Value = 0;
+		}
+
+		free(Root);
+		Root = 0;
+	}
+
 	//Translate a virtual address to its physical address in these tables (0 if unmapped).
 	//Includes the in-page offset; handles 4KB/2MB/1GB leaf pages.
 	paddr_t ResolvePhysical(const void* const virtAddr) const

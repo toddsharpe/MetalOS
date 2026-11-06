@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core_crt/stdint.h"
-#include "x64/CpuId.h"
+#include "kernel/Arch.h"
 #include "Assert.h"
 #include "kernel/HyperV/HyperV.h"
 
@@ -21,13 +21,13 @@ namespace HyperV::Platform
 	inline void Initialize()
 	{
 		//1. Verify a hypervisor is present
-		Assert(CpuId::IsHypervisor());
+		Assert(Arch::CpuId::IsHypervisor());
 
 		//2. Read highest leaf and interface signature
 		{
 			//Highest leaf value
-			CpuId::Result result = {};
-			CpuId::Get(result, static_cast<uint32_t>(CPUID_LEAF::Vendor));
+			Arch::CpuId::Result result = {};
+			Arch::CpuId::Get(result, static_cast<uint32_t>(CPUID_LEAF::Vendor));
 			Assert(result.EAX >= static_cast<uint32_t>(CPUID_LEAF::Highest));
 
 			//Get vendor name
@@ -37,7 +37,7 @@ namespace HyperV::Platform
 			Assert(strcmp(Vendor, "Microsoft Hv") == 0);
 
 			//Interface
-			CpuId::Get(result, static_cast<uint32_t>(CPUID_LEAF::Interface));
+			Arch::CpuId::Get(result, static_cast<uint32_t>(CPUID_LEAF::Interface));
 			char interface[5] = { 0 };
 			*((uint32_t*)interface) = (uint32_t)result.EAX;
 			Assert(strcmp(interface, "Hv#1") == 0);
@@ -50,12 +50,12 @@ namespace HyperV::Platform
 		guestId.OSID = 0x1;
 		guestId.OSType = GUEST_OS_TYPE::Linux;
 		guestId.OpenSource = true;
-		__writemsr(static_cast<uint32_t>(MSR::HV_X64_MSR_GUEST_OS_ID), guestId.Value);
+		ArchWriteMsr(static_cast<uint32_t>(MSR::HV_X64_MSR_GUEST_OS_ID), guestId.Value);
 
 		//4. Read Hypercall MSR
 		{
 			HYPERCALL_REG reg = { };
-			reg.AsUint64 = __readmsr(static_cast<uint32_t>(MSR::HV_X64_MSR_HYPERCALL));
+			reg.AsUint64 = ArchReadMsr(static_cast<uint32_t>(MSR::HV_X64_MSR_HYPERCALL));
 		
 			//5. Check if interface is already enabled
 			if (!reg.Enabled)
@@ -65,7 +65,7 @@ namespace HyperV::Platform
 				//7. Write to hypercall reg
 				reg.Enabled = true;
 				reg.HypercallGPFN = ResolveImageVA((void*)HypercallPage) >> Arch::PageShift;
-				__writemsr(static_cast<uint32_t>(MSR::HV_X64_MSR_HYPERCALL), reg.AsUint64);
+				ArchWriteMsr(static_cast<uint32_t>(MSR::HV_X64_MSR_HYPERCALL), reg.AsUint64);
 			}
 		}
 
@@ -133,6 +133,6 @@ namespace HyperV::Platform
 
 	inline void SignalEom()
 	{
-		__writemsr(static_cast<uint32_t>(MSR::EOM), 0);
+		ArchWriteMsr(static_cast<uint32_t>(MSR::EOM), 0);
 	}
 }

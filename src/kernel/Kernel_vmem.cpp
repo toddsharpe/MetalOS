@@ -1,8 +1,6 @@
 #include "kernel/Api.h"
 #include "kernel/KProcess.h"
 #include "kernel/Arch.h"
-#include "x64/x64.h"
-#include "x64/PageTables.h"
 #include "MetalOS.Space.h"
 #include "Assert.h"
 
@@ -29,7 +27,7 @@ namespace
 	bool Commit(KProcess& process, const uintptr_t reserved, const size_t count)
 	{
 		//TODO(tsharpe): Support read/execute only
-		const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
+		const Arch::PageAttr attributes = process.IsGlobal ? Arch::KernelPages : Arch::UserPages;
 		for (size_t i = 0; i < count; i++)
 		{
 			const uintptr_t virt = reserved + (i << Arch::PageShift);
@@ -85,7 +83,7 @@ namespace
 
 		//Map into the process's page tables
 		//TODO(tsharpe): Support read/execute only
-		const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
+		const Arch::PageAttr attributes = process.IsGlobal ? Arch::KernelPages : Arch::UserPages;
 		for (size_t i = 0; i < count; i++)
 		{
 			const paddr_t paddr = addresses[i];
@@ -141,13 +139,13 @@ void* KeVirtualAlloc(const size_t size)
 
 void* KeVirtualAlloc(KProcess& process, const size_t size)
 {
-	return Allocate(process, x64::SizeToPages(size));
+	return Allocate(process, Arch::SizeToPages(size));
 }
 
 //Allocate at a fixed virtual address
 void* KeVirtualAlloc(KProcess& process, const void* address, const size_t size)
 {
-	return Allocate(process, address, x64::SizeToPages(size));
+	return Allocate(process, address, Arch::SizeToPages(size));
 }
 
 //Free
@@ -167,7 +165,7 @@ bool KeVirtualMap(KProcess& process, const void* const virtualAddr, const paddr_
 	Assert(virtualAddr);
 	Assert(size);
 
-	const size_t count = x64::SizeToPages(size);
+	const size_t count = Arch::SizeToPages(size);
 
 	//Reserve region, returning false if it isn't free
 	const uintptr_t reserved = (uintptr_t)virtualAddr;
@@ -176,7 +174,7 @@ bool KeVirtualMap(KProcess& process, const void* const virtualAddr, const paddr_
 
 	//Map into the process's page tables
 	//TODO(tsharpe): Support read/execute only
-	const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
+	const Arch::PageAttr attributes = process.IsGlobal ? Arch::KernelPages : Arch::UserPages;
 	Assert(process.Tables.MapPages(reserved, physicalAddr, count, attributes));
 
 	return true;
@@ -190,7 +188,7 @@ void* KeVirtualMap(const paddr_t* addresses, const size_t size)
 
 void* KeVirtualMap(KProcess& process, const paddr_t* addresses, const size_t size)
 {
-	return VirtualMap(process, addresses, x64::SizeToPages(size));
+	return VirtualMap(process, addresses, Arch::SizeToPages(size));
 }
 
 //Map a contiguous physical range, reserving the virtual range automatically
@@ -203,7 +201,7 @@ void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size)
 {
 	Assert(size);
 
-	const size_t count = x64::SizeToPages(size);
+	const size_t count = Arch::SizeToPages(size);
 
 	//Reserve region, returning nullptr if it isn't free
 	const uintptr_t reserved = process.Space.Reserve(count);
@@ -211,7 +209,7 @@ void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size)
 		return nullptr;
 
 	//Map the contiguous physical range
-	const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
+	const Arch::PageAttr attributes = process.IsGlobal ? Arch::KernelPages : Arch::UserPages;
 	Assert(process.Tables.MapPages(reserved, address, count, attributes));
 
 	return (void*)reserved;
@@ -220,39 +218,7 @@ void* KeVirtualMap(KProcess& process, const paddr_t address, const size_t size)
 //Frees a process's user-half page tables and root; the kernel half is copied from the kernel's root and shared
 void KeFreePageTables(KProcess& process)
 {
-	using namespace x64;
-	static constexpr uint64_t AddressMask = 0x000F'FFFF'FFFF'F000;
-	static constexpr size_t UserEntries = 1 << 8;
-	static constexpr size_t Entries = 1 << 9;
-
-	PML4E* const pml4 = reinterpret_cast<PML4E*>(KernelPhysicalStart + process.Tables.Root);
-	for (size_t i4 = 0; i4 < UserEntries; i4++)
-	{
-		if (!pml4[i4].Present)
-			continue;
-
-		const paddr_t pdptAddr = pml4[i4].Value & AddressMask;
-		PDPTE_DIR* const pdpt = reinterpret_cast<PDPTE_DIR*>(KernelPhysicalStart + pdptAddr);
-		for (size_t i3 = 0; i3 < Entries; i3++)
-		{
-			if (!pdpt[i3].Present || pdpt[i3].PageSize)
-				continue;
-
-			const paddr_t pdAddr = pdpt[i3].Value & AddressMask;
-			PDE_DIR* const pd = reinterpret_cast<PDE_DIR*>(KernelPhysicalStart + pdAddr);
-			for (size_t i2 = 0; i2 < Entries; i2++)
-			{
-				if (pd[i2].Present && !pd[i2].PageSize)
-					KePhysicalFree(pd[i2].Value & AddressMask);
-			}
-			KePhysicalFree(pdAddr);
-		}
-		KePhysicalFree(pdptAddr);
-		pml4[i4].Value = 0;
-	}
-
-	KePhysicalFree(process.Tables.Root);
-	process.Tables.Root = 0;
+	process.Tables.FreeUserTables([](const paddr_t page) { KePhysicalFree(page); });
 }
 
 //Write memory into the address space of another process without switching CR3.
@@ -284,14 +250,14 @@ void KeWriteProcessMemory(KProcess& process, void* const destVirtual, const void
 //Alias a kernel-resident region [source, source+size) into `process` at the fixed address `dest`
 void KeAliasInto(KProcess& process, const void* const source, const void* const dest, const size_t size)
 {
-	const size_t count = x64::SizeToPages(size);
+	const size_t count = Arch::SizeToPages(size);
 	const uintptr_t destVA = reinterpret_cast<uintptr_t>(dest);
 
 	//Reserve the destination range in the process (a fixed address = the image's ImageBase).
 	Assert(process.Space.Reserve(destVA, count, PageOwnership::Owned));
 
 	//Map the source's (kernel-resident) physical frames into the process, no new physical.
-	const PageAttr attributes = process.IsGlobal ? KernelAll : UserAll;
+	const Arch::PageAttr attributes = process.IsGlobal ? Arch::KernelPages : Arch::UserPages;
 	for (size_t i = 0; i < count; i++)
 	{
 		const uintptr_t srcPage = reinterpret_cast<uintptr_t>(source) + (i << Arch::PageShift);

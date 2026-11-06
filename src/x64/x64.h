@@ -107,6 +107,24 @@ namespace x64
 		uint64_t Rflags;
 	};
 
+	// FXSAVE64 image of the x87, MMX and SSE state (SDM Vol. 1, 10.5.1)
+	struct alignas(16) FxSave
+	{
+		uint16_t ControlWord;
+		uint16_t StatusWord;
+		uint8_t TagWord; // Abridged
+		uint8_t Reserved1;
+		uint16_t Opcode;
+		uint64_t InstructionPointer;
+		uint64_t DataPointer;
+		uint32_t MxCsr;
+		uint32_t MxCsrMask;
+		uint8_t FloatRegisters[8][16];
+		uint8_t XmmRegisters[16][16];
+		uint8_t Reserved2[96];
+	};
+	static_assert(sizeof(FxSave) == 512, "FXSAVE writes 512 bytes");
+
 #pragma pack(push, 1)
 	struct SyscallFrame
 	{

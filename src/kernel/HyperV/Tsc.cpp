@@ -20,11 +20,11 @@ namespace HyperV::Tsc
 				// 0 means that the Reference TSC enlightenment is not available at  
 				// the moment, and the Reference Time can only be obtained from  
 				// reading the Reference Counter MSR. 
-				ReferenceTime = __readmsr(static_cast<uint32_t>(MSR::HV_X64_MSR_TIME_REF_COUNT));
+				ReferenceTime = ArchReadMsr(static_cast<uint32_t>(MSR::HV_X64_MSR_TIME_REF_COUNT));
 				return ReferenceTime; 
 			} 
 		
-			Tsc = __rdtsc();
+			Tsc = ArchReadTimestamp();
 			// Assigning Scale and Offset should neither happen before 
 			// setting StartSequence, nor after setting EndSequence. 
 			Scale = TscPage.TscScale; 
@@ -44,11 +44,11 @@ namespace HyperV::Tsc
 	{
 		//Enable TSC
 		HV_REF_TSC_REG tscReg = { 0 };
-		tscReg.AsUint64 = __readmsr(static_cast<uint32_t>(MSR::HV_X64_MSR_REFERENCE_TSC));
+		tscReg.AsUint64 = ArchReadMsr(static_cast<uint32_t>(MSR::HV_X64_MSR_REFERENCE_TSC));
 		tscReg.Enable = true;
 		tscReg.GPAPageNumber = ResolveImageVA((void*)&TscPage) >> Arch::PageShift;
 
-		__writemsr(static_cast<uint32_t>(MSR::HV_X64_MSR_REFERENCE_TSC), tscReg.AsUint64);
+		ArchWriteMsr(static_cast<uint32_t>(MSR::HV_X64_MSR_REFERENCE_TSC), tscReg.AsUint64);
 		Printf("  Tsc: 0x%016x\n", ReadTsc());
 	}
 }

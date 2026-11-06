@@ -1204,10 +1204,7 @@ SyscallResult DebugPrintStack(const uint64_t rip)
 	if (!thread.Process.Space.IsValidRange(thread.Stack, sizeof(uintptr_t)))
 		return SyscallResult::InvalidPointer;
 
-	Arch::Context context = {};
-	context.Rip = rip;
-	context.Rsp = (uintptr_t)thread.Stack;
-	context.Rbp = *(uintptr_t*)thread.Stack;
+	const Arch::Context context = ArchMakeContext(rip, (uintptr_t)thread.Stack, *(uintptr_t*)thread.Stack);
 	PrintStack(&context, thread.Process);
 
 	return SyscallResult::Success;

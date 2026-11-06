@@ -2,7 +2,7 @@
 
 #include "kernel/UProcess.h"
 #include "user/MetalOS.h"
-#include "x64/intrin.h"
+#include "kernel/Arch.h"
 #include <cstring>
 
 inline uint32_t LastUThreadId = 0;
@@ -27,11 +27,7 @@ public:
 		m_fpu(),
 		m_teb(teb)
 	{
-		//Start from the power-on defaults: x87 control word and MXCSR with all exceptions masked
-		const uint16_t fcw = 0x037F;
-		const uint32_t mxcsr = 0x1F80;
-		memcpy(&m_fpu[0], &fcw, sizeof(fcw));
-		memcpy(&m_fpu[24], &mxcsr, sizeof(mxcsr));
+		ArchInitFpu(m_fpu);
 	}
 
 	//TODO(tsharpe): Find way to specify this arena in user process space
@@ -53,9 +49,7 @@ public:
 		Printf("   Name: %s\n", Name);
 		Printf("  m_teb: 0x%016x\n", m_teb);
 		Printf("  stack: 0x%016x\n", Stack);
-		Printf("  Context:\n");
-		Printf("   - Rsp: 0x%016x \n", m_context.Rsp);
-		Printf("   - Rip: 0x%016x\n", m_context.Rip);
+		ArchPrintContext(m_context);
 		Process.Display();
 	}
 
@@ -63,8 +57,8 @@ public:
 	void* TebAddress() const { return &m_teb; }
 
 	//The kernel never uses floating point, so FPU/SSE state is only user state, switched with the thread
-	void SaveFpu() { _fxsave64(m_fpu); }
-	void LoadFpu() const { _fxrstor64(m_fpu); }
+	void SaveFpu() { ArchSaveFpu(m_fpu); }
+	void LoadFpu() const { ArchLoadFpu(m_fpu); }
 
 	//Process and Thread precede Stack so Stack stays at offset 16 for x64_SYSTEMCALL asm
 	//(guarded by the static_assert below); the UThread list is now a LinkedList in UProcess.
@@ -83,7 +77,7 @@ public:
 private:
 	//Storage
 	Arch::Context m_context;
-	alignas(16) uint8_t m_fpu[512]; //FXSAVE image
+	Arch::fpu_context_t m_fpu;
 
 	//Pointers into process address space
 	ThreadEnvironmentBlock& m_teb;

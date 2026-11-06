@@ -4,7 +4,7 @@
 #include "Drivers/RamDrive.h"
 #include "Lib/Math.h"
 
-static constexpr CString RamDriveHid = "RDRV";
+static constexpr char RamDriveHid[] = "RDRV";
 class RamDriveDriver : public StorageDriver
 {
 public:
@@ -28,11 +28,8 @@ public:
 
 		//Set properties
 		m_device.Class = KDeviceClass::Storage;
-		m_device.Name = KeCopy("RamDrive", AllocType::Kernel);
-
-		char buffer[64] = { 0 };
-		sprintf(buffer, "Ram Drive - Files: %zu", m_ramDrive->FileCount());
-		m_device.Description = KeCopy(buffer, AllocType::Kernel);
+		StrCopy(m_device.Name, Str("RamDrive"));
+		snprintf(m_device.Description, sizeof(m_device.Description), "Ram Drive - Files: %zu", m_ramDrive->FileCount());
 
 		return true;
 	}

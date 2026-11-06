@@ -4,6 +4,7 @@
 #include "kernel/HyperV/VmBus.h"
 #include "Assert.h"
 #include "kernel/Api.h"
+#include "user/Protocol_net.h"
 
 HyperVNic::HyperVNic(KDevice& device) :
 	NicDriver(device),
@@ -85,23 +86,19 @@ bool HyperVNic::Initialize()
 
 	// Step 5: initialize RNDIS
 	{
-		const uint32_t rndisLen = (uint32_t)(sizeof(rndis_message_header) + sizeof(rndis_initialize_request));
+		struct
+		{
+			rndis_message_header Header;
+			rndis_initialize_request Init;
+		} message = {};
+		message.Header.ndis_msg_type = RNDIS_MSG_INIT;
+		message.Header.msg_len = sizeof(message);
+		message.Init.req_id = 1;
+		message.Init.major_version = 1;
+		message.Init.minor_version = 0;
+		message.Init.max_transfer_size = 0x4000;
 
-		StaticBuffer<64> initArena;
-		uint8_t* rndis = initArena.Data;
-		memset(rndis, 0, rndisLen);
-
-		rndis_message_header* rndisHdr = (rndis_message_header*)rndis;
-		rndisHdr->ndis_msg_type = RNDIS_MSG_INIT;
-		rndisHdr->msg_len = rndisLen;
-
-		rndis_initialize_request* rndisInit = (rndis_initialize_request*)(rndisHdr + 1);
-		rndisInit->req_id = 1;
-		rndisInit->major_version = 1;
-		rndisInit->minor_version = 0;
-		rndisInit->max_transfer_size = 0x4000;
-
-		SendRndisPacket(NVSP_CHANNEL_TYPE_CONTROL, rndis, rndisLen, true);
+		SendRndisPacket(NVSP_CHANNEL_TYPE_CONTROL, &message, sizeof(message), true);
 		KeWait(m_event);
 	}
 
@@ -109,49 +106,42 @@ bool HyperVNic::Initialize()
 	{
 		const uint32_t filterValue = RNDIS_PACKET_TYPE_DIRECTED |
 			RNDIS_PACKET_TYPE_ALL_MULTICAST | RNDIS_PACKET_TYPE_BROADCAST;
-		const uint32_t rndisLen = (uint32_t)(sizeof(rndis_message_header) + sizeof(rndis_set_request) + sizeof(uint32_t));
+		struct
+		{
+			rndis_message_header Header;
+			rndis_set_request Set;
+			uint32_t Filter;
+		} message = {};
+		message.Header.ndis_msg_type = RNDIS_MSG_SET;
+		message.Header.msg_len = sizeof(message);
+		message.Set.req_id = 2;
+		message.Set.oid = OID_GEN_CURRENT_PACKET_FILTER;
+		message.Set.info_buflen = sizeof(message.Filter);
+		message.Set.info_buf_offset = sizeof(rndis_set_request);
+		message.Set.device_vc_handle = 0;
+		message.Filter = filterValue;
 
-		StaticBuffer<64> setArena;
-		uint8_t* rndis = setArena.Data;
-		memset(rndis, 0, rndisLen);
-
-		rndis_message_header* rndisHdr = (rndis_message_header*)rndis;
-		rndisHdr->ndis_msg_type = RNDIS_MSG_SET;
-		rndisHdr->msg_len = rndisLen;
-
-		rndis_set_request* setReq = (rndis_set_request*)(rndisHdr + 1);
-		setReq->req_id = 2;
-		setReq->oid = OID_GEN_CURRENT_PACKET_FILTER;
-		setReq->info_buflen = sizeof(uint32_t);
-		setReq->info_buf_offset = sizeof(rndis_set_request);
-		setReq->device_vc_handle = 0;
-		*(uint32_t*)(setReq + 1) = filterValue;
-
-		SendRndisPacket(NVSP_CHANNEL_TYPE_CONTROL, rndis, rndisLen, true);
+		SendRndisPacket(NVSP_CHANNEL_TYPE_CONTROL, &message, sizeof(message), true);
 		KeWait(m_event);
 	}
 
 	// Step 7: query MAC address via RNDIS OID.
 	// Response arrives as XFER_PAGES, so no COMPLETION_REQUESTED — OnCallback signals m_event on RNDIS_MSG_QUERY_C.
 	{
-		const uint32_t rndisLen = (uint32_t)(sizeof(rndis_message_header) + sizeof(rndis_query_request));
+		struct
+		{
+			rndis_message_header Header;
+			rndis_query_request Query;
+		} message = {};
+		message.Header.ndis_msg_type = RNDIS_MSG_QUERY;
+		message.Header.msg_len = sizeof(message);
+		message.Query.req_id = 3;
+		message.Query.oid = OID_802_3_PERMANENT_ADDRESS;
+		message.Query.info_buflen = 0;
+		message.Query.info_buf_offset = sizeof(rndis_query_request);
+		message.Query.device_vc_handle = 0;
 
-		StaticBuffer<64> queryArena;
-		uint8_t* rndis = queryArena.Data;
-		memset(rndis, 0, rndisLen);
-
-		rndis_message_header* rndisHdr = (rndis_message_header*)rndis;
-		rndisHdr->ndis_msg_type = RNDIS_MSG_QUERY;
-		rndisHdr->msg_len = rndisLen;
-
-		rndis_query_request* queryReq = (rndis_query_request*)(rndisHdr + 1);
-		queryReq->req_id = 3;
-		queryReq->oid = OID_802_3_PERMANENT_ADDRESS;
-		queryReq->info_buflen = 0;
-		queryReq->info_buf_offset = sizeof(rndis_query_request);
-		queryReq->device_vc_handle = 0;
-
-		SendRndisPacket(NVSP_CHANNEL_TYPE_CONTROL, rndis, rndisLen, false);
+		SendRndisPacket(NVSP_CHANNEL_TYPE_CONTROL, &message, sizeof(message), false);
 		KeWait(m_event);
 
 		//Stored little-endian; print in canonical (wire) order.
@@ -319,21 +309,21 @@ void HyperVNic::OnCallback()
 bool HyperVNic::SendFrame(const void* data, size_t length)
 {
 	// Build the RNDIS_PACKET message: [rndis_message_header][rndis_packet][Ethernet frame].
-	const uint32_t rndisLen = (uint32_t)(sizeof(rndis_message_header) + sizeof(rndis_packet) + length);
+	struct
+	{
+		rndis_message_header Header;
+		rndis_packet Packet;
+		uint8_t Frame[NetDevice::Mtu];
+	} message = {};
+	if (length > sizeof(message.Frame))
+		return false;
 
-	StaticBuffer<2048> rndisArena;
-	uint8_t* buf = rndisArena.Data;
-	memset(buf, 0, rndisLen);
-
-	rndis_message_header* rndisHdr = (rndis_message_header*)buf;
-	rndisHdr->ndis_msg_type = RNDIS_MSG_PACKET;
-	rndisHdr->msg_len = rndisLen;
-
-	rndis_packet* pkt = (rndis_packet*)(rndisHdr + 1);
-	pkt->data_offset = sizeof(rndis_packet);
-	pkt->data_length = (uint32_t)length;
-
-	memcpy((uint8_t*)(pkt + 1), data, length);
+	const uint32_t rndisLen = (uint32_t)(sizeof(message.Header) + sizeof(message.Packet) + length);
+	message.Header.ndis_msg_type = RNDIS_MSG_PACKET;
+	message.Header.msg_len = rndisLen;
+	message.Packet.data_offset = sizeof(rndis_packet);
+	message.Packet.data_length = (uint32_t)length;
+	memcpy(message.Frame, data, length);
 
 	//Own section per in-flight frame so back-to-back sends can't overwrite one the host hasn't read; drop if none free
 	const uint32_t section = AcquireSendSection();
@@ -341,7 +331,7 @@ bool HyperVNic::SendFrame(const void* data, size_t length)
 		return false;
 
 	// Transmit over the data channel through the send-buffer section, the same path as control RNDIS messages
-	if (!SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, buf, rndisLen, true, section))
+	if (!SendRndisPacket(NVSP_CHANNEL_TYPE_DATA, &message, rndisLen, true, section))
 	{
 		//Ring full: no completion will come, so the section is still ours
 		ReleaseSendSection(SendSectionTag | section);

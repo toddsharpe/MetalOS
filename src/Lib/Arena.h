@@ -74,15 +74,15 @@ public:
 		//TODO(tsharpe): Implement?
 	}
 
-	CString Copy(const CString& source)
+	cstr_t Copy(const cstr_t source)
 	{
 		//Allocate for null terminator; a full arena gives back an empty string rather than a copy to null
-		void* allocated = Allocate(source.Length + 1);
+		void* allocated = Allocate(source.Size + 1);
 		if (!allocated)
 			return {};
 
-		memcpy(allocated, source.c_str(), source.Length);
-		return {reinterpret_cast<const char*>(allocated), source.Length};
+		memcpy(allocated, source.Data, source.Size);
+		return { reinterpret_cast<const char*>(allocated), source.Size };
 	}
 
 	void Reset()

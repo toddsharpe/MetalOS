@@ -2,7 +2,7 @@
 
 #include "Net/Net.h"
 #include "Net/PacketBuffer.h"
-#include "Lib/Buffer.h"
+#include "Lib/Span.h"
 #include "Assert.h"
 
 //Datagram socket. Sends reuse the Net::Socket send path; receives are demultiplexed by
@@ -42,9 +42,8 @@ public:
 		if (m_queue.IsEmpty())
 			return false;
 
-		Buffer out(m_scratch, sizeof(m_scratch));
 		size_t recordLength = 0;
-		if (!m_queue.Pop(out, recordLength))
+		if (!m_queue.Pop(buffer_t(m_scratch), recordLength))
 			return false;
 
 		Assert(recordLength >= sizeof(Net::endpoint_t));

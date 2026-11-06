@@ -93,13 +93,13 @@ void UObject::Display() const
 		case UObjectType::Thread:
 			Assert(Thread);
 			Printf("  UThread\n");
-			Printf("    Name: %s\n", Thread->Name.c_str());
+			Printf("    Name: %s\n", Thread->Name);
 			break;
 		
 		case UObjectType::Process:
 			Assert(Process);
 			Printf("  UProcess\n");
-			Printf("    Name: %s\n", Process->Name.c_str());
+			Printf("    Name: %s\n", Process->Name);
 			break;
 
 		case UObjectType::File:

@@ -71,17 +71,20 @@ public:
 	}
 
 	//Names longer than the destination are clipped, but the whole string is still consumed
-	bool ReadString(StringStorage& value)
+	bool ReadString(const str_t value)
 	{
+		Assert(value.Size != 0);
+		size_t count = 0;
 		char* blockPointer = (char*)GetPointer();
 		while ((*blockPointer) != '\0')
 		{
-			if (value.Count() < value.Capacity - 1)
-				value.Append(*blockPointer);
+			if (count < value.Size - 1)
+				value[count++] = *blockPointer;
 
 			m_position++;
 			blockPointer = (char*)GetPointer();
 		}
+		value[count] = '\0';
 
 		m_position++;
 		return true;

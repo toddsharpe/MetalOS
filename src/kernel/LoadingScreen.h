@@ -15,7 +15,7 @@ public:
 	void Initialize();
 
 	void Printf(const char* format, ...);
-	void Write(const CString& string);
+	void Write(const cstr_t string);
 
 private:
 	static constexpr Graphics::Color Foreground = Graphics::Colors::White;

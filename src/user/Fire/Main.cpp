@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 	screen = new FireScreen(frame.Height, frame.Width);
 	screen->Initialize();
 
-	GUI gui("Fire", frame, UICallback, WindowStyle::Framed, &Icons::Flame);
+	GUI gui(Str("Fire"), frame, UICallback, WindowStyle::Framed, &Icons::Flame);
 	gui.Initialize();
 
 	gui.Run();

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Lib/Buffer.h"
+#include "Lib/Span.h"
 #include "Net/Net.h"
 #include "Assert.h"
 #include <cstdint>
@@ -16,12 +16,12 @@ namespace Net
 
 		}
 
-		Packet(const Buffer& _backing) : backing(_backing), src(), dst(), proto(), offset(), count(_backing.Capacity)
+		Packet(const buffer_t _backing) : backing(_backing), src(), dst(), proto(), offset(), count(_backing.Size)
 		{
 
 		}
 
-		Packet(const Buffer& _backing, const size_t _count) : backing(_backing), src(), dst(), proto(), offset(), count(_count)
+		Packet(const buffer_t _backing, const size_t _count) : backing(_backing), src(), dst(), proto(), offset(), count(_count)
 		{
 
 		}
@@ -65,7 +65,7 @@ namespace Net
 			count += size;
 		}
 
-		Buffer backing;
+		buffer_t backing;
 
 		//Layer specific data
 		endpoint_t src;

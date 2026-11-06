@@ -152,13 +152,6 @@ enum class AllocType
 void* KeAlloc(size_t size, AllocType type);
 void KeFree(void* ptr, AllocType type);
 
-inline CString KeCopy(const CString& source, const AllocType type)
-{
-	char* const buf = reinterpret_cast<char*>(KeAlloc(source.Length + 1, type));
-	memcpy(buf, source.c_str(), source.Length);
-	buf[source.Length] = '\0';
-	return { buf, source.Length };
-}
 
 inline void* malloc(size_t size) { return KeAlloc(size, AllocType::Malloc); }
 inline void free(void* ptr) { KeFree(ptr, AllocType::Malloc); }
@@ -174,7 +167,7 @@ T* KeAlloc(AllocType type, Args&&... args)
 /*
  * Modules.
  */
-const KModule* KeAddModule(const CString& name, void* const image, const size_t imageSize); //Null once the kernel's module table is full
+const KModule* KeAddModule(const cstr_t name, void* const image, const size_t imageSize); //Null once the kernel's module table is full
 const KModule* KeLoadLibrary(const char* const name);
 bool KeGetModule(const uintptr_t address, KModule& module); //Fills module with the kernel module containing address
 //Resolve a virtual address back to its loaded image (used by stack traces).

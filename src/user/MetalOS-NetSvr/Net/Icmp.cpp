@@ -21,7 +21,7 @@ namespace Net::Icmp
 		const NetLayer& l2 = get_l2(net_if.l2);
 
 		//Allocate space
-		StaticBuffer<Net::buffer_size> buffer;
+		uint8_t buffer[Net::buffer_size] = {};
 		Packet reply(buffer);
 		reply.mask(l2.HeaderSize);
 		reply.mask(ipv4_hdr_size);

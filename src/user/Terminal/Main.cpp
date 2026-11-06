@@ -16,16 +16,17 @@ namespace
 
 	Console console({ 0, 0, StartRect.Width, StartRect.Height });
 
-	static constexpr CString PromptName = "metal";
-	static constexpr CString PromptMark = "> ";
+	static constexpr char PromptName[] = "metal";
+	static constexpr char PromptMark[] = "> ";
 
 	//Command lines are copied into 128 bytes by the kernel; the ".exe" suffix must still fit
 	static constexpr size_t MaxCommandLength = 100;
-	StaticString<MaxCommandLength + 2> command;
+	char command[MaxCommandLength + 2];
+	size_t commandLength = 0;
 
 	//Earlier commands, oldest first, for Up and Down; historyIndex == historyCount is the line being typed
 	static constexpr size_t HistorySize = 16;
-	StaticString<MaxCommandLength + 2> history[HistorySize];
+	char history[HistorySize][MaxCommandLength + 2];
 	size_t historyCount = 0;
 	size_t historyIndex = 0;
 
@@ -39,7 +40,7 @@ namespace
 	//Bounds one repaint's worth of draining, so a child that never stops writing can't starve the UI
 	static constexpr size_t MaxDrainPerPaint = 4096;
 
-	void Write(const CString& text, const ConsoleAttribute attribute)
+	void Write(const cstr_t text, const ConsoleAttribute attribute)
 	{
 		console.Text.SetAttribute(attribute);
 		console.Text.Write(text);
@@ -48,15 +49,15 @@ namespace
 
 	void ShowPrompt()
 	{
-		Write(PromptName, ConsoleAttribute::Prompt);
-		Write(PromptMark, ConsoleAttribute::Punctuation);
+		Write(Str(PromptName), ConsoleAttribute::Prompt);
+		Write(Str(PromptMark), ConsoleAttribute::Punctuation);
 	}
 
 	//Prompt and command stay on one line, so Backspace never has to cross a wrapped line
 	size_t CommandLimit()
 	{
 		const size_t columns = console.Text.Columns();
-		const size_t prompt = PromptName.Length + PromptMark.Length;
+		const size_t prompt = Str(PromptName).Size + Str(PromptMark).Size;
 		const size_t fit = columns > prompt + 1 ? columns - prompt - 1 : 0;
 		return fit < MaxCommandLength ? fit : MaxCommandLength;
 	}
@@ -83,24 +84,42 @@ namespace
 	}
 
 	//Copies the command, appending .exe to the program name when it has no extension (so "ps" runs ps.exe)
-	void BuildCommandLine(const CString& typed, StaticString<MaxCommandLength + 8>& line)
+	void BuildCommandLine(const cstr_t typed, char (&line)[MaxCommandLength + 8])
 	{
 		size_t nameLength = 0;
-		while (nameLength < typed.Length && typed[nameLength] != ' ')
+		while (nameLength < typed.Size && typed[nameLength] != ' ')
 			nameLength++;
 
 		bool hasExtension = false;
 		for (size_t i = 0; i < nameLength; i++)
 			hasExtension |= typed[i] == '.';
 
-		line.Append(CString(typed.c_str(), nameLength));
+		StrCopy(line, typed.Slice(0, nameLength));
 		if (!hasExtension)
-			line.Append(".exe");
-		line.Append(CString(typed.c_str() + nameLength, typed.Length - nameLength));
+			StrAppend(line, Str(".exe"));
+		StrAppend(line, typed.Slice(nameLength, typed.Size - nameLength));
+	}
+
+	//Adds a typed char to the command, or takes the last one off
+	void PushCommand(const char c)
+	{
+		command[commandLength++] = c;
+		command[commandLength] = '\0';
+	}
+
+	void PopCommand()
+	{
+		command[--commandLength] = '\0';
+	}
+
+	void ClearCommand()
+	{
+		commandLength = 0;
+		command[0] = '\0';
 	}
 
 	//Starts the command with its own stdout and stderr pipes, so its errors can show in red; false if it couldn't be started
-	bool Launch(const CString& commandLine)
+	bool Launch(const char* const commandLine)
 	{
 		HFile inRead = nullptr;
 		HFile inWrite = nullptr;
@@ -132,7 +151,7 @@ namespace
 		args.StdError = errWrite;
 
 		CreateProcessResult result = {};
-		const SyscallResult status = CreateProcess(commandLine.c_str(), &args, &result);
+		const SyscallResult status = CreateProcess(commandLine, &args, &result);
 
 		//The child holds its own ends now; closing the stdin write end gives it end of file
 		CloseHandle(inRead);
@@ -170,7 +189,7 @@ namespace
 			if (read == 0)
 				return true;
 
-			Write(CString(buffer, read), attribute);
+			Write({ buffer, read }, attribute);
 			budget -= read;
 		}
 		return false;
@@ -200,48 +219,44 @@ namespace
 		ShowPrompt();
 	}
 
-	void Remember(const CString& line)
+	void Remember(const cstr_t line)
 	{
 		if (historyCount == HistorySize)
 		{
 			for (size_t i = 1; i < HistorySize; i++)
-			{
-				history[i - 1].Clear();
-				history[i - 1].Append(history[i]);
-			}
+				StrCopy(history[i - 1], Str(history[i]));
 			historyCount--;
 		}
-		history[historyCount].Clear();
-		history[historyCount].Append(line);
+		StrCopy(history[historyCount], line);
 		historyCount++;
 		historyIndex = historyCount;
 	}
 
 	//Swaps the line being typed for another (from the history), on screen too
-	void ReplaceCommand(const CString& text)
+	void ReplaceCommand(const cstr_t text)
 	{
-		while (command.Count() != 0)
+		while (commandLength != 0)
 		{
-			command.Pop();
+			PopCommand();
 			console.Text.Backspace();
 		}
 
 		const size_t limit = CommandLimit();
-		for (size_t i = 0; i < text.Length && command.Count() < limit; i++)
+		for (size_t i = 0; i < text.Size && commandLength < limit; i++)
 		{
-			command.Append(text[i]);
+			PushCommand(text[i]);
 			console.Text.Write(text[i]);
 		}
 	}
 
 	void ShowHelp()
 	{
-		Write("Run: ", ConsoleAttribute::Dim);
-		Write("hello ps time calc fire doom dhcp ping nettest crash\n", ConsoleAttribute::Normal);
-		Write("Built in: ", ConsoleAttribute::Dim);
-		Write("help clear\n", ConsoleAttribute::Normal);
-		Write("Keys: ", ConsoleAttribute::Dim);
-		Write("Up/Down history, PgUp/PgDn scroll, Ctrl+L clear\n", ConsoleAttribute::Normal);
+		Write(Str("Run: "), ConsoleAttribute::Dim);
+		Write(Str("hello ps time calc fire doom dhcp ping nettest crash\n"), ConsoleAttribute::Normal);
+		Write(Str("Built in: "), ConsoleAttribute::Dim);
+		Write(Str("help clear\n"), ConsoleAttribute::Normal);
+		Write(Str("Keys: "), ConsoleAttribute::Dim);
+		Write(Str("Up/Down history, PgUp/PgDn scroll, Ctrl+L clear\n"), ConsoleAttribute::Normal);
 	}
 
 	void ClearScreen()
@@ -249,41 +264,42 @@ namespace
 		console.Text.Clear();
 		console.Scroll = 0;
 		ShowPrompt();
-		console.Text.Write(command);
+		console.Text.Write(Str(command));
 	}
 
 	void RunCommand()
 	{
 		console.Text.Write('\n');
-		if (command.Count() == 0)
+		if (commandLength == 0)
 		{
 			ShowPrompt();
 			return;
 		}
 
-		Remember(command);
-		if (CString(command) == "help")
+		const cstr_t typed = { command, commandLength };
+		Remember(typed);
+		if (typed == Str("help"))
 		{
-			command.Clear();
+			ClearCommand();
 			ShowHelp();
 			ShowPrompt();
 			return;
 		}
-		if (CString(command) == "clear")
+		if (typed == Str("clear"))
 		{
-			command.Clear();
+			ClearCommand();
 			ClearScreen();
 			return;
 		}
 
-		StaticString<MaxCommandLength + 8> line;
-		BuildCommandLine(command, line);
-		command.Clear();
+		char line[MaxCommandLength + 8];
+		BuildCommandLine(typed, line);
+		ClearCommand();
 
 		if (!Launch(line))
 		{
-			Write(line, ConsoleAttribute::Error);
-			Write(": could not run\n", ConsoleAttribute::Error);
+			Write(Str(line), ConsoleAttribute::Error);
+			Write(Str(": could not run\n"), ConsoleAttribute::Error);
 			ShowPrompt();
 		}
 	}
@@ -324,9 +340,9 @@ namespace
 				break;
 
 			case VK_BACK:
-				if (command.Count() != 0)
+				if (commandLength != 0)
 				{
-					command.Pop();
+					PopCommand();
 					console.Text.Backspace();
 				}
 				break;
@@ -335,7 +351,7 @@ namespace
 				if (historyIndex > 0)
 				{
 					historyIndex--;
-					ReplaceCommand(history[historyIndex]);
+					ReplaceCommand(Str(history[historyIndex]));
 				}
 				break;
 
@@ -343,16 +359,16 @@ namespace
 				if (historyIndex < historyCount)
 				{
 					historyIndex++;
-					ReplaceCommand(historyIndex == historyCount ? CString("") : CString(history[historyIndex]));
+					ReplaceCommand(historyIndex == historyCount ? cstr_t() : Str(history[historyIndex]));
 				}
 				break;
 
 			default:
 			{
 				const char c = ToChar(key.Key);
-				if (c != '\0' && command.Count() < CommandLimit())
+				if (c != '\0' && commandLength < CommandLimit())
 				{
-					command.Append(c);
+					PushCommand(c);
 					console.Text.Write(c);
 				}
 			}
@@ -389,12 +405,12 @@ int main(int argc, char** argv)
 {
 	DebugPrint("Hi From terminal!\n");
 
-	GUI gui("Terminal", StartRect, UICallback, WindowStyle::Resizable, &Icons::Terminal);
+	GUI gui(Str("Terminal"), StartRect, UICallback, WindowStyle::Resizable, &Icons::Terminal);
 	gui.Initialize();
 	gui.Background = Theme::IronDeep;
 
-	Write("MetalOS Terminal", ConsoleAttribute::Bright);
-	Write("  type help for commands\n", ConsoleAttribute::Dim);
+	Write(Str("MetalOS Terminal"), ConsoleAttribute::Bright);
+	Write(Str("  type help for commands\n"), ConsoleAttribute::Dim);
 	ShowPrompt();
 	gui.Children.Add(&console);
 

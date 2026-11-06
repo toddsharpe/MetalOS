@@ -2,7 +2,7 @@
 #include "Arch.h"
 #include "kernel/HyperV/Types.h"
 #include "Kernel/HyperV/HyperV.h"
-#include "Lib/Buffer.h"
+#include "Lib/Span.h"
 #include "kernel/Drivers/HyperVRingBuffer.h"
 #include "Assert.h"
 
@@ -97,14 +97,14 @@ bool HyperVChannel::SendPacket(const void* buffer, const size_t length, const ui
 	constexpr size_t headerSize = 1;
 	constexpr size_t fullSize = 3;
 
-	const CBuffer buffers[] = {
-		{&desc, sizeof(HyperV::vmpacket_descriptor)},
-		{buffer, length},
-		{&aligned_data, packetlen_aligned - packetlen}
+	const cbuffer_t buffers[] = {
+		Bytes(&desc, sizeof(HyperV::vmpacket_descriptor)),
+		Bytes(buffer, length),
+		Bytes(&aligned_data, packetlen_aligned - packetlen)
 	};
-	int writeCount = ((length != 0) ? fullSize : headerSize);
+	const size_t writeCount = ((length != 0) ? fullSize : headerSize);
 
-	return m_outbound.Write(buffers, writeCount);
+	return m_outbound.Write({ buffers, writeCount });
 }
 
 void* HyperVChannel::ReadPacket(const uint32_t length)

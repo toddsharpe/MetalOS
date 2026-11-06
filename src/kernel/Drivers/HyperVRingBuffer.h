@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Lib/Span.h"
+
 class HyperVChannel;
 class HyperVRingBuffer
 {
@@ -9,7 +11,7 @@ public:
 	void Initialize(const paddr_t address);
 	void Unmap(); //Drops the wrap-around view; the physical pages stay with the channel
 
-	bool Write(const CBuffer* buffers, const size_t count); //False if the host hasn't freed enough space
+	bool Write(const Span<const cbuffer_t> buffers); //False if the host hasn't freed enough space
 	void Increment(const uint32_t length);
 	void* Read(const uint32_t length);
 	bool CommitRead();

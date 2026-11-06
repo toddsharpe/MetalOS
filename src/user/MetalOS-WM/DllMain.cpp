@@ -2,7 +2,7 @@
 #include "user/Protocol_wm.h"
 #include "user/Ipc.h"
 #include "Graphics/Types.h"
-#include "Lib/Buffer.h"
+#include "Lib/Span.h"
 #include "Lib/StaticVector.h"
 #include <cstring>
 

@@ -14,13 +14,13 @@
 extern KProcess m_process;
 extern LinkedList<UProcess*> m_processes;
 
-static constexpr CString RuntimeDLL = "MetalOS-RT.dll";
+static constexpr char RuntimeDLL[] = "MetalOS-RT.dll";
 
-//The kernel's own modules (moskrnl and kdcom), added at boot and never unloaded; filled in place, as a KModule's name can't be copied
+//The kernel's own modules (moskrnl and kdcom), added at boot and never unloaded
 static constexpr size_t MaxKernelModules = 2;
 static KModule m_modules[MaxKernelModules];
 static size_t m_moduleCount;
-static constexpr size_t MaxPathLength = decltype(UProcess::Name)::Size - 1; //The path also names the process
+static constexpr size_t MaxPathLength = sizeof(UProcess::Name) - 1; //The path also names the process
 
 //An image installs at its fixed ImageBase, so it must be page-aligned and end inside user space
 static bool FitsUserSpace(const Loader::LoadedImage& image)
@@ -44,13 +44,13 @@ static bool CanInstall(const Loader::LoadedImage& exe, const Loader::LoadedImage
 	return exeEnd <= runtimeStart || runtimeEnd <= exeStart;
 }
 
-const KModule* KeAddModule(const CString& name, void* const image, const size_t imageSize)
+const KModule* KeAddModule(const cstr_t name, void* const image, const size_t imageSize)
 {
 	if (m_moduleCount == MaxKernelModules)
 		return nullptr;
 
 	KModule& module = m_modules[m_moduleCount++];
-	module.Name.Set(name);
+	StrCopy(module.Name, name);
 	module.ImageBase = image;
 	module.ImageSize = imageSize;
 	return &module;
@@ -65,9 +65,7 @@ bool KeGetModule(const uintptr_t address, KModule& module)
 		if (address < base || address - base >= candidate.ImageSize)
 			continue;
 
-		module.Name.Set(CString(candidate.Name.c_str()));
-		module.ImageBase = candidate.ImageBase;
-		module.ImageSize = candidate.ImageSize;
+		module = candidate;
 		return true;
 	}
 
@@ -76,12 +74,12 @@ bool KeGetModule(const uintptr_t address, KModule& module)
 
 const KModule* KeLoadLibrary(const char* const name)
 {
-	const CString moduleName(name);
+	const cstr_t moduleName = CStr(name);
 
 	//Check if module is already loaded
 	for (size_t i = 0; i < m_moduleCount; i++)
 	{
-		if (m_modules[i].Name == moduleName)
+		if (Str(m_modules[i].Name) == moduleName)
 			return &m_modules[i];
 	}
 
@@ -90,7 +88,7 @@ const KModule* KeLoadLibrary(const char* const name)
 
 	//If it doesn't exist, load it in the kernel, install it at its ImageBase (a kernel VA for a
 	//kernel module), then drop the temporary load alias.
-	Loader::LoadedImage image = Loader::Load(moduleName);
+	Loader::LoadedImage image = Loader::Load(name);
 	if (!image.UserBase)
 		return nullptr;
 	KeAliasInto(m_process, image.Alias, image.UserBase, image.Size);
@@ -125,21 +123,21 @@ UProcess* KeCreateProcess(const char* const cmd)
 		return nullptr;
 	}
 
-	StaticString<64> path;
-	path.Append(CString(cmd, i));
+	char path[MaxPathLength + 1];
+	StrCopy(path, CStr(cmd, i));
 
 	//Load exe and runtime into the kernel (each returns a temporary kernel alias for patching).
 	Loader::LoadedImage exe = Loader::Load(path);
 	if (!exe.UserBase)
 	{
-		Printf("Failed to load %s\n", path.c_str());
+		Printf("Failed to load %s\n", path);
 		return nullptr;
 	}
 
 	Loader::LoadedImage runtime = Loader::Load(RuntimeDLL);
 	if (!runtime.UserBase)
 	{
-		Printf("Failed to load %s for %s\n", RuntimeDLL.c_str(), path.c_str());
+		Printf("Failed to load %s for %s\n", RuntimeDLL, path);
 		KeVirtualFree(m_process, exe.Alias);
 		return nullptr;
 	}
@@ -148,9 +146,9 @@ UProcess* KeCreateProcess(const char* const cmd)
 	void* const initProcess = WinPE::GetProcAddress(runtime.Alias, "InitProcess");
 	void* const initThread = WinPE::GetProcAddress(runtime.Alias, "InitThread");
 	if (!initProcess)
-		Printf("%s does not export InitProcess\n", RuntimeDLL.c_str());
+		Printf("%s does not export InitProcess\n", RuntimeDLL);
 	if (!initThread)
-		Printf("%s does not export InitThread\n", RuntimeDLL.c_str());
+		Printf("%s does not export InitThread\n", RuntimeDLL);
 	if (!initProcess || !initThread || !Loader::ResolveImports(exe, runtime, RuntimeDLL))
 	{
 		KeVirtualFree(m_process, exe.Alias);
@@ -160,14 +158,14 @@ UProcess* KeCreateProcess(const char* const cmd)
 
 	if (!CanInstall(exe, runtime))
 	{
-		Printf("%s: ImageBase 0x%016x is outside user space or overlaps %s\n", path.c_str(), exe.UserBase, RuntimeDLL.c_str());
+		Printf("%s: ImageBase 0x%016x is outside user space or overlaps %s\n", path, exe.UserBase, RuntimeDLL);
 		KeVirtualFree(m_process, exe.Alias);
 		KeVirtualFree(m_process, runtime.Alias);
 		return nullptr;
 	}
 
 	//Bad images are rejected above, so a failed load never leaves a half-built process in the list
-	UProcess* created = KeAlloc<UProcess>(AllocType::User, path);
+	UProcess* created = KeAlloc<UProcess>(AllocType::User, Str(path));
 	Assert(created);
 	Assert(m_processes.Add(created));
 
@@ -187,10 +185,10 @@ UProcess* KeCreateProcess(const char* const cmd)
 	KeAliasInto(*created, runtime.Alias, runtime.UserBase, runtime.Size);
 
 	//Update process structures
-	created->Initialize(exe.UserBase, CString(cmd));
+	created->Initialize(exe.UserBase, CStr(cmd));
 
-	created->AddModule(path, exe.UserBase);
-	created->AddModule(RuntimeDLL, runtime.UserBase);
+	created->AddModule(Str(path), exe.UserBase);
+	created->AddModule(Str(RuntimeDLL), runtime.UserBase);
 
 	created->IsConsole = WinPE::IsConsole(exe.Alias);
 	const size_t stackSize = WinPE::GetStackSize(exe.Alias);
@@ -208,7 +206,7 @@ UProcess* KeCreateProcess(const char* const cmd)
 	if (!KeCreateUThread(*created, stackSize))
 	{
 		//No memory for the main thread's stack: tear down instead of leaving a running process with no threads
-		Printf("%s: could not create the main thread (no TEB slot or stack memory)\n", path.c_str());
+		Printf("%s: could not create the main thread (no TEB slot or stack memory)\n", path);
 		KeTerminateProcess(*created, 1);
 		return nullptr;
 	}
@@ -221,7 +219,7 @@ void KeTerminateProcess(UProcess& process, const uint32_t exitCode)
 	if (process.State == ProcessState::Terminated)
 		return;
 
-	Printf("Process: %s exited with code 0x%x\n", process.Name.c_str(), exitCode);
+	Printf("Process: %s exited with code 0x%x\n", process.Name, exitCode);
 
 	//Mark dead first: KillProcess() does not return when a process terminates
 	//itself (ExitProcess), so anything after it would be skipped. This also lets
@@ -405,8 +403,6 @@ void KeReleaseUThread(UThread& thread)
 	//Last reference: its KThread (and with it the user stack) is gone and no handle names it
 	UProcess& process = thread.Process;
 	Assert(process.Threads.Remove(&thread));
-	if (thread.Name.Length)
-		KeFree(const_cast<char*>(thread.Name.c_str()), AllocType::User);
 	KeFree(&thread, AllocType::User);
 }
 
@@ -445,8 +441,7 @@ size_t KeGetProcessList(ProcessListEntry* const buffer, const size_t maxCount)
 		entry.VirtualSize = process->Space.ReservedBytes();
 		entry.State = process->State;
 
-		strncpy(entry.Name, process->Name.c_str(), MaxProcessName - 1);
-		entry.Name[MaxProcessName - 1] = '\0';
+		StrCopy(entry.Name, Str(process->Name));
 
 		n++;
 	}

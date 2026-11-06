@@ -46,15 +46,16 @@ void Arena_test()
 	uint8_t* buffer = (uint8_t*)storage;
 	PreallocatedArena prealloc2(buffer, sizeof(storage));
 
-	const CString def = "def";
-	CString new_s;
+	const cstr_t def = Str("def");
+	cstr_t new_s;
 	new_s = arena.Copy(def);
-	Assert(new_s == "def");
+	Assert(new_s == Str("def"));
+	Assert(new_s.Data[new_s.Size] == '\0');
 
 	//String copy
 	{
-		CString copy = arena.Copy({"source", 6});
-		Assert(copy == "source");
+		cstr_t copy = arena.Copy({ "source", 6 });
+		Assert(copy == Str("source"));
 	}
 
 	//Bounds are checked against the aligned size, so nothing past the arena is written
@@ -96,6 +97,6 @@ void Arena_test()
 	{
 		uint8_t small[16];
 		PreallocatedArena full(small);
-		Assert(full.Copy({"0123456789abcdef", 16}).Length == 0);
+		Assert(full.Copy({ "0123456789abcdef", 16 }).Size == 0);
 	}
 }

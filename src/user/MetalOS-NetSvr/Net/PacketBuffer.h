@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Lib/RingBuffer.h"
-#include "Lib/Buffer.h"
+#include "Lib/Span.h"
 #include "Assert.h"
 #include "core_crt/stdint.h"
 
@@ -32,7 +32,7 @@ namespace Net
 			return true;
 		}
 
-		bool Pop(Buffer &out, size_t &bytes_read)
+		bool Pop(const buffer_t out, size_t &bytes_read)
 		{
 			if (IsEmpty())
 				return false;
@@ -42,7 +42,7 @@ namespace Net
 			m_ring.Pop(&len, sizeof(len), dummy);
 			Assert(dummy == sizeof(len));
 
-			Assert(len <= out.Capacity);
+			Assert(len <= out.Size);
 			m_ring.Pop(out.Data, len, bytes_read);
 			m_count--;
 			return true;

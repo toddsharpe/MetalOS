@@ -401,10 +401,10 @@ SyscallResult CreateProcess(const char* commandLine, const CreateProcessArgs* ar
 	}
 
 	//Copy string locally to automatically crop it at max bytes, reading only bytes that are mapped
-	StaticString<128> copy = {};
-	copy.AppendClip(commandLine, UserStringLength(proc, commandLine, copy.Capacity - 1));
+	char copy[128];
+	StrCopy(copy, CStr(commandLine, UserStringLength(proc, commandLine, sizeof(copy) - 1)));
 
-	UProcess* created = KeCreateProcess(copy.c_str());
+	UProcess* created = KeCreateProcess(copy);
 	if (!created)
 		return SyscallResult::Failed;
 
@@ -552,11 +552,12 @@ HFile CreateFile(const char* path, const FileAccess access)
 		return nullptr;
 
 	//The pointer check covers only the first byte, so bound the copy by what's mapped
-	StaticString<128> copy;
-	copy.AppendClip(path, UserStringLength(proc, path, copy.Capacity - 1));
-	copy.ToLower();
+	char copy[128];
+	StrCopy(copy, CStr(path, UserStringLength(proc, path, sizeof(copy) - 1)));
+	for (char* c = copy; *c != '\0'; c++)
+		*c = (char)tolower(*c);
 
-	const bool result = KeCreateFile(uFile->File, copy.c_str(), ToAccess(access));
+	const bool result = KeCreateFile(uFile->File, copy, ToAccess(access));
 	if (!result)
 	{
 		//Don't leave an unopened file object behind

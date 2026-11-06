@@ -24,12 +24,13 @@ namespace UI
 	class Button : public Control
 	{
 	public:
-		Button(const CString& text, const Rectangle& bounds, const ButtonStyle style = ButtonStyle::Normal) :
+		Button(const cstr_t text, const Rectangle& bounds, const ButtonStyle style = ButtonStyle::Normal) :
 			Control(bounds),
-			Text(text),
+			Text(),
 			Style(style),
 			Click()
 		{
+			StrCopy(Text, text);
 		}
 
 		virtual void Draw(FrameBuffer& frame) override
@@ -38,10 +39,11 @@ namespace UI
 			Draw2D::DrawFace(frame, Bounds, face);
 
 			//Centered, and nudged down a pixel while pressed so it reads as pushed in
-			const uint32_t width = Draw2D::PixelTextWidth(Text.Count(), Theme::TextScale);
+			const cstr_t text = Str(Text);
+			const uint32_t width = Draw2D::PixelTextWidth(text.Size, Theme::TextScale);
 			const int32_t x = Bounds.X + ((int32_t)Bounds.Width - (int32_t)width) / 2;
 			const int32_t y = Bounds.Y + ((int32_t)Bounds.Height - Theme::Glyph) / 2 + (Pressed ? 1 : 0);
-			Draw2D::DrawPixelText(frame, { x, y }, Text, face.Label, Theme::TextScale);
+			Draw2D::DrawPixelText(frame, { x, y }, text, face.Label, Theme::TextScale);
 		}
 
 		virtual void OnClick() override
@@ -50,7 +52,7 @@ namespace UI
 				Click(*this);
 		}
 
-		StaticString<64> Text;
+		char Text[64];
 		ButtonStyle Style;
 		ButtonClick Click;
 

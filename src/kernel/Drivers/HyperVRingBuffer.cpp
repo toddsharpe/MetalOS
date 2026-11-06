@@ -44,12 +44,12 @@ void HyperVRingBuffer::Unmap()
 	m_header = nullptr;
 }
 
-bool HyperVRingBuffer::Write(const CBuffer* buffers, const size_t count)
+bool HyperVRingBuffer::Write(const Span<const cbuffer_t> buffers)
 {
 	//Packet plus the trailing 8-byte previous-indices value
 	size_t total = sizeof(uint64_t);
-	for (size_t i = 0; i < count; i++)
-		total += buffers[i].Size;
+	for (const cbuffer_t& buffer : buffers)
+		total += buffer.Size;
 
 	//Refuse a packet that doesn't fit with a byte to spare: never overwrite unread data or make a full ring look empty
 	const uint32_t startIndex = m_header->write_index;
@@ -60,9 +60,9 @@ bool HyperVRingBuffer::Write(const CBuffer* buffers, const size_t count)
 
 	//Copy into ring buffer
 	uint32_t index = startIndex;
-	for (size_t i = 0; i < count; i++)
+	for (const cbuffer_t& buffer : buffers)
 	{
-		index = this->Copy(index, buffers[i].Data, (uint32_t)buffers[i].Size);
+		index = this->Copy(index, buffer.Data, (uint32_t)buffer.Size);
 	}
 
 	//Write new indexes

@@ -13,7 +13,7 @@ void LoadingScreen::Initialize()
 	Graphics::Draw2D::FillScreen(m_frameBuffer, Background);
 
 	Graphics::Draw2D::DrawFrameBorder(m_frameBuffer, Border, 3);
-	Graphics::Draw2D::DrawText(m_frameBuffer, { 9, 9 }, "MetalOS", Border);
+	Graphics::Draw2D::DrawText(m_frameBuffer, { 9, 9 }, Str("MetalOS"), Border);
 	Graphics::Draw2D::DrawRectangle(m_frameBuffer, Border, { 0, 20, m_frameBuffer.Width, 3 });
 }
 
@@ -30,7 +30,7 @@ void LoadingScreen::Printf(const char* format, ...)
 	va_end(args);
 }
 
-void LoadingScreen::Write(const CString& string)
+void LoadingScreen::Write(const cstr_t string)
 {
 	Graphics::Point2D point = Graphics::Draw2D::DrawText(m_frameBuffer, { 5, static_cast<int32_t>(yPos) }, string, Graphics::Colors::White);
 	yPos = static_cast<size_t>(point.Y);

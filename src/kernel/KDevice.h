@@ -44,13 +44,13 @@ public:
 
 	void Display() const
 	{
-		Printf("%s (0x%016x)\n", Path.c_str(), this);
-		if (Name)
-			Printf("    Name : %s\n", Name.c_str());
-		if (Hid)
-			Printf("    HID  : %s\n", Hid.c_str());
-		if (Description)
-			Printf("    Desc : %s\n", Description.c_str());
+		Printf("%s (0x%016x)\n", Path, this);
+		if (Name[0])
+			Printf("    Name : %s\n", Name);
+		if (Hid[0])
+			Printf("    HID  : %s\n", Hid);
+		if (Description[0])
+			Printf("    Desc : %s\n", Description);
 		Printf("    Type : %d\n", Type);
 		Printf("    Class: %d\n", Class);
 		Printf("    Driver: 0x%016X\n", Driver);
@@ -67,10 +67,10 @@ public:
 			child->Display();
 	}
 
-	CString Name;
-	CString Path;
-	CString Hid;
-	CString Description;
+	char Name[64];
+	char Path[128];
+	char Hid[48];
+	char Description[64];
 
 	KDeviceType Type;
 	KDeviceClass Class;

@@ -10,7 +10,7 @@
 //Lib
 #include "Assert.h"
 #include "lib/Path.h"
-#include "Lib/Buffer.h"
+#include "Lib/Span.h"
 #include "Lib/String.h"
 #include "Lib/System.h"
 

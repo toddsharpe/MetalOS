@@ -1,4 +1,5 @@
 #include "kernel/Arch_x64/StackWalk.h"
+#include "WinPE.h"
 #include <intrin.h>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;

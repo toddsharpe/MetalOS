@@ -5,8 +5,6 @@
 #include "kernel/Arch.h"
 #include <cstring>
 
-inline uint32_t LastUThreadId = 0;
-
 class KThread;
 class UThread
 {
@@ -16,7 +14,7 @@ public:
 		Thread(),
 		Stack(),
 		Name(),
-		Id(++LastUThreadId),
+		Id(++LastId),
 		StackBase(),
 		Refs(1),
 		PipeWriteLink(),
@@ -75,6 +73,8 @@ public:
 	KEvent* EventWait; //Event whose reference this thread holds while it waits on it; the reaper drops it if the thread is killed there
 
 private:
+	static uint32_t LastId;
+
 	//Storage
 	Arch::Context m_context;
 	Arch::fpu_context_t m_fpu;

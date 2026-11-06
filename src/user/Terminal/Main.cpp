@@ -377,7 +377,7 @@ namespace
 	}
 }
 
-bool UICallback(GUI& gui, Message& message)
+static bool UICallback(GUI& gui, Message& message)
 {
 	switch (message.Header.MessageType)
 	{

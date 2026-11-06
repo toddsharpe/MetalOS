@@ -1,10 +1,10 @@
 #pragma once
 
 #include "x64/x64.h"
+#include "x64/Types.h"
 #include "x64/CpuId.h"
 #include "x64/PageTables.h"
 #include "x64/intrin.h"
-#include "kernel/Arch_x64/x64Data.h"
 #include "Assert.h"
 
 /*
@@ -21,7 +21,7 @@ namespace Arch
 	static constexpr size_t PageShift = x64::PageShift;
 	static constexpr size_t PageMask = x64::PageMask;
 
-	inline constexpr size_t SizeToPages(const size_t bytes)
+	constexpr size_t SizeToPages(const size_t bytes)
 	{
 		return x64::SizeToPages(bytes);
 	}
@@ -55,41 +55,6 @@ extern "C"
 	void ArchRestoreFlags(const cpu_flags_t flags);
 }
 
-extern "C" inline void ArchInitialize()
-{
-	//Load new segments
-	_lgdt(&x64::GDTR);
-
-	//Update segment registers
-	constexpr x64::SegmentSelector dataSelector(x64::GdtIndex::KernelData);
-	constexpr x64::SegmentSelector codeSelector(x64::GdtIndex::KernelCode);
-	UpdateSegments(dataSelector.Value, codeSelector.Value);
-
-	constexpr x64::SegmentSelector tssSelector(x64::GdtIndex::TssEntry);
-	_ltr(tssSelector.Value);
-
-	//Load interrupt handlers
-	__lidt(&x64::IDTR);
-
-	//Enable interrupts
-	_sti();
-
-	//Enable syscalls
-	constexpr x64::SegmentSelector userCodeSelector(x64::GdtIndex::User32Code, x64::UserDpl);
-	const x64::IA32_STAR_REG starReg = { {0, codeSelector.Value, userCodeSelector.Value } };
-	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_STAR), starReg.AsUint64);
-	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_LSTAR), (uintptr_t)&x64_SYSTEMCALL);
-	//Clear IF, TF, DF (kernel string ops assume it), NT (iretq faults with it set) and AC on syscall entry
-	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_FMASK), 0x200 | 0x100 | 0x400 | 0x4000 | 0x40000);
-
-	//Enable syscall
-	const size_t value = __readmsr(static_cast<uint32_t>(x64::MSR::IA32_EFER));
-	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_EFER), value | 1);
-
-	//Enable WRGSBASE instruction
-	__writecr4(__readcr4() | (1 << 16));
-}
-
 //Home area plus the return-address slot of an entry point reached by jmp or sysret rather than call
 inline size_t ArchStackReserve()
 {
@@ -104,11 +69,7 @@ inline void ArchSetPagingRoot(paddr_t root)
 	}
 }
 
-inline void ArchSetInterruptStack(void* stack)
-{
-	x64::TSS64.RSP_0_low = QWordLow(stack);
-	x64::TSS64.RSP_0_high = QWordHigh(stack);
-}
+void ArchSetInterruptStack(void* stack);
 
 inline void ArchSetUserCpuContext(void* context)
 {

@@ -22,7 +22,7 @@
     <ClCompile Include="$(MetalOSSrc)Lib\*_test.cpp" />
     <ClCompile Include="$(MetalOSSrc)User\MetalOS-NetSvr\*_test.cpp" />
     <!-- The code under test that isn't header-only -->
-    <ClCompile Include="$(MetalOSSrc)kernel\AddressSpace.cpp">
+    <ClCompile Include="$(MetalOSSrc)kernel\AddressSpace.cpp;$(MetalOSSrc)kernel\PebModules.cpp;$(MetalOSSrc)kernel\Arch_x64\RuntimeSupport.cpp">
       <ObjectFileName>$(IntDir)kernel\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="$(MetalOSSrc)User\MetalOS-NetSvr\Net\*.cpp" Exclude="$(MetalOSSrc)User\MetalOS-NetSvr\Net\Socket*.cpp">

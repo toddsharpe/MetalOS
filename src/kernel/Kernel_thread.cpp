@@ -9,6 +9,9 @@
 //Kernel globals (defined in Kernel.cpp).
 extern KProcess m_process;
 
+static void KThreadInit();
+static uint32_t UThreadInit(void* const arg);
+
 namespace
 {
 	//Allocate and initialize a kernel thread without making it schedulable yet
@@ -60,7 +63,7 @@ void KeYield()
 	Scheduler::Schedule();
 }
 
-void KThreadInit()
+static void KThreadInit()
 {
 	KThread& current = Scheduler::GetCurrentThread();
 
@@ -97,7 +100,7 @@ UThread* KeCreateUThread(UProcess& process, const size_t stackSize, const UThrea
 	return user;
 }
 
-uint32_t UThreadInit(void* const arg)
+static uint32_t UThreadInit(void* const arg)
 {
 	UNUSED(arg);
 

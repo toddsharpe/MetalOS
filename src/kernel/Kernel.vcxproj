@@ -25,7 +25,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Kd64\*.cpp;Objects\*.cpp;$(MetalOSSrc)x64\Cpuid.cpp" Exclude="*_test.cpp" />
+    <ClCompile Include="*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Kd64\*.cpp;Objects\*.cpp;$(MetalOSSrc)x64\Cpuid.cpp" Exclude="**\*_test.cpp" />
     <ClCompile Include="$(MetalOSSrc)core_crt\wchar.c">
       <CompileAs>CompileAsCpp</CompileAs>
       <ObjectFileName>$(IntDir)core_crt\</ObjectFileName>

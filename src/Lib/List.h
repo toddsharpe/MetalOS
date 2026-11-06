@@ -99,7 +99,7 @@ template <typename T>
 using ListCFunc = void(*)(const ListEntry&, const T&);
 
 template <typename TItem, typename TContext>
-inline void ListForEach(const ListHead& head, const ListFuncCtx<TItem, TContext>& func, TContext ctx)
+void ListForEach(const ListHead& head, const ListFuncCtx<TItem, TContext>& func, TContext ctx)
 {
 	if (!head.Count)
 		return;
@@ -112,7 +112,7 @@ inline void ListForEach(const ListHead& head, const ListFuncCtx<TItem, TContext>
 }
 
 template <typename T>
-inline void ListForEach(const ListHead &head, const ListCFunc<T>& func)
+void ListForEach(const ListHead &head, const ListCFunc<T>& func)
 {
 	if (!head.Count)
 		return;
@@ -125,7 +125,7 @@ inline void ListForEach(const ListHead &head, const ListCFunc<T>& func)
 }
 
 template <typename T>
-inline T* ListGet(const ListHead& head, const size_t index)
+T* ListGet(const ListHead& head, const size_t index)
 {
 	if (!head.Count)
 		return nullptr;

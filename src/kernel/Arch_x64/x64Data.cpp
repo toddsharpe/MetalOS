@@ -1,14 +1,11 @@
-#pragma once
-
 #include "core_crt/stdint.h"
 #include "x64/x64.h"
 #include "x64/Types.h"
 #include "x64/IdtGate.h"
-#include "Interrupts.h"
+#include "kernel/Arch_x64/Interrupts.h"
 
 namespace x64
 {
-	static constexpr size_t IdtCount = 256;
 	static constexpr size_t IstStackSize = (1 << 12);//4k Stack
 
 	static constexpr size_t IST_DOUBLEFAULT_IDX = 1;
@@ -17,13 +14,13 @@ namespace x64
 	static constexpr size_t IST_MCE_IDX = 4;
 
 	// "Known good stacks" Intel SDM Vol 3A 6.14.5
-	inline volatile uint8_t DOUBLEFAULT_STACK[IstStackSize] = { 0 };
-	inline volatile uint8_t NMI_Stack[IstStackSize] = { 0 };
-	inline volatile uint8_t DEBUG_STACK[IstStackSize] = { 0 };
-	inline volatile uint8_t MCE_STACK[IstStackSize] = { 0 };
+	static volatile uint8_t DOUBLEFAULT_STACK[IstStackSize] = { 0 };
+	static volatile uint8_t NMI_Stack[IstStackSize] = { 0 };
+	static volatile uint8_t DEBUG_STACK[IstStackSize] = { 0 };
+	static volatile uint8_t MCE_STACK[IstStackSize] = { 0 };
 
 	//Kernel Structures
-	inline volatile TASK_STATE_SEGMENT_64 TSS64 =
+	static volatile TASK_STATE_SEGMENT_64 TSS64 =
 	{
 		0, //Reserved
 		0, 0, //RSP 0 low/high
@@ -42,7 +39,7 @@ namespace x64
 	};
 
 	//1 empty, 4 GDTs, and 1 TSS
-	inline volatile KERNEL_GDTS KernelGDT =
+	static volatile KERNEL_GDTS KernelGDT =
 	{
 		{ 0 }, //First entry has to be empty
 		// Seg1   Base  type		   S    DPL		   P    Seg2   OS      L     DB   4GB   Base
@@ -62,7 +59,7 @@ namespace x64
 	//cs = starhigh + 2
 	//ss = starhigh + 1
 
-	inline volatile IdtGate IDT[IdtCount] =
+	static volatile IdtGate IDT[IdtCount] =
 	{
 		IdtGate((uint64_t)&x64_interrupt_handler_0),
 		IdtGate((uint64_t)&x64_interrupt_handler_1),
@@ -322,15 +319,56 @@ namespace x64
 		IdtGate((uint64_t)&x64_interrupt_handler_255)
 	};
 
-	inline DescriptorTable GDTR =
+	static DescriptorTable GDTR =
 	{
 		sizeof(KernelGDT) - 1,
 		(uint64_t)&KernelGDT
 	};
 
-	inline DescriptorTable IDTR =
+	static DescriptorTable IDTR =
 	{
 		sizeof(IDT) - 1,
 		(uint64_t)IDT
 	};
+}
+
+extern "C" void ArchInitialize()
+{
+	//Load new segments
+	_lgdt(&x64::GDTR);
+
+	//Update segment registers
+	constexpr x64::SegmentSelector dataSelector(x64::GdtIndex::KernelData);
+	constexpr x64::SegmentSelector codeSelector(x64::GdtIndex::KernelCode);
+	UpdateSegments(dataSelector.Value, codeSelector.Value);
+
+	constexpr x64::SegmentSelector tssSelector(x64::GdtIndex::TssEntry);
+	_ltr(tssSelector.Value);
+
+	//Load interrupt handlers
+	__lidt(&x64::IDTR);
+
+	//Enable interrupts
+	_sti();
+
+	//Enable syscalls
+	constexpr x64::SegmentSelector userCodeSelector(x64::GdtIndex::User32Code, x64::UserDpl);
+	const x64::IA32_STAR_REG starReg = { {0, codeSelector.Value, userCodeSelector.Value } };
+	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_STAR), starReg.AsUint64);
+	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_LSTAR), (uintptr_t)&x64_SYSTEMCALL);
+	//Clear IF, TF, DF (kernel string ops assume it), NT (iretq faults with it set) and AC on syscall entry
+	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_FMASK), 0x200 | 0x100 | 0x400 | 0x4000 | 0x40000);
+
+	//Enable syscall
+	const size_t value = __readmsr(static_cast<uint32_t>(x64::MSR::IA32_EFER));
+	__writemsr(static_cast<uint32_t>(x64::MSR::IA32_EFER), value | 1);
+
+	//Enable WRGSBASE instruction
+	__writecr4(__readcr4() | (1 << 16));
+}
+
+void ArchSetInterruptStack(void* stack)
+{
+	x64::TSS64.RSP_0_low = QWordLow(stack);
+	x64::TSS64.RSP_0_high = QWordHigh(stack);
 }

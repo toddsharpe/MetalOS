@@ -10,9 +10,11 @@ HyperVVideoDriver::HyperVVideoDriver(KDevice& device) :
 	m_width(),
 	m_height(),
 	m_pitchBytes(),
-	m_barSize(),
+	m_vramSize(),
 	m_framebufferGpa(),
+	m_version(),
 	m_versionResponse(),
+	m_resolutions(),
 	m_event(false, false),
 	m_waiting(),
 	m_answer(),
@@ -44,7 +46,7 @@ bool HyperVVideoDriver::Negotiate()
 {
 	//1) Negotiate the synthvid protocol version, newest first (matches modern hyperv_fb):
 	//3.5 (Win10/Server2016), 3.2 (Win8.1/Server2012R2), 3.0 (Win7/Server2008R2).
-	static constexpr uint32_t kVersions[] = { (5u << 16) | 3u, (2u << 16) | 3u, (0u << 16) | 3u };
+	static constexpr uint32_t kVersions[] = { SYNTHVID_VERSION_WIN10, (2u << 16) | 3u, (0u << 16) | 3u };
 	bool negotiated = false;
 	for (size_t i = 0; i < sizeof(kVersions) / sizeof(kVersions[0]); i++)
 	{
@@ -61,6 +63,7 @@ bool HyperVVideoDriver::Negotiate()
 		}
 		if (m_versionResponse.is_accepted)
 		{
+			m_version = kVersions[i];
 			negotiated = true;
 			break;
 		}
@@ -71,6 +74,9 @@ bool HyperVVideoDriver::Negotiate()
 		return false;
 	}
 
+	//Hosts from 3.5 list the modes the VM's display settings allow, up to its configured maximum
+	const bool listed = m_version >= SYNTHVID_VERSION_WIN10 && QueryResolutions();
+
 	//2) Use the UEFI GOP framebuffer as the VRAM. On a Gen2 VM the GOP framebuffer IS the Hyper-V
 	//synthetic-video MMIO region, and the host only accepts a VRAM GPA inside that region — arbitrary
 	//guest RAM is rejected (no VRAM_LOCATION_ACK). This also makes the host display exactly what
@@ -80,7 +86,8 @@ bool HyperVVideoDriver::Negotiate()
 	m_height = fb.Height;
 	m_pitchBytes = fb.Pitch * sizeof(uint32_t); //Pitch is in pixels
 	m_framebufferGpa = fb.Base;
-	m_barSize = fb.Size; //size of the framebuffer BAR; a mode can't need more VRAM than this
+	const uint16_t megabytes = m_device.m_channel.offer.mmio_megabytes;
+	m_vramSize = megabytes ? (size_t)megabytes << 20 : fb.Size; //The host maps its whole VRAM from the GPA, which can run past GOP's 8 MiB
 
 	//3) Point the host at the VRAM (a guest-physical address inside the MMIO framebuffer region).
 	VramLocationMsg vram = {};
@@ -97,16 +104,42 @@ bool HyperVVideoDriver::Negotiate()
 		return false;
 	}
 
-	//4) Set the display mode, negotiated with the host over synthvid (no UEFI/GOP mode change). Try
-	//1920x1080; if the host rejects it, fall back to the boot GOP mode (already in m_width/m_height).
-	if (!SetMode(1920, 1080) && !SendSituationUpdate(m_width, m_height, m_pitchBytes))
+	//4) Set the mode over synthvid: the largest listed, else 1920x1080 for a host that lists none, else the boot GOP mode in m_width/m_height
+	const bool set = listed ? SetLargestMode() : SetMode(1920, 1080);
+	if (!set && !SendSituationUpdate(m_width, m_height, m_pitchBytes))
 	{
 		Printf("HyperVVideo: no SITUATION_UPDATE ack for the boot mode %ux%u\n", m_width, m_height);
 		return false;
 	}
 
-	Printf("HyperVVideo: %dx%d, VRAM at 0x%016x (gpa 0x%016x)\n", m_width, m_height, KernelPhysicalStart + m_framebufferGpa, m_framebufferGpa);
+	Printf("HyperVVideo: %dx%d (%u modes listed), VRAM 0x%x at 0x%016x (gpa 0x%016x)\n", m_width, m_height, listed ? m_resolutions.resolution_count : 0, (uint32_t)m_vramSize, KernelPhysicalStart + m_framebufferGpa, m_framebufferGpa);
 	return true;
+}
+
+//Asks the host for the resolutions it supports (synthvid 3.5+); false if it doesn't answer with any
+bool HyperVVideoDriver::QueryResolutions()
+{
+	ResolutionRequestMsg request = {};
+	request.pipe.type = PIPE_MSG_DATA;
+	request.pipe.size = sizeof(request) - sizeof(pipe_msg_hdr);
+	request.hdr.type = synthvid_msg_type::ResolutionRequest;
+	request.hdr.size = sizeof(request) - sizeof(pipe_msg_hdr);
+	request.body.maximum_resolution_count = (uint8_t)MAX_RESOLUTIONS;
+	return Request(&request, sizeof(request), synthvid_msg_type::ResolutionResponse) && m_resolutions.resolution_count != 0;
+}
+
+//Sets the largest listed mode that fits the VRAM; the host's own default is its boot mode, not its best
+bool HyperVVideoDriver::SetLargestMode()
+{
+	const hvd_screen_info* best = nullptr;
+	for (size_t i = 0; i < m_resolutions.resolution_count; i++)
+	{
+		const hvd_screen_info& mode = m_resolutions.supported_resolution[i];
+		const size_t pixels = (size_t)mode.width * mode.height;
+		if (pixels != 0 && pixels * sizeof(uint32_t) <= m_vramSize && (!best || pixels > (size_t)best->width * best->height))
+			best = &mode;
+	}
+	return best && SetMode(best->width, best->height);
 }
 
 //Sends a request and waits up to 2s for its answer. Each request re-arms the event, and an answer that comes after its wait ended can't satisfy the next one
@@ -132,12 +165,11 @@ bool HyperVVideoDriver::SetMode(const uint32_t width, const uint32_t height)
 {
 	const uint32_t pitchBytes = width * sizeof(uint32_t);
 
-	//The host scans out of the shared BAR at m_framebufferGpa; a mode that needs more VRAM than the
-	//BAR would make the host read past it (garbled/torn lower rows). Refuse it.
-	if ((size_t)height * pitchBytes > m_barSize)
+	//A mode that needs more than the VRAM would have the host scan out past it (garbled lower rows)
+	if ((size_t)height * pitchBytes > m_vramSize)
 	{
-		Printf("HyperVVideo: mode %ux%u needs 0x%x > BAR 0x%x; refusing\n",
-			width, height, (uint32_t)((size_t)height * pitchBytes), (uint32_t)m_barSize);
+		Printf("HyperVVideo: mode %ux%u needs 0x%x > VRAM 0x%x; refusing\n",
+			width, height, (uint32_t)((size_t)height * pitchBytes), (uint32_t)m_vramSize);
 		return false;
 	}
 
@@ -234,6 +266,16 @@ void HyperVVideoDriver::ProcessMessage(synthvid_msg_hdr* header, const uint32_t 
 		{
 			Assert(size >= sizeof(synthvid_msg_hdr) + sizeof(synthvid_version_response));
 			memcpy(&m_versionResponse, (uint8_t*)header + sizeof(synthvid_msg_hdr), sizeof(synthvid_version_response));
+		}
+		break;
+
+		case synthvid_msg_type::ResolutionResponse:
+		{
+			const size_t length = size - sizeof(synthvid_msg_hdr);
+			m_resolutions = {};
+			memcpy(&m_resolutions, header + 1, length < sizeof(m_resolutions) ? length : sizeof(m_resolutions));
+			if (m_resolutions.resolution_count > MAX_RESOLUTIONS)
+				m_resolutions.resolution_count = MAX_RESOLUTIONS;
 		}
 		break;
 

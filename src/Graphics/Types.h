@@ -61,12 +61,12 @@ namespace Graphics
 
 	struct FrameBuffer
 	{
-		FrameBuffer() : Buffer(), Height(), Width()
+		constexpr FrameBuffer() : Buffer(), Height(), Width()
 		{
 
 		}
 
-		FrameBuffer(Color* const buffer, const uint32_t height, const uint32_t width) :
+		constexpr FrameBuffer(Color* const buffer, const uint32_t height, const uint32_t width) :
 			Buffer(buffer),
 			Height(height),
 			Width(width)

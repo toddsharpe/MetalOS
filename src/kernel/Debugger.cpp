@@ -31,7 +31,7 @@ uint32_t Debugger::ThreadLoop(void* arg)
 	return static_cast<Debugger*>(arg)->ThreadLoop();
 };
 
-Debugger::Debugger()
+void Debugger::Initialize()
 {
 	/* Fill out the KD Version Block */
 	KdVersionBlock.MajorVersion = DBGKD_MAJOR_EFI;
@@ -48,10 +48,7 @@ Debugger::Debugger()
 	KdVersionBlock.PsLoadedModuleList = (ULONG64)(LONG_PTR)&PsLoadedModuleList;
 
 	InitializeListHead(&PsLoadedModuleList);
-}
 
-void Debugger::Initialize()
-{
 	const KModule* kddll = KeLoadLibrary("kdcom.dll");
 
 	//Load pointers

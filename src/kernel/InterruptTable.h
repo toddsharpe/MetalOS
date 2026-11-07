@@ -7,7 +7,7 @@ template <typename TIrq, size_t N>
 class InterruptTable
 {
 public:
-	InterruptTable() :
+	constexpr InterruptTable() :
 		m_table()
 	{
 

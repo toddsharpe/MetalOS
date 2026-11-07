@@ -255,6 +255,8 @@ namespace Net
 	 */
 	static constexpr uint8_t icmp_type_echo_reply = 0x00;
 	static constexpr uint8_t icmp_type_echo_request = 0x08;
+	static constexpr uint8_t icmp_type_dest_unreachable = 0x03;
+	static constexpr size_t dest_unreachable_size = 4; //the unused word before the refused datagram's head
 
 	struct icmp_hdr_t
 	{
@@ -336,6 +338,7 @@ namespace Net
 		uint32_t pool_tx_empty;
 		uint32_t socket_rx_full;
 		uint32_t socket_tx_full;
+		uint32_t socket_no_route;
 	};
 	extern stack_stats_t stack_stats;
 
@@ -401,7 +404,8 @@ namespace Net
 
 	namespace Router
 	{
-		NetIf& Resolve(const Net::endpoint_t& dst);
+		//Null only when there are no interfaces
+		NetIf* Resolve(const ipv4_addr_t addr);
 		bool AddRoute(NetIf& net_if, const ipv4_addr_t dst, const ipv4_addr_t subnet_mask);
 	}
 
@@ -423,6 +427,12 @@ namespace Net
 
 		//From Udp and Icmp: queue the datagram on the socket it matches, which keeps its rx-pool backing
 		bool Receive(NetIf& net_if, Packet& packet);
+
+		//From Icmp: a peer refused a datagram from local, so the sockets bound there count it
+		bool ReceiveUnreachable(NetIf& net_if, const endpoint_t local, const endpoint_t peer);
+
+		//How many of a socket's datagrams were refused, and by whom last
+		bool Refused(const int fd, uint32_t& count, endpoint_t& peer);
 	}
 
 	bool AddNetIf(NetIf& net_if);

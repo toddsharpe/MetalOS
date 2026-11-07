@@ -47,6 +47,18 @@ namespace Net
 			return address == Net::broadcast || Net::is_subnet_broadcast(address, addr, subnet_mask);
 		}
 
+		//Where a datagram for address goes on this link: the address itself on the subnet or a group, the gateway past it, empty with no gateway
+		ipv4_addr_t next_hop(const ipv4_addr_t address) const
+		{
+			if (is_broadcast(address))
+				return Net::broadcast;
+
+			if (Net::is_multicast(address) || Net::is_network(address, addr, subnet_mask))
+				return address;
+
+			return gateway;
+		}
+
 		/*
 		 * Config.
 		 */
@@ -82,6 +94,11 @@ namespace Net
 		void Init()
 		{
 			ethernet.addr = driver.GetMac();
+		}
+
+		bool IsUp() const
+		{
+			return driver.IsLinkUp();
 		}
 
 		void PreDispatch()

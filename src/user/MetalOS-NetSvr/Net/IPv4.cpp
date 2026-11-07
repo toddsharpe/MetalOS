@@ -100,9 +100,9 @@ namespace Net::IPv4
 		else if (!accept && net_if.ipv4.ip_forwarding)
 		{
 			//Only a unicast for someone else is forwarded; a broadcast never is, including the target subnet's
-			NetIf& target_if = Router::Resolve(packet.dst);
-			if (&target_if != &net_if && !target_if.ipv4.is_broadcast(packet.dst.addr))
-				Forward(packet, target_if);
+			NetIf* const target_if = Router::Resolve(packet.dst.addr);
+			if (target_if != nullptr && target_if != &net_if && !target_if->ipv4.is_broadcast(packet.dst.addr))
+				Forward(packet, *target_if);
 		}
 		
 		if (accept)

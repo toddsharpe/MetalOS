@@ -52,14 +52,8 @@ namespace Net::Ethernet
 		if (packet.headroom() < eth_hdr_size)
 			return false;
 
-		//Broadcast IP, limited or this subnet's, maps directly to the broadcast MAC (no ARP, e.g. DHCP DISCOVER).
-		const bool is_broadcast = net_if.ipv4.is_broadcast(packet.dst.addr);
-
-		//L2 next hop: on-subnet destinations are reached directly; anything else goes via
-		//the default gateway (which must itself be on-subnet).
-		ipv4_addr_t nexthop = is_broadcast ? Net::broadcast : packet.dst.addr;
-		if (!is_broadcast && !Net::is_network(packet.dst.addr, net_if.ipv4.addr, net_if.ipv4.subnet_mask))
-			nexthop = net_if.ipv4.gateway;
+		//Broadcast and groups map straight to their MACs (no ARP, e.g. DHCP DISCOVER); past the subnet goes via the gateway
+		const ipv4_addr_t nexthop = net_if.ipv4.next_hop(packet.dst.addr);
 
 		//Off-subnet with no gateway set: there is no next hop to ARP for
 		if (nexthop == Net::empty)

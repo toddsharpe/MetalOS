@@ -157,6 +157,35 @@ namespace
 		return taken;
 	}
 
+	//An ICMP destination unreachable from peer for a UDP datagram local sent it, cut to length bytes, as IPv4 hands one to Icmp
+	void SocketTestUnreachable(const Net::endpoint_t local, const Net::endpoint_t peer, const size_t length)
+	{
+		uint8_t message[] =
+		{
+			Net::icmp_type_dest_unreachable, 3, 0, 0, 0, 0, 0, 0,
+			0x45, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x40, Net::ip_proto_udp, 0x00, 0x00,
+			local.addr.bytes[3], local.addr.bytes[2], local.addr.bytes[1], local.addr.bytes[0],
+			peer.addr.bytes[3], peer.addr.bytes[2], peer.addr.bytes[1], peer.addr.bytes[0],
+			static_cast<uint8_t>(local.port >> 8), static_cast<uint8_t>(local.port), static_cast<uint8_t>(peer.port >> 8), static_cast<uint8_t>(peer.port),
+			0x00, 0x0B, 0x00, 0x00,
+		};
+		Assert(length <= sizeof(message));
+		const uint16_t check = Net::checksum(message, length);
+		message[2] = static_cast<uint8_t>(check >> 8);
+		message[3] = static_cast<uint8_t>(check);
+
+		const buffer_t backing = Net::alloc_rx(length);
+		Assert(backing);
+		memcpy(backing.Data, message, length);
+
+		Net::Packet packet(backing);
+		packet.src = { peer.addr, 0 };
+		packet.dst = { local.addr, 0 };
+		Net::Icmp::Receive(socketIf, packet);
+		Assert(!packet.taken);
+		Net::free_rx(backing);
+	}
+
 	uint16_t SocketTestU16(const uint8_t* const bytes)
 	{
 		return static_cast<uint16_t>((bytes[0] << 8) | bytes[1]);
@@ -489,6 +518,55 @@ void Socket_test()
 		AssertEqual(socketDriver.Sent, sent + 4);
 		Assert(memcmp(socketDriver.Frame, secondMac, sizeof(secondMac)) == 0);
 		Assert(Net::Socket::Close(fd));
+	}
+
+	//Past the subnet with no gateway there is no route, so the send fails now rather than waiting forever; with one, it goes to the gateway
+	{
+		const Net::endpoint_t far = { Net::build_ip(192, 0, 2, 1), 53 };
+		const int fd = Net::Socket::Create(Net::proto_t::Udp);
+		Assert(Net::Socket::Bind(fd, here, &socketIf));
+		const size_t sent = socketDriver.Sent;
+		const uint32_t noRoute = Net::stack_stats.socket_no_route;
+		Assert(!Net::Socket::SendTo(fd, SocketTestPayload, sizeof(SocketTestPayload), far));
+		AssertEqual(Net::stack_stats.socket_no_route, noRoute + 1);
+		AssertEqual(socketDriver.Sent, sent);
+
+		socketIf.ipv4.gateway = there.addr;
+		Assert(Net::Socket::SendTo(fd, SocketTestPayload, sizeof(SocketTestPayload), far));
+		AssertEqual(socketDriver.Sent, sent + 1);
+		const uint8_t* const frame = socketDriver.Frame;
+		const uint8_t gatewayMac[] = { 0x02, 0x02, 0x00, 0x5D, 0x15, 0x00 };
+		Assert(memcmp(frame, gatewayMac, sizeof(gatewayMac)) == 0);
+		const uint8_t farAddr[] = { 192, 0, 2, 1 };
+		Assert(memcmp(&frame[IpOffset + 16], farAddr, sizeof(farAddr)) == 0);
+		socketIf.ipv4.gateway = Net::empty;
+		Assert(Net::Socket::Close(fd));
+	}
+
+	//A peer's port unreachable reaches the socket the refused datagram came from, and no other; one cut short is dropped
+	{
+		const int fd = Net::Socket::Create(Net::proto_t::Udp);
+		Assert(Net::Socket::Bind(fd, here));
+		const int other = Net::Socket::Create(Net::proto_t::Udp);
+		Assert(Net::Socket::Bind(other, { here.addr, 5001 }));
+
+		SocketTestUnreachable(here, there, 36);
+		uint32_t count = 0;
+		Net::endpoint_t peer = {};
+		Assert(Net::Socket::Refused(fd, count, peer));
+		AssertEqual(count, (uint32_t)1);
+		Assert(peer == there);
+		Assert(Net::Socket::Refused(other, count, peer));
+		AssertEqual(count, (uint32_t)0);
+
+		const uint32_t dropped = socketIf.ipv4.rx_dropped;
+		SocketTestUnreachable(here, there, 18);
+		AssertEqual(socketIf.ipv4.rx_dropped, dropped + 1);
+		Assert(Net::Socket::Refused(fd, count, peer));
+		AssertEqual(count, (uint32_t)1);
+
+		Assert(Net::Socket::Close(fd));
+		Assert(Net::Socket::Close(other));
 	}
 
 	//The table holds 64 sockets; the 65th is refused until one closes

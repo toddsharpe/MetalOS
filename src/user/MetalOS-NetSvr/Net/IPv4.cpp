@@ -52,7 +52,16 @@ namespace Net::IPv4
 			.dst = {.addr = deser.ReadU32() },
 		};
 
-		//TODO(tsharpe): Checksum
+		//Checked before anything acts on it, forwarding included: the plain header this stack speaks, its checksum, and its length against the bytes that arrived
+		if (ip_hdr.ihl_version != 0x45 || !checksum_valid(packet.buffer(), ipv4_hdr_size)
+			|| ip_hdr.length < ipv4_hdr_size || ip_hdr.length > packet.length() || (ip_hdr.fragment_flags & ipv4_fragmented) != 0)
+		{
+			net_if.ipv4.rx_dropped++;
+			return false;
+		}
+
+		//Ethernet pads a short frame, so the header's length is what's ours
+		packet.trim(ip_hdr.length);
 
 		//Populate packet values
 		packet.src = { ip_hdr.src, 0 };

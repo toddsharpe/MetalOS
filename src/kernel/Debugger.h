@@ -13,7 +13,11 @@
 class Debugger
 {
 public:
-	Debugger();
+	constexpr Debugger() : PsLoadedModuleList()
+	{
+
+	}
+
 	void Initialize();
 
 	void AddModule(const KModule& library);

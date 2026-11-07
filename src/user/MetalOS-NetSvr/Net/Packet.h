@@ -11,17 +11,17 @@ namespace Net
 {
 	struct Packet
 	{
-		constexpr Packet() : backing(), src(), dst(), proto(), offset(), count()
+		constexpr Packet() : backing(), src(), dst(), proto(), taken(), offset(), count()
 		{
 
 		}
 
-		Packet(const buffer_t _backing) : backing(_backing), src(), dst(), proto(), offset(), count(_backing.Size)
+		Packet(const buffer_t _backing) : backing(_backing), src(), dst(), proto(), taken(), offset(), count(_backing.Size)
 		{
 
 		}
 
-		Packet(const buffer_t _backing, const size_t _count) : backing(_backing), src(), dst(), proto(), offset(), count(_count)
+		Packet(const buffer_t _backing, const size_t _count) : backing(_backing), src(), dst(), proto(), taken(), offset(), count(_count)
 		{
 
 		}
@@ -71,6 +71,9 @@ namespace Net
 		endpoint_t src;
 		endpoint_t dst;
 		proto_t proto;
+
+		//Coming in, a socket that keeps the rx-pool backing says so here, and the driver frees what nobody took
+		bool taken;
 
 	private:
 		//Packet data

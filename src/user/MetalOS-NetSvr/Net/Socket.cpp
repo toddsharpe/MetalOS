@@ -20,7 +20,10 @@ namespace Net::Socket
 			if (net_if.ipv4.addr == Net::empty && dst.addr != Net::broadcast)
 				return false;
 
-			uint8_t allocated[Net::buffer_size] = {};
+			const buffer_t allocated = alloc_tx(buffer_size);
+			if (!allocated)
+				return false;
+
 			Packet packet(allocated);
 			packet.mask(get_l2(net_if.l2).HeaderSize);
 			packet.mask(ipv4_hdr_size);
@@ -28,14 +31,21 @@ namespace Net::Socket
 
 			//The payload has to fit in the space left after the headers
 			if (length > packet.length())
+			{
+				free_tx(allocated);
 				return false;
+			}
 
 			memcpy(packet.buffer(), buffer, length);
 			packet.trim(length);
 			packet.dst = dst;
 			packet.src = { net_if.ipv4.addr, src_port };
 			packet.proto = proto;
-			return send(net_if, packet);
+			if (send(net_if, packet))
+				return true;
+
+			free_tx(allocated);
+			return false;
 		}
 	}
 

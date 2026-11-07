@@ -74,14 +74,25 @@ namespace Net::Ethernet
 				return false;
 
 			//Build arp (reserve room for the ethernet + ARP headers)
-			uint8_t buffer[Net::buffer_size] = {};
+			const buffer_t buffer = alloc_tx(buffer_size);
+			if (!buffer)
+				return false;
+
 			Packet arp(buffer);
 			arp.mask(eth_hdr_size);
 			arp.mask(arp_hdr_size);
 			arp.dst.addr = nexthop;
 
 			//Issue arp
-			return Arp::Send(net_if, arp);
+			if (!Arp::Send(net_if, arp))
+			{
+				free_tx(buffer);
+				return false;
+			}
+
+			//The packet waiting on the ARP is dropped, so it is taken and freed here
+			free_tx(packet.backing);
+			return true;
 		}
 
 		const eth_hdr_t hdr =

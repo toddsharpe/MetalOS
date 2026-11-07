@@ -9,7 +9,7 @@ namespace
 {
 	size_t ipv4TestDelivered;
 
-	//Stands in for the NIC: counts the frames the stack sends through it
+	//Stands in for the NIC: counts the frames the stack sends through it, and frees them as a driver does
 	class Ipv4TestDriver : public Net::NetDriver
 	{
 	public:
@@ -25,8 +25,9 @@ namespace
 
 		}
 
-		bool Send(Net::NetIf&, Net::Packet&) override
+		bool Send(Net::NetIf&, Net::Packet& packet) override
 		{
+			Net::free_tx(packet.backing);
 			Sent++;
 			return true;
 		}
@@ -167,4 +168,12 @@ void IPv4_test()
 	Ipv4TestPing(netA, netA.ipv4.addr);
 	AssertEqual(ipv4TestDelivered, (size_t)7);
 	AssertEqual(driverA.Sent, (size_t)1);
+
+	//Every buffer the stack sent from or dropped went back: both pools are first fit, so each allocates whole
+	const buffer_t rx = Net::alloc_rx(Net::pool_size);
+	Assert(rx);
+	Net::free_rx(rx);
+	const buffer_t tx = Net::alloc_tx(Net::pool_size);
+	Assert(tx);
+	Net::free_tx(tx);
 }

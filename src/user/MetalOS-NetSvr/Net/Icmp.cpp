@@ -21,7 +21,10 @@ namespace Net::Icmp
 		const NetLayer& l2 = get_l2(net_if.l2);
 
 		//Allocate space
-		uint8_t buffer[Net::buffer_size] = {};
+		const buffer_t buffer = alloc_tx(buffer_size);
+		if (!buffer)
+			return;
+
 		Packet reply(buffer);
 		reply.mask(l2.HeaderSize);
 		reply.mask(ipv4_hdr_size);
@@ -38,7 +41,8 @@ namespace Net::Icmp
 		reply.proto = proto_t::EchoReply;
 		reply.dst = packet.src;
 		reply.src = packet.dst;
-		Icmp::Send(net_if, reply);
+		if (!Icmp::Send(net_if, reply))
+			free_tx(buffer);
 	}
 
 	bool Receive(NetIf& net_if, Packet& packet)

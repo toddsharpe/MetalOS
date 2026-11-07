@@ -258,7 +258,7 @@ int main(int argc, char** argv)
 	Assert(rxRegion);
 
 	//Build the single interface over the host NIC and register it for routing.
-	HostDriver driver(ifaces[0]);
+	HostDriver driver(ifaces[0], rxRegion);
 	Net::NetIf net_if(driver, Net::l2_t::Ethernet);
 	net_if.Init();
 	Net::AddNetIf(net_if);
@@ -268,20 +268,13 @@ int main(int argc, char** argv)
 	DebugPrintf("netstack: up rx=%016x mac=%02x:%02x:%02x:%02x:%02x:%02x\n", (uint64_t)rxRegion,
 		ifaces[0].mac[5], ifaces[0].mac[4], ifaces[0].mac[3], ifaces[0].mac[2], ifaces[0].mac[1], ifaces[0].mac[0]);
 
-	SharedRing<NetDevice::Frame> rx(rxRegion);
-
 	//Own the control endpoint; only its owner can poll it for connections
 	AssertSuccess(RegisterEndpoint(NetIpc::ControlEndpoint, 0));
 
 	while (true)
 	{
 		//Drain received frames up the stack.
-		NetDevice::Frame frame;
-		while (rx.Dequeue(frame))
-		{
-			Net::Packet packet({ frame.Data, frame.Length }, frame.Length);
-			Net::get_l2(net_if.l2).Receive(net_if, packet);
-		}
+		net_if.PreDispatch();
 
 		//Service app socket IPC: accept new connections, process pending requests.
 		AcceptConnections();

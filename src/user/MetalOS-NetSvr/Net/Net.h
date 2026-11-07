@@ -306,6 +306,27 @@ namespace Net
 	uint16_t rand_port();
 
 	/*
+	 * Packet pools.
+	 */
+	static constexpr size_t pool_size = 64 * 1024;
+
+	//A driver receives each frame here and frees it unless a socket took it
+	buffer_t alloc_rx(const size_t bytes);
+	void free_rx(const buffer_t buffer);
+
+	//A sender builds here; the driver frees what it sends, and a sender whose Send fails frees it
+	buffer_t alloc_tx(const size_t bytes);
+	void free_tx(const buffer_t buffer);
+
+	//What the stack loses that belongs to no one interface
+	struct stack_stats_t
+	{
+		uint32_t pool_rx_empty;
+		uint32_t pool_tx_empty;
+	};
+	extern stack_stats_t stack_stats;
+
+	/*
 	 * Layers.
 	 */
 	namespace NoEth

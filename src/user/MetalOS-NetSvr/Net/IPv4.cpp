@@ -9,7 +9,9 @@ namespace Net::IPv4
 	{
 		//Get buffer
 		const NetLayer& l2 = get_l2(dst_if.l2);
-		uint8_t buffer[Net::buffer_size] = {};
+		const buffer_t buffer = alloc_tx(buffer_size);
+		if (!buffer)
+			return;
 
 		//Clone packet
 		Net::Packet cloned(buffer);
@@ -23,7 +25,8 @@ namespace Net::IPv4
 		cloned.trim(packet.length());
 
 		//Pop ip hdr and send
-		l2.Send(dst_if, cloned);
+		if (!l2.Send(dst_if, cloned))
+			free_tx(buffer);
 	}
 
 	bool Receive(NetIf& net_if, Packet& packet)

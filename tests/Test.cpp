@@ -16,6 +16,7 @@ int main()
 
 	Test(AddressSpace);
 	Test(Arena);
+	Test(BlockAllocator);
 	Test(Span);
 	Test(String);
 	Test(CircularBuffer);

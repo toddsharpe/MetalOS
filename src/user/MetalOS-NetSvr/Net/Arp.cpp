@@ -53,10 +53,14 @@ namespace Net::Arp
 			.target_proto = request.sender_proto,
 		};
 
-		uint8_t buffer[Net::buffer_size] = {};
+		const buffer_t buffer = alloc_tx(buffer_size);
+		if (!buffer)
+			return;
+
 		Packet packet(buffer);
 		packet.mask(get_l2(net_if.l2).HeaderSize);
-		SendMessage(net_if, packet, reply);
+		if (!SendMessage(net_if, packet, reply))
+			free_tx(buffer);
 	}
 
 	static void ReplyReceive(NetIf& net_if, const arp_t& reply)

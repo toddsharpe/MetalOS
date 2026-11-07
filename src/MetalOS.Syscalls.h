@@ -1,36 +1,29 @@
 #pragma once
 
-//Keep in sync with src/user/MetalOS-RT/syscalls.asm
+//Keep in sync with src/user/MetalOS-RT/syscalls.asm; each range is one kernel/Syscalls_*.cpp
 enum class Syscall : uint64_t
 {
 	//0x100: System
 	GetTickCount = 0x100,
 	GetSystemTime,
 
-	//0x200: Threads/Processes
-	GetCurrentThread = 0x200,
-	CreateProcess,
+	//0x200: Processes
+	CreateProcess = 0x200,
+	TerminateProcess,
+	ExitProcess,
+	IsProcessAlive,
+	GetProcesses,
+
+	//0x300: Threads
+	GetCurrentThread = 0x300,
 	CreateThread,
 	GetThreadId,
 	Sleep,
 	SwitchToThread,
-	SuspendThread,
-	ResumeThread,
-	TerminateProcess,
-	ExitProcess,
 	TerminateThread,
 	ExitThread,
-	IsProcessAlive,
-	GetProcesses,
 
-	//0x300: Devices (framebuffer + network interface enumeration).
-	//IPv4 config (Get/SetInterfaceIp, SetGateway) is netstack IPC, not syscalls.
-	MapFramebuffer = 0x300,
-	GetInterfaces,
-	NetSend,
-	FlushFramebuffer,
-
-	//0x400: Files/pipes
+	//0x400: Files and pipes
 	CreateFile = 0x400,
 	ReadFile,
 	WriteFile,
@@ -40,33 +33,43 @@ enum class Syscall : uint64_t
 	CreateDirectory,
 	CreatePipe,
 	PeekNamedPipe,
-	CloseHandle,
 
-	//0x500: Syncronization
-	WaitForSingleObject = 0x500,
+	//0x500: Handles (closing, and passing one to another process)
+	CloseHandle = 0x500,
+	ShareHandle,
+	ClaimHandle,
+
+	//0x600: Synchronization
+	WaitForSingleObject = 0x600,
 	CreateEvent,
 	SetEvent,
 	ResetEvent,
 
-	//0x600: Memory
-	VirtualAlloc = 0x600,
+	//0x700: Virtual memory
+	VirtualAlloc = 0x700,
 	VirtualFree,
-	CreateSharedMemory,
+
+	//0x800: Shared memory
+	CreateSharedMemory = 0x800,
 	MapSharedMemory,
 	DeleteSharedMemory,
 
-	//0x700: Debug
-	DebugPrint = 0x700,
+	//0x900: Display
+	MapFramebuffer = 0x900,
+	FlushFramebuffer,
+
+	//0xA00: Network interfaces (TCP/IP is the usermode netstack)
+	NetSend = 0xA00,
+	GetInterfaces,
+
+	//0xB00: IPC endpoints (name to capability token rendezvous)
+	RegisterEndpoint = 0xB00,
+	LookupEndpoint,
+	PostEndpoint,
+	PollEndpoint,
+
+	//0xC00: Debug
+	DebugPrint = 0xC00,
 	DebugPrintBytes,
 	DebugPrintStack,
-
-	//0x900: IPC endpoints (name -> capability-token rendezvous)
-	RegisterEndpoint = 0x900,
-	LookupEndpoint,
-	PostEndpoint,   //0x902
-	PollEndpoint,   //0x903
-
-	//0xA00: Handle capabilities (pass a handle to another process)
-	ShareHandle = 0xA00,
-	ClaimHandle,
 };

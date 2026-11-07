@@ -6,7 +6,7 @@
 #include <windows/winnt.h>
 #include <reactos/windbgkd.h>
 #include "kddll.h"
-#include "KThread.h"
+#include "kernel/Core/KThread.h"
 
 //ReactOS::ntoskrnl\kd64\kdapi.c
 //Implements the interop layer between MetalOS and KD. Simulates NT kernel being debugged

@@ -24,7 +24,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Objects\*.cpp;$(MetalOSSrc)x64\Cpuid.cpp" Exclude="**\*_test.cpp" />
+    <ClCompile Include="*.cpp;Core\*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Objects\*.cpp;$(MetalOSSrc)x64\Cpuid.cpp" Exclude="**\*_test.cpp" />
     <!-- Kd64 is vendored, so it gets what it uses from the kernel by forced include rather than edits -->
     <ClCompile Include="Kd64\*.cpp">
       <WarningLevel>Level1</WarningLevel>

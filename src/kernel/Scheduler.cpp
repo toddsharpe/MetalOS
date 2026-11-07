@@ -2,7 +2,7 @@
 #include "kernel/Kernel_heap.h"
 #include "kernel/Kernel_process.h"
 #include "Assert.h"
-#include "kernel/KThread.h"
+#include "kernel/Core/KThread.h"
 #include "Lib/StaticVector.h"
 
 namespace

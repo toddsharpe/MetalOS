@@ -1,7 +1,7 @@
 #pragma once
 
 #include "user/MetalOS.h"
-#include "kernel/UProcess.h"
+#include "kernel/Core/UProcess.h"
 #include "kernel/UObject.h"
 
 //Longer debug output is truncated by Printf's buffer anyway

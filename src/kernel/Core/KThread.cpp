@@ -1,4 +1,4 @@
-#include "kernel/KThread.h"
+#include "kernel/Core/KThread.h"
 #include "kernel/Kernel_vmem.h"
 #include "kernel/Arch.h"
 

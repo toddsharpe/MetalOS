@@ -1,13 +1,13 @@
 #include "kernel/Kernel_heap.h"
 #include "kernel/Kernel_thread.h"
 #include "kernel/Scheduler.h"
-#include "kernel/KThread.h"
-#include "kernel/UThread.h"
-#include "kernel/UProcess.h"
+#include "kernel/Core/KThread.h"
+#include "kernel/Core/UThread.h"
+#include "kernel/Core/UProcess.h"
 #include "kernel/Objects/KEvent.h"
 #include "Assert.h"
 #include "kernel/Kernel.h"
-#include "kernel/KProcess.h"
+#include "kernel/Core/KProcess.h"
 
 static void KThreadInit();
 static uint32_t UThreadInit(void* const arg);

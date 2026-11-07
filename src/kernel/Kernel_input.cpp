@@ -1,6 +1,6 @@
 #include "kernel/Kernel_shm.h"
 #include "kernel/Kernel_input.h"
-#include "kernel/KProcess.h"
+#include "kernel/Core/KProcess.h"
 #include "kernel/Objects/KSpinLock.h"
 #include "Lib/SharedRing.h"
 #include "user/MetalOS.UI.h"

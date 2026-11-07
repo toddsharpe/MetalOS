@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <cstddef>
-#include "kernel/UThread.h"
+#include "kernel/Core/UThread.h"
 #include "kernel/Objects/KSignal.h"
 #include "Lib/Time.h"
 

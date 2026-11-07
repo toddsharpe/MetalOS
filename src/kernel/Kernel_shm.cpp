@@ -4,7 +4,7 @@
 #include "kernel/Kernel_shm.h"
 #include "kernel/Kernel_grant.h"
 #include "kernel/Kernel_endpoint.h"
-#include "kernel/KProcess.h"
+#include "kernel/Core/KProcess.h"
 #include "kernel/Arch.h"
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/UObject.h"

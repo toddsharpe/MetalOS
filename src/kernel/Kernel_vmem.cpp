@@ -1,6 +1,6 @@
 #include "kernel/Kernel_pmem.h"
 #include "kernel/Kernel_vmem.h"
-#include "kernel/KProcess.h"
+#include "kernel/Core/KProcess.h"
 #include "kernel/Arch.h"
 #include "MetalOS.Space.h"
 #include "Assert.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "new.h"
-#include "kernel/KThread.h"
+#include "kernel/Core/KThread.h"
 #include "Lib/Time.h"
 
 typedef nano100_t (*ReadTsc)();

@@ -2,7 +2,7 @@
 #include "kernel/Arch.h"
 #include "kernel/Kernel_pmem.h"
 #include "kernel/Kernel_vmem.h"
-#include "kernel/KProcess.h"
+#include "kernel/Core/KProcess.h"
 #include "Lib/StaticVector.h"
 #include "kernel/Kernel.h"
 #include "core_crt/stdarg.h"

@@ -3,7 +3,7 @@
 #include "windows/types.h"
 #include "windows/winnt.h"
 #include "Assert.h"
-#include "kernel/KProcess.h"
+#include "kernel/Core/KProcess.h"
 #include "Lib/System.h"
 #include "WinPE.h"
 #include "kernel/Kernel_vmem.h"

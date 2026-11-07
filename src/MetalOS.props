@@ -113,6 +113,8 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
+      <!-- Switch jump tables go in .rdata, so code pages hold only code and the SIMD check reads instructions, not table entries -->
+      <AdditionalOptions>/jumptablerdata %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>

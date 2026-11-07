@@ -3,7 +3,7 @@
 #include <Efi.h>
 #include <cstdint>
 #include "Lib/System.h"
-#include "Lib/List.h"
+#include "Lib/IntrusiveList.h"
 
 //PixelsPerScanLine could be larger than HorizonalResolution if theres padding
 struct EFI_GRAPHICS_DEVICE
@@ -43,10 +43,9 @@ enum class PageState
 };
 
 //Simple struct to represent a physical page. Its state and list pointers
-struct PageFrame
+//The link places the frame on the free list
+struct PageFrame : ListLink
 {
-	//Pointers when placing frames on the lists
-	ListEntry Link;
 	PageState State;
 	uint32_t Refs; //Active pages: the allocation plus each owning mapping; freed when it drops to zero
 };

@@ -320,11 +320,11 @@ void Scheduler::KillProcess(UProcess& process)
 	const UThread* const user = GetCurrentThread().UserThread;
 	const bool isRunning = user && &user->Process == &process;
 
-	for (UThread* const thread : process.Threads)
+	for (UThread& thread : process.Threads)
 	{
 		//Skip threads that already exited (their KThread is gone)
-		if (thread->Thread)
-			thread->Thread->Sched.State = KThreadState::Terminated;
+		if (thread.Thread)
+			thread.Thread->Sched.State = KThreadState::Terminated;
 	}
 
 	if (!isRunning)

@@ -144,7 +144,7 @@ x64_SYSTEMCALL PROC
 	mov rbx, qword ptr [rbx+8] ; offsetof(CpuContext, Thread)
 	mov rbx, qword ptr [rbx+8] ; offsetof(KThread, UserThread)
 	push qword ptr gs:[16] ; offsetof(CpuContext, UserStack)
-	pop qword ptr [rbx+16] ; offsetof(UThread, Stack)
+	pop qword ptr [rbx+32] ; offsetof(UThread, Stack)
 
 	; Create new frame
 	PROLOG

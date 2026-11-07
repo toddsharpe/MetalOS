@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Lib/System.h"
-#include "Lib/LinkedList.h"
+#include "Lib/IntrusiveList.h"
 #include "kernel/Plat.h"
 
 struct uacpi_namespace_node;
@@ -25,7 +25,7 @@ enum class KDeviceType
 };
 
 class Driver;
-class KDevice
+class KDevice : public ListLink
 {
 public:
 	constexpr KDevice() :
@@ -62,8 +62,8 @@ public:
 				break;
 		}
 
-		for (const KDevice* const child : Children)
-			child->Display();
+		for (const KDevice& child : Children)
+			child.Display();
 	}
 
 	char Name[64];
@@ -73,7 +73,7 @@ public:
 
 	KDeviceType Type;
 	KDeviceClass Class;
-	LinkedList<KDevice*> Children;
+	IntrusiveList<KDevice> Children;
 	Driver* Driver;
 
 	union

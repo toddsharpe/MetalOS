@@ -2,7 +2,6 @@
 
 #include "kernel/Arch.h"
 #include "Lib/String.h"
-#include "Lib/LinkedList.h"
 
 #include "kernel/Types.h"
 #include "kernel/AddressSpace.h"

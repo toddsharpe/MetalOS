@@ -17,7 +17,7 @@
 #include "Assert.h"
 #include "kernel/Kernel.h"
 
-static LinkedList<UProcess*> m_processes;
+static IntrusiveList<UProcess> m_processes;
 
 static constexpr char RuntimeDLL[] = "MetalOS-RT.dll";
 
@@ -172,7 +172,7 @@ UProcess* KeCreateProcess(const char* const cmd)
 	//Bad images are rejected above, so a failed load never leaves a half-built process in the list
 	UProcess* created = KeAlloc<UProcess>(AllocType::User, Str(path));
 	Assert(created);
-	Assert(m_processes.Add(created));
+	m_processes.InsertTail(*created);
 
 	//Fresh page tables for the process, with the kernel mapped in. No CR3 switch and no
 	//interrupts-off window: the loader aliases each image into the kernel and patches it there,
@@ -263,9 +263,9 @@ void KeExitUThread(UThread& thread, const uint32_t exitCode)
 		return;
 
 	//Another live thread keeps the process running; as on Windows, the last one ending ends the process with its exit code, else nothing would terminate (or reap) it
-	for (const UThread* const other : thread.Process.Threads)
+	for (const UThread& other : thread.Process.Threads)
 	{
-		if (other != &thread && other->Thread && other->Thread->Sched.State != KThreadState::Terminated)
+		if (&other != &thread && other.Thread && other.Thread->Sched.State != KThreadState::Terminated)
 		{
 			KeExitThread(*thread.Thread);
 			return;
@@ -295,7 +295,7 @@ namespace
 		if (!thread.PipeWriteQueue)
 			return;
 
-		thread.PipeWriteQueue->DequeueWriter(thread.PipeWriteLink);
+		thread.PipeWriteQueue->DequeueWriter(thread.PipeWriter);
 		thread.PipeWriteQueue = nullptr;
 	}
 
@@ -324,10 +324,10 @@ namespace
 	//A terminated process is reapable once its last thread record is gone
 	UProcess* FindReapable()
 	{
-		for (UProcess* const process : m_processes)
+		for (UProcess& process : m_processes)
 		{
-			if (process->State == ProcessState::Terminated && !process->Reaped && process->Threads.IsEmpty())
-				return process;
+			if (process.State == ProcessState::Terminated && !process.Reaped && process.Threads.IsEmpty())
+				return &process;
 		}
 		return nullptr;
 	}
@@ -407,7 +407,7 @@ void KeReleaseUThread(UThread& thread)
 
 	//Last reference: its KThread (and with it the user stack) is gone and no handle names it
 	UProcess& process = thread.Process;
-	Assert(process.Threads.Remove(&thread));
+	process.Threads.Remove(thread);
 	KeFree(&thread, AllocType::User);
 }
 
@@ -419,15 +419,15 @@ void KeReleaseUProcess(UProcess& process)
 
 	//Reaping drops the process's own reference, so at zero only the record is left
 	Assert(process.Reaped);
-	Assert(m_processes.Remove(&process));
+	m_processes.Remove(process);
 	KeFree(&process, AllocType::User);
 }
 
 bool KeIsProcessAlive(const uint32_t id)
 {
-	for (UProcess* const process : m_processes)
+	for (const UProcess& process : m_processes)
 	{
-		if (process->Id == id && process->State != ProcessState::Terminated)
+		if (process.Id == id && process.State != ProcessState::Terminated)
 			return true;
 	}
 	return false;
@@ -436,17 +436,17 @@ bool KeIsProcessAlive(const uint32_t id)
 size_t KeGetProcessList(ProcessListEntry* const buffer, const size_t maxCount)
 {
 	size_t n = 0;
-	for (UProcess* const process : m_processes)
+	for (const UProcess& process : m_processes)
 	{
 		if (n >= maxCount)
 			break;
 
 		ProcessListEntry& entry = buffer[n];
-		entry.Id = process->Id;
-		entry.VirtualSize = process->Space.ReservedBytes();
-		entry.State = process->State;
+		entry.Id = process.Id;
+		entry.VirtualSize = process.Space.ReservedBytes();
+		entry.State = process.State;
 
-		StrCopy(entry.Name, Str(process->Name));
+		StrCopy(entry.Name, Str(process.Name));
 
 		n++;
 	}

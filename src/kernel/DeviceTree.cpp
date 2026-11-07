@@ -61,7 +61,7 @@ namespace
 		{
 			KDevice* parentDevice = context->Nodes.Get(parent);
 			Assert(parentDevice);
-			parentDevice->Children.Add(device);
+			parentDevice->Children.InsertTail(*device);
 		}
 
 		uacpi_free_namespace_node_info(info);
@@ -84,8 +84,8 @@ KDevice* DeviceTree::Walk(Visit visit) const
 		if (visit(*current))
 			return current;
 
-		for (auto& child : current->Children)
-			Assert(stack.Add(child));
+		for (KDevice& child : current->Children)
+			Assert(stack.Add(&child));
 	}
 	return nullptr;
 }
@@ -123,7 +123,7 @@ void DeviceTree::AddRootChild(KDevice& device)
 	//Populate path
 	snprintf(device.Path, sizeof(device.Path), "%s%s", m_root->Path, device.Hid);
 
-	m_root->Children.Add(&device);
+	m_root->Children.InsertTail(device);
 	AttachDriver(device);
 }
 

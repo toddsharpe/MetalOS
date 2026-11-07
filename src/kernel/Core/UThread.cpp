@@ -10,7 +10,7 @@ UThread::UThread(UProcess& process, ThreadEnvironmentBlock& teb) :
 	Id(++LastId),
 	StackBase(),
 	Refs(1),
-	PipeWriteLink(),
+	PipeWriter(),
 	PipeWriteQueue(),
 	PipeWait(),
 	EventWait(),

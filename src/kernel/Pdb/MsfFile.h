@@ -2,7 +2,7 @@
 
 #include "core_crt/stdint.h"
 #include "Lib/StaticVector.h"
-#include "Lib/List.h"
+#include "Lib/IntrusiveList.h"
 #include "Lib/Arena.h"
 #include "Lib/Math.h"
 #include "kernel/Pdb/MsfStream.h"
@@ -33,8 +33,6 @@ public:
 	//False for a file that isn't an MSF file this can read (or is cut short), or when the arena can't hold its streams
 	bool Initialize(Arena& arena)
 	{
-		ListInitializeHead(m_streams);
-		
 		//Set header
 		m_header = static_cast<const Header*>(m_image);
 		
@@ -73,7 +71,7 @@ public:
 			if (!mem)
 				return false;
 			MsfStream* stream = new (mem) MsfStream(m_header->BlockSize, Read, this);
-			ListInsertTail(m_streams, stream->Link);
+			m_streams.InsertTail(*stream);
 			
 			const uint32_t streamSize = directory->Read<uint32_t>();
 			if (streamSize == 0xFFFFFFFF)
@@ -91,33 +89,27 @@ public:
 			return false;
 
 		//Each stream's block numbers follow the sizes, stream by stream; a stream reads them from the directory as it needs them
-		ListForEach<MsfStream, MsfStream*>(m_streams, [](const ListEntry& entry, MsfStream& item, MsfStream* ctx)
+		for (MsfStream& item : m_streams)
 		{
-			UNUSED(entry);
 			if (item.IsInvalid)
-				return;
+				continue;
 
-			item.SetBlocks(*ctx, ctx->Position());
-			ctx->Skip<uint32_t>((uint32_t)item.BlockCount);
-		}, directory);
+			item.SetBlocks(*directory, directory->Position());
+			directory->Skip<uint32_t>(static_cast<uint32_t>(item.BlockCount));
+		}
 		return true;
 	}
 
 	//Whether the directory holds a (valid) stream at index, which GetStream needs, so an index read from the PDB is checked first
 	bool HasStream(const uint32_t index) const
 	{
-		if (index >= m_streams.Count)
-			return false;
-
-		const MsfStream* const stream = ListGet<MsfStream>(m_streams, index);
+		const MsfStream* const stream = StreamAt(index);
 		return stream && !stream->IsInvalid;
 	}
 
 	MsfStream& GetStream(const uint32_t index)
 	{
-		Assert(index < m_streams.Count);
-
-		MsfStream* stream = ListGet<MsfStream>(m_streams, index);
+		MsfStream* const stream = StreamAt(index);
 		Assert(stream);
 		stream->Seek(0);
 
@@ -148,11 +140,9 @@ public:
 		Printf("    NumDirectoryBytes: 0x%x\n", m_header->NumDirectoryBytes);
 		Printf("    Unknown: 0x%x\n", m_header->Unknown);
 		Printf("    BlockMapAddr: 0x%x\n", m_header->BlockMapAddr);
-		Printf("  Streams: 0x%x\n", m_streams.Count);
-		ListForEach<MsfStream>(m_streams, [](const ListEntry&, const MsfStream& stream)
-		{
+		Printf("  Streams: 0x%x\n", m_streams.Count());
+		for (const MsfStream& stream : m_streams)
 			stream.Display();
-		});
 	}
 
 private:
@@ -183,6 +173,29 @@ private:
 
 	const void* const m_image;
 	const Header* m_header;
-	ListHead m_streams;
+	IntrusiveList<MsfStream> m_streams;
+
+	//Null past the last stream
+	const MsfStream* StreamAt(const uint32_t index) const
+	{
+		uint32_t i = 0;
+		for (const MsfStream& stream : m_streams)
+		{
+			if (i++ == index)
+				return &stream;
+		}
+		return nullptr;
+	}
+
+	MsfStream* StreamAt(const uint32_t index)
+	{
+		uint32_t i = 0;
+		for (MsfStream& stream : m_streams)
+		{
+			if (i++ == index)
+				return &stream;
+		}
+		return nullptr;
+	}
 };
 

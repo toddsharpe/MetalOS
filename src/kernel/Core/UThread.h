@@ -6,7 +6,7 @@
 #include <cstring>
 
 class KThread;
-class UThread
+class UThread : public ListLink
 {
 public:
 	UThread(UProcess& process, ThreadEnvironmentBlock& teb);
@@ -41,8 +41,7 @@ public:
 	void SaveFpu() { ArchSaveFpu(m_fpu); }
 	void LoadFpu() const { ArchLoadFpu(m_fpu); }
 
-	//Process and Thread precede Stack so Stack stays at offset 16 for x64_SYSTEMCALL asm
-	//(guarded by the static_assert below); the UThread list is now a LinkedList in UProcess.
+	//Process and Thread precede Stack so Stack stays at offset 32, after the list link, for x64_SYSTEMCALL asm
 	UProcess& Process;
 	KThread* Thread; //Null once the thread has exited and the scheduler freed its KThread
 	void* Stack; //Saved from asm on syscalls
@@ -50,7 +49,7 @@ public:
 	const uint32_t Id;
 	void* StackBase; //User stack reservation, freed by the reaper when the thread exits
 	uint32_t Refs; //Its KThread plus each handle; the record is freed at zero (KeReleaseUThread)
-	ListEntry PipeWriteLink; //Place in PipeWriteQueue's writer queue while a WriteFile to a pipe is in progress
+	KPipeWriter PipeWriter; //Place in PipeWriteQueue's writer queue while a WriteFile to a pipe is in progress
 	KPipe* PipeWriteQueue;
 	KPipe* PipeWait; //Pipe whose Waiters this thread holds in a syscall; the reaper drops it if the thread is killed there
 	KEvent* EventWait; //Event whose reference this thread holds while it waits on it; the reaper drops it if the thread is killed there
@@ -63,4 +62,4 @@ private:
 	//Pointers into process address space
 	ThreadEnvironmentBlock& m_teb;
 };
-static_assert(offsetof(UThread, Stack) == 16, "x64_SYSTEMCALL asm invalid");
+static_assert(offsetof(UThread, Stack) == 32, "x64_SYSTEMCALL asm invalid");

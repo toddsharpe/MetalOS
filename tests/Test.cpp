@@ -25,7 +25,6 @@ int main()
 	Test(RingBuffer);
 	Test(SharedRing);
 	Test(StaticHeap);
-	Test(LinkedList);
 	Test(IntrusiveList);
 	Test(TextBuffer);
 	Test(Path);

@@ -3,13 +3,14 @@
 #include "Net/Net.h"
 #include "Net/PacketBuffer.h"
 #include "Lib/Span.h"
+#include "Lib/IntrusiveList.h"
 #include "Assert.h"
 
 //Datagram socket. Sends reuse the Net::Socket send path; receives are demultiplexed by
 //Net::Socket::Receive into a per-socket queue that the netstack IPC layer drains to
 //service app RecvFrom requests. netstack is single-threaded (one RX/IPC loop), so no
 //lock is needed around the queue.
-class KSocket
+class KSocket : public ListLink
 {
 public:
 	//Each queued record is an endpoint_t (source) followed by the payload bytes.

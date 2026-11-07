@@ -293,7 +293,7 @@ void VmBusDriver::OnInterrupt()
 
 				//Create child device
 				KDevice* device = KeAlloc<KDevice>(AllocType::Kernel);
-				m_device.Children.Add(device);
+				m_device.Children.InsertTail(*device);
 				device->Type = KDeviceType::Platform;
 				device->Context = m_children.end() - 1;
 

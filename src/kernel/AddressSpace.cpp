@@ -1,4 +1,5 @@
 #include "kernel/AddressSpace.h"
+#include "new.h"
 #include "kernel/Arch.h"
 #include "Lib/Math.h"
 
@@ -63,7 +64,7 @@ uintptr_t AddressSpace::Reserve(const size_t count, const PageOwnership ownershi
 	//Claim address
 	m_watermark = test;
 	const uintptr_t address = m_watermark;
-	Assert(m_reservations.Add(Reservation{address, count, ownership == PageOwnership::Owned}));
+	Add(address, count, ownership);
 
 	//Increment watermark
 	m_watermark += ByteAlign(bytes, AllocationGranularity);
@@ -80,7 +81,7 @@ bool AddressSpace::Reserve(const uintptr_t address, const size_t count, const Pa
 		return false;
 
 	//Claim
-	Assert(m_reservations.Add(Reservation{address, count, ownership == PageOwnership::Owned}));
+	Add(address, count, ownership);
 
 	return true;
 }
@@ -120,8 +121,26 @@ size_t AddressSpace::ReservedBytes() const
 
 bool AddressSpace::Free(const uintptr_t address, const size_t count)
 {
-	//operator== keys on Address; removes the matching reservation (count is validated by callers).
-	return m_reservations.Remove(Reservation{ address, count });
+	//Reservations are keyed by their unique address; callers validate count
+	UNUSED(count);
+	for (Reservation& res : m_reservations)
+	{
+		if (res.Address != address)
+			continue;
+
+		m_reservations.Remove(res);
+		res.~Reservation();
+		free(&res);
+		return true;
+	}
+	return false;
+}
+
+void AddressSpace::Add(const uintptr_t address, const size_t count, const PageOwnership ownership)
+{
+	void* const memory = malloc(sizeof(Reservation));
+	Assert(memory);
+	m_reservations.InsertTail(*new (memory) Reservation(address, count, ownership == PageOwnership::Owned));
 }
 
 void AddressSpace::Display() const

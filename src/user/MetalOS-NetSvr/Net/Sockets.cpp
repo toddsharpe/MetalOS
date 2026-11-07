@@ -2,7 +2,7 @@
 #include "user/MetalOS.Types.h"
 #include "Net/NetIf.h"
 #include "Net/Packet.h"
-#include "Lib/LinkedList.h"
+#include "Lib/IntrusiveList.h"
 #include "Lib/Time.h"
 #include "Assert.h"
 
@@ -21,18 +21,18 @@ uint16_t Net::rand_port()
 //the registry demuxes received datagrams into the matching socket's queue.
 namespace
 {
-	LinkedList<KSocket*> g_sockets;
+	IntrusiveList<KSocket> g_sockets;
 
 	//Udp::Receive delivers Udp and Icmp::Receive delivers whole ICMP messages (raw sockets) as Icmp
 	KSocket* FindBound(const proto_t proto, const uint16_t port)
 	{
-		for (KSocket* socket : g_sockets)
+		for (KSocket& socket : g_sockets)
 		{
-			if (socket->Proto != proto)
+			if (socket.Proto != proto)
 				continue;
-			if (socket->Proto == proto_t::Udp && socket->Local.port != port)
+			if (socket.Proto == proto_t::Udp && socket.Local.port != port)
 				continue;
-			return socket;
+			return &socket;
 		}
 		return nullptr;
 	}
@@ -41,7 +41,7 @@ namespace
 	{
 		if (socket.Registered)
 			return;
-		Assert(g_sockets.Add(&socket));
+		g_sockets.InsertTail(socket);
 		socket.Registered = true;
 	}
 
@@ -49,7 +49,7 @@ namespace
 	{
 		if (!socket.Registered)
 			return;
-		g_sockets.Remove(&socket);
+		g_sockets.Remove(socket);
 		socket.Registered = false;
 	}
 }

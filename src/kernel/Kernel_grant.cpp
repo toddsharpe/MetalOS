@@ -3,7 +3,8 @@
 #include "kernel/UObject.h"
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/Objects/KSpinLock.h"
-#include "Lib/LinkedList.h"
+#include "kernel/Kernel_heap.h"
+#include "Lib/IntrusiveList.h"
 #include "Assert.h"
 
 /*
@@ -17,18 +18,21 @@
  */
 namespace
 {
-	struct Grant
+	struct Grant : ListLink
 	{
+		Grant(const UObjectType type, void* const object, const uint32_t granter) : Token(), Type(type), Object(object), Granter(granter)
+		{
+
+		}
+
 		uint64_t Token;
 		UObjectType Type;
 		void* Object;
 		uint32_t Granter; //Minting process id, or KernelGrantOwner
-
-		bool operator==(const Grant& other) const { return Token == other.Token; }
 	};
 
 	KSpinLock m_lock;
-	LinkedList<Grant> m_grants;
+	IntrusiveList<Grant> m_grants;
 	uint64_t m_nextToken = 1;
 }
 
@@ -45,10 +49,11 @@ uint64_t KeGrantShare(const UObjectType type, void* const object, const uint32_t
 			break;
 	}
 
+	Grant* const grant = KeAlloc<Grant>(AllocType::Kernel, type, object, granter);
 	KSpinLockGuard guard(m_lock);
-	const uint64_t token = m_nextToken++;
-	Assert(m_grants.Add({ token, type, object, granter }));
-	return token;
+	grant->Token = m_nextToken++;
+	m_grants.InsertTail(*grant);
+	return grant->Token;
 }
 
 //Drops an exited process's unclaimed grants, releasing the reference each held on its object
@@ -57,8 +62,8 @@ void KeGrantRevoke(const uint32_t granter)
 	KSpinLockGuard guard(m_lock);
 	while (true)
 	{
-		const Grant* found = nullptr;
-		for (const Grant& grant : m_grants)
+		Grant* found = nullptr;
+		for (Grant& grant : m_grants)
 		{
 			if (grant.Granter == granter)
 			{
@@ -70,7 +75,8 @@ void KeGrantRevoke(const uint32_t granter)
 			return;
 
 		const Grant revoked = *found;
-		m_grants.Remove(revoked);
+		m_grants.Remove(*found);
+		KeFree(found, AllocType::Kernel);
 		switch (revoked.Type)
 		{
 			case UObjectType::SharedMemory:
@@ -86,7 +92,7 @@ void KeGrantRevoke(const uint32_t granter)
 bool KeGrantClaim(const uint64_t token, UObjectType& type, void*& object)
 {
 	KSpinLockGuard guard(m_lock);
-	for (const Grant& grant : m_grants)
+	for (Grant& grant : m_grants)
 	{
 		if (grant.Token != token)
 			continue;
@@ -94,6 +100,7 @@ bool KeGrantClaim(const uint64_t token, UObjectType& type, void*& object)
 		type = grant.Type;
 		object = grant.Object;
 		m_grants.Remove(grant); //single-use
+		KeFree(&grant, AllocType::Kernel);
 		return true;
 	}
 	return false;

@@ -159,36 +159,36 @@ void uacpi_kernel_io_unmap(uacpi_handle handle)
 
 uacpi_status uacpi_kernel_io_read8(uacpi_handle, uacpi_size offset, uacpi_u8 *out_value)
 {
-	*out_value = ArchReadPort(offset, 8);
+	*out_value = ArchReadPort<uacpi_u8>(static_cast<uint16_t>(offset));
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_io_read16(uacpi_handle, uacpi_size offset, uacpi_u16 *out_value)
 {
-	*out_value = ArchReadPort(offset, 16);
+	*out_value = ArchReadPort<uacpi_u16>(static_cast<uint16_t>(offset));
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_io_read32(uacpi_handle, uacpi_size offset, uacpi_u32 *out_value)
 {
-	*out_value = ArchReadPort(offset, 32);
+	*out_value = ArchReadPort<uacpi_u32>(static_cast<uint16_t>(offset));
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_io_write8(uacpi_handle, uacpi_size offset, uacpi_u8 in_value)
 {
-	ArchWritePort(offset, in_value, 8);
+	ArchWritePort(static_cast<uint16_t>(offset), in_value);
 	return uacpi_status::UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_io_write16(uacpi_handle, uacpi_size offset, uacpi_u16 in_value)
 {
-	ArchWritePort(offset, in_value, 16);
+	ArchWritePort(static_cast<uint16_t>(offset), in_value);
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_io_write32(uacpi_handle, uacpi_size offset, uacpi_u32 in_value)
 {
-	ArchWritePort(offset, in_value, 32);
+	ArchWritePort(static_cast<uint16_t>(offset), in_value);
 	return uacpi_status::UACPI_STATUS_OK;
 }
 

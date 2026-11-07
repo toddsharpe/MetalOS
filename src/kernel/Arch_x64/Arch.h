@@ -86,32 +86,28 @@ inline void ArchWait()
 	__halt();
 }
 
-inline uint32_t ArchReadPort(uint32_t port, uint8_t width)
+template <typename T>
+T ArchReadPort(const uint16_t port)
 {
-	switch (width)
-	{
-	case 8:
+	static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Ports are 8, 16 or 32 bits wide");
+	if constexpr (sizeof(T) == 1)
 		return __inbyte(port);
-	case 16:
+	else if constexpr (sizeof(T) == 2)
 		return __inword(port);
-	case 32:
+	else
 		return __indword(port);
-	default:
-		return 0;
-	}
 }
 
-inline void ArchWritePort(uint32_t port, uint32_t value, uint8_t width)
+template <typename T>
+void ArchWritePort(const uint16_t port, const T value)
 {
-	switch (width)
-	{
-	case 8:
-		return __outbyte(port, value);
-	case 16:
-		return __outword(port, value);
-	case 32:
-		return __outdword(port, value);
-	}
+	static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Ports are 8, 16 or 32 bits wide");
+	if constexpr (sizeof(T) == 1)
+		__outbyte(port, value);
+	else if constexpr (sizeof(T) == 2)
+		__outword(port, value);
+	else
+		__outdword(port, value);
 }
 
 inline uint64_t ArchReadMsr(const uint32_t msr)

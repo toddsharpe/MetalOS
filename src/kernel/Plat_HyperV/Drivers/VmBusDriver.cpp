@@ -91,7 +91,7 @@ uint32_t VmBusDriver::CreateGpadl(const uint32_t childRelid, const paddr_t addre
 
 	KEvent event(false, false);
 	HyperV::VmBusResponse response;
-	header->gpadl = _InterlockedIncrement64((volatile __int64*)&m_nextGpadlHandle);
+	header->gpadl = static_cast<uint32_t>(_InterlockedIncrement(&m_nextGpadlHandle));
 	AddRequest({ header->gpadl, 0, 0, &event, &response });
 
 	HyperV::HV_HYPERCALL_RESULT_VALUE result = HyperV::Platform::HvPostMessage(connectionId, (HyperV::HV_MESSAGE_TYPE)1, (uint32_t)headerMsgSize, header);

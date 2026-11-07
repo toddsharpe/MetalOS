@@ -18,10 +18,11 @@ constexpr T MakePointer(const void* base, const ptrdiff_t offset = 0)
 	return reinterpret_cast<T>((char*)base + offset);
 }
 
-constexpr size_t ByteAlign(const size_t size, const size_t alignment)
+template <typename T>
+constexpr T ByteAlign(const T size, const size_t alignment)
 {
-	const size_t mask = alignment - 1;
-	return ((size + mask) & ~(mask));
+	const T mask = static_cast<T>(alignment - 1);
+	return static_cast<T>((size + mask) & ~mask);
 }
 
 template <typename T, size_t N>

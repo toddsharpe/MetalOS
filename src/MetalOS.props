@@ -63,7 +63,7 @@
       <SDLCheck>false</SDLCheck>
       <SupportJustMyCode>false</SupportJustMyCode>
       <ConformanceMode>Default</ConformanceMode>
-      <WarningLevel>Level2</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <!-- C4200: zero-sized trailing arrays, the idiom of the on-disk and hardware structs here and in the Windows headers -->
       <DisableSpecificWarnings>4200;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -147,6 +147,9 @@
 
   <!-- The host unit tests are an ordinary Windows console program -->
   <ItemDefinitionGroup Condition="'$(MetalOSKind)' == 'Host'">
+    <ClCompile>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
     </Link>

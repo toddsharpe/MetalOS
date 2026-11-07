@@ -28,8 +28,6 @@ namespace EfiLoader
 	//This method should check the memory map file and ensure nobody else has this reservation
 	EFI_STATUS MapKernel(EFI_FILE* pFile, UINT64& imageSizeOut, UINT64& entryPointOut, EFI_PHYSICAL_ADDRESS& physicalImageBaseOut)
 	{
-		EFI_STATUS status;
-
 		//Dos header
 		UINTN size = sizeof(IMAGE_DOS_HEADER);
 		IMAGE_DOS_HEADER dosHeader;

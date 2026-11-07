@@ -38,6 +38,7 @@ int main()
 	Test(PebModules);
 	Test(IPv4);
 	Test(Socket);
+	Test(Router);
 
 	return 0;
 }

@@ -54,6 +54,8 @@ namespace Net::Socket
 			CircularBuffer<tx_entry_t, TxEntries> tx;
 			uint32_t rx_bytes;
 			uint32_t tx_bytes;
+			uint32_t unreachable;
+			endpoint_t last_unreachable;
 		};
 
 		static socket_t m_sockets[SocketCount] = {};
@@ -116,7 +118,7 @@ namespace Net::Socket
 				const tx_entry_t& entry = socket.tx.Peek();
 
 				//A down link would refuse it every loop and jam the rest behind it, so it drops here
-				if (!entry.dst_if->driver.IsLinkUp())
+				if (!entry.dst_if->IsUp())
 				{
 					free_tx(entry.buffer);
 					socket.tx.Dequeue();
@@ -183,17 +185,24 @@ namespace Net::Socket
 			return false;
 		}
 
-		NetIf& dst_if = socket->bound_if ? *socket->bound_if : Router::Resolve(dst);
+		NetIf* const dst_if = socket->bound_if ? socket->bound_if : Router::Resolve(dst.addr);
+
+		//No interface, or no next hop on it (past its subnet with no gateway): the datagram would wait forever, so the send fails now
+		if (dst_if == nullptr || dst_if->ipv4.next_hop(dst.addr) == Net::empty)
+		{
+			stack_stats.socket_no_route++;
+			return false;
+		}
 
 		//A source address is needed, except for broadcast (DHCP DISCOVER goes from 0.0.0.0 before there is one)
-		if (dst_if.ipv4.addr == Net::empty && dst.addr != Net::broadcast)
+		if (dst_if->ipv4.addr == Net::empty && dst.addr != Net::broadcast)
 			return false;
 
 		//An unbound socket takes an ephemeral port, so replies come back to it; for ICMP it is the echo id
 		if (socket->endpoint.port == 0)
 			socket->endpoint.port = rand_port();
 
-		const size_t header_size = get_l2(dst_if.l2).HeaderSize + ipv4_hdr_size + transport_size;
+		const size_t header_size = get_l2(dst_if->l2).HeaderSize + ipv4_hdr_size + transport_size;
 		const buffer_t allocated = alloc_tx(header_size + length);
 		if (!allocated)
 			return false;
@@ -211,7 +220,7 @@ namespace Net::Socket
 			.header_size = header_size,
 			.length = length,
 			.dst = dst,
-			.dst_if = &dst_if
+			.dst_if = dst_if
 		};
 		if (!socket->tx.Enqueue(entry))
 		{
@@ -307,5 +316,31 @@ namespace Net::Socket
 		}
 
 		return false;
+	}
+
+	bool ReceiveUnreachable(NetIf& net_if, const endpoint_t local, const endpoint_t peer)
+	{
+		bool told = false;
+		for (socket_t& socket : m_sockets)
+		{
+			if (socket.fd == closed_fd || !Match(net_if, proto_t::Udp, local, socket))
+				continue;
+
+			socket.unreachable++;
+			socket.last_unreachable = peer;
+			told = true;
+		}
+		return told;
+	}
+
+	bool Refused(const int fd, uint32_t& count, endpoint_t& peer)
+	{
+		const socket_t* const socket = Get(fd);
+		if (!socket)
+			return false;
+
+		count = socket->unreachable;
+		peer = socket->last_unreachable;
+		return true;
 	}
 }

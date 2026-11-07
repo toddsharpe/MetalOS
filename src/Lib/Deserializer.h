@@ -80,6 +80,12 @@ public:
 		m_offset += bytes;
 	}
 
+	void Skip(const size_t bytes)
+	{
+		Assert(bytes <= Remaining());
+		m_offset += bytes;
+	}
+
 	const uint8_t* Peek() const
 	{
 		return &m_buffer[m_offset];

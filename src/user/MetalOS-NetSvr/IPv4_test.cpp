@@ -53,9 +53,19 @@ namespace
 		Net::eth_mac_t m_mac;
 	};
 
+	//How a test datagram's header strays from a sound one
+	struct Ipv4TestHeader
+	{
+		uint8_t ihl_version = 0x45;
+		uint16_t length_over = 0;
+		uint16_t fragment_flags = 0;
+		bool bad_checksum = false;
+		size_t padding = 0;
+	};
+
 	//Hands the stack an IPv4 datagram as Ethernet::Receive would, in the rx pool with the ethernet header already masked
 	template <size_t N>
-	void Ipv4TestReceive(Net::NetIf& net_if, const uint8_t proto, const Net::ipv4_addr_t dst, const uint8_t (&payload)[N])
+	void Ipv4TestReceive(Net::NetIf& net_if, const uint8_t proto, const Net::ipv4_addr_t dst, const uint8_t (&payload)[N], const Ipv4TestHeader& header)
 	{
 		const buffer_t backing = Net::alloc_rx(Net::buffer_size);
 		Assert(backing);
@@ -63,18 +73,24 @@ namespace
 		packet.mask(Net::eth_hdr_size);
 
 		Serializer ser(packet.buffer(), packet.length());
-		ser.Write<uint8_t>(0x45);
+		ser.Write<uint8_t>(header.ihl_version);
 		ser.Write<uint8_t>(0);
-		ser.Write<uint16_t>((uint16_t)(Net::ipv4_hdr_size + N));
+		ser.Write<uint16_t>(static_cast<uint16_t>(Net::ipv4_hdr_size + N + header.length_over));
 		ser.Write<uint16_t>(0);
-		ser.Write<uint16_t>(0);
+		ser.Write<uint16_t>(header.fragment_flags);
 		ser.Write<uint8_t>(64);
 		ser.Write<uint8_t>(proto);
 		ser.Write<uint16_t>(0);
 		ser.Write<uint32_t>(Net::build_ip(192, 168, 0, 20).addr);
 		ser.Write<uint32_t>(dst.addr);
 		ser.WriteBytes(payload);
+		for (size_t i = 0; i < header.padding; i++)
+			ser.Write<uint8_t>(0xEE);
 		packet.trim(ser.Bytes());
+
+		const uint16_t check = static_cast<uint16_t>(Net::checksum(packet.buffer(), Net::ipv4_hdr_size) ^ (header.bad_checksum ? 1 : 0));
+		packet.buffer()[Net::ipv4_hdr_checksum_offset] = static_cast<uint8_t>(check >> 8);
+		packet.buffer()[Net::ipv4_hdr_checksum_offset + 1] = static_cast<uint8_t>(check);
 
 		Net::IPv4::Receive(net_if, packet);
 		if (!packet.taken)
@@ -92,18 +108,21 @@ namespace
 		return count;
 	}
 
-	//A UDP header and 4 bytes of data
-	void Ipv4TestUdp(Net::NetIf& net_if, const Net::ipv4_addr_t dst)
+	//A UDP header and 4 bytes of data, with no checksum (zero), which UDP over IPv4 allows
+	void Ipv4TestUdp(Net::NetIf& net_if, const Net::ipv4_addr_t dst, const Ipv4TestHeader& header = {})
 	{
 		static constexpr uint8_t udp[12] = { 0x04, 0x00, 0x04, 0x00, 0x00, 0x0C, 0x00, 0x00, 'd', 'a', 't', 'a' };
-		Ipv4TestReceive(net_if, Net::ip_proto_udp, dst, udp);
+		Ipv4TestReceive(net_if, Net::ip_proto_udp, dst, udp, header);
 	}
 
-	//An ICMP echo request header, its id and sequence number, and 4 bytes of data
+	//An ICMP echo request header, its id and sequence number, and 4 bytes of data, checksummed
 	void Ipv4TestPing(Net::NetIf& net_if, const Net::ipv4_addr_t dst)
 	{
-		static constexpr uint8_t echo[12] = { Net::icmp_type_echo_request, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 'p', 'i', 'n', 'g' };
-		Ipv4TestReceive(net_if, Net::ip_proto_icmp, dst, echo);
+		uint8_t echo[12] = { Net::icmp_type_echo_request, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 'p', 'i', 'n', 'g' };
+		const uint16_t check = Net::checksum(echo, sizeof(echo));
+		echo[2] = static_cast<uint8_t>(check >> 8);
+		echo[3] = static_cast<uint8_t>(check);
+		Ipv4TestReceive(net_if, Net::ip_proto_icmp, dst, echo, {});
 	}
 
 	//Two interfaces, the first registered being the router's fallback for addresses no interface owns
@@ -181,6 +200,24 @@ void IPv4_test()
 	AssertEqual(driverA.Sent, (size_t)1);
 	delivered += Ipv4TestDrain(fd);
 	AssertEqual(delivered, (size_t)4);
+
+	//A header that isn't sound is dropped and counted before anything acts on it: its checksum, its version, a length past the bytes, a fragment
+	const uint32_t dropped = netA.ipv4.rx_dropped;
+	Ipv4TestUdp(netA, netA.ipv4.addr, { .bad_checksum = true });
+	Ipv4TestUdp(netA, netA.ipv4.addr, { .ihl_version = 0x46 });
+	Ipv4TestUdp(netA, netA.ipv4.addr, { .length_over = 1 });
+	Ipv4TestUdp(netA, netA.ipv4.addr, { .fragment_flags = 0x2000 });
+	Ipv4TestUdp(netA, netA.ipv4.addr, { .fragment_flags = 0x0001 });
+	AssertEqual(netA.ipv4.rx_dropped, dropped + 5);
+	AssertEqual(Ipv4TestDrain(fd), (size_t)0);
+
+	//Don't-fragment is no fragment, and Ethernet's padding after a short datagram is trimmed off, so the socket gets the data alone
+	Ipv4TestUdp(netA, netA.ipv4.addr, { .fragment_flags = 0x4000, .padding = 14 });
+	uint8_t data[Net::mtu] = {};
+	size_t bytes = 0;
+	Assert(Net::Socket::Recv(fd, data, sizeof(data), bytes, nullptr));
+	AssertEqual(bytes, (size_t)4);
+	Assert(memcmp(data, "data", 4) == 0);
 
 	Assert(Net::Socket::Close(fd));
 

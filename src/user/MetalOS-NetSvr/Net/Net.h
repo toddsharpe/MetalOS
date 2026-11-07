@@ -156,6 +156,7 @@ namespace Net
 		ipv4_addr_t dst;
 	};
 	static constexpr size_t ipv4_hdr_checksum_offset = 10;
+	static constexpr uint16_t ipv4_fragmented = 0x3FFF; //more fragments, or a fragment offset: this stack doesn't reassemble
 	static constexpr size_t ipv4_hdr_size = 20;
 
 	constexpr ipv4_addr_t build_ip(const uint8_t a0, const uint8_t a1, const uint8_t a2, const uint8_t a3)
@@ -307,7 +308,11 @@ namespace Net
 		}
 	};
 
+	//The internet checksum (RFC 1071); checksum_add sums in parts, as UDP's pseudo-header and datagram are
 	uint16_t checksum(const void* const buffer, const size_t length);
+	uint32_t checksum_add(const uint32_t current, const void* const buffer, const size_t length);
+	uint16_t checksum_finalize(const uint32_t current);
+	bool checksum_valid(const void* const buffer, const size_t length);
 
 	uint16_t rand_port();
 

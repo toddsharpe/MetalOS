@@ -96,7 +96,10 @@ namespace
 	//An echo reply as IPv4 hands one to Icmp, carrying the id and seq given
 	void SocketTestEchoReply(const Net::endpoint_t src, const Net::ipv4_addr_t dst, const uint16_t id, const uint16_t seq)
 	{
-		const uint8_t message[] = { Net::icmp_type_echo_reply, 0, 0, 0, static_cast<uint8_t>(id >> 8), static_cast<uint8_t>(id), static_cast<uint8_t>(seq >> 8), static_cast<uint8_t>(seq) };
+		uint8_t message[] = { Net::icmp_type_echo_reply, 0, 0, 0, static_cast<uint8_t>(id >> 8), static_cast<uint8_t>(id), static_cast<uint8_t>(seq >> 8), static_cast<uint8_t>(seq) };
+		const uint16_t check = Net::checksum(message, sizeof(message));
+		message[2] = static_cast<uint8_t>(check >> 8);
+		message[3] = static_cast<uint8_t>(check);
 		const buffer_t backing = Net::alloc_rx(sizeof(message));
 		Assert(backing);
 		memcpy(backing.Data, message, sizeof(message));
@@ -129,6 +132,29 @@ namespace
 		Net::Arp::Receive(socketIf, packet);
 		Assert(!packet.taken);
 		Net::free_rx(backing);
+	}
+
+	//A UDP datagram as IPv4 hands one up, its header's length and checksum given, with extra bytes after it as Ethernet pads
+	bool SocketTestUdp(const Net::endpoint_t src, const Net::endpoint_t dst, const uint16_t length, const uint16_t check, const size_t extra = 0)
+	{
+		const uint8_t datagram[] =
+		{
+			static_cast<uint8_t>(src.port >> 8), static_cast<uint8_t>(src.port), static_cast<uint8_t>(dst.port >> 8), static_cast<uint8_t>(dst.port),
+			static_cast<uint8_t>(length >> 8), static_cast<uint8_t>(length), static_cast<uint8_t>(check >> 8), static_cast<uint8_t>(check),
+			'h', 'i', '!', 0xEE, 0xEE,
+		};
+		const size_t bytes = sizeof(datagram) - 2 + extra;
+		const buffer_t backing = Net::alloc_rx(bytes);
+		Assert(backing);
+		memcpy(backing.Data, datagram, bytes);
+
+		Net::Packet packet(backing);
+		packet.src = { src.addr, 0 };
+		packet.dst = { dst.addr, 0 };
+		const bool taken = Net::Udp::Receive(socketIf, packet);
+		if (!packet.taken)
+			Net::free_rx(backing);
+		return taken;
 	}
 
 	uint16_t SocketTestU16(const uint8_t* const bytes)
@@ -240,16 +266,46 @@ void Socket_test()
 		Assert(Net::Socket::SendTo(fd, SocketTestPayload, sizeof(SocketTestPayload), there));
 		AssertEqual(socketDriver.Sent, sent + 1);
 
+		//Wireshark: header checksum 0x66BC correct, UDP checksum 0x4E9F correct
+		const uint8_t datagram[] =
+		{
+			0x45, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x40, 0x11, 0x66, 0xBC, 0x0A, 0x08, 0x00, 0x01,
+			0x0A, 0x08, 0x00, 0x02, 0x13, 0x88, 0x00, 0x35, 0x00, 0x0B, 0x4E, 0x9F, 'h', 'i', '!',
+		};
 		const uint8_t* const frame = socketDriver.Frame;
-		AssertEqual(socketDriver.Length, TransportOffset + Net::udp_hdr_size + sizeof(SocketTestPayload));
+		AssertEqual(socketDriver.Length, IpOffset + sizeof(datagram));
 		AssertEqual(SocketTestU16(&frame[12]), Net::eth_type_ipv4);
-		AssertEqual(frame[IpOffset + 9], Net::ip_proto_udp);
-		const uint8_t dst[] = { 10, 8, 0, 2 };
-		Assert(memcmp(&frame[IpOffset + 16], dst, sizeof(dst)) == 0);
-		AssertEqual(SocketTestU16(&frame[TransportOffset]), here.port);
-		AssertEqual(SocketTestU16(&frame[TransportOffset + 2]), there.port);
-		AssertEqual(SocketTestU16(&frame[TransportOffset + 4]), static_cast<uint16_t>(Net::udp_hdr_size + sizeof(SocketTestPayload)));
-		Assert(memcmp(&frame[TransportOffset + Net::udp_hdr_size], SocketTestPayload, sizeof(SocketTestPayload)) == 0);
+		Assert(memcmp(&frame[IpOffset], datagram, sizeof(datagram)) == 0);
+		Assert(Net::Socket::Close(fd));
+	}
+
+	//UDP checks what arrives: the reply to that datagram has the same checksum, 0x4E9F, since the sum doesn't care which way it goes
+	{
+		const int fd = Net::Socket::Create(Net::proto_t::Udp);
+		Assert(Net::Socket::Bind(fd, here));
+		const uint32_t dropped = socketIf.ipv4.rx_dropped;
+		uint8_t out[16] = {};
+		size_t bytes = 0;
+
+		Assert(SocketTestUdp(there, here, 11, 0x4E9F));
+		Assert(Net::Socket::Recv(fd, out, sizeof(out), bytes, nullptr));
+		AssertEqual(bytes, sizeof(SocketTestPayload));
+
+		//No checksum (zero) is taken as it is
+		Assert(SocketTestUdp(there, here, 11, 0));
+		Assert(Net::Socket::Recv(fd, out, sizeof(out), bytes, nullptr));
+
+		//A wrong checksum, or a length past the bytes or short of a header, is dropped and counted
+		Assert(!SocketTestUdp(there, here, 11, 0x4E9E));
+		Assert(!SocketTestUdp(there, here, 12, 0));
+		Assert(!SocketTestUdp(there, here, 7, 0));
+		AssertEqual(socketIf.ipv4.rx_dropped, dropped + 3);
+
+		//Bytes past the header's length are trimmed off, and the checksum covers only what it claims
+		Assert(SocketTestUdp(there, here, 11, 0x4E9F, 2));
+		Assert(Net::Socket::Recv(fd, out, sizeof(out), bytes, nullptr));
+		AssertEqual(bytes, sizeof(SocketTestPayload));
+		Assert(!Net::Socket::Recv(fd, out, sizeof(out), bytes, nullptr));
 		Assert(Net::Socket::Close(fd));
 	}
 

@@ -47,8 +47,11 @@ namespace Net::Icmp
 
 	bool Receive(NetIf& net_if, Packet& packet)
 	{
-		if (packet.length() < icmp_hdr_size)
+		if (packet.length() < icmp_hdr_size || !checksum_valid(packet.buffer(), packet.length()))
+		{
+			net_if.ipv4.rx_dropped++;
 			return false;
+		}
 
 		Deserializer deser(packet.buffer(), packet.length());
 		const icmp_hdr_t hdr =

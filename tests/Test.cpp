@@ -33,6 +33,7 @@ int main()
 	Test(WinPE);
 	Test(Pdb);
 	Test(ArpCache);
+	Test(Checksum);
 	Test(StackWalk);
 	Test(PebModules);
 	Test(IPv4);

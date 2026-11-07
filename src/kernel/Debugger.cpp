@@ -96,6 +96,7 @@ void Debugger::AddModule(const KModule& library)
 
 void Debugger::DebuggerEvent(Arch::InterruptVector vector, Arch::InterruptFrame& frame)
 {
+	UNUSED(vector);
 	KTRAP_FRAME TrapFrame = { 0 }; //Unused?
 	KEXCEPTION_FRAME ExceptionFrame = { 0 }; //Unused?
 	EXCEPTION_RECORD ExceptionRecord = { 0 };
@@ -103,7 +104,7 @@ void Debugger::DebuggerEvent(Arch::InterruptVector vector, Arch::InterruptFrame&
 	KPROCESSOR_MODE PreviousMode = KernelMode;
 	BOOLEAN SecondChanceException = false;
 
-	ExceptionRecord.ExceptionCode = STATUS_BREAKPOINT;
+	ExceptionRecord.ExceptionCode = static_cast<DWORD>(STATUS_BREAKPOINT);
 	ExceptionRecord.NumberParameters = 3;
 	ExceptionRecord.ExceptionInformation[0] = BREAKPOINT_BREAK;
 	ExceptionRecord.ExceptionInformation[1] = (ULONG64)(LONG_PTR)&Scheduler::GetCurrentThread();

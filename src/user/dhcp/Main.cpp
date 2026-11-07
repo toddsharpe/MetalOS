@@ -201,6 +201,8 @@ static bool AwaitReply(const HSocket sock, const uint8_t expectType, const uint3
 
 int main(int argc, char **argv)
 {
+	UNUSED(argc);
+	UNUSED(argv);
 	printf("dhcp: configuring interface 0\n");
 
 	InterfaceInfo ifaces[4] = {};

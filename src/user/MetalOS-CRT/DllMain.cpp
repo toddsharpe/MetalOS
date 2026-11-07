@@ -3,6 +3,7 @@
 
 bool DllMain(HModule handle, DllReason reason)
 {
+	UNUSED(handle);
 	switch (reason)
 	{
 		case DllReason::ProcessAttach:

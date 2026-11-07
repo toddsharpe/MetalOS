@@ -93,6 +93,7 @@ public:
 		//Each stream's block numbers follow the sizes, stream by stream; a stream reads them from the directory as it needs them
 		ListForEach<MsfStream, MsfStream*>(m_streams, [](const ListEntry& entry, MsfStream& item, MsfStream* ctx)
 		{
+			UNUSED(entry);
 			if (item.IsInvalid)
 				return;
 

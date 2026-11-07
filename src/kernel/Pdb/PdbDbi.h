@@ -180,7 +180,7 @@ public:
 
 private:
 	static constexpr uint32_t TextSection = 1;
-	static constexpr uint32_t Signature = -1;
+	static constexpr uint32_t Signature = 0xFFFFFFFF;
 	static constexpr uint32_t SymbolsSignatureC13 = 4; //CV_SIGNATURE_C13, the first dword of a module's symbol stream
 
 	enum class DbiStreamVersion : uint32_t

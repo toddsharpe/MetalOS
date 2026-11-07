@@ -96,6 +96,7 @@ void HyperVRingBuffer::Increment(const uint32_t length)
 
 void* HyperVRingBuffer::Read(const uint32_t length)
 {
+	UNUSED(length);
 	if (m_iterator == m_header->write_index)
 		return nullptr;
 	

@@ -186,6 +186,7 @@ extern "C" SyscallResult GetScreenRect(Graphics::Rectangle* rect)
 
 bool DllMain(HModule handle, DllReason reason)
 {
+	UNUSED(handle);
 	switch (reason)
 	{
 		case DllReason::ProcessAttach:

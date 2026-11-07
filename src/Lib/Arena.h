@@ -71,6 +71,7 @@ public:
 
 	void Deallocate(const void* const pointer)
 	{
+		UNUSED(pointer);
 		//TODO(tsharpe): Implement?
 	}
 

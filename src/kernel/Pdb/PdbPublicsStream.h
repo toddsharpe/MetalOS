@@ -130,7 +130,6 @@ private:
 		uint32_t Flags;
 		uint32_t Offset;
 		uint16_t Section;
-		char Name[];
 	};
 #pragma pack(pop)
 

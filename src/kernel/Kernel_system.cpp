@@ -45,7 +45,7 @@ void KeGetSystemTime(KSystemTime& time)
 	time.Hour = efiTime.Hour;
 	time.Minute = efiTime.Minute;
 	time.Second = efiTime.Second;
-	time.Milliseconds = efiTime.Nanosecond / 1000;
+	time.Milliseconds = static_cast<uint16_t>(efiTime.Nanosecond / 1000000);
 	time.Nanoseconds = efiTime.Nanosecond;
 }
 

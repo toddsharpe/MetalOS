@@ -33,6 +33,7 @@ void KeInitNetDevice()
 
 void KeNetRxFrame(NicDriver* const nic, const void* const frame, const size_t length)
 {
+	UNUSED(nic);
 	if (!m_rxRegion || length == 0 || length > NetDevice::Mtu)
 		return;
 

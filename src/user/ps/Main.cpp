@@ -3,6 +3,8 @@
 
 int main(int argc, char** argv)
 {
+	UNUSED(argc);
+	UNUSED(argv);
 	ProcessListEntry procs[64] = {};
 	size_t count = 0;
 	if (GetProcesses(procs, 64, &count) != SyscallResult::Success)

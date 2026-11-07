@@ -68,8 +68,8 @@ void Arena_test()
 		Assert(bounded.Allocate(16));
 		Assert(!bounded.Allocate(1));
 		Assert(!bounded.Reserve(1));
-		for (size_t i = 32; i < sizeof(backing); i++)
-			AssertEqual(backing[i], 0xAA);
+		for (size_t offset = 32; offset < sizeof(backing); offset++)
+			AssertEqual(backing[offset], 0xAA);
 
 		bounded.Reset();
 		Assert(bounded.Reserve(40 - 8));

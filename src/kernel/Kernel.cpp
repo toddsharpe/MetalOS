@@ -144,6 +144,7 @@ namespace
 
 	void OnTimer0(void* arg)
 	{
+		UNUSED(arg);
 		PlatEndOfInterrupt();
 		if (Scheduler::IsEnabled())
 			Scheduler::Schedule();
@@ -151,6 +152,7 @@ namespace
 
 	uint32_t IdleThread(void* unused)
 	{
+		UNUSED(unused);
 		while (true)
 			ArchWait();
 	}
@@ -244,7 +246,7 @@ extern "C"
 			PrintStack(&context, proc, pipe);
 
 			//Kill process
-			KeTerminateProcess(proc, -1);
+			KeTerminateProcess(proc, UINT32_MAX);
 			Unreachable();
 		}
 		else

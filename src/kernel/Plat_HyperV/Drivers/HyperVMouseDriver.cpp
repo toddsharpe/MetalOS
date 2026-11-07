@@ -83,6 +83,7 @@ void HyperVMouseDriver::OnCallback()
 //mousevsc_prt_msg contains pipe_prt_msg so the math is pretty fucked up. rewrite
 void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 {
+	UNUSED(size);
 	if (msg->type != PIPE_MESSAGE_DATA)
 		return;
 
@@ -135,13 +136,13 @@ void HyperVMouseDriver::ProcessMessage(pipe_prt_msg* msg, const uint32_t size)
 		const bool rightClick = report->buffer[0] & 2;
 		const uint16_t x = *(uint16_t*)&report->buffer[1];
 		const uint16_t y = *(uint16_t*)&report->buffer[3];
-		Message message = {};
-		message.Header.MessageType = MessageType::MouseEvent;
-		message.MouseEvent.Buttons.LeftPressed = leftClick;
-		message.MouseEvent.Buttons.RightPressed = rightClick;
-		message.MouseEvent.XPosition = x;
-		message.MouseEvent.YPosition = y;
-		KeInputPost(message); //feed the kernel->WM input ring
+		Message event = {};
+		event.Header.MessageType = MessageType::MouseEvent;
+		event.MouseEvent.Buttons.LeftPressed = leftClick;
+		event.MouseEvent.Buttons.RightPressed = rightClick;
+		event.MouseEvent.XPosition = x;
+		event.MouseEvent.YPosition = y;
+		KeInputPost(event); //feed the kernel->WM input ring
 		break;
 	}
 	break;

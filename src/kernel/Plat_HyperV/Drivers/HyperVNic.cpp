@@ -160,7 +160,7 @@ bool HyperVNic::Initialize()
 
 void HyperVNic::SendNvsp(const nvsp_message& msg, bool requestCompletion)
 {
-	const uint32_t flags = requestCompletion ? VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED : 0;
+	const uint16_t flags = requestCompletion ? VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED : 0;
 	m_channel.SendPacket(&msg, sizeof(nvsp_message), (uint64_t)&msg,
 		HyperV::VM_PKT_DATA_INBAND, flags);
 }
@@ -186,7 +186,7 @@ bool HyperVNic::SendRndisPacket(uint32_t channelType, const void* rndisData, uin
 
 	//trans_id names the section so its SendRndisPacketComplete can release it (control messages use 0)
 	const uint64_t transId = (section == 0) ? 0 : (SendSectionTag | section);
-	const uint32_t flags = requestCompletion ? VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED : 0;
+	const uint16_t flags = requestCompletion ? VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED : 0;
 	return m_channel.SendPacket(&msg, sizeof(nvsp_message), transId, HyperV::VM_PKT_DATA_INBAND, flags);
 }
 

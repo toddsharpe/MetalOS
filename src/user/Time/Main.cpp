@@ -3,6 +3,8 @@
 
 int main(int agrc, char** argv)
 {
+	UNUSED(agrc);
+	UNUSED(argv);
 	SystemTime time = {};
 	AssertSuccess(GetSystemTime(&time));
 

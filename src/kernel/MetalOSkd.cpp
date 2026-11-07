@@ -68,6 +68,8 @@ BOOLEAN
 NTAPI
 KeFreezeExecution(IN PKTRAP_FRAME TrapFrame, IN PKEXCEPTION_FRAME ExceptionFrame)
 {
+	UNUSED(TrapFrame);
+	UNUSED(ExceptionFrame);
 	KePauseSystem();
 	return TRUE;
 }
@@ -76,6 +78,7 @@ VOID
 NTAPI
 KeThawExecution(IN BOOLEAN Enable)
 {
+	UNUSED(Enable);
 	KeResumeSystem();
 }
 

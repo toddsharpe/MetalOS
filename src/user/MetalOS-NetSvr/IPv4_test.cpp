@@ -103,6 +103,8 @@ namespace Net::Socket
 	//Stands in for Sockets.cpp's bound-socket registry: counts what the stack delivers
 	bool Receive(NetIf& net_if, Packet& packet)
 	{
+		UNUSED(net_if);
+		UNUSED(packet);
 		ipv4TestDelivered++;
 		return true;
 	}

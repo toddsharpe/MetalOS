@@ -31,6 +31,8 @@ static bool UICallback(GUI& window, Message& message)
 
 int main(int argc, char** argv)
 {
+	UNUSED(argc);
+	UNUSED(argv);
 	//A quarter of the work area, framed, near the bottom-right corner
 	Rectangle area;
 	GetScreenRect(&area);

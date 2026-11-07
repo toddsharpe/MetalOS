@@ -235,6 +235,7 @@ namespace
 
 static bool UICallback(GUI& gui, Message& message)
 {
+	UNUSED(gui);
 	if (message.Header.MessageType == MessageType::KeyEvent)
 	{
 		OnKey(message.KeyEvent);
@@ -245,6 +246,8 @@ static bool UICallback(GUI& gui, Message& message)
 
 int main(int argc, char** argv)
 {
+	UNUSED(argc);
+	UNUSED(argv);
 	ProcessInfo procInfo;
 	GetProcessInfo(&procInfo);
 	DebugPrint("Hi From calc!\n");

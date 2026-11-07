@@ -3,10 +3,9 @@
 
 static void DivZero()
 {
-	//Div zero
-	int x = 1;
-	int y = 0;
-	int z = x / y;
+	//Div zero, by a volatile so the division can't be optimized away
+	volatile int divisor = 0;
+	printf("%d\n", 1 / divisor);
 }
 
 static void NullDereference()

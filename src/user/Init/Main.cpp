@@ -2,6 +2,8 @@
 
 int main(int argc, char** argv)
 {
+	UNUSED(argc);
+	UNUSED(argv);
 	DebugPrintf("Init process\n");
 
 	//Launch the usermode window manager first so it owns the framebuffer and

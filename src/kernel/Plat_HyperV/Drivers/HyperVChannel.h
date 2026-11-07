@@ -19,7 +19,7 @@ public:
 	void Initialize(VmBusDriver& vmbus, const HyperV::vmbus_channel_offer_channel* offerChannel);
 	void Close(VmBusDriver& vmbus); //Undoes Initialize (vmbus_close_internal); the rings are freed only once the host releases their GPADL
 
-	bool SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint32_t flags); //False if the outbound ring is full
+	bool SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint16_t flags); //False if the outbound ring is full
 
 	//Calls onPacket(descriptor, payload, payloadSize) per inbound packet; re-drains if StopRead reports more arrived
 	template <typename F>

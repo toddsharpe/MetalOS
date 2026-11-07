@@ -23,7 +23,7 @@ public:
 	void Write(const T value)
 	{
 		static constexpr size_t size = sizeof(T);
-		AssertOp(m_offset, <, m_length - size);
+		Assert(size <= m_length && m_offset <= m_length - size);
 
 		const T swapped = ByteSwap<T>(value);
 		memcpy(&m_buffer[m_offset], &swapped, size);
@@ -33,7 +33,7 @@ public:
 	template <size_t N>
 	void Write(const uint8_t (&from)[N])
 	{
-		Assert(m_offset <= m_length - N);
+		Assert(N <= m_length && m_offset <= m_length - N);
 		memcpy(&m_buffer[m_offset], from, N);
 
 		//Endian swap
@@ -56,7 +56,7 @@ public:
 	//Does no endian swap
 	void WriteBytes(const void* const from, const size_t bytes)
 	{
-		Assert(m_offset <= m_length - bytes);
+		Assert(bytes <= m_length && m_offset <= m_length - bytes);
 		memcpy(&m_buffer[m_offset], from, bytes);
 
 		m_offset += bytes;

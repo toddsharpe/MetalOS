@@ -21,7 +21,7 @@ public:
 	uint8_t ReadU8()
 	{
 		static constexpr size_t size = sizeof(uint8_t);
-		Assert(m_offset <= m_length - size);
+		Assert(size <= m_length && m_offset <= m_length - size);
 
 		uint8_t ret = m_buffer[m_offset];
 		m_offset++;
@@ -32,7 +32,7 @@ public:
 	uint16_t ReadU16()
 	{
 		static constexpr size_t size = sizeof(uint16_t);
-		Assert(m_offset <= m_length - size);
+		Assert(size <= m_length && m_offset <= m_length - size);
 
 		uint16_t temp = {};
 		memcpy(&temp, &m_buffer[m_offset], size);
@@ -45,7 +45,7 @@ public:
 	uint32_t ReadU32()
 	{
 		static constexpr size_t size = sizeof(uint32_t);
-		Assert(m_offset <= m_length - size);
+		Assert(size <= m_length && m_offset <= m_length - size);
 
 		uint32_t temp = {};
 		memcpy(&temp, &m_buffer[m_offset], size);
@@ -58,7 +58,7 @@ public:
 	template <size_t N>
 	void Read(uint8_t (&dest)[N])
 	{
-		Assert(m_offset <= m_length - N);
+		Assert(N <= m_length && m_offset <= m_length - N);
 
 		memcpy(dest, &m_buffer[m_offset], N);
 		m_offset += N;
@@ -74,7 +74,7 @@ public:
 
 	void ReadBytes(void* const to, const size_t bytes)
 	{
-		Assert(m_offset <= m_length - bytes);
+		Assert(bytes <= m_length && m_offset <= m_length - bytes);
 
 		memcpy(to, &m_buffer[m_offset], bytes);
 		m_offset += bytes;

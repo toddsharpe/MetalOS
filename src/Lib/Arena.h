@@ -99,20 +99,6 @@ private:
 	size_t m_count;
 };
 
-template <size_t N>
-class StaticArena : public Arena
-{
-public:
-	constexpr StaticArena() :
-		Arena(m_backing, N)
-	{
-
-	}
-
-private:
-	uint8_t m_backing[N];
-};
-
 class PreallocatedArena : public Arena
 {
 public:

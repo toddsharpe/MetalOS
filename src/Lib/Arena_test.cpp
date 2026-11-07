@@ -22,7 +22,8 @@ struct test_struct2
 
 void Arena_test()
 {
-	StaticArena<128> arena;
+	uint8_t arenaBacking[128];
+	PreallocatedArena arena(arenaBacking);
 	void *const space = arena.Allocate(16);
 	Assert(space);
 
@@ -87,7 +88,8 @@ void Arena_test()
 
 	//Sizes whose alignment wraps are rejected
 	{
-		StaticArena<64> wrap;
+		uint8_t backing[64];
+		PreallocatedArena wrap(backing);
 		Assert(!wrap.Allocate(SIZE_MAX));
 		Assert(!wrap.Reserve(SIZE_MAX - 1));
 		Assert(wrap.Allocate(64));

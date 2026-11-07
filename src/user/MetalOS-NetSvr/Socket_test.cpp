@@ -14,6 +14,7 @@ namespace
 			Sent(),
 			Refuse(),
 			LinkUp(true),
+			Ticks(),
 			Frame(),
 			Length(),
 			m_mac{ .bytes = {0x00, 0x15, 0x5D, 0x00, 0x02, 0x01} }
@@ -51,12 +52,13 @@ namespace
 
 		milli_t GetTicks() const override
 		{
-			return 0;
+			return Ticks;
 		}
 
 		size_t Sent;
 		bool Refuse;
 		bool LinkUp;
+		milli_t Ticks;
 		uint8_t Frame[Net::buffer_size];
 		size_t Length;
 
@@ -105,6 +107,28 @@ namespace
 		Net::Icmp::Receive(socketIf, packet);
 		if (!packet.taken)
 			Net::free_rx(backing);
+	}
+
+	//An ARP reply from peer, telling its MAC, as Ethernet hands one to Arp
+	void SocketTestArpReply(const Net::ipv4_addr_t peer, const uint8_t (&mac)[6])
+	{
+		const Net::ipv4_addr_t us = socketIf.ipv4.addr;
+		const uint8_t message[Net::arp_hdr_size] =
+		{
+			0x00, 0x01, 0x08, 0x00, 6, 4, 0x00, Net::arp_op_reply,
+			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+			peer.bytes[3], peer.bytes[2], peer.bytes[1], peer.bytes[0],
+			0, 0, 0, 0, 0, 0,
+			us.bytes[3], us.bytes[2], us.bytes[1], us.bytes[0],
+		};
+		const buffer_t backing = Net::alloc_rx(sizeof(message));
+		Assert(backing);
+		memcpy(backing.Data, message, sizeof(message));
+
+		Net::Packet packet(backing);
+		Net::Arp::Receive(socketIf, packet);
+		Assert(!packet.taken);
+		Net::free_rx(backing);
 	}
 
 	uint16_t SocketTestU16(const uint8_t* const bytes)
@@ -329,6 +353,85 @@ void Socket_test()
 		AssertEqual(SocketTestU16(&out[6]), static_cast<uint16_t>(1));
 		Assert(from.addr == there.addr);
 		Assert(!Net::Socket::Recv(fd, out, sizeof(out), bytes, &from));
+		Assert(Net::Socket::Close(fd));
+	}
+
+	//A send to a peer whose MAC is unknown asks for it, and waits for the reply rather than being dropped
+	{
+		const Net::endpoint_t stranger = { Net::build_ip(10, 8, 0, 3), 53 };
+		const uint8_t mac[] = { 0x00, 0x15, 0x5D, 0x00, 0x02, 0x03 };
+		const int fd = Net::Socket::Create(Net::proto_t::Udp);
+		Assert(Net::Socket::Bind(fd, here));
+		const size_t sent = socketDriver.Sent;
+		Assert(Net::Socket::SendTo(fd, SocketTestPayload, sizeof(SocketTestPayload), stranger));
+		AssertEqual(socketDriver.Sent, sent + 1);
+		AssertEqual(SocketTestU16(&socketDriver.Frame[12]), Net::eth_type_arp);
+
+		socketIf.PreDispatch();
+		AssertEqual(socketDriver.Sent, sent + 1);
+
+		SocketTestArpReply(stranger.addr, mac);
+		socketIf.PreDispatch();
+		AssertEqual(socketDriver.Sent, sent + 2);
+		const uint8_t* const frame = socketDriver.Frame;
+		Assert(memcmp(frame, mac, sizeof(mac)) == 0);
+		AssertEqual(SocketTestU16(&frame[12]), Net::eth_type_ipv4);
+		AssertEqual(SocketTestU16(&frame[TransportOffset + 2]), stranger.port);
+		Assert(Net::Socket::Close(fd));
+	}
+
+	//An unanswered request gives up: the waiting frame is dropped once it expires, and the next send asks again
+	{
+		const Net::endpoint_t silent = { Net::build_ip(10, 8, 0, 4), 53 };
+		const int fd = Net::Socket::Create(Net::proto_t::Udp);
+		Assert(Net::Socket::Bind(fd, here));
+		const size_t sent = socketDriver.Sent;
+		Assert(Net::Socket::SendTo(fd, SocketTestPayload, sizeof(SocketTestPayload), silent));
+		AssertEqual(socketDriver.Sent, sent + 1);
+
+		socketDriver.Ticks += Net::arp_retry_time - 1;
+		socketIf.PreDispatch();
+		Assert(socketIf.ethernet.pending.backing);
+		socketDriver.Ticks += 1;
+		socketIf.PreDispatch();
+		Assert(!socketIf.ethernet.pending.backing);
+		AssertEqual(socketDriver.Sent, sent + 1);
+
+		Assert(Net::Socket::SendTo(fd, SocketTestPayload, sizeof(SocketTestPayload), silent));
+		AssertEqual(socketDriver.Sent, sent + 2);
+		AssertEqual(SocketTestU16(&socketDriver.Frame[12]), Net::eth_type_arp);
+		socketDriver.Ticks += Net::arp_retry_time;
+		socketIf.PreDispatch();
+		Assert(!socketIf.ethernet.pending.backing);
+		Assert(Net::Socket::Close(fd));
+	}
+
+	//While one request is out, a send needing another waits in its socket, and goes once the first is answered
+	{
+		const Net::endpoint_t first = { Net::build_ip(10, 8, 0, 5), 53 };
+		const Net::endpoint_t second = { Net::build_ip(10, 8, 0, 6), 53 };
+		const uint8_t firstMac[] = { 0x00, 0x15, 0x5D, 0x00, 0x02, 0x05 };
+		const uint8_t secondMac[] = { 0x00, 0x15, 0x5D, 0x00, 0x02, 0x06 };
+		const int fd = Net::Socket::Create(Net::proto_t::Udp);
+		Assert(Net::Socket::Bind(fd, here));
+		const size_t sent = socketDriver.Sent;
+		Assert(Net::Socket::SendTo(fd, SocketTestPayload, sizeof(SocketTestPayload), first));
+		Assert(Net::Socket::SendTo(fd, SocketTestPayload, sizeof(SocketTestPayload), second));
+		AssertEqual(socketDriver.Sent, sent + 1);
+
+		SocketTestArpReply(first.addr, firstMac);
+		socketIf.PreDispatch();
+		AssertEqual(socketDriver.Sent, sent + 2);
+		Assert(memcmp(socketDriver.Frame, firstMac, sizeof(firstMac)) == 0);
+
+		Net::Socket::Dispatch();
+		AssertEqual(socketDriver.Sent, sent + 3);
+		AssertEqual(SocketTestU16(&socketDriver.Frame[12]), Net::eth_type_arp);
+
+		SocketTestArpReply(second.addr, secondMac);
+		socketIf.PreDispatch();
+		AssertEqual(socketDriver.Sent, sent + 4);
+		Assert(memcmp(socketDriver.Frame, secondMac, sizeof(secondMac)) == 0);
 		Assert(Net::Socket::Close(fd));
 	}
 

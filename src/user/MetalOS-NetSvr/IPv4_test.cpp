@@ -13,6 +13,7 @@ namespace
 	public:
 		Ipv4TestDriver(const uint8_t id) :
 			Sent(),
+			Ticks(),
 			m_mac{ .bytes = {0x00, 0x15, 0x5D, 0x00, 0x01, id} }
 		{
 
@@ -42,10 +43,11 @@ namespace
 
 		milli_t GetTicks() const override
 		{
-			return 0;
+			return Ticks;
 		}
 
 		size_t Sent;
+		milli_t Ticks;
 
 	private:
 		Net::eth_mac_t m_mac;
@@ -181,6 +183,16 @@ void IPv4_test()
 	AssertEqual(delivered, (size_t)4);
 
 	Assert(Net::Socket::Close(fd));
+
+	//The forwarded packet and the echo reply wait on ARP for peers that never answer, until the requests expire
+	driverA.Ticks = Net::arp_retry_time;
+	driverB.Ticks = Net::arp_retry_time;
+	netA.PreDispatch();
+	netB.PreDispatch();
+	Assert(!netA.ethernet.pending.backing);
+	Assert(!netB.ethernet.pending.backing);
+	AssertEqual(driverA.Sent, (size_t)1);
+	AssertEqual(driverB.Sent, (size_t)1);
 
 	//Every buffer the stack sent from or dropped went back: both pools are first fit, so each allocates whole
 	const buffer_t rx = Net::alloc_rx(Net::pool_size);

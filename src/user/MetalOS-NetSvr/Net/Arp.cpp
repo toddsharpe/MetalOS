@@ -71,7 +71,7 @@ namespace Net::Arp
 
 		ArpCache::Update(reply.sender_proto, reply.sender_hw);
 
-		//Resolution done; allow future ARP requests (senders retry once the cache is warm)
+		//Resolution done: Ethernet::Dispatch sends the frame waiting on it, and another request may go
 		net_if.ethernet.arp.end();
 	}
 	

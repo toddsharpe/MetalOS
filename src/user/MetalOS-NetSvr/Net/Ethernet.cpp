@@ -65,18 +65,30 @@ namespace Net::Ethernet
 		if (nexthop == Net::empty)
 			return false;
 
-		//Unresolved next hop: drop the packet and ARP for it (senders retry once the cache is warm)
+		//Unresolved next hop: ARP for it, and the packet waits here for the reply
 		eth_mac_t dst_mac = {};
 		if (!ArpCache::Lookup(nexthop, dst_mac))
 		{
-			//One ARP at a time; an unanswered one expires so a later send asks again
-			if (!net_if.ethernet.arp.try_begin(net_if.driver.GetTicks()))
+			eth_data_t& eth = net_if.ethernet;
+
+			//One ARP at a time; while one is out a sender is refused, so a socket keeps its datagram queued
+			if (!eth.arp.try_begin(net_if.driver.GetTicks()))
 				return false;
+
+			//A frame still waiting on an expired request is dropped for this one
+			if (eth.pending.backing)
+			{
+				free_tx(eth.pending.backing);
+				eth.pending = {};
+			}
 
 			//Build arp (reserve room for the ethernet + ARP headers)
 			const buffer_t buffer = alloc_tx(buffer_size);
 			if (!buffer)
+			{
+				eth.arp.end();
 				return false;
+			}
 
 			Packet arp(buffer);
 			arp.mask(eth_hdr_size);
@@ -87,11 +99,13 @@ namespace Net::Ethernet
 			if (!Arp::Send(net_if, arp))
 			{
 				free_tx(buffer);
+				eth.arp.end();
 				return false;
 			}
 
-			//The packet waiting on the ARP is dropped, so it is taken and freed here
-			free_tx(packet.backing);
+			//The packet is taken: it goes when Dispatch sees the reply, or is dropped when the request expires
+			eth.arp.target = nexthop;
+			eth.pending = packet;
 			return true;
 		}
 
@@ -109,5 +123,23 @@ namespace Net::Ethernet
 		ser.Write(hdr.type);
 
 		return net_if.driver.Send(net_if, packet);
+	}
+
+	void Dispatch(NetIf& net_if)
+	{
+		eth_data_t& eth = net_if.ethernet;
+		if (!eth.pending.backing)
+			return;
+
+		eth_mac_t mac = {};
+		const bool resolved = ArpCache::Lookup(eth.arp.target, mac);
+		if (!resolved && !eth.arp.expired(net_if.driver.GetTicks()))
+			return;
+
+		//One attempt: a frame that can't go now is dropped, as a lost datagram is
+		Packet frame = eth.pending;
+		eth.pending = {};
+		if (!resolved || !Send(net_if, frame))
+			free_tx(frame.backing);
 	}
 }

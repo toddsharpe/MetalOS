@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Assert.h"
-#include "kernel/Api.h"
 
 typedef bool(*SignalPredicate)(void* const arg);
 

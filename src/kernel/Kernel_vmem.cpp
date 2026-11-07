@@ -1,11 +1,11 @@
-#include "kernel/Api.h"
+#include "kernel/Kernel_pmem.h"
+#include "kernel/Kernel_vmem.h"
 #include "kernel/KProcess.h"
 #include "kernel/Arch.h"
 #include "MetalOS.Space.h"
 #include "Assert.h"
 #include "kernel/Kernel.h"
-
-//Kernel globals (defined in Kernel.cpp).
+#include "MetalOS.Loader.h"
 
 //Reserves space in a process, acquires physical pages, maps into its page tables
 namespace
@@ -266,4 +266,16 @@ void KeAliasInto(KProcess& process, const void* const source, const void* const 
 		KePhysicalRef(phys & ~0xFFFull); //The alias owns the page too, so freeing the source leaves it with the process
 		Assert(process.Tables.MapPages(destVA + (i << Arch::PageShift), phys & ~0xFFFull, 1, attributes));
 	}
+}
+
+bool KeIsValid(const void* address)
+{
+	return m_process.Space.IsValidPointer(address);
+}
+
+paddr_t ResolveImageVA(void* const address)
+{
+	const uint64_t rva = (uintptr_t)address - KernelBase;
+	Assert(rva < BootParams.KernelImageSize);
+	return BootParams.KernelAddress + rva;
 }

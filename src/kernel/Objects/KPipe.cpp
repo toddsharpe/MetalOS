@@ -1,13 +1,12 @@
 #include "kernel/Objects/KPipe.h"
 #include "kernel/Arch.h"
-#include "kernel/Api.h"
+#include "kernel/Kernel_pmem.h"
+#include "kernel/Kernel_vmem.h"
 #include "kernel/KProcess.h"
 #include "Lib/StaticVector.h"
 #include "kernel/Kernel.h"
 #include "core_crt/stdarg.h"
 #include "core_crt/stdio.h"
-
-//Kernel globals (defined in Kernel.cpp).
 
 bool KPipe::EventSignal(void* const arg)
 {
@@ -175,15 +174,4 @@ bool KPipe::EventSignal(const KPipeOp op, const size_t count, const ListEntry* c
 bool KPipe::IsEmpty() const
 {
 	return m_count == 0;
-}
-
-void KePipeUnref(KPipe& pipe, KRef& ref)
-{
-	ref.Decrement();
-	if (!pipe.IsUnused())
-		return;
-
-	//No handle and no blocked thread can reach it any more
-	pipe.Free();
-	KeFree(&pipe, AllocType::Kernel); //Matches CreatePipe's allocation
 }

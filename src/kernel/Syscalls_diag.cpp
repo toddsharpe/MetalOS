@@ -1,6 +1,7 @@
 #include "kernel/Syscalls.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Arch.h"
+#include "kernel/Kernel_diag.h"
 
 SyscallResult DebugPrint(const char* s)
 {

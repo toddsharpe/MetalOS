@@ -1,5 +1,5 @@
 #include "kernel/DeviceTree.h"
-#include "kernel/Api.h"
+#include "kernel/Kernel_heap.h"
 #include "kernel/DeviceHids.h"
 #include "kernel/Plat.h"
 #include "kernel/Drivers/RamDriveDriver.h"

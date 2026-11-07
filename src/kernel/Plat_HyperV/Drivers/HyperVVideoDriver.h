@@ -3,6 +3,7 @@
 #include "kernel/Drivers/Driver.h"
 #include "kernel/Plat_HyperV/Drivers/HyperVChannel.h"
 #include "kernel/Objects/KEvent.h"
+#include "kernel/Kernel_display.h"
 
 //Hyper-V synthetic video (VSC) {DA0A7802-E377-4AAC-8E77-0558EB1073F8}: negotiates synthvid, points the host at the VRAM and sets the mode
 class HyperVVideoDriver : public DisplayDriver

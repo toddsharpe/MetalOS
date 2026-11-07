@@ -3,7 +3,8 @@
 #include <Assert.h>
 #include "user/MetalOS.Types.h"
 #include "user/MetalOS.UI.h"
-#include "kernel/Api.h"
+#include "kernel/Kernel_thread.h"
+#include "kernel/Kernel_input.h"
 
 
 //TODO: could be refactored into HID + HyperV portions

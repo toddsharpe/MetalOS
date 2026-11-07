@@ -1,4 +1,10 @@
-#include "kernel/Api.h"
+#include "kernel/Kernel_vmem.h"
+#include "kernel/Kernel_heap.h"
+#include "kernel/Kernel_grant.h"
+#include "kernel/Kernel_endpoint.h"
+#include "kernel/Kernel_thread.h"
+#include "kernel/Kernel_process.h"
+#include "kernel/Kernel_pipe.h"
 #include "kernel/Arch.h"
 #include "kernel/KProcess.h"
 #include "kernel/UProcess.h"
@@ -11,7 +17,6 @@
 #include "Assert.h"
 #include "kernel/Kernel.h"
 
-//Kernel globals (defined in Kernel.cpp).
 static LinkedList<UProcess*> m_processes;
 
 static constexpr char RuntimeDLL[] = "MetalOS-RT.dll";

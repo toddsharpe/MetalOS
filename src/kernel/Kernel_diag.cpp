@@ -1,4 +1,8 @@
-#include "kernel/Api.h"
+#include "kernel/Kernel_system.h"
+#include "kernel/Kernel_vmem.h"
+#include "kernel/Kernel_process.h"
+#include "kernel/Kernel_file.h"
+#include "kernel/Kernel_diag.h"
 #include "kernel/Arch.h"
 #include "kernel/KProcess.h"
 #include "kernel/UProcess.h"
@@ -19,7 +23,6 @@
 #include "core_crt/ctype.h"
 #include "Lib/StaticMap.h"
 
-//Kernel globals (defined in Kernel.cpp).
 static constexpr size_t TempArenaSize = Arch::PageSize << 10; //4MB Temp Arena
 static KERNEL_PAGE_ALIGN StaticArena<TempArenaSize> m_tempArena;
 static DirectUart m_uart(DirectUart::ComPort::Com1);

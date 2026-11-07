@@ -6,6 +6,8 @@
 #include "kernel/KProcess.h"
 #include "Lib/System.h"
 #include "WinPE.h"
+#include "kernel/Kernel_vmem.h"
+#include "kernel/Kernel_file.h"
 
 //Used by:
 // - Kernel to load an exe into a fresh process - just want to process RT imports

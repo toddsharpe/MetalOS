@@ -1,4 +1,5 @@
 #include "kernel/Plat_HyperV/Tsc.h"
+#include "kernel/Kernel_vmem.h"
 
 namespace HyperV::Tsc
 {

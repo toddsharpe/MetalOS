@@ -2,6 +2,7 @@
 #include "kernel/Scheduler.h"
 #include "kernel/Objects/KPipe.h"
 #include "Lib/String.h"
+#include "kernel/Kernel_process.h"
 
 namespace
 {

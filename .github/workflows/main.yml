@@ -29,8 +29,13 @@ jobs:
       shell: cmd
       run: scripts\build.bat Release
 
-    # diskpart needs admin, which hosted runners have. DOOM.WAD/DEFAULT.CFG aren't
-    # available here, so the image has doom.exe but no game data.
+    # build_vhd.cmd runs BuildVhd.cs as a .NET 10 file-based app
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: '10.0.x'
+
+    # DOOM.WAD/DEFAULT.CFG aren't available here, so the image has doom.exe but no game data
     - name: Build VHDX
       shell: cmd
       run: scripts\build_vhd.cmd

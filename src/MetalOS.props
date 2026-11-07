@@ -36,7 +36,7 @@
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
   </ImportGroup>
 
-  <!-- Every binary lands in build\ for make_vhd; objects go per project, and every build is a full rebuild -->
+  <!-- Every binary lands in build\ for build_vhd; objects go per project, and every build is a full rebuild -->
   <PropertyGroup>
     <OutDir>$(MetalOSRoot)build\</OutDir>
     <IntDir>$(MetalOSRoot)build\obj\$(Configuration)\$(MSBuildProjectName)\</IntDir>

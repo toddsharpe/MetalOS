@@ -5,7 +5,7 @@ MetalOS is homebrew operating system for x86-64. It is 64-bit only and has only 
 
 ## Building
 1. Open a VS 2022 x64 Native Tools command prompt and run ``.\scripts\build.bat`` (Debug, unoptimized) or ``.\scripts\build.bat Release`` (``/O2`` and LTCG; the kernel stays unoptimized) to rebuild ``MetalOS.sln`` (boot loader, kernel, user mode and host tests) into ``.\build``
-2. From an elevated prompt, run ``.\scripts\build_vhd.cmd`` to build ``.\build\MetalOS.vhdx``. CI builds this on every PR and push to master (uploaded as the ``MetalOS-vhdx`` artifact, without Doom's ``DOOM.WAD``/``DEFAULT.CFG``)
+2. Run ``.\scripts\build_vhd.cmd`` to build ``.\build\MetalOS.vhdx`` (needs the .NET 10 SDK, not admin). CI builds this on every PR and push to master (uploaded as the ``MetalOS-vhdx`` artifact, without Doom's ``DOOM.WAD``/``DEFAULT.CFG``)
 3. Create a new VM in ``Hyper-V Manager``, Gen2, reference the build ``vhdx``, disable secure boot.
 4. Turn on Com ports:
 ```

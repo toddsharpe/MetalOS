@@ -6,7 +6,7 @@ param(
 	[string]$PipeName = 'metalos_com1'
 )
 
-#Boots the VM from build\MetalOS.vhdx (make_vhd.cmd) and logs COM1 until -Until matches or -Seconds pass, then powers it off; exits 1 on a bugcheck, a fatal error or a missing -Until (needs Hyper-V Administrators, not admin)
+#Boots the VM from build\MetalOS.vhdx (build_vhd.cmd) and logs COM1 until -Until matches or -Seconds pass, then powers it off; exits 1 on a bugcheck, a fatal error or a missing -Until (needs Hyper-V Administrators, not admin)
 $ErrorActionPreference = 'Stop'
 $Failure = 'Bugcheck|Fatal|Unhandled exception'
 

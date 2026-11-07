@@ -5,6 +5,8 @@
 #include "Lib/IntrusiveList.h"
 #include "Lib/Math.h"
 #include "Assert.h"
+#include "kernel/Kernel.h"
+#include "MetalOS.Space.h"
 
 
 //Allocates physical pages from the page frame database

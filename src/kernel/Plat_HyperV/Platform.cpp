@@ -1,5 +1,6 @@
 #include "kernel/Plat_HyperV/Platform.h"
 #include "Assert.h"
+#include "kernel/Api.h"
 
 namespace HyperV::Platform
 {

@@ -1,3 +1,4 @@
+#include "x64/intrin.h"
 #include "uACPI/kernel_api.h"
 #include "uACPI/uacpi.h"
 #include "uACPI/event.h"
@@ -6,6 +7,9 @@
 #include "MetalOS.Loader.h"
 #include "Assert.h"
 #include "errno.h"
+#include "kernel/Acpi.h"
+#include "kernel/Kernel.h"
+#include "MetalOS.Space.h"
 
 
 //Acpi is single threaded, just stub these out

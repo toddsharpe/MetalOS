@@ -9,6 +9,7 @@
 #include "kernel/Loader.h"
 #include "WinPE.h"
 #include "Assert.h"
+#include "kernel/Kernel.h"
 
 //Kernel globals (defined in Kernel.cpp).
 static LinkedList<UProcess*> m_processes;

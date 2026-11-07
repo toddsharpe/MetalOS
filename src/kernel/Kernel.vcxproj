@@ -13,7 +13,6 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(MetalOSSrc)Acpi;$(MetalOSSrc)External\uACPI\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UACPI_OVERRIDE_TYPES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>$(MetalOSSrc)kernel\Kernel.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <BaseAddress>0xFFFF800001000000</BaseAddress>
@@ -25,18 +24,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Kd64\*.cpp;Objects\*.cpp;$(MetalOSSrc)x64\Cpuid.cpp" Exclude="**\*_test.cpp" />
+    <ClCompile Include="*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Objects\*.cpp;$(MetalOSSrc)x64\Cpuid.cpp" Exclude="**\*_test.cpp" />
+    <!-- Kd64 is vendored, so it gets what it uses from the kernel by forced include rather than edits -->
+    <ClCompile Include="Kd64\*.cpp">
+      <ForcedIncludeFiles>$(MetalOSSrc)core_crt\stdarg.h;$(MetalOSSrc)core_crt\string.h;$(MetalOSSrc)core_crt\stdio.h;$(MetalOSSrc)Lib\Math.h;$(MetalOSSrc)MetalOS.Space.h;$(MetalOSSrc)kernel\Arch.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="$(MetalOSSrc)core_crt\wchar.c">
       <CompileAs>CompileAsCpp</CompileAs>
       <ObjectFileName>$(IntDir)core_crt\</ObjectFileName>
     </ClCompile>
-    <!-- uACPI, compiled as C against the standard headers as Acpi.c was, without the forced Kernel.h -->
+    <!-- uACPI, compiled as C against the standard headers as Acpi.c was -->
     <ClCompile Include="$(MetalOSSrc)External\uACPI\source\default_handlers.c;$(MetalOSSrc)External\uACPI\source\event.c;$(MetalOSSrc)External\uACPI\source\interpreter.c;$(MetalOSSrc)External\uACPI\source\io.c;$(MetalOSSrc)External\uACPI\source\mutex.c;$(MetalOSSrc)External\uACPI\source\namespace.c;$(MetalOSSrc)External\uACPI\source\notify.c;$(MetalOSSrc)External\uACPI\source\opcodes.c;$(MetalOSSrc)External\uACPI\source\opregion.c;$(MetalOSSrc)External\uACPI\source\osi.c;$(MetalOSSrc)External\uACPI\source\registers.c;$(MetalOSSrc)External\uACPI\source\resources.c;$(MetalOSSrc)External\uACPI\source\shareable.c;$(MetalOSSrc)External\uACPI\source\sleep.c;$(MetalOSSrc)External\uACPI\source\stdlib.c;$(MetalOSSrc)External\uACPI\source\tables.c;$(MetalOSSrc)External\uACPI\source\types.c;$(MetalOSSrc)External\uACPI\source\uacpi.c;$(MetalOSSrc)External\uACPI\source\utilities.c">
       <CompileAs>CompileAsC</CompileAs>
       <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
       <AdditionalIncludeDirectories>$(MetalOSSrc);$(MetalOSSrc)Acpi;$(MetalOSSrc)External\uACPI\source;$(MetalOSSrc)External\uACPI\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions></PreprocessorDefinitions>
-      <ForcedIncludeFiles></ForcedIncludeFiles>
       <ObjectFileName>$(IntDir)uacpi\</ObjectFileName>
     </ClCompile>
     <MASM Include="Arch_x64\Arch.asm" />

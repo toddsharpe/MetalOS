@@ -3,17 +3,20 @@
 #include "Lib/Time.h"
 #include "kernel/Types.h"
 #include "kernel/Objects/KPipe.h"
+#include "core_crt/stdarg.h"
+#include "kernel/Arch.h"
+#include "MetalOS.Space.h"
 
 /*
  * Forward declarations.
  */
-class KSignal;
+struct KSignal;
 class KEvent;
 class KDevice;
 class UProcess;
-class KProcess;
+struct KProcess;
 class UThread;
-class Message;
+struct Message;
 class KSharedMemory;
 enum class UObjectType;
 
@@ -176,7 +179,7 @@ paddr_t ResolveImageVA(void* const address);
 /*
  * KThreads.
  */
-struct KThread;
+class KThread;
 
 KThread* KeCreateThread(const KThreadStart start, void* const arg, const char* const name);
 void KeExitThread();

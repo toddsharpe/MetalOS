@@ -5,7 +5,7 @@
 
 typedef nano100_t (*ReadTsc)();
 
-class KProcess;
+struct KProcess;
 
 //Singleton kernel scheduler. A namespace, not a class: there is exactly one, and it needs no
 //friendship into KThread/UProcess (they expose the state it touches). All internal state lives

@@ -1,6 +1,7 @@
 #include "kernel/PebModules.h"
 #include "Lib/Math.h"
 #include "WinPE.h"
+#include "kernel/Arch.h"
 
 bool GetPebModule(const ProcessEnvironmentBlock* const peb, const AddressSpace& space, const uintptr_t address, KModule& module)
 {

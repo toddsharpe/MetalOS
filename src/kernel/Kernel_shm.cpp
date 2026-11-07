@@ -4,6 +4,7 @@
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/UObject.h"
 #include "Assert.h"
+#include "kernel/Kernel.h"
 
 //Kernel globals (defined in Kernel.cpp).
 

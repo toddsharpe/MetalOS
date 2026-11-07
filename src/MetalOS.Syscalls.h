@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core_crt/stdint.h"
+
 //Keep in sync with src/user/MetalOS-RT/syscalls.asm; each range is one kernel/Syscalls_*.cpp
 enum class Syscall : uint64_t
 {

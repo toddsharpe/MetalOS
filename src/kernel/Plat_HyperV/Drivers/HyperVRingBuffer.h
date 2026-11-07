@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Lib/Span.h"
+#include "kernel/Arch.h"
 
 class HyperVChannel;
 class HyperVRingBuffer

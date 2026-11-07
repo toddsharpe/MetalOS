@@ -7,6 +7,7 @@
 #include "kernel/Plat_HyperV/HyperV.h"
 #include "Lib/StaticVector.h"
 #include "Lib/StaticMap.h"
+#include "kernel/KDevice.h"
 
 class VmBusDriver;
 

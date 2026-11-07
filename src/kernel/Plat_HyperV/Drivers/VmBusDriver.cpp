@@ -3,6 +3,11 @@
 #include "Lib/Span.h"
 #include "kernel/Arch.h"
 #include "Assert.h"
+#include "kernel/Api.h"
+#include "kernel/DeviceHids.h"
+#include "kernel/KDevice.h"
+#include "core_crt/stdio.h"
+#include "Lib/String.h"
 
 //Monitor pages handed to the host in CHANNELMSG_INITIATE_CONTACT
 static HYPERV_PAGE_ALIGN volatile uint8_t MonitorPage1[Arch::PageSize] = { 0 }; //Parent->child notifications

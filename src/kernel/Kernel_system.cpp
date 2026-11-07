@@ -2,6 +2,10 @@
 #include "kernel/Arch.h"
 #include "kernel/KProcess.h"
 #include "kernel/Scheduler.h"
+#include "kernel/Kernel.h"
+#include "kernel/Plat.h"
+#include "MetalOS.Loader.h"
+#include "Efi.h"
 
 //Kernel globals (defined in Kernel.cpp).
 static EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);

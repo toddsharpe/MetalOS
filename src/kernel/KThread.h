@@ -14,7 +14,7 @@ enum class KThreadState
 	Terminated
 };
 
-class KProcess;
+struct KProcess;
 class KThread
 {
 public:

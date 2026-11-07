@@ -1,4 +1,23 @@
 #include "kernel/Kernel.h"
+#include "kernel/Api.h"
+#include "kernel/Arch.h"
+#include "kernel/Plat.h"
+#include "kernel/Acpi.h"
+#include "kernel/KProcess.h"
+#include "kernel/UProcess.h"
+#include "kernel/Scheduler.h"
+#include "kernel/DeviceTree.h"
+#include "kernel/Debugger.h"
+#include "kernel/LoadingScreen.h"
+#include "kernel/InterruptTable.h"
+#include "Drivers/RamDrive.h"
+#include "kernel/Drivers/RamDriveDriver.h"
+#include "MetalOS.Loader.h"
+#include "MetalOS.Space.h"
+#include "Graphics/Types.h"
+#include "WinPE.h"
+#include "Lib/String.h"
+#include "Assert.h"
 
 //Networking: the TCP/IP stack lives in the usermode netstack process. The kernel keeps
 //only the NIC driver (HyperVNic) and a raw ethernet frame device (Kernel_net.cpp).

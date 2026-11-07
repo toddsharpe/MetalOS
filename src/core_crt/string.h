@@ -36,11 +36,20 @@ extern "C"
 
 	char *strcpy(char *_Destination, char const *_Source);
 
-	char const *strchr(const char * _String, const int _Ch);
+	//C callers get the standard char*, C++ callers keep the const of the string searched; both name the same function
+#ifdef __cplusplus
+	char const *strchr(char const *_String, int _Ch);
 
-	char const *strrchr(char *const _String, int const _Ch);
+	char const *strrchr(char const *_String, int _Ch);
 
-	const char *strstr(const char *const _String, char const *const _SubString);
+	char const *strstr(char const *_String, char const *_SubString);
+#else
+	char *strchr(char const *_String, int _Ch);
+
+	char *strrchr(char const *_String, int _Ch);
+
+	char *strstr(char const *_String, char const *_SubString);
+#endif
 
 #ifdef __cplusplus
 }

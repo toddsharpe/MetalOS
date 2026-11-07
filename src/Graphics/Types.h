@@ -49,10 +49,10 @@ namespace Graphics
 
 		bool Contains(const Point2D& p) const
 		{
-			if (p.X < X || p.X >= X + Width)
+			if (p.X < X || p.X >= (int64_t)X + Width)
 				return false;
 
-			if (p.Y < Y || p.Y >= Y + Height)
+			if (p.Y < Y || p.Y >= (int64_t)Y + Height)
 				return false;
 
 			return true;

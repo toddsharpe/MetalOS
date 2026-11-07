@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_crt/wchar.h"
+#include <cwchar>
 
 inline void GetDirectoryName(const wchar_t* source, wchar_t* destination)
 {

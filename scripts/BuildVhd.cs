@@ -7,7 +7,7 @@ using DiscUtils.Partitions;
 using DiscUtils.Streams;
 
 //Builds the boot disk without mounting it, so without admin: a dynamic VHDX holding a GPT with one EFI system partition, every file under EFI\BOOT
-const long PartitionSize = 512L * 1024 * 1024; //DiscUtils formats FAT32 (what diskpart used) only from 512 MB; a dynamic disk only stores what's written
+const long PartitionSize = 512L * 1024 * 1024; //DiscUtils formats FAT32 only from 512 MB; a dynamic disk only stores what's written
 
 const long SectorSize = 512;
 const long FirstSector = 1024 * 1024 / SectorSize;
@@ -16,7 +16,7 @@ const string BootDirectory = @"EFI\BOOT";
 
 if (args.Length < 2)
 {
-	Console.Error.WriteLine("usage: dotnet run --file MakeVhd.cs -- <output.vhdx> <file>...");
+	Console.Error.WriteLine("usage: dotnet run --file BuildVhd.cs -- <output.vhdx> <file>...");
 	return 1;
 }
 
@@ -26,7 +26,7 @@ foreach (string file in files)
 {
 	if (!File.Exists(file))
 	{
-		Console.Error.WriteLine($"MakeVhd: missing {file}");
+		Console.Error.WriteLine($"BuildVhd: missing {file}");
 		return 1;
 	}
 }
@@ -42,7 +42,7 @@ using (DiscUtils.Vhdx.Disk disk = DiscUtils.Vhdx.Disk.InitializeDynamic(stream, 
 	using FatFileSystem fat = FatFileSystem.FormatPartition(disk, partition, "SYSTEM");
 	if (fat.FatVariant != FatType.Fat32)
 	{
-		Console.Error.WriteLine($"MakeVhd: formatted {fat.FatVariant}, expected Fat32");
+		Console.Error.WriteLine($"BuildVhd: formatted {fat.FatVariant}, expected Fat32");
 		return 1;
 	}
 
@@ -55,9 +55,9 @@ using (DiscUtils.Vhdx.Disk disk = DiscUtils.Vhdx.Disk.InitializeDynamic(stream, 
 		source.CopyTo(destination);
 	}
 
-	Console.WriteLine($"MakeVhd: {files.Length} files on {fat.FatVariant} ({fat.ClusterSize}-byte clusters)");
+	Console.WriteLine($"BuildVhd: {files.Length} files on {fat.FatVariant} ({fat.ClusterSize}-byte clusters)");
 }
 
 File.Move(temp, output, true);
-Console.WriteLine($"MakeVhd: wrote {output}");
+Console.WriteLine($"BuildVhd: wrote {output}");
 return 0;

@@ -3,6 +3,7 @@
 #include "kernel/Arch.h"
 #include "MetalOS.Space.h"
 #include "Assert.h"
+#include "kernel/Kernel.h"
 
 //Kernel globals (defined in Kernel.cpp).
 

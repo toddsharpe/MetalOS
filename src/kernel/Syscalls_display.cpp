@@ -1,6 +1,8 @@
 #include "kernel/Syscalls.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Drivers/Driver.h"
+#include "kernel/Kernel.h"
+#include "kernel/DeviceTree.h"
 
 //Map the linear framebuffer into the calling process (used by the usermode WM).
 SyscallResult MapFramebuffer(GraphicsDevice* device)

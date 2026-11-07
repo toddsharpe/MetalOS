@@ -1,4 +1,6 @@
 #include "kernel/AddressSpace.h"
+#include "kernel/Arch.h"
+#include "Lib/Math.h"
 
 bool AddressSpace::IsValidPointer(const void* const address)
 {

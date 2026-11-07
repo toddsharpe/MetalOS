@@ -6,6 +6,7 @@
 #include "Lib/SharedRing.h"
 #include "user/Protocol_net.h"
 #include "Assert.h"
+#include "kernel/Kernel.h"
 
 //Kernel globals (defined in Kernel.cpp).
 

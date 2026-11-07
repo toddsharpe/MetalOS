@@ -4,6 +4,7 @@
 #include "core_crt/stddef.h"
 #include "kernel/Objects/KRef.h"
 #include "Lib/List.h"
+#include "core_crt/stdarg.h"
 
 enum class KPipeOp
 {

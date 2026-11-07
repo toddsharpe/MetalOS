@@ -5,6 +5,7 @@
 #include "kernel/Objects/KPredicate.h"
 #include "Lib/String.h"
 #include "Assert.h"
+#include "core_crt/ctype.h"
 
 namespace
 {

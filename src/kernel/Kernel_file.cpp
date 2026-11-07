@@ -2,6 +2,7 @@
 #include "kernel/DeviceTree.h"
 #include "kernel/Drivers/Driver.h"
 #include "Assert.h"
+#include "kernel/Kernel.h"
 
 
 bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access)

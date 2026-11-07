@@ -2,8 +2,9 @@
 
 #include "Lib/System.h"
 #include "Lib/LinkedList.h"
-#include "uACPI/namespace.h"
 #include "kernel/Plat.h"
+
+struct uacpi_namespace_node;
 
 enum class KDeviceClass
 {

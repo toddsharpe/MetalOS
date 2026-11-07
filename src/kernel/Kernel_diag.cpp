@@ -3,6 +3,21 @@
 #include "kernel/KProcess.h"
 #include "kernel/UProcess.h"
 #include "Assert.h"
+#include "kernel/Kernel.h"
+#include "kernel/Scheduler.h"
+#include "kernel/Pdb/PdbFile.h"
+#include "kernel/Types.h"
+#include "Drivers/DirectUart.h"
+#include "MetalOS.Loader.h"
+#include "MetalOS.Space.h"
+#include "WinPE.h"
+#include "Lib/Arena.h"
+#include "Lib/Path.h"
+#include "Lib/String.h"
+#include "core_crt/stdarg.h"
+#include "core_crt/stdio.h"
+#include "core_crt/ctype.h"
+#include "Lib/StaticMap.h"
 
 //Kernel globals (defined in Kernel.cpp).
 static constexpr size_t TempArenaSize = Arch::PageSize << 10; //4MB Temp Arena

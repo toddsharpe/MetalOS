@@ -3,6 +3,9 @@
 #include "kernel/Api.h"
 #include "kernel/KProcess.h"
 #include "Lib/StaticVector.h"
+#include "kernel/Kernel.h"
+#include "core_crt/stdarg.h"
+#include "core_crt/stdio.h"
 
 //Kernel globals (defined in Kernel.cpp).
 

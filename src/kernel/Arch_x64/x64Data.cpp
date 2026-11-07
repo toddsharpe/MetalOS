@@ -3,6 +3,7 @@
 #include "x64/Types.h"
 #include "x64/IdtGate.h"
 #include "kernel/Arch_x64/Interrupts.h"
+#include "kernel/Arch.h"
 
 namespace x64
 {

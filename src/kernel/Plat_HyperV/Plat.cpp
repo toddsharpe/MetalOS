@@ -6,6 +6,7 @@
 #include "kernel/Plat_HyperV/Drivers/HyperVNic.h"
 #include "kernel/Plat_HyperV/Drivers/HyperVVideoDriver.h"
 #include "Assert.h"
+#include "kernel/KDevice.h"
 
 void PlatInitialize()
 {

@@ -1,4 +1,5 @@
 #include "core_crt/wchar.h"
+#include "core_crt/string.h"
 
 //Intrinsics under /Oi, implemented here
 #pragma function(wcscmp, wcslen, wcscpy)

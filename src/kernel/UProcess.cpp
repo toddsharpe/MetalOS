@@ -5,6 +5,7 @@
 #include "kernel/Api.h"
 #include "kernel/PebModules.h"
 #include "new.h"
+#include "core_crt/stdio.h"
 
 static uint32_t LastId = 0;
 

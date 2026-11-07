@@ -1,5 +1,7 @@
 #include "kernel/UObject.h"
 #include "kernel/Types.h"
+#include "kernel/UThread.h"
+#include "kernel/UProcess.h"
 
 static constexpr handle_t StartingHandle = 0x10;
 static handle_t LastHandle = StartingHandle;

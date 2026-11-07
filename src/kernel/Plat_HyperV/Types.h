@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core_crt/stdint.h"
+#include "kernel/Arch.h"
 
 // Hypervisor Top Level Functional Specification v6.0b.pdf
 

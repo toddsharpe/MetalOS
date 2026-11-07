@@ -1,4 +1,4 @@
-#include "Kernel.h"
+#include "core_crt/stdarg.h"
 #include "Assert.h"
 
 #include "core_crt/stdint.h"
@@ -15,6 +15,9 @@
 #include <reactos/amd64/ke.h>
 #include "Kernel/Kd64/kd64.h"
 #include "Kernel/MetalOSkd.h"
+#include "kernel/Api.h"
+#include "kernel/Scheduler.h"
+#include "core_crt/stdio.h"
 
 extern "C" KdDll m_dll;
 KdDll m_dll;

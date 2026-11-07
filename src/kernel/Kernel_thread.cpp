@@ -5,6 +5,8 @@
 #include "kernel/UProcess.h"
 #include "kernel/Objects/KEvent.h"
 #include "Assert.h"
+#include "kernel/Kernel.h"
+#include "kernel/KProcess.h"
 
 //Kernel globals (defined in Kernel.cpp).
 

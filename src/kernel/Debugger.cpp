@@ -1,3 +1,4 @@
+#include "core_crt/stdarg.h"
 #include "Assert.h"
 
 
@@ -13,6 +14,9 @@
 #include <coreclr/list.h>
 #include "kddll.h"
 #include "kernel/Kd64/kd64.h"
+#include "kernel/Scheduler.h"
+#include "core_crt/wchar.h"
+#include "core_crt/stdlib.h"
 extern "C" KdDll m_dll;
 #include "Debugger.h"
 #include "Loader.h"

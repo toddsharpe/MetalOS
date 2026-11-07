@@ -238,13 +238,13 @@ char const* strchr(const char* _String, const int _Ch)
 	while (*s != (char)_Ch)
 		if (!*s++)
 			return 0;
-	return (char*)s;
+	return s;
 }
 
-char const* strrchr(char* const _String, int const _Ch)
+char const* strrchr(char const* const _String, int const _Ch)
 {
-	char* s = _String;
-	char* ret = 0;
+	const char* s = _String;
+	const char* ret = 0;
 	do {
 		if (*s == (char)_Ch)
 			ret = s;

@@ -1,4 +1,5 @@
-#include "kernel/Api.h"
+#include "kernel/Kernel_shm.h"
+#include "kernel/Kernel_net.h"
 #include "kernel/KProcess.h"
 #include "kernel/DeviceTree.h"
 #include "kernel/Drivers/Driver.h"
@@ -7,8 +8,6 @@
 #include "user/Protocol_net.h"
 #include "Assert.h"
 #include "kernel/Kernel.h"
-
-//Kernel globals (defined in Kernel.cpp).
 
 namespace
 {

@@ -1,4 +1,5 @@
-#include "kernel/Api.h"
+#include "kernel/Kernel_shm.h"
+#include "kernel/Kernel_grant.h"
 #include "kernel/UObject.h"
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/Objects/KSpinLock.h"

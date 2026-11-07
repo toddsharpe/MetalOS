@@ -1,4 +1,4 @@
-#include "kernel/Api.h"
+#include "kernel/Kernel_system.h"
 #include "kernel/Arch.h"
 #include "kernel/KProcess.h"
 #include "kernel/Scheduler.h"
@@ -7,7 +7,6 @@
 #include "MetalOS.Loader.h"
 #include "Efi.h"
 
-//Kernel globals (defined in Kernel.cpp).
 static EFI_RUNTIME_SERVICES m_runtime(*BootParams.Runtime);
 
 void KePauseSystem()
@@ -47,9 +46,4 @@ void KeGetSystemTime(KSystemTime& time)
 	time.Second = efiTime.Second;
 	time.Milliseconds = static_cast<uint16_t>(efiTime.Nanosecond / 1000000);
 	time.Nanoseconds = efiTime.Nanosecond;
-}
-
-bool KeIsValid(const void* address)
-{
-	return m_process.Space.IsValidPointer(address);
 }

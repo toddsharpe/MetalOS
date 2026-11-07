@@ -1,7 +1,8 @@
 #include "Lib/System.h"
 #include "HyperVVideoDriver.h"
 #include "kernel/KDevice.h"
-#include "kernel/Api.h"
+#include "kernel/Kernel_thread.h"
+#include "kernel/Kernel_display.h"
 #include "MetalOS.Space.h"
 #include "Assert.h"
 

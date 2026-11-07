@@ -1,6 +1,7 @@
 #include "kernel/Syscalls.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Drivers/Driver.h"
+#include "kernel/Kernel_net.h"
 
 //Transmit a raw ethernet frame through the NIC (the TCP/IP stack is the usermode netstack)
 SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length)

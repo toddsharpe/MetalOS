@@ -2,6 +2,7 @@
 
 #include "new.h"
 #include "kernel/KThread.h"
+#include "Lib/Time.h"
 
 typedef nano100_t (*ReadTsc)();
 

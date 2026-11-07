@@ -1,12 +1,15 @@
-#include "kernel/Api.h"
+#include "kernel/Kernel_pmem.h"
+#include "kernel/Kernel_vmem.h"
+#include "kernel/Kernel_heap.h"
+#include "kernel/Kernel_shm.h"
+#include "kernel/Kernel_grant.h"
+#include "kernel/Kernel_endpoint.h"
 #include "kernel/KProcess.h"
 #include "kernel/Arch.h"
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/UObject.h"
 #include "Assert.h"
 #include "kernel/Kernel.h"
-
-//Kernel globals (defined in Kernel.cpp).
 
 KSharedMemory* KeShmCreate(const size_t size)
 {

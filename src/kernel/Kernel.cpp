@@ -1,5 +1,13 @@
 #include "kernel/Kernel.h"
-#include "kernel/Api.h"
+#include "kernel/Kernel_system.h"
+#include "kernel/Kernel_pmem.h"
+#include "kernel/Kernel_vmem.h"
+#include "kernel/Kernel_heap.h"
+#include "kernel/Kernel_thread.h"
+#include "kernel/Kernel_process.h"
+#include "kernel/Kernel_diag.h"
+#include "kernel/Kernel_net.h"
+#include "kernel/Kernel_input.h"
 #include "kernel/Arch.h"
 #include "kernel/Plat.h"
 #include "kernel/Acpi.h"
@@ -163,26 +171,6 @@ void KeRegisterInterrupt(const Arch::InterruptVector interrupt, const ActionCont
 {
 	Assert(!m_irqs.Contains(interrupt));
 	m_irqs.Add(interrupt, context);
-}
-
-//This works for static code/data that is part of kernel image
-paddr_t ResolveImageVA(void* const address)
-{
-	const uint64_t rva = (uintptr_t)address - KernelBase;
-	Assert(rva < BootParams.KernelImageSize);
-	return m_params.KernelAddress + rva;
-}
-
-//Physical framebuffer descriptor from the loader, for mapping into a process.
-KFramebufferInfo KeGetFramebuffer()
-{
-	return {
-		BootParams.Display.FrameBufferBase,
-		BootParams.Display.FrameBufferSize,
-		BootParams.Display.HorizontalResolution,
-		BootParams.Display.VerticalResolution,
-		BootParams.Display.PixelsPerScanLine,
-	};
 }
 
 /*

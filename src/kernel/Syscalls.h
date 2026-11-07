@@ -1,7 +1,6 @@
 #pragma once
 
 #include "user/MetalOS.h"
-#include "kernel/Api.h"
 #include "kernel/UProcess.h"
 #include "kernel/UObject.h"
 

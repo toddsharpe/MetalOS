@@ -1,5 +1,6 @@
 #include "kernel/Syscalls.h"
 #include "kernel/Scheduler.h"
+#include "kernel/Kernel_system.h"
 
 milli_t GetTickCount()
 {

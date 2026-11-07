@@ -3,7 +3,10 @@
 #include "kernel/Plat_HyperV/Drivers/VmBusDriver.h"
 #include "kernel/Plat_HyperV/VmBus.h"
 #include "Assert.h"
-#include "kernel/Api.h"
+#include "kernel/Kernel_pmem.h"
+#include "kernel/Kernel_vmem.h"
+#include "kernel/Kernel_thread.h"
+#include "kernel/Kernel_net.h"
 #include "user/Protocol_net.h"
 
 HyperVNic::HyperVNic(KDevice& device) :

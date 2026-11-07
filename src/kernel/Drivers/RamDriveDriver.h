@@ -6,6 +6,8 @@
 #include "Lib/Math.h"
 #include "core_crt/stdio.h"
 #include "MetalOS.Loader.h"
+#include "kernel/Kernel_vmem.h"
+#include "kernel/Kernel_heap.h"
 
 static constexpr char RamDriveHid[] = "RDRV";
 class RamDriveDriver : public StorageDriver

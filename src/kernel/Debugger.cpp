@@ -22,6 +22,9 @@ extern "C" KdDll m_dll;
 #include "Loader.h"
 #include "WinPE.h"
 #include "MetalOS.Space.h"
+#include "kernel/Kernel_heap.h"
+#include "kernel/Kernel_thread.h"
+#include "kernel/Kernel_process.h"
 
 uint32_t Debugger::ThreadLoop(void* arg)
 {

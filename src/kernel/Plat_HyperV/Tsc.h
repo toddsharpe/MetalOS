@@ -3,7 +3,6 @@
 #include "Lib/Time.h"
 #include "kernel/Plat_HyperV/Types.h"
 #include "kernel/Arch.h"
-#include "kernel/Api.h"
 #include "Assert.h"
 
 // Hypervisor Top Level Functional Specification v6.0b.pdf

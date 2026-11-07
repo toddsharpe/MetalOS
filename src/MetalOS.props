@@ -68,7 +68,8 @@
       <DisableSpecificWarnings>4200;4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <!-- external/ holds vendored headers: searched like /I, but their warnings are off -->
-      <AdditionalOptions>/Gw /external:I "$(MetalOSRoot)external" /external:W0 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Gw /external:I "$(MetalOSRoot)external" %(AdditionalOptions)</AdditionalOptions>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <AdditionalIncludeDirectories>$(MetalOSSrc)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

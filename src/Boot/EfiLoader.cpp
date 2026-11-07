@@ -49,7 +49,7 @@ namespace EfiLoader
 
 		//Kernel cant have imports yet
 		if (peHeader.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size != 0)
-			ReturnIfNotSuccess(EFI_UNSUPPORTED);
+			ReturnError(EFI_UNSUPPORTED);
 
 		//Allocate pages for full image
 		ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, x64::SizeToPages((UINTN)peHeader.OptionalHeader.SizeOfImage), &physicalImageBaseOut));

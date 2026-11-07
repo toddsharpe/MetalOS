@@ -4,6 +4,8 @@
 
 int main(int argc, char** argv)
 {
+	UNUSED(argc);
+	UNUSED(argv);
 	printf("NetTest: UDP datagram socket demo\n");
 
 	//Interface 0 must be configured (run dhcp.exe first). Show its address and derive the

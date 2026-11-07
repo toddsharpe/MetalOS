@@ -91,8 +91,8 @@ int main(int argc, char** argv)
 		uint8_t msg[8 + 12] = {};
 		msg[0] = 8; //echo request
 		msg[1] = 0; //code
-		msg[4] = (uint8_t)(id >> 8);  msg[5] = (uint8_t)id;
-		msg[6] = (uint8_t)(seq >> 8); msg[7] = (uint8_t)seq;
+		msg[4] = static_cast<uint8_t>(id >> 8);  msg[5] = static_cast<uint8_t>(id & 0xFF);
+		msg[6] = static_cast<uint8_t>(seq >> 8); msg[7] = static_cast<uint8_t>(seq);
 		memcpy(msg + 8, payload, payloadLen);
 		const size_t len = 8 + payloadLen;
 		const uint16_t ck = IcmpChecksum(msg, len);
@@ -111,8 +111,8 @@ int main(int argc, char** argv)
 		sockaddr_in from = {};
 		const SyscallResult r = SocketRecvFrom(sock, reply, sizeof(reply), &got, &from, 1000);
 		if (r == SyscallResult::Success && got >= 8 && reply[0] == 0 /*echo reply*/ &&
-			reply[4] == (uint8_t)(id >> 8) && reply[5] == (uint8_t)id &&
-			reply[6] == (uint8_t)(seq >> 8) && reply[7] == (uint8_t)seq)
+			reply[4] == static_cast<uint8_t>(id >> 8) && reply[5] == static_cast<uint8_t>(id & 0xFF) &&
+			reply[6] == static_cast<uint8_t>(seq >> 8) && reply[7] == static_cast<uint8_t>(seq))
 		{
 			const milli_t rtt = GetTickCount() - t0;
 			const uint8_t* f = (const uint8_t*)&from.sin_addr.s_addr;

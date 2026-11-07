@@ -246,6 +246,8 @@ namespace
 
 int main(int argc, char** argv)
 {
+	UNUSED(argc);
+	UNUSED(argv);
 	InterfaceInfo ifaces[4] = {};
 	size_t ifaceCount = 0;
 	AssertSuccess(GetInterfaces(ifaces, 4, &ifaceCount));

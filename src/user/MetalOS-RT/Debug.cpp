@@ -52,5 +52,5 @@ void Bugcheck(const char* file, const char* line, const char* format, ...)
 
 	DebugPrintStack();
 
-	ExitProcess(-2);
+	ExitProcess(static_cast<uint32_t>(-2));
 }

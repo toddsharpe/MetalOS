@@ -56,6 +56,7 @@ extern "C"
 	long _InterlockedCompareExchange(long volatile * _Destination, long _Exchange, long _Comparand);
 	__int64 _InterlockedCompareExchange64(__int64 volatile * _Destination, __int64 _Exchange, __int64 _Comparand);
 	long _InterlockedIncrement(long volatile * _Addend);
+	unsigned __int64 __umulh(unsigned __int64 _Multiplier, unsigned __int64 _Multiplicand);
 	__int64 _InterlockedIncrement64(__int64 volatile * _Addend);
 	__int64 _InterlockedExchange64(__int64 volatile * _Target, __int64 _Value);
 	unsigned char _interlockedbittestandreset(long volatile * _BitBase, long _BitPos);

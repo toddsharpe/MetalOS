@@ -21,6 +21,7 @@ public:
 
 	bool Send(Net::NetIf& netIf, Net::Packet& packet) override
 	{
+		UNUSED(netIf);
 		return NetSend(m_info.index, packet.buffer(), packet.length()) == SyscallResult::Success;
 	}
 

@@ -62,7 +62,6 @@ namespace
 	 */
 	bool Alloc(paddr_t& address, const size_t count)
 	{
-		const size_t length = m_buddyMap.Length;
 		const size_t buddyCount = DivRoundUp(count, BuddySize);
 
 		size_t foundIdx = 0;

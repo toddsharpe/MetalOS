@@ -86,11 +86,14 @@ uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rsdp_address)
 //Use the kernel's permanent physical map of all RAM
 void *uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len)
 {
+	UNUSED(len);
 	return reinterpret_cast<void*>(KernelPhysicalStart + addr);
 }
 
 void uacpi_kernel_unmap(void *addr, uacpi_size len)
 {
+	UNUSED(addr);
+	UNUSED(len);
 	//No-op: addresses come from the permanent physical map
 }
 
@@ -101,6 +104,8 @@ void uacpi_kernel_log(uacpi_log_level, const uacpi_char* c_str)
 
 uacpi_status uacpi_kernel_pci_device_open(uacpi_pci_address address, uacpi_handle *out_handle)
 {
+	UNUSED(address);
+	UNUSED(out_handle);
 	NotImplemented();
 	return uacpi_status::UACPI_STATUS_OK;
 }
@@ -112,48 +117,68 @@ void uacpi_kernel_pci_device_close(uacpi_handle)
 
 uacpi_status uacpi_kernel_pci_read8(uacpi_handle device, uacpi_size offset, uacpi_u8 *value)
 {
+	UNUSED(device);
+	UNUSED(offset);
+	UNUSED(value);
 	NotImplemented();
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_pci_read16(uacpi_handle device, uacpi_size offset, uacpi_u16 *value)
 {
+	UNUSED(device);
+	UNUSED(offset);
+	UNUSED(value);
 	NotImplemented();
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_pci_read32(uacpi_handle device, uacpi_size offset, uacpi_u32 *value)
 {
+	UNUSED(device);
+	UNUSED(offset);
+	UNUSED(value);
 	NotImplemented();
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_pci_write8(uacpi_handle device, uacpi_size offset, uacpi_u8 value)
 {
+	UNUSED(device);
+	UNUSED(offset);
+	UNUSED(value);
 	NotImplemented();
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_pci_write16(uacpi_handle device, uacpi_size offset, uacpi_u16 value)
 {
+	UNUSED(device);
+	UNUSED(offset);
+	UNUSED(value);
 	NotImplemented();
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_pci_write32(uacpi_handle device, uacpi_size offset, uacpi_u32 value)
 {
+	UNUSED(device);
+	UNUSED(offset);
+	UNUSED(value);
 	NotImplemented();
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_io_map(uacpi_io_addr base, uacpi_size len, uacpi_handle *out_handle)
 {
+	UNUSED(len);
 	*out_handle = reinterpret_cast<uacpi_handle>(base);
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 void uacpi_kernel_io_unmap(uacpi_handle handle)
 {
+	UNUSED(handle);
 	NotImplemented();
 }
 
@@ -209,11 +234,13 @@ uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
 
 void uacpi_kernel_stall(uacpi_u8 usec)
 {
+	UNUSED(usec);
 	NotImplemented();
 }
 
 void uacpi_kernel_sleep(uacpi_u64 msec)
 {
+	UNUSED(msec);
 	NotImplemented();
 }
 
@@ -273,11 +300,15 @@ uacpi_status uacpi_kernel_handle_firmware_request(uacpi_firmware_request*)
 
 uacpi_status uacpi_kernel_install_interrupt_handler(uacpi_u32 irq, uacpi_interrupt_handler, uacpi_handle ctx, uacpi_handle *out_irq_handle)
 {
+	UNUSED(irq);
+	UNUSED(ctx);
+	UNUSED(out_irq_handle);
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_uninstall_interrupt_handler(uacpi_interrupt_handler, uacpi_handle irq_handle)
 {
+	UNUSED(irq_handle);
 	return uacpi_status::UACPI_STATUS_OK;
 }
 
@@ -302,6 +333,7 @@ void uacpi_kernel_unlock_spinlock(uacpi_handle, uacpi_cpu_flags)
 
 uacpi_status uacpi_kernel_schedule_work(uacpi_work_type, uacpi_work_handler, uacpi_handle ctx)
 {
+	UNUSED(ctx);
 	return uacpi_status::UACPI_STATUS_OK;
 }
 

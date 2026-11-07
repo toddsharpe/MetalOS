@@ -1432,6 +1432,8 @@ namespace
 
 int main(int argc, char** argv)
 {
+	UNUSED(argc);
+	UNUSED(argv);
 	//Map the framebuffer into this process
 	if (MapFramebuffer(&g_gfx) != SyscallResult::Success)
 		return 1;

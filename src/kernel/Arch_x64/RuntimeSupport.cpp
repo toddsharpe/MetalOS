@@ -50,6 +50,7 @@ namespace RuntimeSupport
 
 	const RUNTIME_FUNCTION* LookupFunctionEntry(const uint64_t ControlPC, const uintptr_t ImageBase, const void* HistoryTable, const AddressSpace* const Space)
 	{
+		UNUSED(HistoryTable);
 		const uint64_t RVA = (ControlPC - (uint64_t)ImageBase);
 
 		//Searched within its size, rather than up to an entry of zeroes past the end
@@ -94,12 +95,12 @@ namespace RuntimeSupport
 	//Either 1. complete epilog, 2. unwind prolog, or 3. call handler/unwind directly
 	bool VirtualUnwind(DWORD HandlerType, ULONG64 ImageBase, ULONG64 ControlPC, const RUNTIME_FUNCTION* FunctionEntry, PCONTEXT ContextRecord, PKNONVOLATILE_CONTEXT_POINTERS ContextPointers, const AddressSpace* const Space)
 	{
+		UNUSED(HandlerType);
+		UNUSED(ControlPC);
 		const UNWIND_INFO* unwindInfo = GetUnwindInfo(ImageBase, FunctionEntry, Space);
 		if (!unwindInfo || unwindInfo->Version != 1)
 			return false;
 		//AssertEqual(unwindInfo->Flags, UNW_FLAG_NHANDLER);
-
-		const uintptr_t PrologOffset = ContextRecord->Rip - (FunctionEntry->BeginAddress + ImageBase);
 
 		uintptr_t EstablisherFrame;
 		if (unwindInfo->FrameRegister == 0)

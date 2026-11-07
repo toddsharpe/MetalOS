@@ -33,10 +33,8 @@ namespace HyperV::Tsc
 			EndSequence = TscPage.TscSequence; 
 		} while (EndSequence != StartSequence); 
 		
-		// The result of the multiplication is treated as a 128-bit value. 
-		int64_t highProduct = 0;
-		int64_t lowProduct = _mul128(Tsc, Scale, &highProduct);
-		ReferenceTime = highProduct + Offset; 
+		//The high 64 bits of the unsigned 128-bit product, plus the offset
+		ReferenceTime = __umulh(Tsc, Scale) + Offset;
 		return ReferenceTime;
 	}
 

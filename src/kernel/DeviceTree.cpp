@@ -24,6 +24,7 @@ namespace
 
 	uacpi_iteration_decision acpi_init_one_device(void *ctx, uacpi_namespace_node *node, uacpi_u32 node_depth)
 	{
+		UNUSED(node_depth);
 		uacpi_namespace_node_info *info;
 
 		const char *path = uacpi_namespace_node_generate_absolute_path(node);

@@ -102,7 +102,7 @@ static char *ksprintn(char *nbuf, uintmax_t num, int base, int *lenp, int upper)
 	do
 	{
 		c = hex2ascii(num % base);
-		*++p = upper ? toupper(c) : c;
+		*++p = static_cast<char>(upper ? toupper(c) : c);
 	} while (num /= base);
 	if (lenp)
 		*lenp = (int)(p - nbuf);
@@ -143,17 +143,17 @@ int kvprintf(char const *fmt, void (*func)(int, void *), void *arg, int radix, v
 		if (func)             \
 			(*func)(cc, arg); \
 		else                  \
-			*d++ = cc;        \
+			*d++ = static_cast<char>(cc); \
 		retval++;             \
 	}
 	char nbuf[MAXNBUF];
 	char *d;
-	const char *p, *percent, *q;
-	const wchar_t *wp;
+	const char *p = nullptr, *percent, *q;
+	const wchar_t *wp = nullptr;
 	unsigned char *up;
 	int ch, n;
 	uintmax_t num;
-	int base, lflag, qflag, tmp, width, ladjust, sharpflag, neg, sign, dot;
+	int base = 10, lflag, qflag, tmp, width, ladjust, sharpflag, neg, sign, dot;
 	int cflag, hflag, jflag, tflag, zflag;
 	int bconv, dwidth, upper;
 	char padc;
@@ -325,9 +325,9 @@ int kvprintf(char const *fmt, void (*func)(int, void *), void *arg, int radix, v
 			else if (zflag)
 				*(va_arg(ap, size_t *)) = retval;
 			else if (hflag)
-				*(va_arg(ap, short *)) = retval;
+				*(va_arg(ap, short *)) = static_cast<short>(retval);
 			else if (cflag)
-				*(va_arg(ap, char *)) = retval;
+				*(va_arg(ap, char *)) = static_cast<char>(retval);
 			else
 				*(va_arg(ap, int *)) = retval;
 			break;

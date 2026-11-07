@@ -285,7 +285,7 @@ namespace HyperV
 		uint32_t child_relid;
 	};
 
-	enum vmbus_packet_type {
+	enum vmbus_packet_type : uint16_t {
 		VM_PKT_INVALID = 0x0,
 		VM_PKT_SYNCH = 0x1,
 		VM_PKT_ADD_XFER_PAGESET = 0x2,

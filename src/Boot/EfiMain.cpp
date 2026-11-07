@@ -100,11 +100,11 @@ static EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL
 		else
 		{
 			//Convert to asci
-			char buffer[32] = {};
-			wcstombs(buffer, fileInfo->FileName, sizeof(buffer));
+			char name[32] = {};
+			wcstombs(name, fileInfo->FileName, sizeof(name));
 
 			//Allocate in ram
-			void* address = drive.Allocate(buffer, fileInfo->FileSize);
+			void* address = drive.Allocate(name, fileInfo->FileSize);
 
 			//Open
 			EFI_FILE_HANDLE file;

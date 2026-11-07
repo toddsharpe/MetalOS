@@ -403,6 +403,8 @@ static bool UICallback(GUI& gui, Message& message)
 
 int main(int argc, char** argv)
 {
+	UNUSED(argc);
+	UNUSED(argv);
 	DebugPrint("Hi From terminal!\n");
 
 	GUI gui(Str("Terminal"), StartRect, UICallback, WindowStyle::Resizable, &Icons::Terminal);

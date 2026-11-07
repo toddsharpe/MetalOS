@@ -341,6 +341,7 @@ extern "C"
 
 	int fflush(FILE *stream)
 	{
+		UNUSED(stream);
 		//Do nothing
 		return 0;
 	}

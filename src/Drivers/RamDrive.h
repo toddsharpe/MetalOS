@@ -62,8 +62,8 @@ public:
 	void *Allocate(const char *name, const size_t size)
 	{
 		size_t index;
-		bool found = GetFileIndex(name, index);
-		// TODO: assert false and not -1
+		const bool found = GetFileIndex(name, index);
+		Assert(!found && index < MAX_ENTRIES);
 		// TODO: assert name is less than MAX_NAME
 		// TODO: assert size is large enough
 

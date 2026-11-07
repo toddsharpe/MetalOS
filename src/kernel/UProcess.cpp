@@ -62,6 +62,7 @@ void UProcess::Initialize(void* const image, const cstr_t cmd)
 
 UThread* UProcess::CreateThread(const size_t stackSize, const UThreadStart userStart, void* const arg)
 {
+	UNUSED(stackSize);
 	//Where user thread starts executing from. Main process thread calls inits process and executes main.
 	//Other user threads call init thread and then jump to this entry
 	void* threadStart = userStart == nullptr ? InitProcess : InitThread;

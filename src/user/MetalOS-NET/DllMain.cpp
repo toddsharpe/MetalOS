@@ -211,6 +211,7 @@ extern "C" SyscallResult SetGateway(uint32_t index, const in_addr* gateway)
 
 bool DllMain(HModule handle, DllReason reason)
 {
+	UNUSED(handle);
 	switch (reason)
 	{
 		case DllReason::ProcessAttach:

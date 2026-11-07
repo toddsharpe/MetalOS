@@ -39,5 +39,4 @@
 
 //The firmware's tables, which EfiMain stores
 extern EFI_SYSTEM_TABLE* ST;
-extern EFI_RUNTIME_SERVICES* RT;
 extern EFI_BOOT_SERVICES* BS;

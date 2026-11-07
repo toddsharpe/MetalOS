@@ -20,6 +20,11 @@ do \
 		EfiError::DisplayError(L#x, WFILE, LLINE, _status); return _status; \
 	} \
 } while (0)
+#define ReturnError(x) \
+do \
+{ \
+	EfiError::DisplayError(L#x, WFILE, LLINE, x); return x; \
+} while (0)
 #define ReturnIfNotSuccessNoDisplay(x) status = x; if (EFI_ERROR(status)) { return status; }
 
 namespace EfiError

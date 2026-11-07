@@ -212,11 +212,17 @@ namespace Net
 	{
 		bool pending;
 		milli_t sent;
+		ipv4_addr_t target;
+
+		bool expired(const milli_t now) const
+		{
+			return now - sent >= arp_retry_time;
+		}
 
 		//False while a request sent less than arp_retry_time ago is unanswered
 		bool try_begin(const milli_t now)
 		{
-			if (pending && now - sent < arp_retry_time)
+			if (pending && !expired(now))
 				return false;
 
 			pending = true;
@@ -345,6 +351,9 @@ namespace Net
 	{
 		bool Receive(NetIf& net_if, Packet& packet);
 		bool Send(NetIf& net_if, Packet& packet);
+
+		//Each loop: the frame waiting on ARP goes once its next hop resolves, or is dropped once the request expires
+		void Dispatch(NetIf& net_if);
 	}
 
 	namespace TunEth

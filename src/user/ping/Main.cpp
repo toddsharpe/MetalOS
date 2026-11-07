@@ -64,13 +64,6 @@ int main(int argc, char** argv)
 	const char* payload = "MetalOS ping";
 	static constexpr size_t payloadLen = 12;
 
-	//Warm up ARP: the first unicast send resolves asynchronously.
-	{
-		uint8_t warm[8 + 12] = { 8, 0 };
-		SocketSendTo(sock, warm, sizeof(warm), &dst);
-		Sleep(300);
-	}
-
 	int received = 0;
 	for (uint16_t seq = 1; seq <= 4; seq++)
 	{
@@ -83,12 +76,12 @@ int main(int argc, char** argv)
 		const milli_t t0 = GetTickCount();
 		if (SocketSendTo(sock, msg, len, &dst) != SyscallResult::Success)
 		{
-			printf("  seq=%u send failed (arp?)\n", seq);
+			printf("  seq=%u send failed\n", seq);
 			Sleep(500);
 			continue;
 		}
 
-		//Every reply is to this socket's id; one to another seq (the warm-up's, or a late one) is skipped
+		//Every reply is to this socket's id; one to another seq (a late one) is skipped
 		bool replied = false;
 		sockaddr_in from = {};
 		while (!replied)

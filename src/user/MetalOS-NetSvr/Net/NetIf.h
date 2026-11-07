@@ -12,7 +12,8 @@ namespace Net
 		constexpr eth_data_t() :
 			addr(),
 			filters(),
-			arp()
+			arp(),
+			pending()
 		{
 
 		}
@@ -20,6 +21,7 @@ namespace Net
 		eth_mac_t addr;
 		StaticVector<eth_mac_t, 4> filters; //extra accepted destination MACs (joined multicast groups)
 		arp_request_t arp;
+		Packet pending; //the frame waiting on arp, a tx-pool buffer; its backing is empty when none waits
 	};
 
 	struct ipv4_mc_route_t
@@ -85,6 +87,9 @@ namespace Net
 		void PreDispatch()
 		{
 			driver.Receive(*this);
+
+			if (l2 == l2_t::Ethernet)
+				Ethernet::Dispatch(*this);
 		}
 
 		NetDriver& driver;

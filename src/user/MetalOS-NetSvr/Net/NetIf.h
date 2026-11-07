@@ -65,7 +65,7 @@ namespace Net
 		uint32_t rx_broadcast;
 	};
 	
-	struct NetDriver;
+	class NetDriver;
 	struct NetIf
 	{
 		NetIf(NetDriver& _driver, const l2_t _l2)

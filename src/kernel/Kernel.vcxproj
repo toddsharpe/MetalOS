@@ -27,6 +27,7 @@
     <ClCompile Include="*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Objects\*.cpp;$(MetalOSSrc)x64\Cpuid.cpp" Exclude="**\*_test.cpp" />
     <!-- Kd64 is vendored, so it gets what it uses from the kernel by forced include rather than edits -->
     <ClCompile Include="Kd64\*.cpp">
+      <WarningLevel>Level1</WarningLevel>
       <ForcedIncludeFiles>$(MetalOSSrc)core_crt\stdarg.h;$(MetalOSSrc)core_crt\string.h;$(MetalOSSrc)core_crt\stdio.h;$(MetalOSSrc)Lib\Math.h;$(MetalOSSrc)MetalOS.Space.h;$(MetalOSSrc)kernel\Arch.h</ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="$(MetalOSSrc)core_crt\wchar.c">
@@ -36,6 +37,7 @@
     <!-- uACPI, compiled as C against the standard headers as Acpi.c was -->
     <ClCompile Include="$(MetalOSSrc)External\uACPI\source\default_handlers.c;$(MetalOSSrc)External\uACPI\source\event.c;$(MetalOSSrc)External\uACPI\source\interpreter.c;$(MetalOSSrc)External\uACPI\source\io.c;$(MetalOSSrc)External\uACPI\source\mutex.c;$(MetalOSSrc)External\uACPI\source\namespace.c;$(MetalOSSrc)External\uACPI\source\notify.c;$(MetalOSSrc)External\uACPI\source\opcodes.c;$(MetalOSSrc)External\uACPI\source\opregion.c;$(MetalOSSrc)External\uACPI\source\osi.c;$(MetalOSSrc)External\uACPI\source\registers.c;$(MetalOSSrc)External\uACPI\source\resources.c;$(MetalOSSrc)External\uACPI\source\shareable.c;$(MetalOSSrc)External\uACPI\source\sleep.c;$(MetalOSSrc)External\uACPI\source\stdlib.c;$(MetalOSSrc)External\uACPI\source\tables.c;$(MetalOSSrc)External\uACPI\source\types.c;$(MetalOSSrc)External\uACPI\source\uacpi.c;$(MetalOSSrc)External\uACPI\source\utilities.c">
       <CompileAs>CompileAsC</CompileAs>
+      <WarningLevel>Level1</WarningLevel>
       <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
       <AdditionalIncludeDirectories>$(MetalOSSrc);$(MetalOSSrc)Acpi;$(MetalOSSrc)External\uACPI\source;$(MetalOSSrc)External\uACPI\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions></PreprocessorDefinitions>

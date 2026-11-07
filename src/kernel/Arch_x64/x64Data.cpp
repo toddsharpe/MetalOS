@@ -51,7 +51,7 @@ namespace x64
 		{ 0xFFFF, 0, 0, GDT_TYPE_RWX, true, UserDpl,   true, 0xF, false, true, false, true, 0x00 }, //64-bit code User
 		{
 			// Seg1				Base1			Base2							type  S    DPL  P   Seg2	OS      L   DB     4GB   Base3
-			sizeof(TSS64) - 1, (uint16_t)&TSS64, (uint8_t)((uint64_t)&TSS64 >> 16), 0x9, false, 0, true, 0, false, false, false, true, (uint8_t)((uint64_t)&TSS64 >> 24),
+			sizeof(TSS64) - 1, (uint16_t)(uint64_t)&TSS64, (uint8_t)((uint64_t)&TSS64 >> 16), 0x9, false, 0, true, 0, false, false, false, true, (uint8_t)((uint64_t)&TSS64 >> 24),
 			// Base4						Zeroes
 			QWordHigh(&TSS64), 0, 0, 0
 		}

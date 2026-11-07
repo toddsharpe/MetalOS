@@ -12,6 +12,8 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(MetalOSRoot)external\reactos;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!-- Vendored: keeps the level it has built at -->
+      <WarningLevel>Level1</WarningLevel>
     </ClCompile>
     <Link>
       <BaseAddress>0xFFFF800002000000</BaseAddress>

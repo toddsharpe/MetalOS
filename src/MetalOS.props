@@ -63,7 +63,9 @@
       <SDLCheck>false</SDLCheck>
       <SupportJustMyCode>false</SupportJustMyCode>
       <ConformanceMode>Default</ConformanceMode>
-      <WarningLevel>Level1</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
+      <!-- C4200: zero-sized trailing arrays, the idiom of the on-disk and hardware structs here and in the Windows headers -->
+      <DisableSpecificWarnings>4200;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <AdditionalOptions>/Gw %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>$(MetalOSSrc);$(MetalOSRoot)external</AdditionalIncludeDirectories>

@@ -1,4 +1,4 @@
-//The stack's receive path without sockets
+//The stack's receive path, counting what reaches a socket
 #include "Net/Net.h"
 #include "Net/NetDriver.h"
 #include "Net/NetIf.h"
@@ -7,8 +7,6 @@
 
 namespace
 {
-	size_t ipv4TestDelivered;
-
 	//Stands in for the NIC: counts the frames the stack sends through it, and frees them as a driver does
 	class Ipv4TestDriver : public Net::NetDriver
 	{
@@ -53,12 +51,13 @@ namespace
 		Net::eth_mac_t m_mac;
 	};
 
-	//Hands the stack an IPv4 datagram as Ethernet::Receive would, with the ethernet header already masked
+	//Hands the stack an IPv4 datagram as Ethernet::Receive would, in the rx pool with the ethernet header already masked
 	template <size_t N>
 	void Ipv4TestReceive(Net::NetIf& net_if, const uint8_t proto, const Net::ipv4_addr_t dst, const uint8_t (&payload)[N])
 	{
-		uint8_t buffer[Net::buffer_size] = {};
-		Net::Packet packet(buffer);
+		const buffer_t backing = Net::alloc_rx(Net::buffer_size);
+		Assert(backing);
+		Net::Packet packet(backing);
 		packet.mask(Net::eth_hdr_size);
 
 		Serializer ser(packet.buffer(), packet.length());
@@ -76,6 +75,19 @@ namespace
 		packet.trim(ser.Bytes());
 
 		Net::IPv4::Receive(net_if, packet);
+		if (!packet.taken)
+			Net::free_rx(backing);
+	}
+
+	//The datagrams waiting on a socket, taken off it
+	size_t Ipv4TestDrain(const int fd)
+	{
+		size_t count = 0;
+		uint8_t data[Net::mtu] = {};
+		size_t bytes = 0;
+		while (Net::Socket::Recv(fd, data, sizeof(data), bytes, nullptr))
+			count++;
+		return count;
 	}
 
 	//A UDP header and 4 bytes of data
@@ -99,18 +111,6 @@ namespace
 	Net::NetIf netA(driverA, Net::l2_t::Ethernet);
 }
 
-namespace Net::Socket
-{
-	//Stands in for Sockets.cpp's bound-socket registry: counts what the stack delivers
-	bool Receive(NetIf& net_if, Packet& packet)
-	{
-		UNUSED(net_if);
-		UNUSED(packet);
-		ipv4TestDelivered++;
-		return true;
-	}
-}
-
 void IPv4_test()
 {
 	Assert(Net::AddNetIf(netB));
@@ -122,23 +122,31 @@ void IPv4_test()
 	netB.ipv4.addr = Net::build_ip(172, 16, 0, 1);
 	netB.ipv4.subnet_mask = Net::build_ip(255, 255, 255, 0);
 
+	//A socket on the test datagrams' port counts what the stack delivers
+	const int fd = Net::Socket::Create(Net::proto_t::Udp);
+	Assert(Net::Socket::Bind(fd, { Net::empty, 0x0400 }));
+	size_t delivered = 0;
+
 	//An interface doesn't forward until it is configured to
 	Assert(!netA.ipv4.ip_forwarding);
 	Assert(!netB.ipv4.ip_forwarding);
 
 	//The interface's directed broadcast is accepted and counted as a broadcast, like the limited broadcast
 	Ipv4TestUdp(netA, Net::build_ip(192, 168, 0, 255));
-	AssertEqual(ipv4TestDelivered, (size_t)1);
+	delivered += Ipv4TestDrain(fd);
+	AssertEqual(delivered, (size_t)1);
 	AssertEqual(netA.ipv4.rx_broadcast, (uint32_t)1);
 	Ipv4TestUdp(netA, Net::broadcast);
-	AssertEqual(ipv4TestDelivered, (size_t)2);
+	delivered += Ipv4TestDrain(fd);
+	AssertEqual(delivered, (size_t)2);
 	AssertEqual(netA.ipv4.rx_broadcast, (uint32_t)2);
 	AssertEqual(netA.ipv4.rx_accepted, (uint32_t)2);
 
 	//Another subnet's broadcast and another host's address aren't ours
 	Ipv4TestUdp(netA, Net::build_ip(192, 168, 1, 255));
 	Ipv4TestUdp(netA, Net::build_ip(172, 16, 0, 5));
-	AssertEqual(ipv4TestDelivered, (size_t)2);
+	delivered += Ipv4TestDrain(fd);
+	AssertEqual(delivered, (size_t)2);
 	AssertEqual(netA.ipv4.rx_unicast, (uint32_t)2);
 
 	//Without forwarding, another host's packet goes nowhere
@@ -148,26 +156,31 @@ void IPv4_test()
 	netA.ipv4.ip_forwarding = true;
 	Ipv4TestUdp(netA, Net::build_ip(172, 16, 0, 5));
 	AssertEqual(driverB.Sent, (size_t)1);
-	AssertEqual(ipv4TestDelivered, (size_t)2);
+	delivered += Ipv4TestDrain(fd);
+	AssertEqual(delivered, (size_t)2);
 
 	//Broadcasts are delivered locally but never forwarded: not the limited broadcast, ours, or the target subnet's
 	Ipv4TestUdp(netA, Net::broadcast);
 	Ipv4TestUdp(netA, Net::build_ip(192, 168, 0, 255));
-	AssertEqual(ipv4TestDelivered, (size_t)4);
+	delivered += Ipv4TestDrain(fd);
+	AssertEqual(delivered, (size_t)4);
 	Ipv4TestUdp(netA, Net::build_ip(172, 16, 0, 255));
-	AssertEqual(ipv4TestDelivered, (size_t)4);
+	delivered += Ipv4TestDrain(fd);
+	AssertEqual(delivered, (size_t)4);
 	AssertEqual(driverB.Sent, (size_t)1);
 	AssertEqual(driverA.Sent, (size_t)0);
 	netA.ipv4.ip_forwarding = false;
 
-	//A broadcast ping reaches raw sockets but gets no reply; a ping to our address does (as an ARP request for the sender)
+	//An echo request is the stack's, not a socket's: a broadcast one gets no reply, one to our address does (as an ARP request for the sender)
 	Ipv4TestPing(netA, Net::build_ip(192, 168, 0, 255));
 	Ipv4TestPing(netA, Net::broadcast);
-	AssertEqual(ipv4TestDelivered, (size_t)6);
 	AssertEqual(driverA.Sent, (size_t)0);
 	Ipv4TestPing(netA, netA.ipv4.addr);
-	AssertEqual(ipv4TestDelivered, (size_t)7);
 	AssertEqual(driverA.Sent, (size_t)1);
+	delivered += Ipv4TestDrain(fd);
+	AssertEqual(delivered, (size_t)4);
+
+	Assert(Net::Socket::Close(fd));
 
 	//Every buffer the stack sent from or dropped went back: both pools are first fit, so each allocates whole
 	const buffer_t rx = Net::alloc_rx(Net::pool_size);

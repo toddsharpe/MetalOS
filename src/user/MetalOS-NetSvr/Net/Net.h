@@ -323,6 +323,8 @@ namespace Net
 	{
 		uint32_t pool_rx_empty;
 		uint32_t pool_tx_empty;
+		uint32_t socket_rx_full;
+		uint32_t socket_tx_full;
 	};
 	extern stack_stats_t stack_stats;
 
@@ -389,12 +391,24 @@ namespace Net
 		bool AddRoute(NetIf& net_if, const ipv4_addr_t dst, const ipv4_addr_t subnet_mask);
 	}
 
+	//Datagram sockets: UDP, and ICMP echo, where the stack writes the socket's port as the echo id and delivers replies by it
 	namespace Socket
 	{
-		bool Receive(NetIf& net_if, Packet& packet);
+		static constexpr int closed_fd = 0;
 
-		bool SendUdp(const endpoint_t dst, const uint16_t src_port, const void* const buffer, const size_t length);
-		bool SendIcmpRaw(const endpoint_t dst, const void* const buffer, const size_t length);
+		int Create(const proto_t proto);
+		bool Bind(const int fd, const endpoint_t endpoint, NetIf* const net_if = nullptr);
+		bool SendTo(const int fd, const void* const buffer, const size_t length, const endpoint_t dst);
+		bool Close(const int fd);
+
+		//A datagram larger than the buffer is dropped, not truncated
+		bool Recv(const int fd, void* const buffer, const size_t length, size_t& bytes_read, endpoint_t* const src);
+
+		//Each loop: send what a busy driver refused before
+		void Dispatch();
+
+		//From Udp and Icmp: queue the datagram on the socket it matches, which keeps its rx-pool backing
+		bool Receive(NetIf& net_if, Packet& packet);
 	}
 
 	bool AddNetIf(NetIf& net_if);

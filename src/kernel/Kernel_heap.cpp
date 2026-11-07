@@ -14,7 +14,8 @@ namespace
 	static constexpr size_t AcpiArenaSize = Arch::PageSize << 8; //1MB ACPI Arena
 
 	KERNEL_PAGE_ALIGN static StaticHeap<KernelArenaSize> m_kernelAlloc;
-	KERNEL_PAGE_ALIGN static StaticArena<AcpiArenaSize> m_acpiArena;
+	KERNEL_PAGE_ALIGN static uint8_t m_acpiBacking[AcpiArenaSize];
+	static constinit PreallocatedArena m_acpiArena(m_acpiBacking);
 }
 
 void* KeAlloc(const size_t size, const AllocType type)

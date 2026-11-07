@@ -24,7 +24,8 @@
 #include "Lib/StaticMap.h"
 
 static constexpr size_t TempArenaSize = Arch::PageSize << 10; //4MB Temp Arena
-static KERNEL_PAGE_ALIGN StaticArena<TempArenaSize> m_tempArena;
+static KERNEL_PAGE_ALIGN uint8_t m_tempBacking[TempArenaSize];
+static constinit PreallocatedArena m_tempArena(m_tempBacking);
 static DirectUart m_uart(DirectUart::ComPort::Com1);
 
 namespace

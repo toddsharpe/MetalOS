@@ -86,7 +86,7 @@ UThread* UProcess::CreateThread(const size_t stackSize, const UThreadStart userS
 	//Allocate thread on the kernel heap
 	UThread* thread = KeAlloc<UThread>(AllocType::User, *this, *teb);
 	Assert(thread);
-	Assert(Threads.Add(thread));
+	Threads.InsertTail(*thread);
 	thread->StackBase = m_stack;
 
 	void* const stackPointer = MakePointer<void*>(m_stack, UThreadStackSize - ArchStackReserve());
@@ -114,28 +114,28 @@ UThread* UProcess::CreateThread(const size_t stackSize, const UThreadStart userS
 UObject* UProcess::CreateObject(const UObjectType type)
 {
 	UObject* created = KeAlloc<UObject>(AllocType::User, type);
-	Assert(Objects.Add(created));
+	Objects.InsertTail(*created);
 	return created;
 }
 
 UObject* UProcess::CreateObject(const UObjectType type, const handle_t handle)
 {
 	UObject* created = KeAlloc<UObject>(AllocType::User, type, handle);
-	Assert(Objects.Add(created));
+	Objects.InsertTail(*created);
 	return created;
 }
 
 UObject* UProcess::GetObject()
 {
-	return Objects.First();
+	return Objects.IsEmpty() ? nullptr : &Objects.First();
 }
 
 UObject* UProcess::GetObject(const handle_t handle)
 {
-	for (UObject*& obj : Objects)
+	for (UObject& obj : Objects)
 	{
-		if (obj->Handle == handle)
-			return obj;
+		if (obj.Handle == handle)
+			return &obj;
 	}
 
 	return nullptr;
@@ -193,7 +193,7 @@ bool UProcess::CloseObject(const handle_t handle)
 			break;
 	}
 
-	Objects.Remove(object);
+	Objects.Remove(*object);
 	KeFree(object, AllocType::User);
 	return true;
 }
@@ -236,6 +236,6 @@ void UProcess::Display() const
 
 	//objects
 	Printf("UObjects: %d\n", Objects.Count());
-	for (const UObject* obj : Objects)
-		obj->Display();
+	for (const UObject& obj : Objects)
+		obj.Display();
 }

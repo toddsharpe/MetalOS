@@ -3,7 +3,7 @@
 #include "core_crt/stdint.h"
 #include "core_crt/stddef.h"
 #include "kernel/Objects/KRef.h"
-#include "Lib/List.h"
+#include "Lib/IntrusiveList.h"
 #include "core_crt/stdarg.h"
 
 enum class KPipeOp
@@ -13,6 +13,11 @@ enum class KPipeOp
 };
 
 //Ring over a double-mapped buffer; m_count tells full from empty, so all m_size bytes are usable
+//A WriteFile waiting its turn at a pipe; the writing thread embeds one
+struct KPipeWriter : ListLink
+{
+};
+
 class KPipe
 {
 public:
@@ -37,8 +42,8 @@ public:
 	bool IsUnused() const;
 
 	//Writes are queued whole in arrival order, as on Windows: only the writer at the front may write
-	void QueueWriter(ListEntry& writer);
-	void DequeueWriter(ListEntry& writer);
+	void QueueWriter(KPipeWriter& writer);
+	void DequeueWriter(KPipeWriter& writer);
 
 	KRef Readers;
 	KRef Writers;
@@ -47,7 +52,7 @@ public:
 private:
 	static constexpr size_t MaxPages = 16; //Buffer size limit; Init lists each page twice for the double map
 
-	bool EventSignal(const KPipeOp op, const size_t count, const ListEntry* const writer);
+	bool EventSignal(const KPipeOp op, const size_t count, const KPipeWriter* const writer);
 	bool IsEmpty() const;
 
 	uint8_t* m_buffer;
@@ -55,7 +60,7 @@ private:
 	size_t m_size;
 	size_t m_readIndex;
 	size_t m_writeIndex;
-	ListHead m_writers;
+	IntrusiveList<KPipeWriter> m_writers;
 };
 
 constexpr KPipe::KPipe(const size_t size) :
@@ -74,7 +79,7 @@ constexpr KPipe::KPipe(const size_t size) :
 
 struct KPipeSignal
 {
-	KPipeSignal(KPipe& pipe, const KPipeOp op, const size_t count, const ListEntry* const writer = nullptr) :
+	KPipeSignal(KPipe& pipe, const KPipeOp op, const size_t count, const KPipeWriter* const writer = nullptr) :
 		Pipe(pipe),
 		Op(op),
 		Count(count),
@@ -86,5 +91,5 @@ struct KPipeSignal
 	KPipe& Pipe;
 	const KPipeOp Op;
 	const size_t Count;
-	const ListEntry* const Writer; //A write waits for its turn as well as for room
+	const KPipeWriter* const Writer; //A write waits for its turn as well as for room
 };

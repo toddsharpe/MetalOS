@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Lib/LinkedList.h"
+#include "Lib/IntrusiveList.h"
 #include <cstdint>
 #include <cstdlib>
 
@@ -49,20 +49,23 @@ public:
 private:
 	static constexpr uint64_t AllocationGranularity = 0x1'0000; //64K
 
-	struct Reservation
+	struct Reservation : ListLink
 	{
+		Reservation(const uintptr_t address, const size_t pageCount, const bool ownsPages) : Address(address), PageCount(pageCount), OwnsPages(ownsPages)
+		{
+
+		}
+
 		uintptr_t Address;
 		size_t PageCount;
 		bool OwnsPages; //Holds a reference on each mapped page (KeVirtualAlloc, KeAliasInto), unlike caller-supplied maps
-
-		//Reservations are keyed by their (unique) address, so equality compares Address only.
-		bool operator==(const Reservation& other) const { return Address == other.Address; }
 	};
 
 	bool IsFree(const uintptr_t address, const size_t count) const;
+	void Add(const uintptr_t address, const size_t count, const PageOwnership ownership);
 
 	//Reservations. Unbounded: the kernel address space in particular accumulates more than a
 	//small fixed cap (fixed maps, UEFI ranges, thread stacks, transient loader aliases).
 	uintptr_t m_watermark;
-	LinkedList<Reservation> m_reservations;
+	IntrusiveList<Reservation> m_reservations;
 };

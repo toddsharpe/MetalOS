@@ -6,7 +6,7 @@
 #include "Graphics/Draw2D.h"
 #include "Graphics/Theme.h"
 #include "Graphics/Icons.h"
-#include "Lib/LinkedList.h"
+#include "Lib/IntrusiveList.h"
 #include <cstring>
 #include <stdio.h>
 
@@ -31,7 +31,7 @@ namespace
 		HSharedMem ChannelHandle;  //our handle to the channel region; CloseHandle releases it
 	};
 
-	struct WmWindow
+	struct WmWindow : ListLink
 	{
 		Connection* Owner;
 		uint16_t WindowId;         //unique within its connection; messages for the window carry it
@@ -75,7 +75,7 @@ namespace
 	WmWindow g_windows[MaxWindows];
 
 	//Z-order: head is topmost. Holds pointers into g_windows (whose slots never move), so the list can be reordered and removed from freely.
-	LinkedList<WmWindow*> g_zorder;
+	IntrusiveList<WmWindow> g_zorder;
 
 	WmWindow* g_focus = nullptr;
 	WmWindow* g_drag = nullptr;
@@ -238,17 +238,20 @@ namespace
 	void Raise(WmWindow* const window)
 	{
 		//Move to the top (head) of the z-order.
-		if (g_zorder.Remove(window))
-			g_zorder.InsertHead(window);
+		if (window->IsLinked())
+		{
+			g_zorder.Remove(*window);
+			g_zorder.InsertHead(*window);
+		}
 	}
 
 	WmWindow* HitTest(const Point2D& point)
 	{
 		//Head is topmost, so the first (non-minimized) window containing the point wins.
-		for (WmWindow* const window : g_zorder)
+		for (WmWindow& window : g_zorder)
 		{
-			if (!window->Minimized && Outer(window).Contains(point))
-				return window;
+			if (!window.Minimized && Outer(&window).Contains(point))
+				return &window;
 		}
 		return nullptr;
 	}
@@ -256,10 +259,10 @@ namespace
 	//Topmost window that isn't minimized (null if none)
 	WmWindow* TopmostVisible()
 	{
-		for (WmWindow* const window : g_zorder)
+		for (WmWindow& window : g_zorder)
 		{
-			if (!window->Minimized)
-				return window;
+			if (!window.Minimized)
+				return &window;
 		}
 		return nullptr;
 	}
@@ -420,7 +423,7 @@ namespace
 			window->Maximized = false;
 			KeepReachable(window);
 
-			g_zorder.InsertHead(window); //new window on top
+			g_zorder.InsertHead(*window); //new window on top
 			Focus(window);
 			break;
 		}
@@ -467,7 +470,8 @@ namespace
 	void DestroyWindow(WmWindow* const window)
 	{
 		//Drop it from the z-order.
-		g_zorder.Remove(window);
+		if (window->IsLinked())
+			g_zorder.Remove(*window);
 
 		if (g_drag == window)
 			g_drag = nullptr;
@@ -1007,11 +1011,11 @@ namespace
 	size_t SwitchList(WmWindow** const list, const size_t max)
 	{
 		size_t count = 0;
-		for (WmWindow* const window : g_zorder)
+		for (WmWindow& window : g_zorder)
 		{
 			if (count == max)
 				break;
-			list[count++] = window;
+			list[count++] = &window;
 		}
 		return count;
 	}
@@ -1401,10 +1405,10 @@ namespace
 			memcpy(g_back.Buffer, g_desktop.Buffer, g_back.Size());
 
 			//Draw bottom to top: Reversed() walks tail -> head, i.e. bottommost first.
-			for (WmWindow* const window : g_zorder.Reversed())
+			for (WmWindow& window : g_zorder.Reversed())
 			{
-				if (!window->Minimized)
-					DrawWindow(window);
+				if (!window.Minimized)
+					DrawWindow(&window);
 			}
 
 			//The taskbar draws over windows, and the start menu over the taskbar

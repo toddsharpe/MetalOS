@@ -17,7 +17,6 @@ bool KPipe::EventSignal(void* const arg)
 
 bool KPipe::Init()
 {
-	ListInitializeHead(m_writers);
 	Assert(m_size % Arch::PageSize == 0);
 	const size_t count = Arch::SizeToPages(m_size);
 	if (count > MaxPages)
@@ -139,14 +138,14 @@ bool KPipe::IsBroken() const
 	return Readers.IsEmpty() || Writers.IsEmpty();
 }
 
-void KPipe::QueueWriter(ListEntry& writer)
+void KPipe::QueueWriter(KPipeWriter& writer)
 {
-	ListInsertTail(m_writers, writer);
+	m_writers.InsertTail(writer);
 }
 
-void KPipe::DequeueWriter(ListEntry& writer)
+void KPipe::DequeueWriter(KPipeWriter& writer)
 {
-	ListRemoveEntry(m_writers, writer);
+	m_writers.Remove(writer);
 }
 
 bool KPipe::IsUnused() const
@@ -154,7 +153,7 @@ bool KPipe::IsUnused() const
 	return Readers.IsEmpty() && Writers.IsEmpty() && Waiters.IsEmpty();
 }
 
-bool KPipe::EventSignal(const KPipeOp op, const size_t count, const ListEntry* const writer)
+bool KPipe::EventSignal(const KPipeOp op, const size_t count, const KPipeWriter* const writer)
 {
 	switch (op)
 	{
@@ -163,7 +162,7 @@ bool KPipe::EventSignal(const KPipeOp op, const size_t count, const ListEntry* c
 			return Writers.IsEmpty() || Count() >= count;
 
 		case KPipeOp::Write:
-			return IsBroken() || (m_writers.Link.Flink == writer && Space() >= count);
+			return IsBroken() || (!m_writers.IsEmpty() && &m_writers.First() == writer && Space() >= count);
 
 		default:
 			Fatal("Invalid pipe op");

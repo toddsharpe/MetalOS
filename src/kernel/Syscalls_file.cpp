@@ -177,7 +177,7 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 			const size_t needed = (bufferSize <= pipe.Capacity()) ? bufferSize : 1;
 
 			//Writes are queued in arrival order and each finishes before the next starts, so writers' bytes never interleave
-			pipe.QueueWriter(writer.PipeWriteLink);
+			pipe.QueueWriter(writer.PipeWriter);
 			writer.PipeWriteQueue = &pipe;
 
 			size_t written = 0;
@@ -185,7 +185,7 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 			while (written < bufferSize)
 			{
 				//Wait for this write's turn and for room
-				KPipeSignal signal(pipe, KPipeOp::Write, needed, &writer.PipeWriteLink);
+				KPipeSignal signal(pipe, KPipeOp::Write, needed, &writer.PipeWriter);
 				KPredicate wait(&KPipe::EventSignal, &signal);
 				KWaitResult result = KeWait(wait);
 				Assert(result == KWaitResult::Signaled);
@@ -210,7 +210,7 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 				written += bytes;
 			}
 
-			pipe.DequeueWriter(writer.PipeWriteLink);
+			pipe.DequeueWriter(writer.PipeWriter);
 			writer.PipeWriteQueue = nullptr;
 
 			//The count may have been freed during a wait as well

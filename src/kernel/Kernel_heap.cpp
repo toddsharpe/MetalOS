@@ -1,4 +1,5 @@
 #include "kernel/Kernel_heap.h"
+#include "core_crt/stdlib.h"
 #include "Lib/StaticHeap.h"
 #include "Lib/Arena.h"
 #include "Lib/System.h"
@@ -53,4 +54,15 @@ void KeFree(void* ptr, const AllocType type)
 		default:
 			NotImplemented();
 	}
+}
+
+//core_crt's malloc and free, on the kernel heap
+extern "C" void* malloc(size_t size)
+{
+	return KeAlloc(size, AllocType::Malloc);
+}
+
+extern "C" void free(void* ptr)
+{
+	KeFree(ptr, AllocType::Malloc);
 }

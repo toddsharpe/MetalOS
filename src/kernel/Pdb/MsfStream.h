@@ -1,17 +1,17 @@
 #pragma once
 
 #include "kernel/Pdb/Platform.h"
+#include "Lib/IntrusiveList.h"
 #include "Assert.h"
 
 //No caching since the PDB is in memory; block numbers (blocks can be non-contiguous) are read where the PDB keeps them, so a stream of any size needs no table
-class MsfStream
+class MsfStream : public ListLink
 {
 public:
 	MsfStream(const size_t blockSize, const ReadBlock read, void* const context) :
 		Size(),
 		IsInvalid(),
 		BlockCount(),
-		Link(),
 		m_blockSize(blockSize),
 		m_read(read),
 		m_context(context),
@@ -216,7 +216,6 @@ public:
 	uint32_t Size;
 	bool IsInvalid;
 	size_t BlockCount;
-	ListEntry Link;
 
 private:
 	void* GetPointer() const

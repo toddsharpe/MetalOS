@@ -4,13 +4,13 @@
 #include "Lib/Arena.h"
 #include "user/MetalOS.Types.h"
 #include "kernel/UObject.h"
-#include "Lib/LinkedList.h"
+#include "Lib/IntrusiveList.h"
 #include "kernel/Types.h"
 #include "kernel/Objects/KPipe.h"
 
 class KThread;
 class UThread;
-class UProcess : public KProcess
+class UProcess : public KProcess, public ListLink
 {
 public:
 	UProcess(const cstr_t name);
@@ -39,8 +39,8 @@ public:
 	//TODO(tsharpe): Shouldnt be a static string, just string
 	char Name[MaxProcessName];
 
-	LinkedList<UObject*> Objects;
-	LinkedList<UThread*> Threads;
+	IntrusiveList<UObject> Objects;
+	IntrusiveList<UThread> Threads;
 
 	//Lifecycle: Created at construction, Running once fully built and schedulable, Terminated on
 	//teardown (consumers like the WM liveness check read this directly).

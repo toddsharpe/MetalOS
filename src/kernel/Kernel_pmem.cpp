@@ -42,12 +42,12 @@ namespace
 		if (m_freeList.IsEmpty())
 			return false;
 
-		PageFrame* entry = m_freeList.Pop();
-		Assert(entry->State == PageState::Free);
-		entry->State = PageState::Active;
-		entry->Refs = 1;
+		PageFrame& entry = m_freeList.Pop();
+		Assert(entry.State == PageState::Free);
+		entry.State = PageState::Active;
+		entry.Refs = 1;
 
-		const size_t idx = GetIndex(entry);
+		const size_t idx = GetIndex(&entry);
 		const size_t buddyIdx = idx / BuddySize;
 
 		//Mark buddy as in use
@@ -161,9 +161,6 @@ void KePhysicalInitialize()
 {
 	//Zero out memory region
 	memset(m_frames, 0, sizeof(PageFrame) * m_count);
-
-	//Initialize free list
-	m_freeList.Initialize();
 
 	//Default everything to reserved with all buddies in use. The bootloader's
 	//FreeRanges then carve out the pages the allocator may hand out.

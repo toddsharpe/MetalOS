@@ -3,6 +3,7 @@
 #include "kernel/Types.h"
 #include "kernel/Objects/KEvent.h"
 #include "kernel/Objects/KPipe.h"
+#include "Lib/IntrusiveList.h"
 #include "Assert.h"
 
 enum class UObjectType
@@ -31,7 +32,7 @@ namespace Handles
 class UThread;
 class UProcess;
 class KSharedMemory;
-class UObject
+class UObject : public ListLink
 {
 public:
 	UObject(const UObjectType type);

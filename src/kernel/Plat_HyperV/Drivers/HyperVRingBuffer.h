@@ -17,8 +17,8 @@ public:
 	void* Read(const uint32_t length);
 	bool CommitRead();
 
-	const size_t Size;
-	const size_t DataSize;
+	const uint32_t Size;
+	const uint32_t DataSize;
 
 private:
 #define VMBUS_PKT_TRAILER	8

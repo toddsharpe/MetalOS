@@ -70,8 +70,6 @@ static paddr_t FindAcpiRsdp()
 
 static EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir)
 {
-	EFI_STATUS status;
-
 	static constexpr size_t MAX_FILE_INFO_SIZE = 1024;
 	uint8_t buffer[MAX_FILE_INFO_SIZE] = { 0 };
 	EFI_FILE_INFO* fileInfo = (EFI_FILE_INFO*)buffer;

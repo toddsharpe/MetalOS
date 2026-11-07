@@ -65,7 +65,7 @@ private:
 
 	//Connection properties
 	uint32_t m_msg_conn_id;
-	uint32_t m_nextGpadlHandle;
+	volatile long m_nextGpadlHandle;
 
 	//Requests awaiting a host response; each is removed when answered
 	StaticVector<BusRequest, 16> m_requests;

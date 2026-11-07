@@ -5,7 +5,7 @@
 // 12.5 Synthetic Timer MSRs
 namespace HyperV::Timer
 {
-	static constexpr size_t NumTimers = 4;
+	static constexpr uint32_t NumTimers = 4;
 
 	//Counts: time value measured in 100 nanosecond units
 	//One-shot: absolute expiration of time
@@ -32,5 +32,5 @@ namespace HyperV::Timer
 		};
 	};
 
-	void Enable(const nano_t value, const size_t timerId, const uint8_t irq);
+	void Enable(const nano_t value, const uint32_t timerId, const uint8_t irq);
 };

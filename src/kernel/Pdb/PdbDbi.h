@@ -232,8 +232,8 @@ private:
 	{
 		uint16_t Section;
 		char Padding1[2];
-		int32_t Offset;
-		int32_t Size;
+		uint32_t Offset;
+		uint32_t Size;
 		uint32_t Characteristics;
 		uint16_t ModuleIndex;
 		char Padding2[2];

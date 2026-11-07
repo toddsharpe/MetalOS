@@ -45,7 +45,7 @@ namespace x64
 		}
 
 		constexpr IdtGate(const uint64_t isrAddress, const uint16_t stackIdx = 0, const uint16_t priv = KernelDpl) :
-			Offset1(isrAddress),
+			Offset1(static_cast<uint16_t>(isrAddress)),
 			SegmentSelector(GdtIndex::KernelCode, priv),
 			InterruptStackTable(stackIdx),
 			Zeros(),
@@ -53,8 +53,8 @@ namespace x64
 			Zero(),
 			PrivilegeLevel(priv),
 			Present(true),
-			Offset2(isrAddress >> 16),
-			Offset3(isrAddress >> 32),
+			Offset2(static_cast<uint16_t>(isrAddress >> 16)),
+			Offset3(static_cast<uint32_t>(isrAddress >> 32)),
 			Reserved()
 		{
 

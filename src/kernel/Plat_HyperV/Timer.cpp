@@ -5,7 +5,7 @@
 // 12.5 Synthetic Timer MSRs
 namespace HyperV::Timer
 {
-	void Enable(const nano_t value, const size_t timerId, const uint8_t irq)
+	void Enable(const nano_t value, const uint32_t timerId, const uint8_t irq)
 	{
 		Assert(timerId < NumTimers);
 		const uint32_t countReg = static_cast<uint32_t>(MSR::HV_X64_MSR_STIMER0_COUNT) + timerId;

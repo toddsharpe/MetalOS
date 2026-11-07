@@ -48,11 +48,11 @@ namespace NetIpc
 	struct Request
 	{
 		Op       Code;
-		uint32_t Socket;   //socket id (netstack-assigned) for socket ops; interface index for config ops
+		uint32_t Socket;   //socket fd (netstack-assigned) for socket ops; interface index for config ops
 		int32_t  Type;     //Create
 		int32_t  Proto;
 		sockaddr_in Addr;  //Bind / SendTo destination
-		uint32_t Length;   //SendTo payload length
+		uint32_t Length;   //SendTo payload length; RecvFrom the app's buffer size
 		in_addr  Ip;       //SetInterfaceIp addr / SetGateway gateway (network order)
 		in_addr  Subnet;   //SetInterfaceIp subnet (network order)
 		uint8_t  Data[MaxPayload]; //SendTo payload
@@ -62,7 +62,7 @@ namespace NetIpc
 	struct Reply
 	{
 		SyscallResult Result;
-		uint32_t Socket;   //Create: assigned socket id
+		uint32_t Socket;   //Create: assigned socket fd
 		sockaddr_in From;  //RecvFrom: source
 		uint32_t Length;   //RecvFrom: payload length
 		in_addr  Ip;       //GetInterfaceIp addr / GetGateway gateway (network order)

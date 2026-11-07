@@ -3,20 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-//Ping over a raw ICMP socket: we build the whole echo request (incl. checksum), netstack adds the IP header, and replies are matched by id/seq.
-
-static uint16_t IcmpChecksum(const uint8_t* data, size_t len)
-{
-	uint32_t sum = 0;
-	size_t i = 0;
-	for (; i + 1 < len; i += 2)
-		sum += ((uint32_t)data[i] << 8) | data[i + 1];
-	if (i < len)
-		sum += (uint32_t)data[i] << 8;
-	while (sum >> 16)
-		sum = (sum & 0xFFFF) + (sum >> 16);
-	return (uint16_t)~sum;
-}
+//Ping over an ICMP socket: we build the echo request, netstack fills in its id (the socket's port) and checksum and hands back the replies to that id, matched here by seq.
 
 static bool ParseIp(const char* s, in_addr* out)
 {
@@ -74,7 +61,6 @@ int main(int argc, char** argv)
 	dst.sin_port = 0;
 	dst.sin_addr = target;
 
-	static constexpr uint16_t id = 0x4d53; //'MS'
 	const char* payload = "MetalOS ping";
 	static constexpr size_t payloadLen = 12;
 
@@ -90,13 +76,9 @@ int main(int argc, char** argv)
 	{
 		uint8_t msg[8 + 12] = {};
 		msg[0] = 8; //echo request
-		msg[1] = 0; //code
-		msg[4] = static_cast<uint8_t>(id >> 8);  msg[5] = static_cast<uint8_t>(id & 0xFF);
 		msg[6] = static_cast<uint8_t>(seq >> 8); msg[7] = static_cast<uint8_t>(seq);
 		memcpy(msg + 8, payload, payloadLen);
 		const size_t len = 8 + payloadLen;
-		const uint16_t ck = IcmpChecksum(msg, len);
-		msg[2] = (uint8_t)(ck >> 8); msg[3] = (uint8_t)ck;
 
 		const milli_t t0 = GetTickCount();
 		if (SocketSendTo(sock, msg, len, &dst) != SyscallResult::Success)
@@ -106,13 +88,24 @@ int main(int argc, char** argv)
 			continue;
 		}
 
-		uint8_t reply[256] = {};
-		size_t got = 0;
+		//Every reply is to this socket's id; one to another seq (the warm-up's, or a late one) is skipped
+		bool replied = false;
 		sockaddr_in from = {};
-		const SyscallResult r = SocketRecvFrom(sock, reply, sizeof(reply), &got, &from, 1000);
-		if (r == SyscallResult::Success && got >= 8 && reply[0] == 0 /*echo reply*/ &&
-			reply[4] == static_cast<uint8_t>(id >> 8) && reply[5] == static_cast<uint8_t>(id & 0xFF) &&
-			reply[6] == static_cast<uint8_t>(seq >> 8) && reply[7] == static_cast<uint8_t>(seq))
+		while (!replied)
+		{
+			const milli_t waited = GetTickCount() - t0;
+			if (waited >= 1000)
+				break;
+
+			uint8_t reply[256] = {};
+			size_t got = 0;
+			if (SocketRecvFrom(sock, reply, sizeof(reply), &got, &from, 1000 - waited) != SyscallResult::Success)
+				break;
+			replied = got >= 8 && reply[0] == 0 /*echo reply*/ &&
+				reply[6] == static_cast<uint8_t>(seq >> 8) && reply[7] == static_cast<uint8_t>(seq);
+		}
+
+		if (replied)
 		{
 			const milli_t rtt = GetTickCount() - t0;
 			const uint8_t* f = (const uint8_t*)&from.sin_addr.s_addr;

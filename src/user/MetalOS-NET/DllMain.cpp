@@ -86,11 +86,14 @@ extern "C" SyscallResult SocketSendTo(HSocket sock, const void* buf, size_t len,
 	return Call(req, reply) ? reply.Result : SyscallResult::Failed;
 }
 
-//Blocking recv: netstack replies immediately (data or empty), so poll until data or the timeout elapses (timeoutMs == 0 polls once).
+//Blocking recv: netstack replies immediately (data or empty), so poll until data or the timeout elapses (timeoutMs == 0 polls once); a datagram larger than buf is dropped.
 extern "C" SyscallResult SocketRecvFrom(HSocket sock, void* buf, size_t maxLen, size_t* bytesRecv, sockaddr_in* from, milli_t timeoutMs)
 {
 	if (!buf)
 		return SyscallResult::InvalidPointer;
+
+	//The stack drops what won't fit, so it needs the buffer's size
+	const uint32_t room = static_cast<uint32_t>(maxLen < NetIpc::MaxPayload ? maxLen : NetIpc::MaxPayload);
 
 	const milli_t start = GetTickCount();
 	for (;;)
@@ -99,6 +102,7 @@ extern "C" SyscallResult SocketRecvFrom(HSocket sock, void* buf, size_t maxLen, 
 		{
 			.Code = NetIpc::Op::RecvFrom,
 			.Socket = ToId(sock),
+			.Length = room,
 		};
 
 		NetIpc::Reply reply = {};

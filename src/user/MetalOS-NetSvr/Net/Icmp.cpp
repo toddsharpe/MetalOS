@@ -58,11 +58,18 @@ namespace Net::Icmp
 			.checksum = deser.ReadU16(),
 		};
 
-		//Deliver the complete ICMP message (header + payload) to any raw ICMP socket (e.g. ping) before stripping the header below.
-		packet.proto = proto_t::Icmp;
-		Socket::Receive(net_if, packet);
+		//An echo reply goes whole to the ICMP socket whose port is its echo id
+		if (hdr.type == icmp_type_echo_reply)
+		{
+			if (packet.length() < icmp_hdr_size + echo_hdr_size)
+				return false;
 
-		//Only echo requests need a reply from the stack; any other type is just for raw sockets
+			packet.proto = proto_t::Icmp;
+			packet.dst.port = deser.ReadU16();
+			return Socket::Receive(net_if, packet);
+		}
+
+		//Only echo requests need a reply from the stack
 		packet.mask(icmp_hdr_size);
 
 		//A broadcast echo request gets no reply, which would go out with the broadcast address as its source

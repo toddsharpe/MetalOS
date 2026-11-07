@@ -25,7 +25,7 @@
     <ClCompile Include="$(MetalOSSrc)kernel\AddressSpace.cpp;$(MetalOSSrc)kernel\PebModules.cpp;$(MetalOSSrc)kernel\Arch_x64\RuntimeSupport.cpp">
       <ObjectFileName>$(IntDir)kernel\</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="$(MetalOSSrc)User\MetalOS-NetSvr\Net\*.cpp" Exclude="$(MetalOSSrc)User\MetalOS-NetSvr\Net\Socket*.cpp">
+    <ClCompile Include="$(MetalOSSrc)User\MetalOS-NetSvr\Net\*.cpp">
       <ObjectFileName>$(IntDir)net\</ObjectFileName>
     </ClCompile>
   </ItemGroup>

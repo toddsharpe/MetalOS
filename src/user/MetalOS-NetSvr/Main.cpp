@@ -7,12 +7,11 @@
 #include "Net/Net.h"
 #include "Net/NetIf.h"
 #include "Net/Packet.h"
-#include "Net/KSocket.h"
-#include "Net/Sockets.h"
 #include "Net/HostDriver.h"
 #include "user/Protocol_net.h"
 #include "user/Ipc.h"
 #include "Lib/ByteSwap.h"
+#include "Lib/Math.h"
 
 //MetalOS-NetSvr.exe -- usermode TCP/IP stack. Claims the kernel RX ring + NIC MAC, runs
 //ARP/IPv4/ICMP/UDP/routing, transmits via NetSend; apps reach it over IPC (Protocol_net.h).
@@ -20,7 +19,7 @@
 
 namespace
 {
-	//App IPC: each app's duplex channel gets per-connection socket ids backed by KSockets.
+	//App IPC: each app's duplex channel holds the fds of the sockets it created; an fd names a socket only to the app that owns it.
 	//sockaddr_in is network order, the stack host order, so convert here (ByteSwap == hton/ntoh).
 	Net::endpoint_t ToEndpoint(const sockaddr_in& sa)
 	{
@@ -52,7 +51,7 @@ namespace
 	{
 		void* Region;      //mapped channel; null when the slot is free
 		HSharedMem Handle; //our handle to the channel; CloseHandle releases it
-		KSocket* Sockets[MaxSocketsPerConn];
+		int Sockets[MaxSocketsPerConn]; //closed_fd when the slot is free
 	};
 
 	Connection g_conns[MaxConns] = {};
@@ -96,22 +95,44 @@ namespace
 			if (pid == 0 || IsProcessAlive(pid))
 				continue;
 
-			for (KSocket*& socket : conn.Sockets)
+			for (int& fd : conn.Sockets)
 			{
-				if (socket)
-					SocketClose(*socket);
-				socket = nullptr;
+				if (fd != Net::Socket::closed_fd)
+					Net::Socket::Close(fd);
+				fd = Net::Socket::closed_fd;
 			}
 			CloseHandle((Handle)conn.Handle);
 			conn.Region = nullptr;
 		}
 	}
 
-	KSocket* GetSock(Connection& conn, const uint32_t id)
+	int* FindSlot(Connection& conn, const int fd)
 	{
-		if (id == 0 || id > MaxSocketsPerConn)
-			return nullptr;
-		return conn.Sockets[id - 1];
+		for (int& slot : conn.Sockets)
+		{
+			if (slot == fd)
+				return &slot;
+		}
+		return nullptr;
+	}
+
+	//The connection's slot holding the fd a request names, or null when the app doesn't own it
+	int* FindSocket(Connection& conn, const uint32_t fd)
+	{
+		const int named = static_cast<int>(fd);
+		return named == Net::Socket::closed_fd ? nullptr : FindSlot(conn, named);
+	}
+
+	//UDP for datagram sockets, ICMP echo for ICMP ones (raw or datagram, as Linux ping sockets take either)
+	bool ToProto(const int type, const int proto, Net::proto_t& result)
+	{
+		if (proto == IPPROTO_UDP || (proto == 0 && type == SOCK_DGRAM))
+			result = Net::proto_t::Udp;
+		else if (proto == IPPROTO_ICMP || (proto == 0 && type == SOCK_RAW))
+			result = Net::proto_t::Icmp;
+		else
+			return false;
+		return true;
 	}
 
 	void HandleRequest(Connection& conn, const NetIpc::Request& req, NetIpc::Reply& reply)
@@ -122,20 +143,25 @@ namespace
 		{
 		case NetIpc::Op::Create:
 		{
-			KSocket* s = SocketCreate(req.Type, req.Proto);
-			if (!s)
-				return;
-			for (uint32_t i = 0; i < MaxSocketsPerConn; i++)
+			Net::proto_t proto = {};
+			if (!ToProto(req.Type, req.Proto, proto))
 			{
-				if (!conn.Sockets[i])
-				{
-					conn.Sockets[i] = s;
-					reply.Socket = i + 1;
-					reply.Result = SyscallResult::Success;
-					return;
-				}
+				reply.Result = SyscallResult::InvalidArg;
+				return;
 			}
-			SocketClose(*s); //table full
+
+			//The app's own cap comes first, so a full app takes nothing from the stack's table
+			int* const slot = FindSlot(conn, Net::Socket::closed_fd);
+			if (!slot)
+				return;
+
+			const int fd = Net::Socket::Create(proto);
+			if (fd == Net::Socket::closed_fd)
+				return;
+
+			*slot = fd;
+			reply.Socket = static_cast<uint32_t>(fd);
+			reply.Result = SyscallResult::Success;
 			return;
 		}
 
@@ -180,43 +206,44 @@ namespace
 		}
 
 		//The remaining ops act on one of the connection's sockets
-		KSocket* const s = GetSock(conn, req.Socket);
-		if (!s)
+		int* const slot = FindSocket(conn, req.Socket);
+		if (!slot)
 		{
 			reply.Result = (req.Code == NetIpc::Op::Close) ? SyscallResult::Success : SyscallResult::InvalidHandle;
 			return;
 		}
+		const int fd = *slot;
 
 		switch (req.Code)
 		{
 		case NetIpc::Op::Bind:
-			SocketBind(*s, ToEndpoint(req.Addr));
-			reply.Result = SyscallResult::Success;
+			reply.Result = Net::Socket::Bind(fd, ToEndpoint(req.Addr)) ? SyscallResult::Success : SyscallResult::Failed;
 			return;
 
 		case NetIpc::Op::SendTo:
 		{
 			const Net::endpoint_t dst = ToEndpoint(req.Addr);
-			const size_t len = req.Length < NetIpc::MaxPayload ? req.Length : NetIpc::MaxPayload;
-			reply.Result = SocketSend(*s, dst, req.Data, len) ? SyscallResult::Success : SyscallResult::Failed;
+			const size_t len = Min<size_t>(req.Length, NetIpc::MaxPayload);
+			reply.Result = Net::Socket::SendTo(fd, req.Data, len, dst) ? SyscallResult::Success : SyscallResult::Failed;
 			return;
 		}
 
+		//Length is the app's buffer, so a datagram larger than it is dropped here rather than truncated
 		case NetIpc::Op::RecvFrom:
 		{
 			Net::endpoint_t src = {};
 			size_t bytes = 0;
-			if (!SocketRecv(*s, src, reply.Data, NetIpc::MaxPayload, bytes))
+			if (!Net::Socket::Recv(fd, reply.Data, Min<size_t>(req.Length, NetIpc::MaxPayload), bytes, &src))
 				return; //empty (Failed): the client retries until timeout
-			reply.Length = (uint32_t)bytes;
+			reply.Length = static_cast<uint32_t>(bytes);
 			FromEndpoint(src, reply.From);
 			reply.Result = SyscallResult::Success;
 			return;
 		}
 
 		case NetIpc::Op::Close:
-			SocketClose(*s);
-			conn.Sockets[req.Socket - 1] = nullptr;
+			Net::Socket::Close(fd);
+			*slot = Net::Socket::closed_fd;
 			reply.Result = SyscallResult::Success;
 			return;
 
@@ -280,6 +307,9 @@ int main(int argc, char** argv)
 		AcceptConnections();
 		ProcessRequests();
 		ReapDeadConnections();
+
+		//Send what a busy driver refused before
+		Net::Socket::Dispatch();
 
 		Sleep(1);
 	}

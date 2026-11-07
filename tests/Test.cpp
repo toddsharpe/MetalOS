@@ -35,6 +35,7 @@ int main()
 	Test(StackWalk);
 	Test(PebModules);
 	Test(IPv4);
+	Test(Socket);
 
 	return 0;
 }

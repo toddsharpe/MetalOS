@@ -19,6 +19,7 @@ int main()
 	Test(BlockAllocator);
 	Test(Span);
 	Test(String);
+	Test(Serializer);
 	Test(CircularBuffer);
 	Test(Bitset);
 	Test(StaticVector);

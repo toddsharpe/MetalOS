@@ -1,5 +1,5 @@
 #include "MetalOS.Syscalls.h"
-#include "kernel/Syscalls.h"
+#include "kernel/Syscalls/Syscalls.h"
 
 //Length of a NUL-terminated user string, never reading past maxLength or the process's reservations
 size_t UserStringLength(const UProcess& proc, const char* const s, const size_t maxLength)

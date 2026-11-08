@@ -1,4 +1,4 @@
-#include "kernel/Syscalls.h"
+#include "kernel/Syscalls/Syscalls.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/Kernel_grant.h"

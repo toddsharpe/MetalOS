@@ -1,7 +1,7 @@
 
 static constexpr size_t AllocationGranularity = 0x10000; // 64K
 
-#include "kernel/AddressSpace.h"
+#include "kernel/Core/AddressSpace.h"
 
 // Small address range to keep tests simple
 static constexpr uintptr_t TestStart = 0x10000;  // 64K

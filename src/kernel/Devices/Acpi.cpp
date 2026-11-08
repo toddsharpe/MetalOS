@@ -8,7 +8,7 @@
 #include "MetalOS.Loader.h"
 #include "Assert.h"
 #include "errno.h"
-#include "kernel/Acpi.h"
+#include "kernel/Devices/Acpi.h"
 #include "kernel/Kernel.h"
 #include "MetalOS.Space.h"
 

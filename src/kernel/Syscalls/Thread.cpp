@@ -1,5 +1,5 @@
 #include "kernel/Syscalls/Syscalls.h"
-#include "kernel/Scheduler.h"
+#include "kernel/Core/Scheduler.h"
 #include "kernel/Thread.h"
 #include "kernel/Process.h"
 

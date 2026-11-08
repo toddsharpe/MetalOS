@@ -8,7 +8,7 @@
 #include "kernel/Core/UProcess.h"
 #include "Assert.h"
 #include "kernel/Kernel.h"
-#include "kernel/Scheduler.h"
+#include "kernel/Core/Scheduler.h"
 #include "kernel/Pdb/PdbFile.h"
 #include "kernel/Types.h"
 #include "Drivers/DirectUart.h"

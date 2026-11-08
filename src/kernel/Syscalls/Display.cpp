@@ -1,8 +1,8 @@
 #include "kernel/Syscalls/Syscalls.h"
-#include "kernel/Scheduler.h"
-#include "kernel/Drivers/Driver.h"
+#include "kernel/Core/Scheduler.h"
+#include "kernel/Devices/Driver.h"
 #include "kernel/Kernel.h"
-#include "kernel/DeviceTree.h"
+#include "kernel/Devices/DeviceTree.h"
 #include "kernel/Vmem.h"
 #include "kernel/Display.h"
 

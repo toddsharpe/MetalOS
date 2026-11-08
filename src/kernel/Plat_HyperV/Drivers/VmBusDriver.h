@@ -1,13 +1,13 @@
 #pragma once
 
-#include "kernel/Drivers/Driver.h"
+#include "kernel/Devices/Driver.h"
 #include "kernel/Objects/KEvent.h"
 #include "kernel/Plat_HyperV/Interrupts.h"
 #include "kernel/Plat_HyperV/VmBus.h"
 #include "kernel/Plat_HyperV/HyperV.h"
 #include "Lib/StaticVector.h"
 #include "Lib/StaticMap.h"
-#include "kernel/KDevice.h"
+#include "kernel/Devices/KDevice.h"
 
 class VmBusDriver;
 

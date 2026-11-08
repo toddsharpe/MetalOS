@@ -14,11 +14,11 @@
 #include "kddll.h"
 #include <reactos/amd64/ke.h>
 #include "Kernel/Kd64/kd64.h"
-#include "Kernel/MetalOSkd.h"
+#include "kernel/Debug/MetalOSkd.h"
 #include "kernel/System.h"
 #include "kernel/Vmem.h"
 #include "kernel/Diag.h"
-#include "kernel/Scheduler.h"
+#include "kernel/Core/Scheduler.h"
 #include "core_crt/stdio.h"
 
 extern "C" KdDll m_dll;

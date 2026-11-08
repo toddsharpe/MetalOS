@@ -1,6 +1,6 @@
 #include "kernel/Heap.h"
 #include "kernel/Thread.h"
-#include "kernel/Scheduler.h"
+#include "kernel/Core/Scheduler.h"
 #include "kernel/Core/KThread.h"
 #include "kernel/Core/UThread.h"
 #include "kernel/Core/UProcess.h"

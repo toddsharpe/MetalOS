@@ -3,7 +3,7 @@
 #include <windows/types.h>
 #include <windows/winnt.h>
 #include <coreclr/win64unwind.h>
-#include "kernel/AddressSpace.h"
+#include "kernel/Core/AddressSpace.h"
 
 namespace RuntimeSupport
 {

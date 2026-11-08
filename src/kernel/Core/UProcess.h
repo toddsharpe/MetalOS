@@ -3,7 +3,7 @@
 #include "kernel/Core/KProcess.h"
 #include "Lib/Arena.h"
 #include "user/MetalOS.Types.h"
-#include "kernel/UObject.h"
+#include "kernel/Core/UObject.h"
 #include "Lib/IntrusiveList.h"
 #include "kernel/Types.h"
 #include "kernel/Objects/KPipe.h"

@@ -22,7 +22,7 @@
 #include "kddll.h"
 #include <reactos/amd64/ke.h>
 #include "kd64.h"
-#include "Kernel/MetalOSkd.h"
+#include "kernel/Debug/MetalOSkd.h"
 
 #undef UNIMPLEMENTED
 #define UNIMPLEMENTED KdpDprintf("%s is unimplemented\n", __FUNCTION__)

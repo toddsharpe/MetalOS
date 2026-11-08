@@ -1,4 +1,4 @@
-#include "kernel/AddressSpace.h"
+#include "kernel/Core/AddressSpace.h"
 #include "new.h"
 #include "kernel/Arch.h"
 #include "Lib/Math.h"

@@ -1,6 +1,6 @@
 #include "Lib/System.h"
 #include "HyperVVideoDriver.h"
-#include "kernel/KDevice.h"
+#include "kernel/Devices/KDevice.h"
 #include "kernel/Thread.h"
 #include "kernel/Display.h"
 #include "MetalOS.Space.h"

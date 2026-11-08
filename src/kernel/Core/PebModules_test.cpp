@@ -1,4 +1,4 @@
-#include "kernel/PebModules.h"
+#include "kernel/Core/PebModules.h"
 #include "WinPE.h"
 #include <string.h>
 #include <malloc.h>

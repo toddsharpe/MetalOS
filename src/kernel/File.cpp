@@ -1,7 +1,7 @@
 #include "kernel/Vmem.h"
 #include "kernel/File.h"
-#include "kernel/DeviceTree.h"
-#include "kernel/Drivers/Driver.h"
+#include "kernel/Devices/DeviceTree.h"
+#include "kernel/Devices/Driver.h"
 #include "Assert.h"
 #include "kernel/Kernel.h"
 

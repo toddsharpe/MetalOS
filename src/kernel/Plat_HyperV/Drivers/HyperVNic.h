@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kernel/Drivers/Driver.h"
+#include "kernel/Devices/Driver.h"
 #include "kernel/Plat_HyperV/Drivers/HyperVChannel.h"
 #include "kernel/Objects/KEvent.h"
 #include "kernel/Net.h"

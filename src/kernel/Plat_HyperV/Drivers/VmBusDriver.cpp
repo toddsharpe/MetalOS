@@ -7,8 +7,8 @@
 #include "kernel/Heap.h"
 #include "kernel/Thread.h"
 #include "kernel/Kernel.h"
-#include "kernel/DeviceHids.h"
-#include "kernel/KDevice.h"
+#include "kernel/Devices/DeviceHids.h"
+#include "kernel/Devices/KDevice.h"
 #include "core_crt/stdio.h"
 #include "Lib/String.h"
 

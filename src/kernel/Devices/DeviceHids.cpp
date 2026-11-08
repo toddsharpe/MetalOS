@@ -1,4 +1,4 @@
-#include "kernel/DeviceHids.h"
+#include "kernel/Devices/DeviceHids.h"
 #include "core_crt/string.h"
 
 namespace DeviceHids

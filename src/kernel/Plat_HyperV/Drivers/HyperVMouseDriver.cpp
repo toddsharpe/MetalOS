@@ -1,5 +1,5 @@
 #include "HyperVMouseDriver.h"
-#include "kernel/KDevice.h"
+#include "kernel/Devices/KDevice.h"
 #include <Assert.h>
 #include "user/MetalOS.Types.h"
 #include "user/MetalOS.UI.h"

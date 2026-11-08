@@ -1,4 +1,4 @@
-#include "kernel/Core/UObject.h"
+#include "kernel/Objects/UObject.h"
 #include "kernel/Types.h"
 #include "kernel/Core/UThread.h"
 #include "kernel/Core/UProcess.h"

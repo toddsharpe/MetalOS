@@ -2,7 +2,7 @@
 
 #include "core_crt/stdint.h"
 
-//Keep in sync with src/user/MetalOS-RT/syscalls.asm; each range is one kernel/Syscalls_*.cpp
+//Keep in sync with src/user/MetalOS-RT/syscalls.asm; each range is one kernel/Syscalls/*.cpp
 enum class Syscall : uint64_t
 {
 	//0x100: System

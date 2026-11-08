@@ -24,7 +24,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="*.cpp;Core\*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Objects\*.cpp;$(MetalOSSrc)x64\Cpuid.cpp" Exclude="**\*_test.cpp" />
+    <!-- Each folder's objects get their own directory, so Syscalls\File.cpp and a File.cpp beside it don't collide -->
+    <ClCompile Include="*.cpp;Core\*.cpp;Syscalls\*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Objects\*.cpp" Exclude="**\*_test.cpp">
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="$(MetalOSSrc)x64\Cpuid.cpp">
+      <ObjectFileName>$(IntDir)x64\</ObjectFileName>
+    </ClCompile>
     <!-- Kd64 is vendored, so it gets what it uses from the kernel by forced include rather than edits -->
     <ClCompile Include="Kd64\*.cpp">
       <WarningLevel>Level1</WarningLevel>

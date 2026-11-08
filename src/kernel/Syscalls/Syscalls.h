@@ -2,7 +2,7 @@
 
 #include "user/MetalOS.h"
 #include "kernel/Core/UProcess.h"
-#include "kernel/Core/UObject.h"
+#include "kernel/Objects/UObject.h"
 
 //Longer debug output is truncated by Printf's buffer anyway
 static constexpr size_t MaxDebugPrint = 1024;

@@ -5,7 +5,7 @@
 #include "Lib/Span.h"
 #include "kernel/Plat_HyperV/Drivers/HyperVRingBuffer.h"
 #include "Assert.h"
-#include "kernel/Kernel_pmem.h"
+#include "kernel/Pmem.h"
 
 HyperVChannel::HyperVChannel(const uint32_t sendSize, const uint32_t receiveSize, const ActionContext callback) :
 	m_callback(callback),

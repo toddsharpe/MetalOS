@@ -1,7 +1,7 @@
 #include "kernel/Syscalls/Syscalls.h"
 #include "kernel/Scheduler.h"
-#include "kernel/Kernel_thread.h"
-#include "kernel/Kernel_process.h"
+#include "kernel/Thread.h"
+#include "kernel/Process.h"
 
 HThread GetCurrentThread()
 {

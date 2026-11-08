@@ -1,7 +1,7 @@
 #pragma once
 
 #include "kernel/Types.h"
-#include "kernel/Kernel_display.h"
+#include "kernel/Display.h"
 
 class KDevice;
 class Driver

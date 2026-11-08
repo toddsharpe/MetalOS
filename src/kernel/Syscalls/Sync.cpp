@@ -2,8 +2,8 @@
 #include "kernel/Scheduler.h"
 #include "kernel/Objects/KEvent.h"
 #include "Assert.h"
-#include "kernel/Kernel_heap.h"
-#include "kernel/Kernel_thread.h"
+#include "kernel/Heap.h"
+#include "kernel/Thread.h"
 
 namespace
 {

@@ -1,5 +1,5 @@
-#include "kernel/Kernel_heap.h"
-#include "kernel/Kernel_thread.h"
+#include "kernel/Heap.h"
+#include "kernel/Thread.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Core/KThread.h"
 #include "kernel/Core/UThread.h"

@@ -1,7 +1,7 @@
 #include "kernel/Syscalls/Syscalls.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Objects/KSharedMemory.h"
-#include "kernel/Kernel_shm.h"
+#include "kernel/Shm.h"
 
 SyscallResult CreateSharedMemory(const size_t size, HSharedMem* handle, void** address)
 {

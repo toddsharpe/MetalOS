@@ -1,4 +1,4 @@
-#include "kernel/Kernel_pmem.h"
+#include "kernel/Pmem.h"
 #include "kernel/Arch.h"
 #include "MetalOS.Loader.h"
 #include "Lib/Bitset.h"

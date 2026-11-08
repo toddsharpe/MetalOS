@@ -1,4 +1,4 @@
-#include "kernel/Kernel_display.h"
+#include "kernel/Display.h"
 #include "kernel/Kernel.h"
 #include "MetalOS.Loader.h"
 

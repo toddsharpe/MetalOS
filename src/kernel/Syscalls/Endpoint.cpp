@@ -1,6 +1,6 @@
 #include "kernel/Syscalls/Syscalls.h"
 #include "kernel/Scheduler.h"
-#include "kernel/Kernel_endpoint.h"
+#include "kernel/Endpoint.h"
 
 namespace
 {

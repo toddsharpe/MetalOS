@@ -1,7 +1,7 @@
 #include "kernel/Syscalls/Syscalls.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Arch.h"
-#include "kernel/Kernel_vmem.h"
+#include "kernel/Vmem.h"
 
 void* VirtualAlloc(const void* address, const size_t size)
 {

@@ -1,5 +1,5 @@
-#include "kernel/Kernel_pipe.h"
-#include "kernel/Kernel_heap.h"
+#include "kernel/Pipe.h"
+#include "kernel/Heap.h"
 #include "kernel/Objects/KPipe.h"
 
 void KePipeUnref(KPipe& pipe, KRef& ref)

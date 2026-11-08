@@ -1,5 +1,5 @@
 #include "kernel/Core/KThread.h"
-#include "kernel/Kernel_vmem.h"
+#include "kernel/Vmem.h"
 #include "kernel/Arch.h"
 
 static uint32_t LastId = 0;

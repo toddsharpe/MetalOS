@@ -3,10 +3,10 @@
 #include "kernel/Plat_HyperV/Drivers/VmBusDriver.h"
 #include "kernel/Plat_HyperV/VmBus.h"
 #include "Assert.h"
-#include "kernel/Kernel_pmem.h"
-#include "kernel/Kernel_vmem.h"
-#include "kernel/Kernel_thread.h"
-#include "kernel/Kernel_net.h"
+#include "kernel/Pmem.h"
+#include "kernel/Vmem.h"
+#include "kernel/Thread.h"
+#include "kernel/Net.h"
 #include "user/Protocol_net.h"
 
 HyperVNic::HyperVNic(KDevice& device) :
@@ -155,7 +155,7 @@ bool HyperVNic::Initialize()
 	}
 
 	//The NIC is now discoverable via the device tree (KDeviceClass::Nic). The kernel
-	//net device (Kernel_net.cpp) finds it there to transmit; received frames go up
+	//net device (kernel/Net.cpp) finds it there to transmit; received frames go up
 	//via KeNetRxFrame (called from OnCallback) to the netstack RX ring.
 
 	return true;

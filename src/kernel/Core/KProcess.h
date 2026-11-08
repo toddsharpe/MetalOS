@@ -6,7 +6,7 @@
 #include "kernel/Types.h"
 #include "kernel/AddressSpace.h"
 #include "MetalOS.Space.h"
-#include "kernel/Kernel_vmem.h"
+#include "kernel/Vmem.h"
 
 //Manages resources associated with a process
 //-Virtual allocations

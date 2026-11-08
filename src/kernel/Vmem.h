@@ -1,7 +1,7 @@
 #pragma once
 
 #include "kernel/Arch.h"
-#include "kernel/Kernel_pmem.h"
+#include "kernel/Pmem.h"
 #include "MetalOS.Space.h"
 
 struct KProcess;

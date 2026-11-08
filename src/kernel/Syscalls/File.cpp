@@ -6,10 +6,10 @@
 #include "Lib/String.h"
 #include "Assert.h"
 #include "core_crt/ctype.h"
-#include "kernel/Kernel_heap.h"
-#include "kernel/Kernel_thread.h"
-#include "kernel/Kernel_file.h"
-#include "kernel/Kernel_pipe.h"
+#include "kernel/Heap.h"
+#include "kernel/Thread.h"
+#include "kernel/File.h"
+#include "kernel/Pipe.h"
 
 namespace
 {

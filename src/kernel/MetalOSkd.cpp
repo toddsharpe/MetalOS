@@ -15,9 +15,9 @@
 #include <reactos/amd64/ke.h>
 #include "Kernel/Kd64/kd64.h"
 #include "Kernel/MetalOSkd.h"
-#include "kernel/Kernel_system.h"
-#include "kernel/Kernel_vmem.h"
-#include "kernel/Kernel_diag.h"
+#include "kernel/System.h"
+#include "kernel/Vmem.h"
+#include "kernel/Diag.h"
 #include "kernel/Scheduler.h"
 #include "core_crt/stdio.h"
 

@@ -1,13 +1,13 @@
 #include "kernel/Kernel.h"
-#include "kernel/Kernel_system.h"
-#include "kernel/Kernel_pmem.h"
-#include "kernel/Kernel_vmem.h"
-#include "kernel/Kernel_heap.h"
-#include "kernel/Kernel_thread.h"
-#include "kernel/Kernel_process.h"
-#include "kernel/Kernel_diag.h"
-#include "kernel/Kernel_net.h"
-#include "kernel/Kernel_input.h"
+#include "kernel/System.h"
+#include "kernel/Pmem.h"
+#include "kernel/Vmem.h"
+#include "kernel/Heap.h"
+#include "kernel/Thread.h"
+#include "kernel/Process.h"
+#include "kernel/Diag.h"
+#include "kernel/Net.h"
+#include "kernel/Input.h"
 #include "kernel/Arch.h"
 #include "kernel/Plat.h"
 #include "kernel/Acpi.h"
@@ -28,7 +28,7 @@
 #include "Assert.h"
 
 //Networking: the TCP/IP stack lives in the usermode netstack process. The kernel keeps
-//only the NIC driver (HyperVNic) and a raw ethernet frame device (Kernel_net.cpp).
+//only the NIC driver (HyperVNic) and a raw ethernet frame device (kernel/Net.cpp).
 
 /*
  * Bootloader parameters.

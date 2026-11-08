@@ -1,6 +1,6 @@
 #include "kernel/Scheduler.h"
-#include "kernel/Kernel_heap.h"
-#include "kernel/Kernel_process.h"
+#include "kernel/Heap.h"
+#include "kernel/Process.h"
 #include "Assert.h"
 #include "kernel/Core/KThread.h"
 #include "Lib/StaticVector.h"

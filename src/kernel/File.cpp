@@ -1,5 +1,5 @@
-#include "kernel/Kernel_vmem.h"
-#include "kernel/Kernel_file.h"
+#include "kernel/Vmem.h"
+#include "kernel/File.h"
 #include "kernel/DeviceTree.h"
 #include "kernel/Drivers/Driver.h"
 #include "Assert.h"

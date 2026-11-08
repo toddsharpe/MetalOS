@@ -1,7 +1,7 @@
 #include "kernel/Syscalls/Syscalls.h"
 #include "kernel/Scheduler.h"
 #include "kernel/Objects/KSharedMemory.h"
-#include "kernel/Kernel_grant.h"
+#include "kernel/Grant.h"
 
 SyscallResult CloseHandle(const Handle handle)
 {

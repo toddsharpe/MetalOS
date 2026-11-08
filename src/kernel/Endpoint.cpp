@@ -1,4 +1,4 @@
-#include "kernel/Kernel_endpoint.h"
+#include "kernel/Endpoint.h"
 #include "kernel/Objects/KSpinLock.h"
 #include "Lib/StaticVector.h"
 #include "Lib/CircularBuffer.h"

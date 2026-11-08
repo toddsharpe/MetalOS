@@ -1,5 +1,5 @@
-#include "kernel/Kernel_shm.h"
-#include "kernel/Kernel_net.h"
+#include "kernel/Shm.h"
+#include "kernel/Net.h"
 #include "kernel/Core/KProcess.h"
 #include "kernel/DeviceTree.h"
 #include "kernel/Drivers/Driver.h"

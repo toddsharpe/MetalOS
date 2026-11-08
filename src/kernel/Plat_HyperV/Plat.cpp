@@ -7,7 +7,7 @@
 #include "kernel/Plat_HyperV/Drivers/HyperVVideoDriver.h"
 #include "Assert.h"
 #include "kernel/KDevice.h"
-#include "kernel/Kernel_heap.h"
+#include "kernel/Heap.h"
 
 void PlatInitialize()
 {

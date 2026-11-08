@@ -1,4 +1,4 @@
-#include "kernel/Kernel_heap.h"
+#include "kernel/Heap.h"
 #include "core_crt/stdlib.h"
 #include "Lib/StaticHeap.h"
 #include "Lib/Arena.h"

@@ -1,5 +1,5 @@
-#include "kernel/Kernel_shm.h"
-#include "kernel/Kernel_input.h"
+#include "kernel/Shm.h"
+#include "kernel/Input.h"
 #include "kernel/Core/KProcess.h"
 #include "kernel/Objects/KSpinLock.h"
 #include "Lib/SharedRing.h"

@@ -1,5 +1,5 @@
 #include "HyperVNic.h"
-#include "kernel/KDevice.h"
+#include "kernel/Devices/KDevice.h"
 #include "kernel/Plat_HyperV/Drivers/VmBusDriver.h"
 #include "kernel/Plat_HyperV/VmBus.h"
 #include "Assert.h"

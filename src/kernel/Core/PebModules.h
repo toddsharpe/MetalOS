@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kernel/AddressSpace.h"
+#include "kernel/Core/AddressSpace.h"
 #include "kernel/Types.h"
 #include "user/MetalOS.Types.h"
 

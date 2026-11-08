@@ -10,7 +10,7 @@
 #include "kddll.h"
 #include <reactos/amd64/ke.h>
 #include "kd64.h"
-#include "Kernel/MetalOSkd.h"
+#include "kernel/Debug/MetalOSkd.h"
 
 #define DEFAULT_UNREACHABLE default: __assume(0)
 

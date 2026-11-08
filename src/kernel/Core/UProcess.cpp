@@ -8,7 +8,7 @@
 #include "kernel/Thread.h"
 #include "kernel/Process.h"
 #include "kernel/Pipe.h"
-#include "kernel/PebModules.h"
+#include "kernel/Core/PebModules.h"
 #include "new.h"
 #include "core_crt/stdio.h"
 

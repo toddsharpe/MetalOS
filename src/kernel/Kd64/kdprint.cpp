@@ -23,7 +23,7 @@
 #include "core_crt/stdarg.h"
 #include "kd64.h"
 #include <reactos/ke.h>
-#include "Kernel/MetalOSkd.h"
+#include "kernel/Debug/MetalOSkd.h"
 
 /* FUNCTIONS *****************************************************************/
 

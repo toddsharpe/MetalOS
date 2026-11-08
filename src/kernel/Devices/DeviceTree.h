@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kernel/KDevice.h"
+#include "kernel/Devices/KDevice.h"
 
 class DeviceTree
 {

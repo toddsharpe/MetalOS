@@ -22,7 +22,7 @@
 #include <reactos/ke.h>
 #include "kddll.h"
 #include "kd64.h"
-#include "Kernel/MetalOSkd.h"
+#include "kernel/Debug/MetalOSkd.h"
 
 /* FUNCTIONS *****************************************************************/
 

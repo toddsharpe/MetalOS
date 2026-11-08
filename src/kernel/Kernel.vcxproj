@@ -25,7 +25,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <!-- Each folder's objects get their own directory, so Syscalls\File.cpp and a File.cpp beside it don't collide -->
-    <ClCompile Include="*.cpp;Core\*.cpp;Syscalls\*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Objects\*.cpp" Exclude="**\*_test.cpp">
+    <ClCompile Include="*.cpp;Core\*.cpp;Devices\*.cpp;Debug\*.cpp;Syscalls\*.cpp;Arch_x64\*.cpp;Plat_HyperV\*.cpp;Plat_HyperV\Drivers\*.cpp;Objects\*.cpp" Exclude="**\*_test.cpp">
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <ClCompile Include="$(MetalOSSrc)x64\Cpuid.cpp">

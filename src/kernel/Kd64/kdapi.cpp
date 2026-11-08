@@ -19,7 +19,7 @@
 #include "kddll.h"
 #include <reactos/amd64/ke.h>
 #include "kd64.h"
-#include "Kernel/MetalOSkd.h"
+#include "kernel/Debug/MetalOSkd.h"
 
 VOID NTAPI PspDumpThreads(BOOLEAN SystemThreads);
 

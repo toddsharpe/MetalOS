@@ -14,12 +14,12 @@
 #include <coreclr/list.h>
 #include "kddll.h"
 #include "kernel/Kd64/kd64.h"
-#include "kernel/Scheduler.h"
+#include "kernel/Core/Scheduler.h"
 #include "core_crt/wchar.h"
 #include "core_crt/stdlib.h"
 extern "C" KdDll m_dll;
-#include "Debugger.h"
-#include "Loader.h"
+#include "kernel/Debug/Debugger.h"
+#include "kernel/Core/Loader.h"
 #include "WinPE.h"
 #include "MetalOS.Space.h"
 #include "kernel/Heap.h"

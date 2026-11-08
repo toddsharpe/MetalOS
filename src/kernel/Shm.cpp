@@ -7,7 +7,7 @@
 #include "kernel/Core/KProcess.h"
 #include "kernel/Arch.h"
 #include "kernel/Objects/KSharedMemory.h"
-#include "kernel/UObject.h"
+#include "kernel/Core/UObject.h"
 #include "Assert.h"
 #include "kernel/Kernel.h"
 

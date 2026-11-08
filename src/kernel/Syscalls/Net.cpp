@@ -1,6 +1,6 @@
 #include "kernel/Syscalls/Syscalls.h"
-#include "kernel/Scheduler.h"
-#include "kernel/Drivers/Driver.h"
+#include "kernel/Core/Scheduler.h"
+#include "kernel/Devices/Driver.h"
 #include "kernel/Net.h"
 
 //Transmit a raw ethernet frame through the NIC (the TCP/IP stack is the usermode netstack)

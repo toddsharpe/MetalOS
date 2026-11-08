@@ -4,7 +4,7 @@
 #include "Lib/String.h"
 
 #include "kernel/Types.h"
-#include "kernel/AddressSpace.h"
+#include "kernel/Core/AddressSpace.h"
 #include "MetalOS.Space.h"
 #include "kernel/Vmem.h"
 

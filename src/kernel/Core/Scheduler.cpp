@@ -1,4 +1,4 @@
-#include "kernel/Scheduler.h"
+#include "kernel/Core/Scheduler.h"
 #include "kernel/Heap.h"
 #include "kernel/Process.h"
 #include "Assert.h"

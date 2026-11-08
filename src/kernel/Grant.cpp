@@ -1,6 +1,6 @@
 #include "kernel/Shm.h"
 #include "kernel/Grant.h"
-#include "kernel/UObject.h"
+#include "kernel/Core/UObject.h"
 #include "kernel/Objects/KSharedMemory.h"
 #include "kernel/Objects/KSpinLock.h"
 #include "kernel/Heap.h"

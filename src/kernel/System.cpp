@@ -1,7 +1,7 @@
 #include "kernel/System.h"
 #include "kernel/Arch.h"
 #include "kernel/Core/KProcess.h"
-#include "kernel/Scheduler.h"
+#include "kernel/Core/Scheduler.h"
 #include "kernel/Kernel.h"
 #include "kernel/Plat.h"
 #include "MetalOS.Loader.h"

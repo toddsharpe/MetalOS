@@ -1,5 +1,5 @@
 #include "kernel/Syscalls/Syscalls.h"
-#include "kernel/Scheduler.h"
+#include "kernel/Core/Scheduler.h"
 #include "kernel/Arch.h"
 #include "kernel/Objects/KPipe.h"
 #include "kernel/Objects/KPredicate.h"

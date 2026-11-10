@@ -61,7 +61,7 @@ void KeMountStorage()
 	//The boot files are in the EFI system partition's \EFI\BOOT, so a bare name like term.exe resolves there
 	if (esp == Gpt::MaxPartitions || !m_esp.Mount(m_partitions[esp], m_espCache) || !m_esp.SetDirectory("\\EFI\\BOOT"))
 	{
-		Printf("Storage: no FAT32 EFI system partition with \\EFI\\BOOT; files stay on the RAM drive\n");
+		Printf("Storage: no FAT32 EFI system partition with \\EFI\\BOOT, so no file system\n");
 		return;
 	}
 

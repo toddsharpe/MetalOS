@@ -4,7 +4,7 @@
 
 class FileSystem;
 
-//Where paths resolve; a later mount replaces an earlier one, as FAT32 on the disk replaces the RAM drive
+//Where paths resolve: FAT32 on the boot disk
 void KeMountRoot(FileSystem& fileSystem);
 
 //The first disk's partitions from its GPT, and its EFI system partition as the FAT32 root

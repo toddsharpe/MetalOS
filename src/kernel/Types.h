@@ -33,7 +33,6 @@ inline KFileAccess operator&(KFileAccess lhs, KFileAccess rhs)
 class FileSystem;
 struct KFile
 {
-	void* Context;
 	FileSystem* FileSystem;
 	size_t Position;
 	size_t Length;

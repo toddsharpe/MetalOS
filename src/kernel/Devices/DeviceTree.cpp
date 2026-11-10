@@ -1,8 +1,8 @@
 #include "kernel/Devices/DeviceTree.h"
 #include "kernel/Heap.h"
 #include "kernel/Devices/DeviceHids.h"
+#include "kernel/Devices/Driver.h"
 #include "kernel/Plat.h"
-#include "kernel/Devices/RamDriveDriver.h"
 #include "x64/intrin.h"
 #include "uACPI/uacpi.h"
 #include "uACPI/namespace.h"
@@ -118,15 +118,6 @@ void DeviceTree::Enumerate()
 	AttachDrivers();
 }
 
-void DeviceTree::AddRootChild(KDevice& device)
-{
-	//Populate path
-	snprintf(device.Path, sizeof(device.Path), "%s%s", m_root->Path, device.Hid);
-
-	m_root->Children.InsertTail(device);
-	AttachDriver(device);
-}
-
 void DeviceTree::AttachDrivers()
 {
 	Walk([this](KDevice& device) { AttachDriver(device); return false; });
@@ -145,15 +136,7 @@ KDevice* DeviceTree::GetDeviceByClass(const KDeviceClass kClass) const
 
 void DeviceTree::AttachDriver(KDevice& device)
 {
-	if (Str(device.Hid) == Str(RamDriveHid))
-	{
-		device.Driver = KeAlloc<RamDriveDriver>(AllocType::Kernel, device);
-		Assert(device.Driver);
-	}
-	else
-	{
-		device.Driver = PlatCreateDriver(device);
-	}
+	device.Driver = PlatCreateDriver(device);
 
 	//If driver was attached, attempt to initialize (a bus adds its child devices here, which Walk then visits)
 	if (device.Driver && !device.Driver->Initialize())

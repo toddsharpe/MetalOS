@@ -30,6 +30,14 @@ inline KFileAccess operator&(KFileAccess lhs, KFileAccess rhs)
 	);
 }
 
+//What an open does when the file is there, or isn't: fopen's r, w and a
+enum class KFileCreate
+{
+	OpenExisting,
+	CreateAlways,
+	OpenAlways
+};
+
 class FileSystem;
 struct KFile
 {
@@ -43,6 +51,10 @@ struct KFile
 	uint32_t Run;
 	uint32_t Cursor;
 	uint32_t CursorIndex;
+
+	//Where the file's directory entry is, for a write that changes its size or first cluster
+	uint64_t EntrySector;
+	uint32_t EntryOffset;
 };
 
 struct KModule

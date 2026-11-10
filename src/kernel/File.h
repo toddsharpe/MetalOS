@@ -4,10 +4,10 @@
 
 class FileSystem;
 
-//Where paths resolve: the RAM drive, until FAT32 on the disk replaces it
+//Where paths resolve; a later mount replaces an earlier one, as FAT32 on the disk replaces the RAM drive
 void KeMountRoot(FileSystem& fileSystem);
 
-//The first disk's partitions, from its GPT
+//The first disk's partitions from its GPT, and its EFI system partition as the FAT32 root
 void KeMountStorage();
 
 bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access);

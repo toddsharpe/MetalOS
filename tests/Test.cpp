@@ -38,6 +38,7 @@ int main()
 	Test(StackWalk);
 	Test(PebModules);
 	Test(Gpt);
+	Test(Fat32);
 	Test(IPv4);
 	Test(Socket);
 	Test(Router);

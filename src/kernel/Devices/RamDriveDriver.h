@@ -63,7 +63,7 @@ public:
 		return true;
 	}
 
-	size_t Read(const KFile& handle, void* const buffer, const size_t bytesToRead) override
+	size_t Read(KFile& handle, void* const buffer, const size_t bytesToRead) override
 	{
 		//End of file (also covers empty files)
 		if (handle.Position >= handle.Length)

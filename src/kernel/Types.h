@@ -30,11 +30,11 @@ inline KFileAccess operator&(KFileAccess lhs, KFileAccess rhs)
 	);
 }
 
-class Driver;
+class FileSystem;
 struct KFile
 {
 	void* Context;
-	Driver* Driver;
+	FileSystem* FileSystem;
 	size_t Position;
 	size_t Length;
 	KFileAccess Access;

@@ -1,31 +1,32 @@
 #include "kernel/Vmem.h"
 #include "kernel/File.h"
-#include "kernel/Devices/DeviceTree.h"
-#include "kernel/Devices/Driver.h"
+#include "kernel/FileSystems/FileSystem.h"
 #include "Assert.h"
-#include "kernel/Kernel.h"
 
+static FileSystem* m_root = nullptr;
+
+void KeMountRoot(FileSystem& fileSystem)
+{
+	Assert(!m_root);
+	m_root = &fileSystem;
+}
 
 bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access)
 {
-	const KDevice* device = m_deviceTree.GetDeviceByClass(KDeviceClass::Storage);
-	Assert(device);
-	StorageDriver* const storage = (StorageDriver*)device->Driver;
-	Assert(storage);
-	const bool result = storage->OpenFile(file, path, access);
-	file.Driver = storage;
+	//Nothing is mounted before the device tree comes up, so an early bugcheck's PDB lookup finds nothing rather than faulting again
+	if (!m_root || !m_root->Open(file, path, access))
+		return false;
 
-	return result;
+	file.FileSystem = m_root;
+	return true;
 }
 
 bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead)
 {
 	//Printf("KeReadFile: Buffer %p, Bytes %d\n", buffer, bufferSize);
 
-	const StorageDriver* storage = (StorageDriver*)file.Driver;
-	Assert(storage);
-
-	const size_t read = storage->ReadFile(file, buffer, bufferSize);
+	Assert(file.FileSystem);
+	const size_t read = file.FileSystem->Read(file, buffer, bufferSize);
 	file.Position += read;
 
 	if (bytesRead != nullptr)

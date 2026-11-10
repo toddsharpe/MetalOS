@@ -6,6 +6,7 @@
 #include "kernel/Vmem.h"
 #include "kernel/Heap.h"
 #include "kernel/Thread.h"
+#include "kernel/Core/Scheduler.h"
 #include "kernel/Kernel.h"
 #include "kernel/Devices/DeviceHids.h"
 #include "kernel/Devices/KDevice.h"
@@ -382,4 +383,8 @@ void VmBusDriver::OnInterrupt()
 	}
 	
 	HyperV::Interrupts::EOI();
+
+	//A channel callback may have woken a thread (a disk request's completion), which runs now rather than at the next timer tick
+	if (Scheduler::IsEnabled())
+		Scheduler::Schedule();
 }

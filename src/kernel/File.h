@@ -7,7 +7,7 @@ class FileSystem;
 //Where paths resolve: FAT32 on the boot disk
 void KeMountRoot(FileSystem& fileSystem);
 
-//The first disk's partitions from its GPT, and its EFI system partition as the FAT32 root
+//The first disk's partitions from its GPT, and its first basic data partition (MetalOS) as the FAT32 root
 void KeMountStorage();
 
 bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access);

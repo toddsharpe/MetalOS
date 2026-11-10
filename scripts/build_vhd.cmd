@@ -11,9 +11,11 @@
 @if exist "%DOOM_DATA%\DEFAULT.CFG" set DOOM_FILES=%DOOM_FILES% "%DOOM_DATA%\DEFAULT.CFG"
 
 @pushd "%BUILD_OUT%"
+@rem The EFI system partition holds what the loader loads; the MetalOS partition holds the rest
 dotnet run --file "%~dp0BuildVhd.cs" -- "%VHD%" ^
-	BOOTX64.EFI ^
-	moskrnl.exe moskrnl.pdb kdcom.dll kdcom.pdb ^
+	BOOTX64.EFI moskrnl.exe moskrnl.pdb ^
+	--os ^
+	kdcom.dll kdcom.pdb ^
 	MetalOS-RT.dll MetalOS-RT.pdb MetalOS-CRT.dll MetalOS-CRT.pdb MetalOS-WM.dll MetalOS-WM.pdb MetalOS-NET.dll MetalOS-NET.pdb ^
 	MetalOS-WMSvr.exe MetalOS-WMSvr.pdb MetalOS-NetSvr.exe MetalOS-NetSvr.pdb ^
 	calc.exe fire.exe hello.exe init.exe init.pdb term.exe time.exe ps.exe nettest.exe dhcp.exe ping.exe crash.exe crash.pdb ^

@@ -15,8 +15,8 @@
 static FileSystem* m_root = nullptr;
 static Gpt::table_t m_table = {};
 static Partition m_partitions[Gpt::MaxPartitions] = {};
-static SectorCache m_espCache;
-static Fat32 m_esp;
+static SectorCache m_osCache;
+static Fat32 m_os;
 
 //File systems keep state between calls (FAT32's sector cache), so opens and reads take turns: an auto-reset event that starts signaled
 static KEvent m_lock(false, true);
@@ -43,30 +43,30 @@ void KeMountStorage()
 		return;
 	}
 
-	size_t esp = Gpt::MaxPartitions;
+	size_t os = Gpt::MaxPartitions;
 	for (size_t i = 0; i < m_table.Count; i++)
 	{
 		const Gpt::partition_t& entry = m_table.Partitions[i];
 		m_partitions[i] = Partition(*disk, entry.FirstSector, entry.SectorCount);
 
-		const bool isEsp = Gpt::SameGuid(entry.Type, Gpt::EfiSystem);
-		if (isEsp && esp == Gpt::MaxPartitions)
-			esp = i;
+		const bool isData = Gpt::SameGuid(entry.Type, Gpt::BasicData);
+		if (isData && os == Gpt::MaxPartitions)
+			os = i;
 
-		const char* const type = isEsp ? "EFI system" : Gpt::SameGuid(entry.Type, Gpt::BasicData) ? "basic data" : "other";
+		const char* const type = isData ? "basic data" : Gpt::SameGuid(entry.Type, Gpt::EfiSystem) ? "EFI system" : "other";
 		Printf("Storage: disk 0 partition %u: \"%s\" (%s), %u MB at sector %u\n", static_cast<uint32_t>(i), entry.Name, type,
 			static_cast<uint32_t>((entry.SectorCount * disk->SectorSize()) >> 20), static_cast<uint32_t>(entry.FirstSector));
 	}
 
-	//The boot files are in the EFI system partition's \EFI\BOOT, so a bare name like term.exe resolves there
-	if (esp == Gpt::MaxPartitions || !m_esp.Mount(m_partitions[esp], m_espCache) || !m_esp.SetDirectory("\\EFI\\BOOT"))
+	//The OS and its data are on the first basic data partition, a bare name like term.exe at its root; the EFI system partition holds only what the loader loads
+	if (os == Gpt::MaxPartitions || !m_os.Mount(m_partitions[os], m_osCache))
 	{
-		Printf("Storage: no FAT32 EFI system partition with \\EFI\\BOOT, so no file system\n");
+		Printf("Storage: no FAT32 basic data partition, so no file system\n");
 		return;
 	}
 
-	KeMountRoot(m_esp);
-	Printf("Storage: FAT32 on partition %u is the root, bare names from \\EFI\\BOOT\n", static_cast<uint32_t>(esp));
+	KeMountRoot(m_os);
+	Printf("Storage: FAT32 on partition %u (\"%s\") is the root\n", static_cast<uint32_t>(os), m_table.Partitions[os].Name);
 }
 
 bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access)

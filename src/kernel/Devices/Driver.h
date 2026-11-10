@@ -19,18 +19,6 @@ protected:
 	KDevice& m_device;
 };
 
-class StorageDriver : public Driver
-{
-public:
-	StorageDriver(KDevice& device) : Driver(device)
-	{
-
-	}
-
-	virtual bool OpenFile(KFile& file, const char* const path, const KFileAccess access) const = 0;
-	virtual size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const = 0;
-};
-
 class NicDriver : public Driver
 {
 public:

@@ -2,6 +2,8 @@
 
 #include "kernel/Devices/KDevice.h"
 #include "kernel/Devices/Driver.h"
+#include "kernel/FileSystems/FileSystem.h"
+#include "kernel/File.h"
 #include "Drivers/RamDrive.h"
 #include "Lib/Math.h"
 #include "core_crt/stdio.h"
@@ -10,11 +12,12 @@
 #include "kernel/Heap.h"
 
 static constexpr char RamDriveHid[] = "RDRV";
-class RamDriveDriver : public StorageDriver
+//The boot loader's copy of the boot files, a file system of its own until FAT32 replaces it
+class RamDriveDriver : public Driver, public FileSystem
 {
 public:
 
-	RamDriveDriver(KDevice& device) : StorageDriver(device)
+	RamDriveDriver(KDevice& device) : Driver(device), m_ramDrive()
 	{
 
 	}
@@ -36,10 +39,11 @@ public:
 		StrCopy(m_device.Name, Str("RamDrive"));
 		snprintf(m_device.Description, sizeof(m_device.Description), "Ram Drive - Files: %zu", m_ramDrive->FileCount());
 
+		KeMountRoot(*this);
 		return true;
 	}
 
-	bool OpenFile(KFile& file, const char* const path, const KFileAccess access) const override
+	bool Open(KFile& file, const char* const path, const KFileAccess access) override
 	{
 		//Read-only drive
 		if (access != KFileAccess::Read)
@@ -60,7 +64,7 @@ public:
 		return true;
 	}
 
-	size_t ReadFile(const KFile& handle, void* const buffer, const size_t bytesToRead) const override
+	size_t Read(const KFile& handle, void* const buffer, const size_t bytesToRead) override
 	{
 		//End of file (also covers empty files)
 		if (handle.Position >= handle.Length)

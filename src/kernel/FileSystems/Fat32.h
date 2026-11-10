@@ -6,12 +6,15 @@
 #include "kernel/FileSystems/SectorCache.h"
 #include "kernel/Devices/BlockDevice.h"
 
-//A FAT32 volume: long or short names in any case, '/' or '\' between them, and a path not from the root starts in the default directory; one writer to a file at a time
+//A FAT32 volume: long or short names in any case, '/' or '\' between them, and a path not from the root starts in the default directory
 class Fat32 : public FileSystem
 {
 public:
 	//The free cluster count when the volume's FSInfo didn't give one
 	static constexpr uint32_t Unknown = 0xFFFFFFFF;
+
+	//Files open at once, however many opens each has
+	static constexpr size_t MaxOpen = 64;
 
 	constexpr Fat32() :
 		m_volume(),
@@ -25,7 +28,8 @@ public:
 		m_directory(),
 		m_fsInfo(),
 		m_freeCount(),
-		m_nextFree()
+		m_nextFree(),
+		m_open()
 	{
 
 	}
@@ -41,7 +45,9 @@ public:
 		return m_freeCount;
 	}
 
+	//Any number may read a file but one writes, and one anyone has open isn't emptied, deleted or renamed; false too when MaxOpen files are open
 	bool Open(KFile& file, const char* const path, const KFileAccess access, const KFileCreate create) override;
+	void Close(KFile& file) override;
 	size_t Read(KFile& file, void* const buffer, const size_t bytes) override;
 	size_t Write(KFile& file, const void* const buffer, const size_t bytes) override;
 	bool Delete(const char* const path) override;
@@ -70,6 +76,18 @@ private:
 		size_t Count;
 		location_t Slots[MaxEntries];
 	};
+
+	//A file open now, by where its short entry is: how many opens it has, and whether one writes
+	struct open_t
+	{
+		uint64_t Sector;
+		uint32_t Offset;
+		uint32_t Count;
+		bool Writer;
+	};
+
+	//The open file whose short entry is there, or with null a free slot; null if there's none
+	open_t* FindOpen(const location_t* const at);
 
 	bool IsData(const uint32_t cluster) const;
 	uint64_t ClusterSector(const uint32_t cluster) const;
@@ -128,4 +146,5 @@ private:
 	uint64_t m_fsInfo;
 	uint32_t m_freeCount;
 	uint32_t m_nextFree;
+	open_t m_open[MaxOpen];
 };

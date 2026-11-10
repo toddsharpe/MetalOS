@@ -282,14 +282,31 @@ namespace
 		return total;
 	}
 
+	//Closes what the test had open, as closing its handle would
+	void FatTestClose(Fat32& fs, KFile& file)
+	{
+		if (file.Access != KFileAccess::None)
+			fs.Close(file);
+		file = {};
+	}
+
+	bool FatTestOpen(Fat32& fs, KFile& file, const char* const path, const KFileAccess access, const KFileCreate create)
+	{
+		FatTestClose(fs, file);
+		return fs.Open(file, path, access, create);
+	}
+
 	//The whole of a file, read from its start
 	bool FatTestSame(Fat32& fs, const char* const path, const uint8_t* const expected, const size_t size)
 	{
 		static uint8_t out[8192];
 		KFile file = {};
-		if (!fs.Open(file, path, KFileAccess::Read, KFileCreate::OpenExisting) || file.Length != size)
+		if (!FatTestOpen(fs, file, path, KFileAccess::Read, KFileCreate::OpenExisting))
 			return false;
-		return FatTestRead(fs, file, out, 777) == size && memcmp(out, expected, size) == 0;
+
+		const bool same = file.Length == size && FatTestRead(fs, file, out, 777) == size && memcmp(out, expected, size) == 0;
+		FatTestClose(fs, file);
+		return same;
 	}
 
 	uint8_t FatTestData[8192];
@@ -343,26 +360,26 @@ void Fat32_test()
 
 	//A short name in any case, from the root
 	{
-		Assert(fs.Open(file, "readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
 		AssertEqual(file.Length, (size_t)100);
 		AssertEqual(FatTestRead(fs, file, FatTestOut, 4096), (size_t)100);
 		Assert(memcmp(FatTestOut, FatTestData, 100) == 0);
-		Assert(fs.Open(file, "/README.TXT", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(fs.Open(file, "/./readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/README.TXT", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/./readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
 	}
 
 	//A long name in any case, and its short alias
 	{
-		Assert(fs.Open(file, "metalos-wmsvr.EXE", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "metalos-wmsvr.EXE", KFileAccess::Read, KFileCreate::OpenExisting));
 		AssertEqual(file.Length, (size_t)3000);
 		AssertEqual(FatTestRead(fs, file, FatTestOut, 4096), (size_t)3000);
 		Assert(memcmp(FatTestOut, FatTestData, 3000) == 0);
-		Assert(fs.Open(file, "METALO~1.EXE", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "METALO~1.EXE", KFileAccess::Read, KFileCreate::OpenExisting));
 	}
 
 	//A file in consecutive clusters reads its whole sectors in one request, however many clusters they span
 	{
-		Assert(fs.Open(file, "/metalos-wmsvr.exe", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/metalos-wmsvr.exe", KFileAccess::Read, KFileCreate::OpenExisting));
 		const size_t before = volume.Disk.Reads;
 		AssertEqual(fs.Read(file, FatTestOut, 2560), (size_t)2560);
 		AssertEqual(volume.Disk.Reads, before + 1);
@@ -374,7 +391,7 @@ void Fat32_test()
 		static constexpr size_t chunks[] = { 1, 7, 511, 512, 513, 4096 };
 		for (const size_t chunk : chunks)
 		{
-			Assert(fs.Open(file, "\\EFI\\BOOT\\term.exe", KFileAccess::Read, KFileCreate::OpenExisting));
+			Assert(FatTestOpen(fs, file, "\\EFI\\BOOT\\term.exe", KFileAccess::Read, KFileCreate::OpenExisting));
 			memset(FatTestOut, 0, sizeof(FatTestOut));
 			AssertEqual(FatTestRead(fs, file, FatTestOut, chunk), (size_t)5000);
 			Assert(memcmp(FatTestOut, FatTestData, 5000) == 0);
@@ -383,7 +400,7 @@ void Fat32_test()
 
 	//A position moved forward or back reads from there
 	{
-		Assert(fs.Open(file, "/efi/boot/TERM.EXE", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/efi/boot/TERM.EXE", KFileAccess::Read, KFileCreate::OpenExisting));
 		file.Position = 4000;
 		AssertEqual(fs.Read(file, FatTestOut, 600), (size_t)600);
 		Assert(memcmp(FatTestOut, FatTestData + 4000, 600) == 0);
@@ -394,52 +411,52 @@ void Fat32_test()
 
 	//A path not from the root starts in the default directory; ".." climbs, to the root from its child
 	{
-		Assert(!fs.Open(file, "term.exe", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "term.exe", KFileAccess::Read, KFileCreate::OpenExisting));
 		Assert(fs.SetDirectory("/efi/boot"));
-		Assert(fs.Open(file, "term.exe", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(fs.Open(file, "./TERM.EXE", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(fs.Open(file, "../BOOT/term.exe", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(fs.Open(file, "..\\..\\readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(fs.Open(file, "/readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "term.exe", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "./TERM.EXE", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "../BOOT/term.exe", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "..\\..\\readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
 		Assert(!fs.SetDirectory("/readme.txt"));
 	}
 
 	//Missing, a directory, a file used as a directory, or a deleted entry: no file
 	{
-		Assert(!fs.Open(file, "/missing.txt", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(!fs.Open(file, "/EFI", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(!fs.Open(file, "/readme.txt/x", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(!fs.Open(file, "/gone.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/missing.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/EFI", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/readme.txt/x", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/gone.txt", KFileAccess::Read, KFileCreate::OpenExisting));
 	}
 
 	//An empty file reads nothing, and so does a file at its end
 	{
-		Assert(fs.Open(file, "empty.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "empty.txt", KFileAccess::Read, KFileCreate::OpenExisting));
 		AssertEqual(file.Length, (size_t)0);
 		AssertEqual(fs.Read(file, FatTestOut, 10), (size_t)0);
 
-		Assert(fs.Open(file, "/readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/readme.txt", KFileAccess::Read, KFileCreate::OpenExisting));
 		file.Position = 100;
 		AssertEqual(fs.Read(file, FatTestOut, 10), (size_t)0);
 	}
 
 	//A long name whose checksum doesn't tie it to its short entry is only the short name
 	{
-		Assert(!fs.Open(file, "/Bad Checksum.txt", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(fs.Open(file, "/BADSUM.TXT", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/Bad Checksum.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/BADSUM.TXT", KFileAccess::Read, KFileCreate::OpenExisting));
 	}
 
 	//A directory of many clusters is searched to its last entry
 	{
-		Assert(fs.Open(file, "/many/File number 39.dat", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/many/File number 39.dat", KFileAccess::Read, KFileCreate::OpenExisting));
 		AssertEqual(fs.Read(file, FatTestOut, 1), (size_t)1);
 		AssertEqual(FatTestOut[0], FatTestData[39]);
-		Assert(fs.Open(file, "/MANY/FILE0000.DAT", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/MANY/FILE0000.DAT", KFileAccess::Read, KFileCreate::OpenExisting));
 	}
 
 	//A chain that ends before the file's size gives what it has
 	{
-		Assert(fs.Open(file, "/short.bin", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/short.bin", KFileAccess::Read, KFileCreate::OpenExisting));
 		AssertEqual(file.Length, (size_t)2048);
 		AssertEqual(FatTestRead(fs, file, FatTestOut, 4096), (size_t)1024);
 	}
@@ -467,10 +484,10 @@ void Fat32Write_test()
 
 	//Only a write open makes a file, and only with a disposition that allows it
 	{
-		Assert(!fs.Open(file, "/new.bin", KFileAccess::ReadWrite, KFileCreate::OpenExisting));
-		Assert(!fs.Open(file, "/new.bin", KFileAccess::Read, KFileCreate::CreateAlways));
-		Assert(!fs.Open(file, "/new.bin", KFileAccess::Read, KFileCreate::OpenAlways));
-		Assert(fs.Open(file, "/new.bin", KFileAccess::ReadWrite, KFileCreate::CreateAlways));
+		Assert(!FatTestOpen(fs, file, "/new.bin", KFileAccess::ReadWrite, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/new.bin", KFileAccess::Read, KFileCreate::CreateAlways));
+		Assert(!FatTestOpen(fs, file, "/new.bin", KFileAccess::Read, KFileCreate::OpenAlways));
+		Assert(FatTestOpen(fs, file, "/new.bin", KFileAccess::ReadWrite, KFileCreate::CreateAlways));
 		AssertEqual(file.Length, (size_t)0);
 	}
 
@@ -491,17 +508,20 @@ void Fat32Write_test()
 
 	//A read open doesn't write, and nor does a read-only file open for writing
 	{
-		Assert(fs.Open(file, "/new.bin", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/new.bin", KFileAccess::Read, KFileCreate::OpenExisting));
 		AssertEqual(fs.Write(file, FatTestData, 10), (size_t)0);
-		Assert(fs.Open(file, "/locked.txt", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(!fs.Open(file, "/locked.txt", KFileAccess::Write, KFileCreate::OpenExisting));
-		Assert(!fs.Open(file, "/locked.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/locked.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/locked.txt", KFileAccess::Write, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/locked.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/locked.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!fs.Delete("/locked.txt"));
+		FatTestClose(fs, file);
 		Assert(!fs.Delete("/locked.txt"));
 	}
 
 	//Writing over the middle changes only those bytes; past the end the file grows, the gap reading as zeros
 	{
-		Assert(fs.Open(file, "/new.bin", KFileAccess::ReadWrite, KFileCreate::OpenAlways));
+		Assert(FatTestOpen(fs, file, "/new.bin", KFileAccess::ReadWrite, KFileCreate::OpenAlways));
 		AssertEqual(file.Length, (size_t)5000);
 		file.Position = 1000;
 		AssertEqual(FatTestWrite(fs, file, FatTestData + 100, 1500, 1500), (size_t)1500);
@@ -519,30 +539,80 @@ void Fat32Write_test()
 	//Opening to create over a file empties it, its clusters freed
 	{
 		const uint32_t free = fs.FreeClusters();
-		Assert(fs.Open(file, "/new.bin", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/new.bin", KFileAccess::Write, KFileCreate::CreateAlways));
 		AssertEqual(file.Length, (size_t)0);
 		AssertEqual(fs.FreeClusters(), free + 14);
 		Assert(FatTestSame(fs, "/new.bin", FatTestData, 0));
 	}
 
+	//Any number read a file but one writes, and a file anyone has open isn't emptied, deleted or renamed until the last closes it
+	{
+		KFile reader = {};
+		KFile other = {};
+		KFile writer = {};
+		Assert(FatTestOpen(fs, reader, "/old.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, other, "/OLD.TXT", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, writer, "/old.txt", KFileAccess::ReadWrite, KFileCreate::OpenAlways));
+		Assert(!FatTestOpen(fs, file, "/old.txt", KFileAccess::Write, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/old.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(!fs.Delete("/old.txt"));
+		Assert(!fs.Rename("/old.txt", "/older.txt"));
+
+		FatTestClose(fs, writer);
+		Assert(FatTestOpen(fs, writer, "/old.txt", KFileAccess::Write, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/old.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		FatTestClose(fs, writer);
+		FatTestClose(fs, reader);
+		Assert(!fs.Delete("/old.txt"));
+		FatTestClose(fs, other);
+		Assert(fs.Rename("/old.txt", "/older.txt"));
+		Assert(fs.Rename("/older.txt", "/old.txt"));
+		Assert(FatTestSame(fs, "/old.txt", FatTestData, 1000));
+	}
+
+	//Only so many files are open at once, however many opens each has; closing one makes room
+	{
+		KFile held[Fat32::MaxOpen] = {};
+		char name[32];
+		for (size_t i = 0; i < Fat32::MaxOpen; i++)
+		{
+			snprintf(name, sizeof(name), "/held%02u.txt", static_cast<uint32_t>(i));
+			Assert(FatTestOpen(fs, held[i], name, KFileAccess::Write, KFileCreate::CreateAlways));
+		}
+		Assert(!FatTestOpen(fs, file, "/old.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/held64.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/held00.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		FatTestClose(fs, file);
+		FatTestClose(fs, held[0]);
+		Assert(FatTestOpen(fs, file, "/old.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		FatTestClose(fs, file);
+		for (size_t i = 0; i < Fat32::MaxOpen; i++)
+		{
+			FatTestClose(fs, held[i]);
+			snprintf(name, sizeof(name), "/held%02u.txt", static_cast<uint32_t>(i));
+			Assert(fs.Delete(name));
+		}
+		Assert(!FatTestOpen(fs, file, "/held64.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+	}
+
 	//A long name gets an alias with a numeric tail, the next along when that's taken; a name that is its 8.3 alias exactly needs no long name
 	{
-		Assert(fs.Open(file, "/Long File Name.txt", KFileAccess::Write, KFileCreate::CreateAlways));
-		Assert(fs.Open(file, "/Long File Name 2.txt", KFileAccess::Write, KFileCreate::CreateAlways));
-		Assert(fs.Open(file, "/LONGFI~1.TXT", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(fs.Open(file, "/longfi~2.txt", KFileAccess::Read, KFileCreate::OpenExisting));
-		Assert(fs.Open(file, "/LONG FILE NAME 2.TXT", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/Long File Name.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/Long File Name 2.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/LONGFI~1.TXT", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/longfi~2.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(FatTestOpen(fs, file, "/LONG FILE NAME 2.TXT", KFileAccess::Read, KFileCreate::OpenExisting));
 
 		bool longName = true;
-		Assert(fs.Open(file, "/UPPER.TXT", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/UPPER.TXT", KFileAccess::Write, KFileCreate::CreateAlways));
 		Assert(volume.FindEntry(FatTestVolume::Root, "UPPER   TXT", &longName) != nullptr);
 		Assert(!longName);
-		Assert(fs.Open(file, "/lower.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/lower.txt", KFileAccess::Write, KFileCreate::CreateAlways));
 		Assert(volume.FindEntry(FatTestVolume::Root, "LOWER   TXT", &longName) != nullptr);
 		Assert(longName);
-		Assert(fs.Open(file, "/.hidden", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/.hidden", KFileAccess::Write, KFileCreate::CreateAlways));
 		Assert(volume.FindEntry(FatTestVolume::Root, "HIDDEN~1   ") != nullptr);
-		Assert(fs.Open(file, "/a+b.tar.gz", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/a+b.tar.gz", KFileAccess::Write, KFileCreate::CreateAlways));
 		Assert(volume.FindEntry(FatTestVolume::Root, "A_BTAR~1GZ ") != nullptr);
 	}
 
@@ -551,18 +621,18 @@ void Fat32Write_test()
 		char name[258] = "/";
 		memset(name + 1, 'x', 251);
 		memcpy(name + 252, ".txt", 5);
-		Assert(fs.Open(file, name, KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, name, KFileAccess::Write, KFileCreate::CreateAlways));
 		AssertEqual(FatTestWrite(fs, file, FatTestData, 600, 600), (size_t)600);
 		Assert(FatTestSame(fs, name, FatTestData, 600));
 		Assert(FatTestSame(fs, "/XXXXXX~1.TXT", FatTestData, 600));
 
 		memcpy(name + 252, "x.txt", 6);
-		Assert(!fs.Open(file, name, KFileAccess::Write, KFileCreate::CreateAlways));
-		Assert(!fs.Open(file, "/bad?.txt", KFileAccess::Write, KFileCreate::CreateAlways));
-		Assert(!fs.Open(file, "/trailing.", KFileAccess::Write, KFileCreate::CreateAlways));
-		Assert(!fs.Open(file, "/missing/x.txt", KFileAccess::Write, KFileCreate::CreateAlways));
-		Assert(!fs.Open(file, "/old.txt/x.txt", KFileAccess::Write, KFileCreate::CreateAlways));
-		Assert(!fs.Open(file, "/", KFileAccess::Write, KFileCreate::OpenAlways));
+		Assert(!FatTestOpen(fs, file, name, KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(!FatTestOpen(fs, file, "/bad?.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(!FatTestOpen(fs, file, "/trailing.", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(!FatTestOpen(fs, file, "/missing/x.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(!FatTestOpen(fs, file, "/old.txt/x.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(!FatTestOpen(fs, file, "/", KFileAccess::Write, KFileCreate::OpenAlways));
 		Assert(!fs.CreateDirectory("/"));
 		Assert(!fs.CreateDirectory("/old.txt"));
 	}
@@ -571,9 +641,9 @@ void Fat32Write_test()
 	{
 		Assert(fs.CreateDirectory("/Projects"));
 		Assert(!fs.CreateDirectory("/projects"));
-		Assert(!fs.Open(file, "/projects", KFileAccess::Write, KFileCreate::OpenAlways));
+		Assert(!FatTestOpen(fs, file, "/projects", KFileAccess::Write, KFileCreate::OpenAlways));
 		Assert(fs.CreateDirectory("/projects/Sub"));
-		Assert(fs.Open(file, "/projects/sub/notes.txt", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/projects/sub/notes.txt", KFileAccess::Write, KFileCreate::CreateAlways));
 		AssertEqual(FatTestWrite(fs, file, FatTestData, 100, 100), (size_t)100);
 
 		Assert(fs.SetDirectory("/projects/sub"));
@@ -589,8 +659,10 @@ void Fat32Write_test()
 		uint8_t* const projects = volume.FindEntry(FatTestVolume::Root, "PROJECTS   ");
 		Assert(projects != nullptr);
 		const uint32_t cluster = FatTestVolume::EntryCluster(projects);
+		Assert(!fs.Delete("/projects/sub/notes.txt"));
+		FatTestClose(fs, file);
 		Assert(fs.Delete("/projects/sub/notes.txt"));
-		Assert(!fs.Open(file, "/projects/sub/notes.txt", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/projects/sub/notes.txt", KFileAccess::Read, KFileCreate::OpenExisting));
 		Assert(fs.Delete("/projects/sub"));
 		Assert(fs.Delete("/projects"));
 		AssertEqual(projects[0], (uint8_t)0xE5);
@@ -602,11 +674,13 @@ void Fat32Write_test()
 	{
 		Assert(fs.CreateDirectory("/a"));
 		Assert(fs.CreateDirectory("/a/b"));
-		Assert(fs.Open(file, "/a/data.bin", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/a/data.bin", KFileAccess::Write, KFileCreate::CreateAlways));
 		AssertEqual(FatTestWrite(fs, file, FatTestData, 3000, 3000), (size_t)3000);
+		Assert(!fs.Rename("/a/data.bin", "/a/Renamed Data.bin"));
+		FatTestClose(fs, file);
 
 		Assert(fs.Rename("/a/data.bin", "/a/Renamed Data.bin"));
-		Assert(!fs.Open(file, "/a/data.bin", KFileAccess::Read, KFileCreate::OpenExisting));
+		Assert(!FatTestOpen(fs, file, "/a/data.bin", KFileAccess::Read, KFileCreate::OpenExisting));
 		Assert(FatTestSame(fs, "/a/renamed data.bin", FatTestData, 3000));
 		Assert(fs.Rename("/a/renamed data.bin", "/moved.bin"));
 		Assert(FatTestSame(fs, "/moved.bin", FatTestData, 3000));
@@ -633,7 +707,7 @@ void Fat32Write_test()
 		for (int i = 0; i < 40; i++)
 		{
 			snprintf(name, sizeof(name), "/many/File number %02d.dat", i);
-			Assert(fs.Open(file, name, KFileAccess::Write, KFileCreate::CreateAlways));
+			Assert(FatTestOpen(fs, file, name, KFileAccess::Write, KFileCreate::CreateAlways));
 			AssertEqual(FatTestWrite(fs, file, FatTestData + i, 1, 1), (size_t)1);
 		}
 		Assert(FatTestSame(fs, "/many/file number 39.dat", FatTestData + 39, 1));
@@ -641,7 +715,7 @@ void Fat32Write_test()
 
 		const uint32_t free = fs.FreeClusters();
 		Assert(fs.Delete("/many/File number 07.dat"));
-		Assert(fs.Open(file, "/many/File number 77.dat", KFileAccess::Write, KFileCreate::CreateAlways));
+		Assert(FatTestOpen(fs, file, "/many/File number 77.dat", KFileAccess::Write, KFileCreate::CreateAlways));
 		AssertEqual(fs.FreeClusters(), free + 1);
 		Assert(FatTestSame(fs, "/many/file number 08.dat", FatTestData + 8, 1));
 	}

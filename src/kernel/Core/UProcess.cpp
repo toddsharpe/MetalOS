@@ -8,6 +8,7 @@
 #include "kernel/Thread.h"
 #include "kernel/Process.h"
 #include "kernel/Pipe.h"
+#include "kernel/File.h"
 #include "kernel/Core/PebModules.h"
 #include "new.h"
 #include "core_crt/stdio.h"
@@ -183,6 +184,10 @@ bool UProcess::CloseObject(const handle_t handle)
 
 		case UObjectType::Thread:
 			KeReleaseUThread(*object->Thread);
+			break;
+
+		case UObjectType::File:
+			KeCloseFile(object->File);
 			break;
 
 		case UObjectType::Process:

@@ -227,10 +227,20 @@ bool Fat32::Open(KFile& file, const char* const path, const KFileAccess access, 
 
 	const bool writing = (access & KFileAccess::Write) != KFileAccess::None;
 	entry_t entry;
+	open_t* open = nullptr;
 	if (Walk(path, strlen(path), entry))
 	{
 		//A directory isn't a file, and a read-only file isn't written
 		if (entry.Directory || entry.Count == 0 || (writing && (entry.Attributes & AttrReadOnly) != 0))
+			return false;
+
+		//A second writer, or emptying a file under those who have it open, would leave their view of its clusters out of date
+		open = FindOpen(&entry.Slots[entry.Count - 1]);
+		if (open && ((writing && open->Writer) || create == KFileCreate::CreateAlways))
+			return false;
+
+		//The table is checked before anything changes, so a full one fails an open cleanly
+		if (!open && !(open = FindOpen(nullptr)))
 			return false;
 
 		if (create == KFileCreate::CreateAlways)
@@ -250,7 +260,8 @@ bool Fat32::Open(KFile& file, const char* const path, const KFileAccess access, 
 		uint32_t directory;
 		const char* leaf;
 		size_t length;
-		if (create == KFileCreate::OpenExisting || !writing || !Parent(path, directory, leaf, length) || !ValidName(leaf, length))
+		open = FindOpen(nullptr);
+		if (!open || create == KFileCreate::OpenExisting || !writing || !Parent(path, directory, leaf, length) || !ValidName(leaf, length))
 			return false;
 
 		uint8_t shortEntry[32] = {};
@@ -259,6 +270,15 @@ bool Fat32::Open(KFile& file, const char* const path, const KFileAccess access, 
 		if (!Commit() || !added)
 			return false;
 	}
+
+	if (open->Count == 0)
+	{
+		open->Sector = entry.Slots[entry.Count - 1].Sector;
+		open->Offset = entry.Slots[entry.Count - 1].Offset;
+		open->Writer = false;
+	}
+	open->Count++;
+	open->Writer = open->Writer || writing;
 
 	file = KFile();
 	file.Start = entry.Cluster;
@@ -277,6 +297,17 @@ bool Fat32::Open(KFile& file, const char* const path, const KFileAccess access, 
 			file.Run++;
 	}
 	return true;
+}
+
+void Fat32::Close(KFile& file)
+{
+	const location_t at = { file.EntrySector, file.EntryOffset };
+	open_t* const open = FindOpen(&at);
+	Assert(open);
+
+	if ((file.Access & KFileAccess::Write) != KFileAccess::None)
+		open->Writer = false;
+	open->Count--;
 }
 
 size_t Fat32::Read(KFile& file, void* const buffer, const size_t bytes)
@@ -343,7 +374,7 @@ size_t Fat32::Write(KFile& file, const void* const buffer, const size_t bytes)
 bool Fat32::Delete(const char* const path)
 {
 	entry_t entry;
-	if (!m_volume || !Walk(path, strlen(path), entry) || entry.Count == 0)
+	if (!m_volume || !Walk(path, strlen(path), entry) || entry.Count == 0 || FindOpen(&entry.Slots[entry.Count - 1]))
 		return false;
 
 	//A read-only file stays, and a directory goes only empty and never the root or the default directory
@@ -367,7 +398,7 @@ bool Fat32::Rename(const char* const from, const char* const to)
 	uint32_t directory;
 	const char* leaf;
 	size_t length;
-	if (!m_volume || !Walk(from, strlen(from), source) || source.Count == 0 || !Parent(to, directory, leaf, length) || !ValidName(leaf, length))
+	if (!m_volume || !Walk(from, strlen(from), source) || source.Count == 0 || FindOpen(&source.Slots[source.Count - 1]) || !Parent(to, directory, leaf, length) || !ValidName(leaf, length))
 		return false;
 
 	entry_t taken;
@@ -457,6 +488,16 @@ bool Fat32::CreateDirectory(const char* const path)
 bool Fat32::Flush()
 {
 	return m_volume && Commit() && m_volume->Flush();
+}
+
+Fat32::open_t* Fat32::FindOpen(const location_t* const at)
+{
+	for (open_t& open : m_open)
+	{
+		if (at ? (open.Count != 0 && open.Sector == at->Sector && open.Offset == at->Offset) : open.Count == 0)
+			return &open;
+	}
+	return nullptr;
 }
 
 bool Fat32::IsData(const uint32_t cluster) const

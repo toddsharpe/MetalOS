@@ -5,6 +5,7 @@
 #include "kernel/Plat_HyperV/Drivers/HyperVMouseDriver.h"
 #include "kernel/Plat_HyperV/Drivers/HyperVNic.h"
 #include "kernel/Plat_HyperV/Drivers/HyperVVideoDriver.h"
+#include "kernel/Plat_HyperV/Drivers/HyperVScsiDriver.h"
 #include "Assert.h"
 #include "kernel/Devices/KDevice.h"
 #include "kernel/Heap.h"
@@ -55,6 +56,8 @@ Driver* PlatCreateDriver(KDevice& device)
 		return Create<HyperVNic>(device);
 	if (hid == Str("{DA0A7802-E377-4AAC-8E77-0558EB1073F8}"))
 		return Create<HyperVVideoDriver>(device);
+	if (hid == Str("{BA6163D9-04A1-4D29-B605-72E2FFB1DC7F}"))
+		return Create<HyperVScsiDriver>(device);
 	return nullptr;
 }
 

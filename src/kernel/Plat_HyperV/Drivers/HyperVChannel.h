@@ -21,6 +21,10 @@ public:
 
 	bool SendPacket(const void* buffer, const size_t length, const uint64_t requestId, const HyperV::vmbus_packet_type type, const uint16_t flags); //False if the outbound ring is full
 
+	//A message whose data the host reads or writes in guest memory, byteCount bytes of physically contiguous pages at address; completion requested
+	bool SendPacketGpaDirect(const void* buffer, const size_t length, const uint64_t requestId, const paddr_t address, const uint32_t byteCount);
+	static constexpr size_t GpaDirectMaxPages = 32;
+
 	//Calls onPacket(descriptor, payload, payloadSize) per inbound packet; re-drains if StopRead reports more arrived
 	template <typename F>
 	void Drain(F onPacket)

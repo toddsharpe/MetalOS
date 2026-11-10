@@ -35,7 +35,6 @@ public:
 		Assert(m_ramDrive);
 
 		//Set properties
-		m_device.Class = KDeviceClass::Storage;
 		StrCopy(m_device.Name, Str("RamDrive"));
 		snprintf(m_device.Description, sizeof(m_device.Description), "Ram Drive - Files: %zu", m_ramDrive->FileCount());
 

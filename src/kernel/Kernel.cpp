@@ -20,6 +20,7 @@
 #include "kernel/Core/InterruptTable.h"
 #include "Drivers/RamDrive.h"
 #include "kernel/Devices/RamDriveDriver.h"
+#include "kernel/File.h"
 #include "MetalOS.Loader.h"
 #include "MetalOS.Space.h"
 #include "Graphics/Types.h"
@@ -130,6 +131,7 @@ namespace
 			ramDrive->Context = (void*)BootParams.RamDriveAddress;
 			m_deviceTree.AddRootChild(*ramDrive);
 		}
+		KeMountStorage();
 
 		m_debugger.Initialize();
 		m_debugger.AddModule(*kernelModule);

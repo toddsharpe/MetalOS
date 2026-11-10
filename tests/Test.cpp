@@ -17,6 +17,7 @@ int main()
 	Test(AddressSpace);
 	Test(Arena);
 	Test(BlockAllocator);
+	Test(Crc32);
 	Test(Span);
 	Test(String);
 	Test(Serializer);
@@ -36,6 +37,7 @@ int main()
 	Test(Checksum);
 	Test(StackWalk);
 	Test(PebModules);
+	Test(Gpt);
 	Test(IPv4);
 	Test(Socket);
 	Test(Router);

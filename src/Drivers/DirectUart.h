@@ -23,11 +23,16 @@ public:
 	{
 		while (*buffer != '\0')
 		{
+			//A byte waits for the transmit holding register to empty (line status bit 5); Hyper-V drops one written while it's full
+			while ((__inbyte(static_cast<uint16_t>(m_port) + LineStatus) & TransmitEmpty) == 0);
 			__outbyte(static_cast<uint16_t>(m_port), static_cast<uint8_t>(*buffer));
 			buffer++;
 		}
 	}
 
 private:
+	static constexpr uint16_t LineStatus = 5;
+	static constexpr uint8_t TransmitEmpty = 0x20;
+
 	const ComPort m_port;
 };

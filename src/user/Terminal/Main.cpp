@@ -5,6 +5,7 @@
 #include "Graphics/Theme.h"
 #include "Graphics/Icons.h"
 #include "Assert.h"
+#include <stdio.h>
 
 using namespace Graphics;
 using namespace UI;
@@ -254,7 +255,7 @@ namespace
 		Write(Str("Run: "), ConsoleAttribute::Dim);
 		Write(Str("hello ps time calc fire doom dhcp ping nettest crash\n"), ConsoleAttribute::Normal);
 		Write(Str("Built in: "), ConsoleAttribute::Dim);
-		Write(Str("help clear\n"), ConsoleAttribute::Normal);
+		Write(Str("help clear ls cat write append mkdir rm mv\n"), ConsoleAttribute::Normal);
 		Write(Str("Keys: "), ConsoleAttribute::Dim);
 		Write(Str("Up/Down history, PgUp/PgDn scroll, Ctrl+L clear\n"), ConsoleAttribute::Normal);
 	}
@@ -265,6 +266,147 @@ namespace
 		console.Scroll = 0;
 		ShowPrompt();
 		console.Text.Write(Str(command));
+	}
+
+	//The next space-separated word of a line, cut off where it ends; null when there's none
+	char* NextWord(char*& at)
+	{
+		while (*at == ' ')
+			at++;
+		if (*at == '\0')
+			return nullptr;
+
+		char* const word = at;
+		while (*at != '\0' && *at != ' ')
+			at++;
+		if (*at == ' ')
+			*at++ = '\0';
+		return word;
+	}
+
+	void Fail(const char* const verb, const char* const what, const char* const path)
+	{
+		char text[MaxCommandLength + 64];
+		snprintf(text, sizeof(text), "%s: can't %s %s\n", verb, what, path);
+		Write(CStr(text), ConsoleAttribute::Error);
+	}
+
+	//A directory's names a page of entries at a time, directories marked and files with their size
+	void ListFiles(const char* const path)
+	{
+		static DirectoryEntry entries[16];
+		static constexpr size_t Page = sizeof(entries) / sizeof(entries[0]);
+		size_t index = 0;
+		for (;;)
+		{
+			const size_t start = index;
+			if (ListDirectory(path, entries, Page, &index) != SyscallResult::Success)
+			{
+				Fail("ls", "list", path);
+				return;
+			}
+
+			for (size_t i = 0; i < index - start; i++)
+			{
+				char size[16];
+				if (entries[i].Directory)
+					snprintf(size, sizeof(size), "%10s  ", "<dir>");
+				else
+					snprintf(size, sizeof(size), "%10u  ", static_cast<uint32_t>(entries[i].Size));
+				Write(CStr(size), ConsoleAttribute::Dim);
+				Write(CStr(entries[i].Name), entries[i].Directory ? ConsoleAttribute::Prompt : ConsoleAttribute::Normal);
+				console.Text.Write('\n');
+			}
+
+			if (index - start < Page)
+				return;
+		}
+	}
+
+	//A file's text, up to a limit so a large one doesn't stall the terminal
+	void ShowFile(const char* const path)
+	{
+		static constexpr size_t MaxShown = 64 * 1024;
+		FILE* const file = fopen(path, "r");
+		if (!file)
+		{
+			Fail("cat", "open", path);
+			return;
+		}
+
+		char buffer[256];
+		size_t shown = 0;
+		size_t read;
+		while (shown < MaxShown && (read = fread(buffer, 1, sizeof(buffer), file)) != 0)
+		{
+			Write({ buffer, read }, ConsoleAttribute::Normal);
+			shown += read;
+		}
+		if (shown == MaxShown && fread(buffer, 1, 1, file) == 1)
+			Write(Str("\n(only the first 64 KB)"), ConsoleAttribute::Dim);
+		fclose(file);
+	}
+
+	//The text and a newline as the file's contents, or after them
+	void WriteText(const char* const path, const char* const text, const bool append)
+	{
+		FILE* const file = fopen(path, append ? "a" : "w");
+		if (!file)
+		{
+			Fail(append ? "append" : "write", "open", path);
+			return;
+		}
+
+		const size_t length = strlen(text);
+		if ((length != 0 && fwrite(text, 1, length, file) != length) || fwrite("\n", 1, 1, file) != 1)
+			Fail(append ? "append" : "write", "write", path);
+		fclose(file);
+	}
+
+	//The built-in file commands, through the C runtime as a program would use it; false if the line isn't one
+	bool RunFileCommand(const cstr_t typed)
+	{
+		char line[MaxCommandLength + 2];
+		StrCopy(line, typed);
+		char* at = line;
+		const char* const name = NextWord(at);
+		if (!name)
+			return false;
+
+		const cstr_t verb = CStr(name);
+		const bool isWrite = verb == Str("write") || verb == Str("append");
+		if (!(verb == Str("ls") || verb == Str("cat") || isWrite || verb == Str("mkdir") || verb == Str("rm") || verb == Str("mv")))
+			return false;
+
+		const char* const first = NextWord(at);
+		if (verb == Str("ls"))
+		{
+			ListFiles(first ? first : "/");
+			return true;
+		}
+
+		//write and append take the rest of the line as their text
+		while (*at == ' ')
+			at++;
+		const char* const rest = at;
+		const char* const second = isWrite ? nullptr : NextWord(at);
+		if (!first || (verb == Str("mv") && !second))
+		{
+			Write(Str("usage: ls [dir], cat file, write file text, append file text, mkdir dir, rm path, mv from to\n"), ConsoleAttribute::Error);
+			return true;
+		}
+
+		if (verb == Str("cat"))
+			ShowFile(first);
+		else if (isWrite)
+			WriteText(first, rest, verb == Str("append"));
+		else if (verb == Str("mkdir") && CreateDirectory(first) != SyscallResult::Success)
+			Fail("mkdir", "make", first);
+		else if (verb == Str("rm") && remove(first) != 0)
+			Fail("rm", "delete", first);
+		else if (verb == Str("mv") && rename(first, second) != 0)
+			Fail("mv", "move", first);
+		return true;
 	}
 
 	void RunCommand()
@@ -289,6 +431,14 @@ namespace
 		{
 			ClearCommand();
 			ClearScreen();
+			return;
+		}
+		if (RunFileCommand(typed))
+		{
+			ClearCommand();
+			if (console.Text.CurrentLength() != 0)
+				console.Text.Write('\n');
+			ShowPrompt();
 			return;
 		}
 

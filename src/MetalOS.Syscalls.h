@@ -35,6 +35,7 @@ enum class Syscall : uint64_t
 	CreateDirectory,
 	CreatePipe,
 	PeekNamedPipe,
+	ListDirectory,
 
 	//0x500: Handles (closing, and passing one to another process)
 	CloseHandle = 0x500,

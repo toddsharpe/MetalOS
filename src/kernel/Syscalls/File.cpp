@@ -5,7 +5,6 @@
 #include "kernel/Objects/KPredicate.h"
 #include "Lib/String.h"
 #include "Assert.h"
-#include "core_crt/ctype.h"
 #include "kernel/Heap.h"
 #include "kernel/Thread.h"
 #include "kernel/File.h"
@@ -26,9 +25,49 @@ namespace
 			case FileAccess::ReadWrite:
 				return KFileAccess::ReadWrite;
 
+			case FileAccess::Append:
+				return KFileAccess::Append;
+
+			case FileAccess::ReadAppend:
+				return KFileAccess::ReadAppend;
+
 			default:
 				return KFileAccess::None;
 		}
+	}
+
+	constexpr bool ToCreate(const FileCreate create, KFileCreate& result)
+	{
+		switch (create)
+		{
+			case FileCreate::OpenExisting:
+				result = KFileCreate::OpenExisting;
+				return true;
+
+			case FileCreate::CreateAlways:
+				result = KFileCreate::CreateAlways;
+				return true;
+
+			case FileCreate::OpenAlways:
+				result = KFileCreate::OpenAlways;
+				return true;
+
+			default:
+				return false;
+		}
+	}
+
+	//A path from the caller, read only where it's mapped and refused rather than cut short when it doesn't end in time
+	SyscallResult CopyPath(const UProcess& proc, const char* const path, char (&copy)[MaxPath])
+	{
+		const size_t length = UserStringLength(proc, path, sizeof(copy));
+		if (length == sizeof(copy))
+			return SyscallResult::InvalidArg;
+		if (!proc.Space.IsValidRange(path + length, 1) || path[length] != '\0')
+			return SyscallResult::InvalidPointer;
+
+		StrCopy(copy, CStr(path, length));
+		return SyscallResult::Success;
 	}
 
 	//Keeps a pipe alive while a syscall can block on it, as another thread may close the handle meanwhile
@@ -56,23 +95,20 @@ namespace
 	};
 }
 
-HFile CreateFile(const char* path, const FileAccess access)
+HFile CreateFile(const char* path, const FileAccess access, const FileCreate create)
 {
 	UProcess& proc = Scheduler::GetUProcess();
-	if (!proc.Space.IsValidPointer(path))
+	char copy[MaxPath];
+	KFileCreate disposition;
+	if (CopyPath(proc, path, copy) != SyscallResult::Success || ToAccess(access) == KFileAccess::None || !ToCreate(create, disposition))
 		return nullptr;
 
 	UObject* uFile = proc.CreateObject(UObjectType::File);
 	if (!uFile)
 		return nullptr;
 
-	//The pointer check covers only the first byte, so bound the copy by what's mapped
-	char copy[128] = {};
-	StrCopy(copy, CStr(path, UserStringLength(proc, path, sizeof(copy) - 1)));
-	for (char* c = copy; *c != '\0'; c++)
-		*c = (char)tolower(*c);
-
-	const bool result = KeCreateFile(uFile->File, copy, ToAccess(access));
+	//FAT32 matches names in any case, so the path keeps the case a new file is given
+	const bool result = KeCreateFile(uFile->File, copy, ToAccess(access), disposition);
 	if (!result)
 	{
 		//Don't leave an unopened file object behind
@@ -165,6 +201,13 @@ SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t buf
 
 	switch (obj->Type)
 	{
+		case UObjectType::File:
+		{
+			const bool result = KeWriteFile(obj->File, buffer, bufferSize, bytesWritten);
+			return result ? SyscallResult::Success : SyscallResult::Failed;
+		}
+		break;
+
 		case UObjectType::Pipe:
 		{
 			//The handle can be closed during the wait, so use the pipe itself and hold it until done
@@ -251,24 +294,29 @@ SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const S
 	if (status != SyscallResult::Success)
 		return status;
 
-	size_t newPos = 0;
+	size_t base = 0;
 	switch (seek)
 	{
 		case Seek::Begin:
-			newPos = position;
+			base = 0;
 			break;
 
 		case Seek::Current:
-			newPos = uFile->File.Position + position;
+			base = uFile->File.Position;
 			break;
 
 		case Seek::End:
-			newPos = uFile->File.Length + position;
+			base = uFile->File.Length;
 			break;
 
 		default:
 			return SyscallResult::InvalidArg;
 	}
+
+	//A position before the start is refused rather than wrapping round to a huge one
+	if (position < 0 && 0 - static_cast<size_t>(position) > base)
+		return SyscallResult::InvalidArg;
+	const size_t newPos = base + position;
 
 	const bool result = KeSetFilePosition(uFile->File, newPos);
 	if (!result)
@@ -280,24 +328,84 @@ SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const S
 	return SyscallResult::Success;
 }
 
-//FAT32 is read-only for now, so nothing can be renamed, deleted or created
 SyscallResult MoveFile(const char* existingFileName, const char* newFileName)
 {
-	UNUSED(existingFileName);
-	UNUSED(newFileName);
-	return SyscallResult::NotImplemented;
+	UProcess& proc = Scheduler::GetUProcess();
+	char from[MaxPath];
+	char to[MaxPath];
+	SyscallResult status = CopyPath(proc, existingFileName, from);
+	if (status == SyscallResult::Success)
+		status = CopyPath(proc, newFileName, to);
+	if (status != SyscallResult::Success)
+		return status;
+
+	return KeMoveFile(from, to) ? SyscallResult::Success : SyscallResult::Failed;
 }
 
 SyscallResult DeleteFile(const char* fileName)
 {
-	UNUSED(fileName);
-	return SyscallResult::NotImplemented;
+	UProcess& proc = Scheduler::GetUProcess();
+	char copy[MaxPath];
+	const SyscallResult status = CopyPath(proc, fileName, copy);
+	if (status != SyscallResult::Success)
+		return status;
+
+	return KeDeleteFile(copy) ? SyscallResult::Success : SyscallResult::Failed;
 }
 
 SyscallResult CreateDirectory(const char* path)
 {
-	UNUSED(path);
-	return SyscallResult::NotImplemented;
+	UProcess& proc = Scheduler::GetUProcess();
+	char copy[MaxPath];
+	const SyscallResult status = CopyPath(proc, path, copy);
+	if (status != SyscallResult::Success)
+		return status;
+
+	return KeCreateDirectory(copy) ? SyscallResult::Success : SyscallResult::Failed;
+}
+
+SyscallResult ListDirectory(const char* path, DirectoryEntry* entries, const size_t maxCount, size_t* index)
+{
+	UProcess& proc = Scheduler::GetUProcess();
+	if (maxCount > static_cast<size_t>(-1) / sizeof(DirectoryEntry))
+		return SyscallResult::InvalidArg;
+	if ((maxCount && !proc.Space.IsValidRange(entries, maxCount * sizeof(DirectoryEntry))) || !proc.Space.IsValid(index))
+		return SyscallResult::InvalidPointer;
+
+	char copy[MaxPath];
+	const SyscallResult status = CopyPath(proc, path, copy);
+	if (status != SyscallResult::Success)
+		return status;
+
+	//Names before the index are passed over, and the listing stops once the entries are full
+	struct listing_t
+	{
+		DirectoryEntry* Entries;
+		size_t Max;
+		size_t Skip;
+		size_t Seen;
+		size_t Count;
+	};
+	listing_t listing = { entries, maxCount, *index, 0, 0 };
+	const KListVisit visit = [](void* const context, const KDirEntry& entry) -> bool
+	{
+		listing_t& listing = *static_cast<listing_t*>(context);
+		if (listing.Seen++ < listing.Skip)
+			return true;
+		if (listing.Count == listing.Max)
+			return false;
+
+		DirectoryEntry& out = listing.Entries[listing.Count++];
+		StrCopy(out.Name, CStr(entry.Name));
+		out.Size = entry.Size;
+		out.Directory = entry.Directory;
+		return listing.Count < listing.Max;
+	};
+	if (!KeListDirectory(copy, visit, &listing))
+		return SyscallResult::Failed;
+
+	*index = listing.Skip + listing.Count;
+	return SyscallResult::Success;
 }
 
 SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle)

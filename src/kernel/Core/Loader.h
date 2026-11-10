@@ -76,7 +76,7 @@ namespace Loader
 	{
 		//A missing, truncated, or non-x64 PE file returns a null UserBase
 		KFile file = {};
-		if (!KeCreateFile(file, path, KFileAccess::Read))
+		if (!KeCreateFile(file, path, KFileAccess::Read, KFileCreate::OpenExisting))
 			return { nullptr, nullptr, 0 };
 		KFileScope scope(file);
 

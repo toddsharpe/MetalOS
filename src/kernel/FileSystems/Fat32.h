@@ -53,6 +53,7 @@ public:
 	bool Delete(const char* const path) override;
 	bool Rename(const char* const from, const char* const to) override;
 	bool CreateDirectory(const char* const path) override;
+	bool List(const char* const path, const KListVisit visit, void* const context) override;
 	bool Flush() override;
 
 private:
@@ -114,6 +115,10 @@ private:
 	//Calls visit(entry, location) for each entry slot of the directory in order along its chain, until visit returns false; visit mustn't use the cache, and last gets the chain's last cluster
 	template <typename Visit>
 	bool Scan(const uint32_t directory, Visit visit, uint32_t* const last = nullptr);
+
+	//Calls visit(entry, longName, slots, count) for each name in the directory until it returns false: its short entry, its long name (null when there's none whole and tied to it by checksum), and where its entries are, long name first
+	template <typename Visit>
+	bool Names(const uint32_t directory, Visit visit);
 
 	bool Find(const uint32_t directory, const char* const name, const size_t length, entry_t& found);
 	bool Walk(const char* const path, const size_t length, entry_t& found);

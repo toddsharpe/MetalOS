@@ -77,7 +77,7 @@ bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access)
 
 	KeWait(m_lock);
 	FileSystem* const root = m_root;
-	const bool opened = root->Open(file, path, access);
+	const bool opened = root->Open(file, path, access, KFileCreate::OpenExisting);
 	m_lock.Set();
 	if (!opened)
 		return false;

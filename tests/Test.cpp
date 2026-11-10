@@ -39,6 +39,7 @@ int main()
 	Test(PebModules);
 	Test(Gpt);
 	Test(Fat32);
+	Test(Fat32Write);
 	Test(IPv4);
 	Test(Socket);
 	Test(Router);

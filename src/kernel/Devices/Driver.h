@@ -2,6 +2,7 @@
 
 #include "kernel/Types.h"
 #include "kernel/Display.h"
+#include "kernel/Devices/BlockDevice.h"
 
 class KDevice;
 class Driver
@@ -17,6 +18,18 @@ public:
 
 protected:
 	KDevice& m_device;
+};
+
+//A storage controller, whose disks are block devices
+class StorageDriver : public Driver
+{
+public:
+	StorageDriver(KDevice& device) : Driver(device)
+	{
+
+	}
+
+	virtual BlockDevice* GetDisk(const size_t index) = 0; //Null past the last disk
 };
 
 class NicDriver : public Driver

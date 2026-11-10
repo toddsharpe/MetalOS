@@ -1,4 +1,5 @@
 #include "HyperVChannel.h"
+#include <cstddef>
 #include "kernel/Arch.h"
 #include "kernel/Plat_HyperV/Types.h"
 #include "kernel/Plat_HyperV/HyperV.h"
@@ -106,6 +107,50 @@ bool HyperVChannel::SendPacket(const void* buffer, const size_t length, const ui
 	const size_t writeCount = ((length != 0) ? fullSize : headerSize);
 
 	return m_outbound.Write({ buffers, writeCount });
+}
+
+//Format is vmpacket_descriptor, the range count and one gpa_range with its page numbers, then buffer, alignment, and the old indexes
+bool HyperVChannel::SendPacketGpaDirect(const void* buffer, const size_t length, const uint64_t requestId, const paddr_t address, const uint32_t byteCount)
+{
+	const uint32_t offset = static_cast<uint32_t>(address & (Arch::PageSize - 1));
+	const size_t pages = Arch::SizeToPages(offset + byteCount);
+	Assert(pages != 0 && pages <= GpaDirectMaxPages);
+
+#pragma pack(push, 1)
+	struct
+	{
+		HyperV::vmpacket_descriptor desc;
+		uint32_t reserved;
+		uint32_t rangecount;
+		uint32_t byte_count;
+		uint32_t byte_offset;
+		uint64_t pfn_array[GpaDirectMaxPages];
+	} header = {};
+#pragma pack(pop)
+
+	const uint32_t headerSize = static_cast<uint32_t>(offsetof(decltype(header), pfn_array) + pages * sizeof(uint64_t));
+	const uint32_t packetlen = headerSize + static_cast<uint32_t>(length);
+	const uint32_t packetlen_aligned = ByteAlign(packetlen, sizeof(uint64_t));
+
+	header.desc.type = HyperV::VM_PKT_DATA_USING_GPA_DIRECT;
+	header.desc.flags = VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED;
+	header.desc.offset8 = static_cast<uint16_t>(headerSize >> 3);
+	header.desc.len8 = static_cast<uint16_t>(packetlen_aligned >> 3);
+	header.desc.trans_id = requestId;
+	header.rangecount = 1;
+	header.byte_count = byteCount;
+	header.byte_offset = offset;
+	for (size_t i = 0; i < pages; i++)
+		header.pfn_array[i] = (address >> Arch::PageShift) + i;
+
+	uint64_t aligned_data = 0;
+	const cbuffer_t buffers[] = {
+		Bytes(&header, headerSize),
+		Bytes(buffer, length),
+		Bytes(&aligned_data, packetlen_aligned - packetlen)
+	};
+
+	return m_outbound.Write({ buffers, 3 });
 }
 
 void* HyperVChannel::ReadPacket(const uint32_t length)

@@ -42,6 +42,7 @@ public:
 	{
 		if (count > m_sectorCount || sector > m_sectorCount - count)
 			return false;
+		Reads++;
 		memcpy(buffer, Sector(sector), count * m_sectorSize);
 		return true;
 	}
@@ -58,6 +59,9 @@ public:
 	{
 		return true;
 	}
+
+	//Requests made, for a test that checks how a file system batches them
+	size_t Reads = 0;
 
 private:
 	size_t m_sectorSize;

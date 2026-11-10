@@ -18,11 +18,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Test.cpp" />
-    <ClCompile Include="$(MetalOSSrc)kernel\Core\AddressSpace_test.cpp;$(MetalOSSrc)kernel\Core\PebModules_test.cpp;$(MetalOSSrc)kernel\Devices\Gpt_test.cpp;$(MetalOSSrc)kernel\Pdb\Pdb_test.cpp;$(MetalOSSrc)kernel\Arch_x64\StackWalk_test.cpp;$(MetalOSSrc)WinPE_test.cpp" />
+    <ClCompile Include="$(MetalOSSrc)kernel\Core\AddressSpace_test.cpp;$(MetalOSSrc)kernel\Core\PebModules_test.cpp;$(MetalOSSrc)kernel\Devices\Gpt_test.cpp;$(MetalOSSrc)kernel\FileSystems\Fat32_test.cpp;$(MetalOSSrc)kernel\Pdb\Pdb_test.cpp;$(MetalOSSrc)kernel\Arch_x64\StackWalk_test.cpp;$(MetalOSSrc)WinPE_test.cpp" />
     <ClCompile Include="$(MetalOSSrc)Lib\*_test.cpp" />
     <ClCompile Include="$(MetalOSSrc)User\MetalOS-NetSvr\*_test.cpp" />
     <!-- The code under test that isn't header-only -->
-    <ClCompile Include="$(MetalOSSrc)kernel\Core\AddressSpace.cpp;$(MetalOSSrc)kernel\Core\PebModules.cpp;$(MetalOSSrc)kernel\Devices\Gpt.cpp;$(MetalOSSrc)kernel\Arch_x64\RuntimeSupport.cpp">
+    <ClCompile Include="$(MetalOSSrc)kernel\Core\AddressSpace.cpp;$(MetalOSSrc)kernel\Core\PebModules.cpp;$(MetalOSSrc)kernel\Devices\Gpt.cpp;$(MetalOSSrc)kernel\FileSystems\Fat32.cpp;$(MetalOSSrc)kernel\Arch_x64\RuntimeSupport.cpp">
       <ObjectFileName>$(IntDir)kernel\</ObjectFileName>
     </ClCompile>
     <ClCompile Include="$(MetalOSSrc)User\MetalOS-NetSvr\Net\*.cpp">

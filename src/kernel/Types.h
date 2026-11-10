@@ -38,6 +38,12 @@ struct KFile
 	size_t Position;
 	size_t Length;
 	KFileAccess Access;
+
+	//The file system's own: FAT32's first cluster, how many clusters run on consecutively from it, and the cluster its last read reached with that cluster's index in the chain
+	uint32_t Start;
+	uint32_t Run;
+	uint32_t Cursor;
+	uint32_t CursorIndex;
 };
 
 struct KModule

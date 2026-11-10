@@ -63,7 +63,7 @@ HModule LoadLibrary(char* lpLibFileName)
 	RetNullIfNot(peb->ModuleIndex < MaxLoadedModules);
 
 	//Load it
-	HFile file = CreateFile(lpLibFileName, FileAccess::Read);
+	HFile file = CreateFile(lpLibFileName, FileAccess::Read, FileCreate::OpenExisting);
 	RetNullIfNot(file);
 
 	//A load that fails partway leaves nothing behind: every early return closes the file and frees the reservation

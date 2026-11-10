@@ -100,7 +100,7 @@ extern "C"
 	SyscallResult NetSend(const uint32_t ifIdx, const void* frame, size_t length);
 
 	//0x400: Files/pipes
-	HFile CreateFile(const char* path, const FileAccess access);
+	HFile CreateFile(const char* path, const FileAccess access, const FileCreate create);
 	SyscallResult ReadFile(const HFile handle, void* buffer, const size_t bufferSize, size_t* bytesRead);
 	SyscallResult WriteFile(const HFile handle, const void* buffer, const size_t bufferSize, size_t* bytesWritten);
 	SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const Seek seek, size_t* newPosition);
@@ -109,6 +109,9 @@ extern "C"
 	SyscallResult CreateDirectory(const char* path);
 	SyscallResult CreatePipe(HFile* readHandle, HFile* writeHandle);
 	SyscallResult PeekNamedPipe(const HFile file, size_t* bytesAvailable);
+
+	//The names in a directory from *index on, but "." and ".."; *index moves past those returned, so fewer than maxCount means the end
+	SyscallResult ListDirectory(const char* path, DirectoryEntry* entries, const size_t maxCount, size_t* index);
 	SyscallResult CloseHandle(const Handle handle);
 
 	//0x500: Syncronization

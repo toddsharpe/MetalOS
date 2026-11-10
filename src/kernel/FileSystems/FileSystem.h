@@ -26,6 +26,9 @@ public:
 
 	virtual bool CreateDirectory(const char* const path) = 0;
 
+	//Each name in a directory but "." and ".."; false if the path isn't a directory or it can't be read
+	virtual bool List(const char* const path, const KListVisit visit, void* const context) = 0;
+
 	//What was written reaches the medium
 	virtual bool Flush() = 0;
 };

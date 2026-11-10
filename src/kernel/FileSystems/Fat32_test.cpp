@@ -309,6 +309,33 @@ namespace
 		return same;
 	}
 
+	//What a listing gave, in order, stopping after Stop names when that isn't zero
+	struct FatTestListing
+	{
+		char Names[16][256];
+		uint32_t Sizes[16];
+		bool Directories[16];
+		size_t Count;
+		size_t Stop;
+	};
+
+	bool FatTestVisit(void* const context, const KDirEntry& entry)
+	{
+		FatTestListing& listing = *static_cast<FatTestListing*>(context);
+		Assert(listing.Count < 16);
+		strcpy(listing.Names[listing.Count], entry.Name);
+		listing.Sizes[listing.Count] = entry.Size;
+		listing.Directories[listing.Count] = entry.Directory;
+		listing.Count++;
+		return listing.Count != listing.Stop;
+	}
+
+	bool FatTestListed(const FatTestListing& listing, const size_t index, const char* const name, const uint32_t size, const bool directory)
+	{
+		return index < listing.Count && strcmp(listing.Names[index], name) == 0 && listing.Sizes[index] == size && listing.Directories[index] == directory;
+	}
+
+	FatTestListing FatTestList;
 	uint8_t FatTestData[8192];
 	uint8_t FatTestOut[8192];
 	uint8_t FatTestExpect[8192];
@@ -340,6 +367,13 @@ void Fat32_test()
 		snprintf(longName, sizeof(longName), "File number %02d.dat", i);
 		volume.AddFile(many, shortName, longName, FatTestData + i, 1);
 	}
+
+	//Short names Windows gave lower case through byte 12 rather than a long name, and a volume label
+	volume.AddFile(FatTestVolume::Root, "CASED   TXT", nullptr, FatTestData, 5);
+	volume.FindEntry(FatTestVolume::Root, "CASED   TXT")[12] = 0x18;
+	volume.AddFile(FatTestVolume::Root, "MIXED   TXT", nullptr, FatTestData, 6);
+	volume.FindEntry(FatTestVolume::Root, "MIXED   TXT")[12] = 0x08;
+	volume.AddEntry(FatTestVolume::Root, "METALOS    ", nullptr, 0x08, 0, 0);
 
 	//A blank partition isn't FAT32, and nor is one with too few clusters, whatever its boot sector says
 	{
@@ -459,6 +493,38 @@ void Fat32_test()
 		Assert(FatTestOpen(fs, file, "/short.bin", KFileAccess::Read, KFileCreate::OpenExisting));
 		AssertEqual(file.Length, (size_t)2048);
 		AssertEqual(FatTestRead(fs, file, FatTestOut, 4096), (size_t)1024);
+	}
+
+	//A listing gives each name in order, its long name if it has one and else its short name in the case byte 12 gives, without ".", "..", deleted names or the volume label
+	{
+		FatTestList = {};
+		Assert(fs.List("/", FatTestVisit, &FatTestList));
+		AssertEqual(FatTestList.Count, (size_t)8);
+		Assert(FatTestListed(FatTestList, 0, "README.TXT", 100, false));
+		Assert(FatTestListed(FatTestList, 1, "MetalOS-WMSvr.exe", 3000, false));
+		Assert(FatTestListed(FatTestList, 2, "EFI", 0, true));
+		Assert(FatTestListed(FatTestList, 3, "BADSUM.TXT", 10, false));
+		Assert(FatTestListed(FatTestList, 4, "SHORT.BIN", 2048, false));
+		Assert(FatTestListed(FatTestList, 5, "MANY", 0, true));
+		Assert(FatTestListed(FatTestList, 6, "cased.txt", 5, false));
+		Assert(FatTestListed(FatTestList, 7, "mixed.TXT", 6, false));
+
+		FatTestList = {};
+		Assert(fs.List("\\efi/boot", FatTestVisit, &FatTestList));
+		AssertEqual(FatTestList.Count, (size_t)2);
+		Assert(FatTestListed(FatTestList, 0, "term.exe", 5000, false));
+		Assert(FatTestListed(FatTestList, 1, "EMPTY.TXT", 0, false));
+	}
+
+	//A listing stops when the visit says to, and only a directory lists
+	{
+		FatTestList = {};
+		FatTestList.Stop = 3;
+		Assert(fs.List("/many", FatTestVisit, &FatTestList));
+		AssertEqual(FatTestList.Count, (size_t)3);
+		Assert(FatTestListed(FatTestList, 2, "File number 02.dat", 1, false));
+		Assert(!fs.List("/readme.txt", FatTestVisit, &FatTestList));
+		Assert(!fs.List("/missing", FatTestVisit, &FatTestList));
 	}
 
 	//A volume whose FSInfo is missing has no free count
@@ -650,6 +716,10 @@ void Fat32Write_test()
 		Assert(FatTestSame(fs, "notes.txt", FatTestData, 100));
 		Assert(FatTestSame(fs, "../sub/notes.txt", FatTestData, 100));
 		Assert(FatTestSame(fs, "../../old.txt", FatTestData, 1000));
+		FatTestList = {};
+		Assert(fs.List("..", FatTestVisit, &FatTestList));
+		AssertEqual(FatTestList.Count, (size_t)1);
+		Assert(FatTestListed(FatTestList, 0, "Sub", 0, true));
 		Assert(!fs.Delete("/projects"));
 		Assert(!fs.Delete("/projects/sub"));
 		Assert(!fs.Delete(".."));

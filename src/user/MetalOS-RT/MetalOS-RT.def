@@ -46,6 +46,7 @@ EXPORTS
 	CreateDirectory
 	CreatePipe
 	PeekNamedPipe
+	ListDirectory
 	CloseHandle
 
 	; 0x500: Synchronization

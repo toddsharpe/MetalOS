@@ -43,6 +43,7 @@ x64Syscall <DeleteFile>, 405h
 x64Syscall <CreateDirectory>, 406h
 x64Syscall <CreatePipe>, 407h
 x64Syscall <PeekNamedPipe>, 408h
+x64Syscall <ListDirectory>, 409h
 
 ; 0x500: Handles (closing, and passing one to another process)
 x64Syscall <CloseHandle>, 500h

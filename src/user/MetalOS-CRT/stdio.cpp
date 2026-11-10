@@ -193,32 +193,34 @@ extern "C"
 {
 	FILE* fopen(char const* _FileName, char const* _Mode)
 	{
+		//r opens a file that's there, w empties or makes one, and a makes one if need be and writes each time at its end; + adds the other direction
+		const bool both = strchr(_Mode, '+') != nullptr;
 		FileAccess access;
+		FileCreate create;
 		switch (_Mode[0])
 		{
 		case 'r':
-			access = FileAccess::Read;
+			access = both ? FileAccess::ReadWrite : FileAccess::Read;
+			create = FileCreate::OpenExisting;
 			break;
 
 		case 'w':
-			access = FileAccess::Write;
+			access = both ? FileAccess::ReadWrite : FileAccess::Write;
+			create = FileCreate::CreateAlways;
 			break;
 
-		//Append needs every write to go to the end, which RT can't ask for yet
 		case 'a':
-			errno = ENOSYS;
-			return nullptr;
+			access = both ? FileAccess::ReadAppend : FileAccess::Append;
+			create = FileCreate::OpenAlways;
+			break;
 
 		default:
 			errno = EINVAL;
 			return nullptr;
 		}
 
-		if (strchr(_Mode, '+'))
-			access = FileAccess::ReadWrite;
-
-		//RT doesn't say why an open failed, and a missing file is the usual reason
-		const HFile file = CreateFile(_FileName, access);
+		//RT doesn't say why an open failed, and a missing file or directory is the usual reason
+		const HFile file = CreateFile(_FileName, access, create);
 		if (!file)
 			errno = ENOENT;
 

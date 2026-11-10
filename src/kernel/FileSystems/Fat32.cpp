@@ -22,6 +22,10 @@ namespace
 	static constexpr uint8_t LongNameLast = 0x40;
 	static constexpr uint8_t LongNameOrdinal = 0x1F;
 
+	//Windows keeps a short name's case in byte 12 rather than giving it a long name
+	static constexpr uint8_t CaseLowerBase = 0x08;
+	static constexpr uint8_t CaseLowerExtension = 0x10;
+
 	static constexpr uint32_t ClusterMask = 0x0FFFFFFF;
 	static constexpr uint32_t EndOfChain = 0x0FFFFFFF;
 
@@ -73,18 +77,21 @@ namespace
 		return stored[length] == '\0';
 	}
 
-	//The 8.3 name as BASE.EXT, without padding
-	void ShortName(const uint8_t* const entry, char (&name)[13])
+	//The 8.3 name as BASE.EXT, without padding, either part lower-cased if asked
+	void ShortName(const uint8_t* const entry, char (&name)[13], const bool lowerBase = false, const bool lowerExtension = false)
 	{
 		size_t at = 0;
 		for (size_t i = 0; i < 8 && entry[i] != ' '; i++)
-			name[at++] = (i == 0 && entry[i] == EntryKanjiE5) ? static_cast<char>(EntryDeleted) : static_cast<char>(entry[i]);
+		{
+			const char c = (i == 0 && entry[i] == EntryKanjiE5) ? static_cast<char>(EntryDeleted) : static_cast<char>(entry[i]);
+			name[at++] = lowerBase ? Lower(c) : c;
+		}
 
 		if (entry[8] != ' ')
 		{
 			name[at++] = '.';
 			for (size_t i = 8; i < 11 && entry[i] != ' '; i++)
-				name[at++] = static_cast<char>(entry[i]);
+				name[at++] = lowerExtension ? Lower(static_cast<char>(entry[i])) : static_cast<char>(entry[i]);
 		}
 		name[at] = '\0';
 	}
@@ -485,6 +492,32 @@ bool Fat32::CreateDirectory(const char* const path)
 	return Commit() && done;
 }
 
+bool Fat32::List(const char* const path, const KListVisit visit, void* const context)
+{
+	entry_t directory;
+	if (!m_volume || !Walk(path, strlen(path), directory) || !directory.Directory)
+		return false;
+
+	return Names(directory.Cluster, [&](const uint8_t* const entry, const char* const longName, const location_t* const slots, const size_t count) -> bool
+	{
+		UNUSED(slots);
+		UNUSED(count);
+		if (entry[0] == '.')
+			return true;
+
+		//A short name without a long one shows in the case Windows' flags in byte 12 give it
+		char shortName[13];
+		if (!longName)
+			ShortName(entry, shortName, (entry[12] & CaseLowerBase) != 0, (entry[12] & CaseLowerExtension) != 0);
+
+		KDirEntry item = {};
+		item.Name = longName ? longName : shortName;
+		item.Size = LittleEndian<uint32_t>(entry + 28);
+		item.Directory = (entry[11] & AttrDirectory) != 0;
+		return visit(context, item);
+	});
+}
+
 bool Fat32::Flush()
 {
 	return m_volume && Commit() && m_volume->Flush();
@@ -747,21 +780,17 @@ bool Fat32::Scan(const uint32_t directory, Visit visit, uint32_t* const last)
 	return true;
 }
 
-//A name in a directory: its long name when its entries are whole and tied to the short entry by checksum, else its short name
-bool Fat32::Find(const uint32_t directory, const char* const name, const size_t length, entry_t& found)
+template <typename Visit>
+bool Fat32::Names(const uint32_t directory, Visit visit)
 {
-	if (length == 0 || length > MaxLongName)
-		return false;
-
 	char longName[MaxLongName + 1] = {};
 	bool longValid = false;
 	uint8_t longChecksum = 0;
 	uint8_t longNext = 0;
-	location_t longSlots[MaxEntries - 1] = {};
+	location_t slots[MaxEntries] = {};
 	size_t longCount = 0;
-	bool hit = false;
 
-	const bool scanned = Scan(directory, [&](const uint8_t* const entry, const location_t at) -> bool
+	return Scan(directory, [&](const uint8_t* const entry, const location_t at) -> bool
 	{
 		if (entry[0] == EntryEnd)
 			return false;
@@ -799,7 +828,7 @@ bool Fat32::Find(const uint32_t directory, const char* const name, const size_t 
 					break;
 				longName[index] = (unit >= 0x20 && unit < 0x7F) ? static_cast<char>(unit) : '?';
 			}
-			longSlots[longCount++] = at;
+			slots[longCount++] = at;
 			longNext--;
 			return true;
 		}
@@ -810,10 +839,25 @@ bool Fat32::Find(const uint32_t directory, const char* const name, const size_t 
 			return true;
 		}
 
-		//Whichever name matched, a long name tied to this entry is its own and goes with it
+		//A long name tied to this entry is its own, and its entries go with it
 		const bool longOwned = longValid && longNext == 0 && longChecksum == ShortChecksum(entry);
 		longValid = false;
-		bool match = longOwned && SameName(longName, name, length);
+		const size_t count = longOwned ? longCount : 0;
+		slots[count] = at;
+		return visit(entry, longOwned ? longName : nullptr, slots, count + 1);
+	});
+}
+
+//A name in a directory: its long name or its short name, in any case
+bool Fat32::Find(const uint32_t directory, const char* const name, const size_t length, entry_t& found)
+{
+	if (length == 0 || length > MaxLongName)
+		return false;
+
+	bool hit = false;
+	const bool scanned = Names(directory, [&](const uint8_t* const entry, const char* const longName, const location_t* const slots, const size_t count) -> bool
+	{
+		bool match = longName && SameName(longName, name, length);
 		if (!match)
 		{
 			char shortName[13];
@@ -825,15 +869,10 @@ bool Fat32::Find(const uint32_t directory, const char* const name, const size_t 
 
 		found.Cluster = (static_cast<uint32_t>(LittleEndian<uint16_t>(entry + 20)) << 16) | LittleEndian<uint16_t>(entry + 26);
 		found.Size = LittleEndian<uint32_t>(entry + 28);
-		found.Directory = (attributes & AttrDirectory) != 0;
-		found.Attributes = attributes;
-		found.Count = 0;
-		if (longOwned)
-		{
-			for (size_t i = 0; i < longCount; i++)
-				found.Slots[found.Count++] = longSlots[i];
-		}
-		found.Slots[found.Count++] = at;
+		found.Directory = (entry[11] & AttrDirectory) != 0;
+		found.Attributes = entry[11];
+		found.Count = count;
+		memcpy(found.Slots, slots, count * sizeof(location_t));
 		hit = true;
 		return false;
 	});

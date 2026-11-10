@@ -86,7 +86,7 @@ static uint64_t Dispatch(const Arch::SyscallFrame& frame)
 
 		//0x400: Files and pipes
 		case Syscall::CreateFile:
-			return (uint64_t)CreateFile((char*)frame.Arg0, (FileAccess)frame.Arg1);
+			return (uint64_t)CreateFile((char*)frame.Arg0, (FileAccess)frame.Arg1, (FileCreate)frame.Arg2);
 
 		case Syscall::ReadFile:
 			return (uintptr_t)ReadFile((HFile)frame.Arg0, (void*)frame.Arg1, (size_t)frame.Arg2, (size_t*)frame.Arg3);
@@ -111,6 +111,9 @@ static uint64_t Dispatch(const Arch::SyscallFrame& frame)
 
 		case Syscall::PeekNamedPipe:
 			return (uint64_t)PeekNamedPipe((HFile)frame.Arg0, (size_t*)frame.Arg1);
+
+		case Syscall::ListDirectory:
+			return (uint64_t)ListDirectory((char*)frame.Arg0, (DirectoryEntry*)frame.Arg1, (size_t)frame.Arg2, (size_t*)frame.Arg3);
 
 		//0x500: Handles (closing, and passing one to another process)
 		case Syscall::CloseHandle:

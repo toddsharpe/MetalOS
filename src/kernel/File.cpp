@@ -18,7 +18,7 @@ static Partition m_partitions[Gpt::MaxPartitions] = {};
 static SectorCache m_osCache;
 static Fat32 m_os;
 
-//File systems keep state between calls (FAT32's sector cache), so opens and reads take turns: an auto-reset event that starts signaled
+//File systems keep state between calls (FAT32's sector cache and open files), so calls into one take turns: an auto-reset event that starts signaled
 static KEvent m_lock(false, true);
 
 void KeMountRoot(FileSystem& fileSystem)
@@ -69,7 +69,7 @@ void KeMountStorage()
 	Printf("Storage: FAT32 on partition %u (\"%s\") is the root\n", static_cast<uint32_t>(os), m_table.Partitions[os].Name);
 }
 
-bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access)
+bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access, const KFileCreate create)
 {
 	//Nothing is mounted before the device tree comes up, so an early bugcheck's PDB lookup finds nothing rather than faulting again
 	if (!m_root)
@@ -77,7 +77,7 @@ bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access)
 
 	KeWait(m_lock);
 	FileSystem* const root = m_root;
-	const bool opened = root->Open(file, path, access, KFileCreate::OpenExisting);
+	const bool opened = root->Open(file, path, access, create);
 	m_lock.Set();
 	if (!opened)
 		return false;
@@ -110,20 +110,81 @@ bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* byte
 	return true;
 }
 
+bool KeWriteFile(KFile& file, const void* buffer, const size_t bufferSize, size_t* bytesWritten)
+{
+	Assert(file.FileSystem);
+	KeWait(m_lock);
+
+	//An append goes at the end, wherever the position was moved to
+	if ((file.Access & KFileAccess::Append) == KFileAccess::Append)
+		file.Position = file.Length;
+	const size_t written = file.FileSystem->Write(file, buffer, bufferSize);
+	m_lock.Set();
+	file.Position += written;
+
+	if (bytesWritten != nullptr)
+		*bytesWritten = written;
+	return written == bufferSize;
+}
+
 bool KeSetFilePosition(KFile& file, const size_t position)
 {
-	//The end itself is a valid position (reads there return nothing), so SEEK_END and ftell at end of file work
-	if (position > file.Length)
+	//The end itself is a valid position (reads there return nothing), so SEEK_END and ftell at end of file work; past it only for a write, which fills the gap with zeros
+	if (position > file.Length && (file.Access & KFileAccess::Write) == KFileAccess::None)
 		return false;
 
 	file.Position = position;
 	return true;
 }
 
+bool KeDeleteFile(const char* const path)
+{
+	if (!m_root)
+		return false;
+
+	KeWait(m_lock);
+	const bool deleted = m_root->Delete(path);
+	m_lock.Set();
+	return deleted;
+}
+
+bool KeMoveFile(const char* const from, const char* const to)
+{
+	if (!m_root)
+		return false;
+
+	KeWait(m_lock);
+	const bool moved = m_root->Rename(from, to);
+	m_lock.Set();
+	return moved;
+}
+
+bool KeCreateDirectory(const char* const path)
+{
+	if (!m_root)
+		return false;
+
+	KeWait(m_lock);
+	const bool created = m_root->CreateDirectory(path);
+	m_lock.Set();
+	return created;
+}
+
+bool KeListDirectory(const char* const path, const KListVisit visit, void* const context)
+{
+	if (!m_root)
+		return false;
+
+	KeWait(m_lock);
+	const bool listed = m_root->List(path, visit, context);
+	m_lock.Set();
+	return listed;
+}
+
 void* KeLoadFile(const char* const path)
 {
 	KFile file = {};
-	if (!KeCreateFile(file, path, KFileAccess::Read))
+	if (!KeCreateFile(file, path, KFileAccess::Read, KFileCreate::OpenExisting))
 		return nullptr;
 
 	KFileScope scope(file);

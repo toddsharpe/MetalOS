@@ -14,12 +14,15 @@ enum class KWaitResult
 	Timeout
 };
 
+//Append writes, each at the end however the position moved
 enum class KFileAccess
 {
 	None = 0,
 	Read = (1 << 0),
 	Write = (1 << 1),
-	ReadWrite = Read | Write
+	ReadWrite = Read | Write,
+	Append = Write | (1 << 2),
+	ReadAppend = ReadWrite | Append
 };
 
 inline KFileAccess operator&(KFileAccess lhs, KFileAccess rhs)
@@ -37,6 +40,17 @@ enum class KFileCreate
 	CreateAlways,
 	OpenAlways
 };
+
+//One name in a directory, its name valid only during the visit
+struct KDirEntry
+{
+	const char* Name;
+	uint32_t Size;
+	bool Directory;
+};
+
+//Called for each name in a directory in turn until it returns false; it mustn't call back into the file system
+typedef bool (*KListVisit)(void* const context, const KDirEntry& entry);
 
 class FileSystem;
 struct KFile

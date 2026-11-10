@@ -138,11 +138,34 @@ struct GraphicsDevice
 	uint32_t PixelsPerScanLine;
 };
 
+//Append writes, each at the end however the position moved
 enum class FileAccess
 {
 	Read = (1 << 0),
 	Write = (1 << 1),
-	ReadWrite = Read | Write
+	ReadWrite = Read | Write,
+	Append = Write | (1 << 2),
+	ReadAppend = ReadWrite | Append
+};
+
+//What CreateFile does when the file is there, or isn't: fopen's r, w and a
+enum class FileCreate
+{
+	OpenExisting,
+	CreateAlways,
+	OpenAlways
+};
+
+//Paths and names passed to the file calls, each including its NUL
+static constexpr size_t MaxPath = 260;
+static constexpr size_t MaxFileName = 256;
+
+//One name in a directory, from ListDirectory
+struct DirectoryEntry
+{
+	char Name[MaxFileName];
+	uint64_t Size;
+	bool Directory;
 };
 
 enum class Seek

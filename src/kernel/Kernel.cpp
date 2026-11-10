@@ -18,8 +18,6 @@
 #include "kernel/Debug/Debugger.h"
 #include "kernel/LoadingScreen.h"
 #include "kernel/Core/InterruptTable.h"
-#include "Drivers/RamDrive.h"
-#include "kernel/Devices/RamDriveDriver.h"
 #include "kernel/File.h"
 #include "MetalOS.Loader.h"
 #include "MetalOS.Space.h"
@@ -122,15 +120,6 @@ namespace
 		//Initialize ACPI/HW
 		InitializeAcpi();
 		m_deviceTree.Enumerate();
-		if (BootParams.RamDriveAddress)
-		{
-			KDevice* ramDrive = KeAlloc<KDevice>(AllocType::Kernel);
-			Assert(ramDrive);
-			StrCopy(ramDrive->Hid, Str(RamDriveHid));
-			ramDrive->Type = KDeviceType::Software;
-			ramDrive->Context = (void*)BootParams.RamDriveAddress;
-			m_deviceTree.AddRootChild(*ramDrive);
-		}
 		KeMountStorage();
 
 		m_debugger.Initialize();

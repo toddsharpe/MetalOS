@@ -20,7 +20,6 @@ enum class KDeviceType
 {
 	Unknown,
 	Acpi,
-	Software,
 	Platform
 };
 

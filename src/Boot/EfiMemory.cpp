@@ -53,7 +53,7 @@ namespace EfiMemory
 			}
 
 			//Memory the kernel allocator may use. Boot-services memory is reclaimable
-			//now; loader data (PFN DB, kernel, ramdrive, these arrays) stays reserved.
+			//now; loader data (PFN DB, kernel, PDB, these arrays) stays reserved.
 			switch (current->Type)
 			{
 				case EfiConventionalMemory:

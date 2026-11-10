@@ -2,7 +2,7 @@
 
 #include "kernel/Types.h"
 
-//A tree of files on some storage: the RAM drive now, FAT32 on a disk partition next
+//A tree of files on some storage, such as FAT32 on a disk partition
 class FileSystem
 {
 public:

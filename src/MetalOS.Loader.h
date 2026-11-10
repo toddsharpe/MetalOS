@@ -76,16 +76,10 @@ struct LoaderParams
 	//ACPI 2.0 RSDP (physical), found by the bootloader in the UEFI config tables
 	paddr_t AcpiRsdp;
 
-	//Ramdrive
-	paddr_t RamDriveAddress;
-
 	//PDB
 	paddr_t PdbAddress;
 	size_t PdbSize;
 };
-
-//Bootloader constants
-static constexpr size_t RamDriveSize = Megabytes(64);
 
 //KernelMain
 typedef void (*KernelMain)();

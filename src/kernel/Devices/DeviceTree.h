@@ -11,7 +11,6 @@ public:
 	}
 
 	void Enumerate();
-	void AddRootChild(KDevice& device);
 	void AttachDrivers();
 	void Display() const;
 	KDevice* GetDeviceByClass(const KDeviceClass kClass) const;

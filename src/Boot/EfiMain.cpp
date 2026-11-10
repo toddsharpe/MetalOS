@@ -68,56 +68,6 @@ static paddr_t FindAcpiRsdp()
 	return 0;
 }
 
-static EFI_STATUS PopulateDrive(RamDrive& drive, EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fs, EFI_FILE* dir)
-{
-	static constexpr size_t MAX_FILE_INFO_SIZE = 1024;
-	uint8_t buffer[MAX_FILE_INFO_SIZE] = { 0 };
-	EFI_FILE_INFO* fileInfo = (EFI_FILE_INFO*)buffer;
-
-	dir->SetPosition(dir, 0);
-
-	while (true)
-	{
-		UINTN size = MAX_FILE_INFO_SIZE;
-		ReturnIfNotSuccess(dir->Read(dir, &size, buffer));
-		if (size == 0)
-			break; //No more directories
-
-		if (wcscmp(fileInfo->FileName, L".") == 0 || wcscmp(fileInfo->FileName, L"..") == 0)
-			continue;
-
-		if (fileInfo->Attribute & EFI_FILE_DIRECTORY)
-		{
-			//Recurse
-			EFI_FILE_HANDLE subDir;
-			ReturnIfNotSuccess(dir->Open(dir, &subDir, fileInfo->FileName, EFI_FILE_MODE_READ, 0));
-			subDir->SetPosition(subDir, 0);
-
-			PopulateDrive(drive, fs, subDir);
-
-			dir->Close(subDir);
-		}
-		else
-		{
-			//Convert to asci
-			char name[32] = {};
-			wcstombs(name, fileInfo->FileName, sizeof(name));
-
-			//Allocate in ram
-			void* address = drive.Allocate(name, fileInfo->FileSize);
-
-			//Open
-			EFI_FILE_HANDLE file;
-			ReturnIfNotSuccess(dir->Open(dir, &file, fileInfo->FileName, EFI_FILE_MODE_READ, 0));
-
-			//Copy
-			ReturnIfNotSuccess(file->Read(file, &fileInfo->FileSize, (void*)address));
-		}
-	}
-
-	return EFI_SUCCESS;
-}
-
 static EFI_STATUS DisplayLoaderParams(const LoaderParams& params)
 {
 	ReturnIfNotSuccess(Print("LoaderParams: 0x%016x, Pages: 0x%x\r\n", &params, x64::SizeToPages(sizeof(LoaderParams))));
@@ -125,7 +75,6 @@ static EFI_STATUS DisplayLoaderParams(const LoaderParams& params)
 	ReturnIfNotSuccess(Print("  FreeRanges: 0x%016x, RuntimeRanges: 0x%016x\r\n", params.FreeRanges, params.RuntimeRanges));
 	ReturnIfNotSuccess(Print("  PFN Database-Address: 0x%016x, Count: 0x%x\r\n", params.PageFrameAddr, params.PageFrameCount));
 	ReturnIfNotSuccess(Print("  AcpiRsdp-Address: 0x%016x\r\n", params.AcpiRsdp));
-	ReturnIfNotSuccess(Print("  RamDrive-Address: 0x%016x, Size: 0x%x\r\n", params.RamDriveAddress, RamDriveSize));
 	ReturnIfNotSuccess(Print("  PDB-Address: 0x%016x, Size: 0x%x\r\n", params.PdbAddress, params.PdbSize));
 
 	ReturnIfNotSuccess(Print("Graphics:\r\n"));
@@ -182,26 +131,11 @@ extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTa
 	params.PageFrameCount = pageCount;
 	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, x64::SizeToPages(pageCount * sizeof(PageFrame)), &params.PageFrameAddr));
 
-	//Allocate space for RamDrive
-	ReturnIfNotSuccess(BS->AllocatePages(AllocateAnyPages, EfiLoaderData, x64::SizeToPages(RamDriveSize), &params.RamDriveAddress));
-	RamDrive drive((void*)params.RamDriveAddress, RamDriveSize);
-
 	//Load kernel path
 	EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* fileSystem = nullptr;
 	ReturnIfNotSuccess(ST->BootServices->OpenProtocol(LoadedImage->DeviceHandle, &gEfiSimpleFileSystemProtocolGuid, (void**)&fileSystem, ImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL));
 	EFI_FILE* CurrentDriveRoot = nullptr;
 	ReturnIfNotSuccess(fileSystem->OpenVolume(fileSystem, &CurrentDriveRoot));
-
-	//Populate
-	PopulateDrive(drive, fileSystem, CurrentDriveRoot);
-	UartPrintf("RamDrive:\n");
-	for (const RamDrive::Entry& entry : drive)
-	{
-		if (*entry.Name == '\0')
-			break;
-
-		UartPrintf("  File: %s PageNumber: 0x%x Length: 0x%x\n", entry.Name, entry.PageNumber, entry.Length);
-	}
 
 	//Build path to kernel
 	CHAR16 KernelPath[MaxKernelPath] = {};

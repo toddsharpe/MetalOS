@@ -280,7 +280,7 @@ SyscallResult SetFilePointer(const HFile handle, const ssize_t position, const S
 	return SyscallResult::Success;
 }
 
-//The only storage is the read-only RAM drive, so nothing can be renamed, deleted or created
+//FAT32 is read-only for now, so nothing can be renamed, deleted or created
 SyscallResult MoveFile(const char* existingFileName, const char* newFileName)
 {
 	UNUSED(existingFileName);

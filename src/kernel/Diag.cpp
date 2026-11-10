@@ -40,7 +40,7 @@ namespace
 		void* Image; //What the parser reads: the boot-mapped kernel PDB, or a KeLoadFile copy freed after the walk
 	};
 
-	//The bootloader maps the kernel's PDB, so kernel frames resolve without the RAM drive, the storage driver or an allocation
+	//The bootloader maps the kernel's PDB, so kernel frames resolve without the file system, the storage driver or an allocation
 	void* LoadPdb(const KProcess& process, const KModule& module)
 	{
 		if (module.ImageBase == (void*)KernelBase && BootParams.PdbSize != 0)

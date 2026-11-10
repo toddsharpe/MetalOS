@@ -78,6 +78,7 @@ namespace Loader
 		KFile file = {};
 		if (!KeCreateFile(file, path, KFileAccess::Read))
 			return { nullptr, nullptr, 0 };
+		KFileScope scope(file);
 
 		//Headers go into kernel-local buffers - no process memory needed yet.
 		IMAGE_DOS_HEADER dosHeader = {};

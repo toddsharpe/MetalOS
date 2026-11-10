@@ -86,6 +86,17 @@ bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access)
 	return true;
 }
 
+void KeCloseFile(KFile& file)
+{
+	if (!file.FileSystem)
+		return;
+
+	KeWait(m_lock);
+	file.FileSystem->Close(file);
+	m_lock.Set();
+	file.FileSystem = nullptr;
+}
+
 bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead)
 {
 	Assert(file.FileSystem);
@@ -112,7 +123,11 @@ bool KeSetFilePosition(KFile& file, const size_t position)
 void* KeLoadFile(const char* const path)
 {
 	KFile file = {};
-	if (!KeCreateFile(file, path, KFileAccess::Read) || file.Length == 0)
+	if (!KeCreateFile(file, path, KFileAccess::Read))
+		return nullptr;
+
+	KFileScope scope(file);
+	if (file.Length == 0)
 		return nullptr;
 
 	void* const address = KeVirtualAlloc(file.Length);

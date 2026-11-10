@@ -7,6 +7,9 @@ class FileSystem;
 //Where paths resolve: the RAM drive, until FAT32 on the disk replaces it
 void KeMountRoot(FileSystem& fileSystem);
 
+//The first disk's partitions, from its GPT
+void KeMountStorage();
+
 bool KeCreateFile(KFile& file, const char* const path, const KFileAccess access);
 bool KeReadFile(KFile& file, void* buffer, const size_t bufferSize, size_t* bytesRead);
 bool KeSetFilePosition(KFile& file, const size_t position);

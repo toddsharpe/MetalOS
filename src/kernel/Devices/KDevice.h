@@ -11,7 +11,7 @@ enum class KDeviceClass
 	Unknown,
 	Keyboard,
 	Mouse,
-	Storage,
+	Storage, //Its driver is a StorageDriver
 	Nic,
 	Display
 };

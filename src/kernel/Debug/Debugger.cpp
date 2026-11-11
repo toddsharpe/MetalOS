@@ -12,6 +12,7 @@
 #include <reactos/amd64/ke.h>
 #include <reactos/windbgkd.h>
 #include <coreclr/list.h>
+#include <reactos/ldrtypes.h>
 #include "kddll.h"
 #include "kernel/Kd64/kd64.h"
 #include "kernel/Core/Scheduler.h"
@@ -26,10 +27,55 @@ extern "C" KdDll m_dll;
 #include "kernel/Thread.h"
 #include "kernel/Process.h"
 
-uint32_t Debugger::ThreadLoop(void* arg)
+namespace
 {
-	return static_cast<Debugger*>(arg)->ThreadLoop();
-};
+	//The loaded module list KD walks, as NT's
+	LIST_ENTRY PsLoadedModuleList;
+
+	//Breaks in when the host asks to
+	uint32_t ThreadLoop(void* arg)
+	{
+		UNUSED(arg);
+		while (true)
+		{
+			if (KdPollBreakIn())
+			{
+				__debugbreak();
+			}
+			Sleep(50);
+		}
+
+		return 0;
+	}
+
+	void ConvertToContext(Arch::InterruptFrame* frame, PCONTEXT context)
+	{
+		context->SegCs = (WORD)frame->CS;
+		context->SegFs = (WORD)frame->FS;
+		context->SegGs = (WORD)frame->GS;
+		context->SegSs = (WORD)frame->SS;
+		context->EFlags = (DWORD)frame->RFlags;
+
+		context->Rip = frame->RIP;
+
+		context->Rax = frame->RAX;
+		context->Rcx = frame->RCX;
+		context->Rdx = frame->RDX;
+		context->Rbx = frame->RBX;
+		context->Rsp = frame->RSP;
+		context->Rbp = frame->RBP;
+		context->Rsi = frame->RSI;
+		context->Rdi = frame->RDI;
+		context->R8 = frame->R8;
+		context->R9 = frame->R9;
+		context->R10 = frame->R10;
+		context->R11 = frame->R11;
+		context->R12 = frame->R12;
+		context->R13 = frame->R13;
+		context->R14 = frame->R14;
+		context->R15 = frame->R15;
+	}
+}
 
 void Debugger::Initialize()
 {
@@ -64,7 +110,7 @@ void Debugger::Initialize()
 	NTSTATUS result = m_dll.KdInitialize(2);
 	Printf("KdInitialized %d\n", result);
 
-	KeCreateThread(Debugger::ThreadLoop, this, "Debugger::ThreadLoop");
+	KeCreateThread(ThreadLoop, nullptr, "Debugger::ThreadLoop");
 
 	//No host has answered yet; each send refreshes this from kdcom
 	KdDebuggerEnabled = TRUE;
@@ -124,46 +170,4 @@ bool Debugger::Enabled()
 bool Debugger::HostPresent()
 {
 	return !KdDebuggerNotPresent;
-}
-
-uint32_t Debugger::ThreadLoop()
-{
-	while (true)
-	{
-		if (KdPollBreakIn())
-		{
-			__debugbreak();
-		}
-		Sleep(50);
-	}
-
-	return 0;
-}
-
-void Debugger::ConvertToContext(Arch::InterruptFrame* frame, PCONTEXT context)
-{
-	context->SegCs = (WORD)frame->CS;
-	context->SegFs = (WORD)frame->FS;
-	context->SegGs = (WORD)frame->GS;
-	context->SegSs = (WORD)frame->SS;
-	context->EFlags = (DWORD)frame->RFlags;
-	
-	context->Rip = frame->RIP;
-
-	context->Rax = frame->RAX;
-	context->Rcx = frame->RCX;
-	context->Rdx = frame->RDX;
-	context->Rbx = frame->RBX;
-	context->Rsp = frame->RSP;
-	context->Rbp = frame->RBP;
-	context->Rsi = frame->RSI;
-	context->Rdi = frame->RDI;
-	context->R8 = frame->R8;
-	context->R9 = frame->R9;
-	context->R10 = frame->R10;
-	context->R11 = frame->R11;
-	context->R12 = frame->R12;
-	context->R13 = frame->R13;
-	context->R14 = frame->R14;
-	context->R15 = frame->R15;
 }

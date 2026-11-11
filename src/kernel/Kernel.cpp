@@ -55,7 +55,6 @@ namespace
 
 	//System
 	InterruptTable<Arch::InterruptVector, Arch::IrqN> m_irqs;
-	Debugger m_debugger;
 
 	void Initialize()
 	{
@@ -122,8 +121,8 @@ namespace
 		m_deviceTree.Enumerate();
 		KeMountStorage();
 
-		m_debugger.Initialize();
-		m_debugger.AddModule(*kernelModule);
+		Debugger::Initialize();
+		Debugger::AddModule(*kernelModule);
 
 		//Initialize the kernel->WM input ring. Compositing lives in the usermode
 		//WM process (MetalOS-WMSvr.exe), which maps the framebuffer and drains this ring.
@@ -244,10 +243,10 @@ extern "C"
 			}
 
 			//Attempt to pass to debugger, falling through to the stack trace when no host answers
-			if (m_debugger.Enabled())
+			if (Debugger::Enabled())
 			{
-				m_debugger.DebuggerEvent(vector, frame);
-				if (m_debugger.HostPresent())
+				Debugger::DebuggerEvent(vector, frame);
+				if (Debugger::HostPresent())
 					return;
 			}
 			
